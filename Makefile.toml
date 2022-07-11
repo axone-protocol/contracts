@@ -1,0 +1,75 @@
+[tasks.format-rust]
+args = ["fmt"]
+command = "cargo"
+description = "Format rust sources files."
+install_crate = { rustup_component_name = "rustfmt" }
+
+[tasks.lint-rust-format]
+args = ["fmt", "--all", "--", "--check"]
+command = "cargo"
+description = "Check format of sources files."
+install_crate = { rustup_component_name = "rustfmt" }
+
+[tasks.lint-rust]
+args = [
+  "clippy",
+  "--workspace",
+  "--locked",
+  "--all-targets",
+  "--all-features",
+  "--",
+  "-D",
+  "clippy::all",
+  "-D",
+  "warnings",
+]
+command = "cargo"
+description = "Check lint of all sources files."
+install_crate = { rustup_component_name = "clippy" }
+
+[tasks.lint-toml]
+args = ["lint"]
+command = "taplo"
+description = "Check lint of all toml files."
+install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
+
+[tasks.format-toml]
+args = ["fmt"]
+command = "taplo"
+description = "Format toml file"
+install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
+
+[tasks.lint]
+dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]
+
+[tasks.format]
+dependencies = ["format-rust", "format-toml"]
+
+[tasks.clean]
+args = ["clean"]
+command = "cargo"
+
+[tasks.build]
+args = ["build", "--release", "--locked"]
+command = "cargo"
+
+[tasks.build-coverage]
+args = ["build"]
+command = "cargo"
+description = "Compile the source code and create testable artifacts."
+env = { RUSTFLAGS = "-Cinstrument-coverage" }
+
+[tasks.test]
+args = ["test", "--tests", "--workspace", "--locked", "--all-features"]
+command = "cargo"
+dependencies = ["build-coverage"]
+description = "Run all unit tests."
+env = { LLVM_PROFILE_FILE = "default.profraw", RUST_BACKTRACE = 1 }
+install_crate = { rustup_component_name = "llvm-tools-preview" }
+
+[tasks.test-coverage]
+dependencies = ["test"]
+install_crate = { crate_name = "grcov" }
+script = '''
+grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "*cargo*" -o coverage.lcov
+'''

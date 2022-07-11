@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  workflow_call:
+
+  push:
+    branches: [ main ]
+
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-rust:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          override: true
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Build rust
+        run: cargo make build

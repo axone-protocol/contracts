@@ -1,0 +1,196 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main ]
+
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  lint-commits:
+    runs-on: ubuntu-20.04
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check commits
+        uses: wagoid/commitlint-github-action@v5
+
+  lint-markdown:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Lint markdown files
+        uses: avto-dev/markdown-lint@v1.5.0
+        with:
+          args: "**/*.md"
+
+  lint-yaml:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Lint yaml files
+        uses: ibiqlik/action-yamllint@v3.1.0
+
+  lint-cargo-toml:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Find changed rust files
+        id: changed-rust-cargo
+        uses: tj-actions/changed-files@v23
+        with:
+          files: |
+            Cargo.toml
+
+      - name: Setup rust
+        if: steps.changed-rust-cargo.outputs.any_changed == 'true'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          override: true
+
+      - name: Install cargo-toml-lint
+        if: steps.changed-rust-cargo.outputs.any_changed == 'true'
+        run: |
+          cargo install --force cargo-toml-lint
+
+      - name: Lint toml files
+        if: steps.changed-rust-cargo.outputs.any_changed == 'true'
+        run: |
+          cargo-toml-lint Cargo.toml
+
+  lint-rust:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Find changed rust files
+        id: changed-rust-files
+        uses: tj-actions/changed-files@v23
+        with:
+          files: |
+            **/*.rs
+            Cargo.lock
+            Cargo.toml
+
+      - name: Setup rust
+        if: steps.changed-rust-files.outputs.any_changed == 'true'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          override: true
+
+      - name: Install cargo make
+        if: steps.changed-rust-files.outputs.any_changed == 'true'
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Lint rust code
+        if: steps.changed-rust-files.outputs.any_changed == 'true'
+        run: |
+          cargo make lint-rust
+
+  lint-rust-format:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Setup rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          override: true
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Check rust format
+        run: |
+          cargo make lint-rust-format
+
+  lint-toml:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          override: true
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Lint toml
+        run: |
+          cargo make lint-toml
+
+  lint-branch-name:
+    runs-on: ubuntu-20.04
+    if: github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened')
+    steps:
+      - name: Check branch name conventions
+        uses: AlbertHernandez/branch-name-action@v1.0.2
+        with:
+          branch_pattern: "feat|fix|build|ci|docs|style|refactor|perf|test|chore"
+          comment_for_invalid_branch_name: |
+            🙋‍ Oops! This branch name does not follow the naming convention.
+
+            <hr>
+
+            Please, see the following branch naming convention:
+
+            Branch naming convention | Purpose
+            ------------------------ | -------
+            `feat/**`                | A new feature
+            `fix/**`                 | A bug fix
+            `build/**`               | Changes that affect the build system (npm, mavem, poetry)
+            `ci/**`                  | Changes to the CI configuration
+            `docs/**`                | Documentation only changes
+            `style/**`               | Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+            `refactor/**`            | Code changes that neither fixe a bug nor adds a feature
+            `perf/**`                | Code changes that improve performance
+            `test/**`                | When adding tests or correcting existing tests
+            `chore/**`               | Other changes that don't modify source
+          fail_if_invalid_branch_name: "true"
+          ignore_branch_pattern: "main"
+      - name: Close non-compliant branch
+        if: ${{ failure() }}
+        uses: codelytv/no-pull-requests@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.OKP4_TOKEN }}
+          message: 🙅 Closing the PR because it does not respect naming conventions. Edit the branch name and submit a new PR.
+    env:
+      GITHUB_TOKEN: ${{ secrets.OKP4_TOKEN }}

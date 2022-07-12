@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-rust:
+  build-wasm:
     runs-on: ubuntu-20.04
     steps:
       - name: Check out repository
@@ -41,5 +41,5 @@ jobs:
       - name: Install cargo make
         uses: davidB/rust-cargo-make@v1
 
-      - name: Build rust
-        run: cargo make build
+      - name: Build wasm
+        run: cargo make wasm

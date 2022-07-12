@@ -1,8 +1,8 @@
 [package]
-name = "cw-template"
-version = "0.1.0"
 authors = ["OKP4"]
 edition = "2021"
+name = "cw-template"
+version = "0.1.0"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -16,15 +16,15 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [profile.release]
-opt-level = 3
-debug = false
-rpath = false
-lto = true
-debug-assertions = false
 codegen-units = 1
-panic = 'abort'
+debug = false
+debug-assertions = false
 incremental = false
+lto = true
+opt-level = 3
 overflow-checks = true
+panic = 'abort'
+rpath = false
 
 [features]
 # for more explicit tests, cargo test --features=backtraces

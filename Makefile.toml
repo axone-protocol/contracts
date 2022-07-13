@@ -78,9 +78,15 @@ script = '''
 grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "*cargo*" -o coverage.lcov
 '''
 
+[tasks.install_wasm]
+script = '''
+rustup target add wasm32-unknown-unknown
+'''
+
 [tasks.wasm]
 args = ["build", "--release", "--target", "wasm32-unknown-unknown"]
 command = "cargo"
+dependencies = ["install_wasm"]
 
 [config]
 default_to_workspace = false

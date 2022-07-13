@@ -88,5 +88,16 @@ args = ["build", "--release", "--target", "wasm32-unknown-unknown"]
 command = "cargo"
 dependencies = ["install_wasm"]
 
+[tasks.check_contracts]
+dependencies = ["wasm"]
+script = '''
+cargo install --debug --version 1.0.0 --features iterator --example check_contract -- cosmwasm-vm
+for W in ./target/wasm32-unknown-unknown/release/*.wasm
+do
+  echo -n "Checking `basename $W`... "
+  check_contract $W
+done
+'''
+
 [config]
 default_to_workspace = false

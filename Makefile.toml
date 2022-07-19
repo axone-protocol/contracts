@@ -40,7 +40,9 @@ description = "Format toml file"
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
 
 [tasks.lint]
+condition = { channels = ["nightly"] }
 dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]
+toolchain = "nightly"
 
 [tasks.format]
 dependencies = ["format-rust", "format-toml"]
@@ -52,6 +54,8 @@ command = "cargo"
 [tasks.build]
 args = ["build", "--release", "--locked"]
 command = "cargo"
+condition = { channels = ["nightly"] }
+toolchain = "nightly"
 
 [tasks.build-coverage]
 args = ["build"]
@@ -60,7 +64,7 @@ description = "Compile the source code and create testable artifacts."
 env = { RUSTFLAGS = "-Cinstrument-coverage" }
 
 [tasks.test]
-args = ["test", "--tests", "--workspace", "--locked", "--all-features"]
+args = ["test", "--lib", "--tests", "--workspace", "--locked", "--all-features"]
 command = "cargo"
 dependencies = ["build-coverage"]
 description = "Run all unit tests."
@@ -73,3 +77,27 @@ install_crate = { crate_name = "grcov" }
 script = '''
 grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "*cargo*" -o coverage.lcov
 '''
+
+[tasks.install_wasm]
+script = '''
+rustup target add wasm32-unknown-unknown
+'''
+
+[tasks.wasm]
+args = ["build", "--release", "--target", "wasm32-unknown-unknown"]
+command = "cargo"
+dependencies = ["install_wasm"]
+
+[tasks.check_contracts]
+dependencies = ["wasm"]
+script = '''
+cargo install --debug --version 1.0.0 --features iterator --example check_contract -- cosmwasm-vm
+for W in ./target/wasm32-unknown-unknown/release/*.wasm
+do
+  echo -n "Checking `basename $W`... "
+  check_contract $W
+done
+'''
+
+[config]
+default_to_workspace = false

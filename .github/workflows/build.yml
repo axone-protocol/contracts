@@ -67,8 +67,16 @@ jobs:
             "homepage": "https://github.com/okp4/contracts#readme",
             "devDependencies": {
               "@size-limit/preset-app": "^7.0.8"
-            }
-          }  
+            },
+            "size-limit": [
+              {
+                "path": "target/wasm32-unknown-unknown/release/cw_template.wasm",
+                "running": false,
+                "brotli": false,
+                "gzip": false
+              }
+            ]
+          }
           EOF
 
       - name: Report wasm size limit

@@ -87,11 +87,12 @@ rustup target add wasm32-unknown-unknown
 args = ["build", "--release", "--target", "wasm32-unknown-unknown"]
 command = "cargo"
 dependencies = ["install_wasm"]
+env = { RUSTFLAGS = "-C link-arg=-s" }
 
 [tasks.check_contracts]
 dependencies = ["wasm"]
 script = '''
-cargo install --debug --version 1.0.0 --features iterator --example check_contract -- cosmwasm-vm
+if [[ ! -e ~/.cargo/bin/check_contract ]]; then cargo install --debug --version 1.0.0 --features iterator --force --example check_contract -- cosmwasm-vm ; fi
 for W in ./target/wasm32-unknown-unknown/release/*.wasm
 do
   echo -n "Checking `basename $W`... "

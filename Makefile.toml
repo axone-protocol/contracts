@@ -92,7 +92,13 @@ env = { RUSTFLAGS = "-C link-arg=-s" }
 [tasks.check_contracts]
 dependencies = ["wasm"]
 script = '''
-if [[ ! -f "$HOME/.cargo/bin/check_contract" ]]; then
+echo "📦 Installed cargo binaries with HOME: "
+ls -lah $HOME/.cargo/bin
+echo "📦 Installed cargo binaries with ~: "
+ls -lah ~/.cargo/bin
+CHECK_CONTRACT_PATH=$HOME/.cargo/bin/check_contract
+echo "🧐 Check if check_contract is already installed in $CHECK_CONTRACT_PATH"
+if [[ ! -e "$CHECK_CONTRACT_PATH" ]]; then
   echo "🚚 Installing check_contract binary"
   cargo install --debug --version 1.0.0 --features iterator --force --example check_contract -- cosmwasm-vm
 fi

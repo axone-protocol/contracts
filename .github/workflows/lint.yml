@@ -159,6 +159,7 @@ jobs:
 
   report-wasm-size:
     runs-on: ubuntu-20.04
+    if: github.event_name == 'pull_request'
     steps:
       - name: Check out repository
         uses: actions/checkout@v3

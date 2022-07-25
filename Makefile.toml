@@ -92,10 +92,14 @@ env = { RUSTFLAGS = "-C link-arg=-s" }
 [tasks.check_contracts]
 dependencies = ["wasm"]
 script = '''
-if [[ ! -e ~/.cargo/bin/check_contract ]]; then cargo install --debug --version 1.0.0 --features iterator --force --example check_contract -- cosmwasm-vm ; fi
+if [[ ! -f "$HOME/.cargo/bin/check_contract" ]]; then
+  echo "🚚 Installing check_contract binary"
+  cargo install --debug --version 1.0.0 --features iterator --force --example check_contract -- cosmwasm-vm
+fi
+
 for W in ./target/wasm32-unknown-unknown/release/*.wasm
 do
-  echo -n "Checking `basename $W`... "
+  echo -n "🔎 Checking `basename $W`... "
   check_contract $W
 done
 '''

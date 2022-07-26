@@ -221,6 +221,7 @@ jobs:
         uses: davidB/rust-cargo-make@v1
 
       - name: Test rust code
+        shell: bash
         run: cargo make check_contracts
 
   lint-branch-name:

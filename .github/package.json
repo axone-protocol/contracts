@@ -6,13 +6,5 @@
     },
     "devDependencies": {
         "@size-limit/preset-app": "^7.0.8"
-    },
-    "size-limit": [
-        {
-            "path": "target/wasm32-unknown-unknown/release/cw_template.wasm",
-            "running": false,
-            "brotli": false,
-            "gzip": false
-        }
-    ]
+    }
 }

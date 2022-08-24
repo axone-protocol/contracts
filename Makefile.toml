@@ -40,9 +40,7 @@ description = "Format toml file"
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
 
 [tasks.lint]
-condition = { channels = ["nightly"] }
 dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]
-toolchain = "nightly"
 
 [tasks.format]
 dependencies = ["format-rust", "format-toml"]
@@ -54,8 +52,6 @@ command = "cargo"
 [tasks.build]
 args = ["build", "--release", "--locked"]
 command = "cargo"
-condition = { channels = ["nightly"] }
-toolchain = "nightly"
 
 [tasks.build-coverage]
 args = ["build"]

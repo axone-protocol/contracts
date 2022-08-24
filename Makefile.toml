@@ -16,7 +16,6 @@ args = [
   "--workspace",
   "--locked",
   "--all-targets",
-  "--all-features",
   "--",
   "-D",
   "clippy::all",
@@ -40,9 +39,7 @@ description = "Format toml file"
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
 
 [tasks.lint]
-condition = { channels = ["nightly"] }
 dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]
-toolchain = "nightly"
 
 [tasks.format]
 dependencies = ["format-rust", "format-toml"]
@@ -54,8 +51,6 @@ command = "cargo"
 [tasks.build]
 args = ["build", "--release", "--locked"]
 command = "cargo"
-condition = { channels = ["nightly"] }
-toolchain = "nightly"
 
 [tasks.build-coverage]
 args = ["build"]
@@ -64,7 +59,7 @@ description = "Compile the source code and create testable artifacts."
 env = { RUSTFLAGS = "-Cinstrument-coverage" }
 
 [tasks.test]
-args = ["test", "--lib", "--tests", "--workspace", "--locked", "--all-features"]
+args = ["test", "--lib", "--tests", "--workspace", "--locked"]
 command = "cargo"
 dependencies = ["build-coverage"]
 description = "Run all unit tests."
@@ -91,20 +86,12 @@ env = { RUSTFLAGS = "-C link-arg=-s" }
 
 [tasks.check_contracts]
 dependencies = ["wasm"]
+install_crate = { crate_name = "cw-check-contract" }
 script = '''
-CHECK_CONTRACT_PATH=$HOME/.cargo/bin/check_contract
-echo "🧐 Check if check_contract is already installed in $CHECK_CONTRACT_PATH"
-if ! ls $CHECK_CONTRACT_PATH* 1> /dev/null 2>&1; then
-  echo "🚚 Installing check_contract binary"
-  cargo install --debug --version 1.0.0 --features iterator --force --example check_contract -- cosmwasm-vm
-else
-  echo "✅ Using $(check_contract --version)"
-fi
-
 for W in ./target/wasm32-unknown-unknown/release/*.wasm
 do
   echo -n "🔎 Checking `basename $W`... "
-  check_contract $W
+  cw-check-contract $W
 done
 '''
 

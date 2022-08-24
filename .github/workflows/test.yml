@@ -34,7 +34,7 @@ jobs:
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: 1.63
           default: true
           override: true
 

@@ -16,7 +16,6 @@ args = [
   "--workspace",
   "--locked",
   "--all-targets",
-  "--all-features",
   "--",
   "-D",
   "clippy::all",
@@ -60,7 +59,7 @@ description = "Compile the source code and create testable artifacts."
 env = { RUSTFLAGS = "-Cinstrument-coverage" }
 
 [tasks.test]
-args = ["test", "--lib", "--tests", "--workspace", "--locked", "--all-features"]
+args = ["test", "--lib", "--tests", "--workspace", "--locked"]
 command = "cargo"
 dependencies = ["build-coverage"]
 description = "Run all unit tests."

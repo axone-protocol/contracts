@@ -31,3 +31,34 @@ The project is structured around a set of Rust workspaces, each defining a smart
 │       └── src
 └─── Cargo.toml
 ```
+
+## 🏗 Build
+
+### Prerequisites
+
+Be sure you have [Rust](https://www.rust-lang.org/tools/install) properly installed with [cargo-make](https://github.com/sagiegurari/cargo-make).
+
+```sh
+$ cargo make --version
+cargo-make 0.35.13
+```
+
+(your version may differ and that is fine)
+
+### Compiling Smart Contracts to Wasm
+
+To compile the Smart Contracts to Wasm, just invoke the `wasm` goal of the makefile:
+
+```sh
+cargo make wasm
+```
+
+This will install the rust Wasm toolchain, if not already done, and start the process for compiling the Smart Contracts to Wasm.
+
+### Test Smart Contracts
+
+The Smart Contracts are under unit testing. The tests can be launched with the following invocation:
+
+```sh
+cargo make test-coverage
+```

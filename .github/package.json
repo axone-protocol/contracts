@@ -1,10 +1,10 @@
 {
-    "name": "contracts",
-    "version": "1.0.0",
-    "scripts": {
-        "build": "cargo make wasm"
-    },
-    "devDependencies": {
-        "@size-limit/preset-app": "^7.0.8"
-    }
+  "name": "contracts",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cargo make wasm"
+  },
+  "devDependencies": {
+    "@size-limit/preset-app": "^7.0.8"
+  }
 }

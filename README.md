@@ -62,3 +62,12 @@ The Smart Contracts are under unit testing. The tests can be launched with the f
 ```sh
 cargo make test-coverage
 ```
+
+## You want to get involved? 😍
+
+So you want to contribute? Great! ❤️ We appreciate any help you're willing to give. Don't hesitate to open issues and/or submit pull requests.
+
+Please check out OKP4 health files:
+
+- [Contributing](https://github.com/okp4/.github/blob/main/CONTRIBUTING.md)
+- [Code of conduct](https://github.com/okp4/.github/blob/main/CODE_OF_CONDUCT.md)

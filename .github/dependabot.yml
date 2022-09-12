@@ -5,4 +5,10 @@ updates:
     schedule:
       interval: "daily"
     reviewers:
-      - "maintainers"
+      - amimart
+      - bdeneux
+      - ccamel
+    assignees:
+      - amimart
+      - bdeneux      
+      - ccamel

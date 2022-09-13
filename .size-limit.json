@@ -1,8 +1,8 @@
 [
-    {
-        "path": "target/wasm32-unknown-unknown/release/cw_template.wasm",
-        "running": false,
-        "brotli": false,
-        "gzip": false
-    }
+  {
+    "path": "target/wasm32-unknown-unknown/release/cw_template.wasm",
+    "running": false,
+    "brotli": false,
+    "gzip": false
+  }
 ]

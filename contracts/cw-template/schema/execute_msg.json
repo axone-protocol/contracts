@@ -4,9 +4,7 @@
   "anyOf": [
     {
       "type": "object",
-      "required": [
-        "increment"
-      ],
+      "required": ["increment"],
       "properties": {
         "increment": {
           "type": "object"
@@ -16,15 +14,11 @@
     },
     {
       "type": "object",
-      "required": [
-        "reset"
-      ],
+      "required": ["reset"],
       "properties": {
         "reset": {
           "type": "object",
-          "required": [
-            "count"
-          ],
+          "required": ["count"],
           "properties": {
             "count": {
               "type": "integer",

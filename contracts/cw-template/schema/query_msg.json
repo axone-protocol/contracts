@@ -4,9 +4,7 @@
   "anyOf": [
     {
       "type": "object",
-      "required": [
-        "get_count"
-      ],
+      "required": ["get_count"],
       "properties": {
         "get_count": {
           "type": "object"

@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint-commits:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Check out repository
@@ -23,7 +23,7 @@ jobs:
         uses: wagoid/commitlint-github-action@v5
 
   lint-markdown:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -34,7 +34,7 @@ jobs:
           args: "**/*.md"
 
   lint-yaml:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -43,7 +43,7 @@ jobs:
         uses: ibiqlik/action-yamllint@v3.1.0
 
   lint-cargo-toml:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -74,7 +74,7 @@ jobs:
           cargo-toml-lint Cargo.toml
 
   lint-rust:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
       - name: Check out repository
@@ -107,7 +107,7 @@ jobs:
           cargo make lint-rust
 
   lint-rust-format:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -127,7 +127,7 @@ jobs:
           cargo make lint-rust-format
 
   lint-toml:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -158,7 +158,7 @@ jobs:
           cargo make lint-toml
 
   report-wasm-size:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event_name == 'pull_request'
     steps:
       - name: Check out repository
@@ -195,7 +195,7 @@ jobs:
           github_token: ${{ secrets.OKP4_TOKEN }}
 
   check_contracts:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -225,7 +225,7 @@ jobs:
         run: cargo make check_contracts
 
   lint-branch-name:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened')
     steps:
       - name: Check branch name conventions

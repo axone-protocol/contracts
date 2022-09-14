@@ -241,7 +241,7 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-multi-test",
- "cw-storage-plus 0.14.0",
+ "cw-storage-plus 0.15.0",
  "cw2 0.15.0",
  "schemars",
  "serde",

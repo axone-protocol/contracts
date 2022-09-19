@@ -86,12 +86,12 @@ env = { RUSTFLAGS = "-C link-arg=-s" }
 
 [tasks.check_contracts]
 dependencies = ["wasm"]
-install_crate = { crate_name = "cw-check-contract" }
+install_crate = { crate_name = "cosmwasm-check" }
 script = '''
 for W in ./target/wasm32-unknown-unknown/release/*.wasm
 do
   echo -n "🔎 Checking `basename $W`... "
-  cw-check-contract $W
+  cosmwasm-check $W
 done
 '''
 

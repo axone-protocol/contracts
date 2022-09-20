@@ -88,11 +88,7 @@ env = { RUSTFLAGS = "-C link-arg=-s" }
 dependencies = ["wasm"]
 install_crate = { crate_name = "cosmwasm-check" }
 script = '''
-for W in ./target/wasm32-unknown-unknown/release/*.wasm
-do
-  echo -n "🔎 Checking `basename $W`... "
-  cosmwasm-check $W
-done
+cosmwasm-check ./target/wasm32-unknown-unknown/release/*.wasm
 '''
 
 [config]

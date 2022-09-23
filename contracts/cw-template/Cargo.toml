@@ -26,6 +26,19 @@ overflow-checks = true
 panic = 'abort'
 rpath = false
 
+[dependencies]
+cosmwasm-std.workspace = true
+cosmwasm-storage.workspace = true
+cw-storage-plus.workspace = true
+cw2.workspace = true
+schemars.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+cosmwasm-schema.workspace = true
+cw-multi-test.workspace = true
+
 [features]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
@@ -39,15 +52,4 @@ optimize = """docker run --rm -v "$(pwd)":/code \
   cosmwasm/rust-optimizer:0.12.6
 """
 
-[dependencies]
-cosmwasm-std = "1.1.0"
-cosmwasm-storage = "1.1.0"
-cw-storage-plus = "0.15.0"
-cw2 = "0.15.0"
-schemars = "0.8.8"
-serde = { version = "1.0.144", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.35" }
 
-[dev-dependencies]
-cosmwasm-schema = "1.1.0"
-cw-multi-test = "0.15.0"

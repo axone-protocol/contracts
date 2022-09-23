@@ -34,7 +34,7 @@ jobs:
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.63
+          toolchain: 1.64
           default: true
           override: true
 

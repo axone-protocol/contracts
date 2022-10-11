@@ -5,7 +5,7 @@ members = ["contracts/*"]
 cosmwasm-std = "1.1.4"
 cosmwasm-storage = "1.1.4"
 cw-storage-plus = "0.15.1"
-cw2 = "0.15.0"
+cw2 = "0.15.1"
 schemars = "0.8.11"
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.37" }

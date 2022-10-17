@@ -4,11 +4,11 @@ use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, GetCountResponse, InstantiateMsg, QueryMsg};
 use crate::state::{State, STATE};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw-template";
+const CONTRACT_NAME: &str = "crates.io:template-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -39,41 +39,49 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Increment {} => try_increment(deps),
-        ExecuteMsg::Reset { count } => try_reset(deps, info, count),
+        ExecuteMsg::Increment {} => execute::increment(deps),
+        ExecuteMsg::Reset { count } => execute::reset(deps, info, count),
     }
 }
 
-pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
-    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        state.count += 1;
-        Ok(state)
-    })?;
+pub mod execute {
+    use super::*;
 
-    Ok(Response::new().add_attribute("method", "try_increment"))
-}
+    pub fn increment(deps: DepsMut) -> Result<Response, ContractError> {
+        STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
+            state.count += 1;
+            Ok(state)
+        })?;
 
-pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
-    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        if info.sender != state.owner {
-            return Err(ContractError::Unauthorized {});
-        }
-        state.count = count;
-        Ok(state)
-    })?;
-    Ok(Response::new().add_attribute("method", "reset"))
+        Ok(Response::new().add_attribute("action", "increment"))
+    }
+
+    pub fn reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
+        STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
+            if info.sender != state.owner {
+                return Err(ContractError::Unauthorized {});
+            }
+            state.count = count;
+            Ok(state)
+        })?;
+        Ok(Response::new().add_attribute("action", "reset"))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
+        QueryMsg::GetCount {} => to_binary(&query::count(deps)?),
     }
 }
 
-fn query_count(deps: Deps) -> StdResult<CountResponse> {
-    let state = STATE.load(deps.storage)?;
-    Ok(CountResponse { count: state.count })
+pub mod query {
+    use super::*;
+
+    pub fn count(deps: Deps) -> StdResult<GetCountResponse> {
+        let state = STATE.load(deps.storage)?;
+        Ok(GetCountResponse { count: state.count })
+    }
 }
 
 #[cfg(test)]
@@ -95,7 +103,7 @@ mod tests {
 
         // it worked, let's query the state
         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: CountResponse = from_binary(&res).unwrap();
+        let value: GetCountResponse = from_binary(&res).unwrap();
         assert_eq!(17, value.count);
     }
 
@@ -114,7 +122,7 @@ mod tests {
 
         // should increase counter by 1
         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: CountResponse = from_binary(&res).unwrap();
+        let value: GetCountResponse = from_binary(&res).unwrap();
         assert_eq!(18, value.count);
     }
 
@@ -142,7 +150,7 @@ mod tests {
 
         // should now be 5
         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: CountResponse = from_binary(&res).unwrap();
+        let value: GetCountResponse = from_binary(&res).unwrap();
         assert_eq!(5, value.count);
     }
 }

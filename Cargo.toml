@@ -9,5 +9,5 @@ cw2 = "0.15.1"
 schemars = "0.8.11"
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.37" }
-cosmwasm-schema = "1.1.4"
+cosmwasm-schema = "1.1.3"
 cw-multi-test = "0.15.1"

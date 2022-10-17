@@ -1,6 +1,6 @@
 [package]
 authors = ["OKP4"]
-edition = "2022"
+edition = "2021"
 name = "cw-template"
 version = "0.2.0"
 

@@ -84,6 +84,10 @@ command = "cargo"
 dependencies = ["install_wasm"]
 env = { RUSTFLAGS = "-C link-arg=-s" }
 
+[tasks.schema]
+args = ["run", "--bin", "schema"]
+command = "cargo"
+
 [tasks.check_contracts]
 dependencies = ["wasm"]
 install_crate = { crate_name = "cosmwasm-check" }

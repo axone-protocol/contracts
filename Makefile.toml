@@ -79,7 +79,7 @@ rustup target add wasm32-unknown-unknown
 '''
 
 [tasks.wasm]
-args = ["build", "--release", "--target", "wasm32-unknown-unknown"]
+args = ["build", "--release", "--lib", "--target", "wasm32-unknown-unknown"]
 command = "cargo"
 dependencies = ["install_wasm"]
 env = { RUSTFLAGS = "-C link-arg=-s" }

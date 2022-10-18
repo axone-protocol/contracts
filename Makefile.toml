@@ -85,8 +85,7 @@ dependencies = ["install_wasm"]
 env = { RUSTFLAGS = "-C link-arg=-s" }
 
 [tasks.schema]
-args = ["run", "--bin", "schema"]
-command = "cargo"
+workspace = true
 
 [tasks.check_contracts]
 dependencies = ["wasm"]

@@ -98,6 +98,7 @@ cosmwasm-check ./target/wasm32-unknown-unknown/release/*.wasm
 dependencies = ["schema"]
 script = '''
 DOCS_FOLDER=docs
+SCHEMA_FOLDER=schema
 echo "🔎 Checking jsonschema2md installed..."
 if ! command -v jsonschema2md &> /dev/null
 then
@@ -107,9 +108,15 @@ then
     exit
 fi
 
+mkdir -p $SCHEMA_FOLDER
+find contracts -type f -name '*.json' \
+    -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
+
 echo "📚 Generating documentation..."
 jsonschema2md -d schema -o $DOCS_FOLDER --schema-extension json --schema-out $DOCS_FOLDER/schema
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
+
+rm -rf $SCHEMA_FOLDER
 '''
 
 [config]

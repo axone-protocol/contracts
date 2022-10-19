@@ -12,11 +12,11 @@
 
 *   [GetCountResponse](./cw-template-responses-getcountresponse.md "We define a custom struct for each query response") – `undefined#/responses/get_count`
 
-*   [InstantiateMsg](./cw-template-instantiatemsg.md "Instantiate CW-Template") – `undefined#/instantiate`
+*   [Increment](./cw-template-executemsg-oneof-increment.md "Execute an increment message") – `undefined#/execute/oneOf/0`
 
-*   [Untitled object in cw-template](./cw-template-executemsg-oneof-0.md) – `undefined#/execute/oneOf/0`
+*   [InstantiateMsg](./cw-template-instantiatemsg.md "Instantiate messages") – `undefined#/instantiate`
 
-*   [Untitled object in cw-template](./cw-template-executemsg-oneof-0-properties-increment.md) – `undefined#/execute/oneOf/0/properties/increment`
+*   [Untitled object in cw-template](./cw-template-executemsg-oneof-increment-properties-increment.md) – `undefined#/execute/oneOf/0/properties/increment`
 
 *   [Untitled object in cw-template](./cw-template-executemsg-oneof-1.md) – `undefined#/execute/oneOf/1`
 

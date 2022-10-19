@@ -16,6 +16,6 @@ merged type ([ExecuteMsg](cw-template-executemsg.md))
 
 one (and only one) of
 
-*   [Untitled object in cw-template](cw-template-executemsg-oneof-0.md "check type definition")
+*   [Increment](cw-template-executemsg-oneof-increment.md "check type definition")
 
 *   [Untitled object in cw-template](cw-template-executemsg-oneof-1.md "check type definition")

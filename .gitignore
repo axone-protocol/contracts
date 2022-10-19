@@ -4,4 +4,4 @@ target/
 .DS_Store
 *.profraw
 *.lcov
-schema/
+contracts/*/schema/

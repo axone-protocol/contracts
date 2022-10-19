@@ -105,7 +105,7 @@ then
     echo "\n❌   jsonschema2md could not be found"
     echo "  Consider installing jsonschema2md to generate documentation.\n"
     echo "＞ \`npm install -g @adobe/jsonschema2md\`\n\n"
-    exit
+    exit 1
 fi
 
 mkdir -p $SCHEMA_FOLDER

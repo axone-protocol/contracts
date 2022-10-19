@@ -16,11 +16,11 @@
 
 *   [InstantiateMsg](./cw-template-instantiatemsg.md "Instantiate messages") – `undefined#/instantiate`
 
+*   [Reset](./cw-template-executemsg-oneof-reset.md "Reset counter to the specified value") – `undefined#/execute/oneOf/1`
+
 *   [Untitled object in cw-template](./cw-template-executemsg-oneof-increment-properties-increment.md) – `undefined#/execute/oneOf/0/properties/increment`
 
-*   [Untitled object in cw-template](./cw-template-executemsg-oneof-1.md) – `undefined#/execute/oneOf/1`
-
-*   [Untitled object in cw-template](./cw-template-executemsg-oneof-1-properties-reset.md) – `undefined#/execute/oneOf/1/properties/reset`
+*   [Untitled object in cw-template](./cw-template-executemsg-oneof-reset-properties-reset.md) – `undefined#/execute/oneOf/1/properties/reset`
 
 *   [Untitled object in cw-template](./cw-template-querymsg-oneof-getcount-properties-get_count.md) – `undefined#/query/oneOf/0/properties/get_count`
 

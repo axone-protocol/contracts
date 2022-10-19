@@ -12,13 +12,13 @@ undefined#/execute/oneOf/1/properties/reset
 
 ## reset Type
 
-`object` ([Details](cw-template-executemsg-oneof-1-properties-reset.md))
+`object` ([Details](cw-template-executemsg-oneof-reset-properties-reset.md))
 
 # reset Properties
 
-| Property        | Type      | Required | Nullable       | Defined by                                                                                                                                        |
-| :-------------- | :-------- | :------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [count](#count) | `integer` | Required | cannot be null | [cw-template](cw-template-executemsg-oneof-1-properties-reset-properties-count.md "undefined#/execute/oneOf/1/properties/reset/properties/count") |
+| Property        | Type      | Required | Nullable       | Defined by                                                                                                                                            |
+| :-------------- | :-------- | :------- | :------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [count](#count) | `integer` | Required | cannot be null | [cw-template](cw-template-executemsg-oneof-reset-properties-reset-properties-count.md "undefined#/execute/oneOf/1/properties/reset/properties/count") |
 
 ## count
 
@@ -32,7 +32,7 @@ undefined#/execute/oneOf/1/properties/reset
 
 *   cannot be null
 
-*   defined in: [cw-template](cw-template-executemsg-oneof-1-properties-reset-properties-count.md "undefined#/execute/oneOf/1/properties/reset/properties/count")
+*   defined in: [cw-template](cw-template-executemsg-oneof-reset-properties-reset-properties-count.md "undefined#/execute/oneOf/1/properties/reset/properties/count")
 
 ### count Type
 

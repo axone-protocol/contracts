@@ -113,6 +113,7 @@ find contracts -type f -name '*.json' \
     -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
 
 echo "📚 Generating documentation..."
+rm -rf $DOCS_FOLDER
 jsonschema2md -d schema -o $DOCS_FOLDER --schema-extension json --schema-out $DOCS_FOLDER/schema
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 

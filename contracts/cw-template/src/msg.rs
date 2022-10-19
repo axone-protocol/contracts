@@ -9,7 +9,11 @@ pub struct InstantiateMsg {
 /// Execute messages
 #[cw_serde]
 pub enum ExecuteMsg {
+    /// # Increment
+    /// Execute an increment message.
     Increment {},
+    /// # Reset
+    /// Reset counter to the specified value.
     Reset { count: i32 },
 }
 

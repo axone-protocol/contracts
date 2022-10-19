@@ -211,6 +211,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
@@ -221,7 +222,7 @@ jobs:
       - name: Install cargo make
         uses: davidB/rust-cargo-make@v1
 
-      - name: Test rust code
+      - name: Check contracts
         shell: bash
         run: cargo make check_contracts
 
@@ -232,7 +233,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v2
         with:
           node-version: 16
 

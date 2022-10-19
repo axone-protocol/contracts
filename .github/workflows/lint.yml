@@ -280,7 +280,7 @@ jobs:
         run: |
           echo "❌ Documentation files has been updated."
           echo "  Changed files : ${{ steps.verify-changed-files.outputs.changed_files }}"
-          echo "Please generate docs using `cargo make generate_docs` then commit this new documentation."
+          echo "Please generate docs using \`cargo make generate_docs\` then commit this new documentation."
           exit 1
 
   lint-branch-name:

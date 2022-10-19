@@ -99,14 +99,14 @@ dependencies = ["schema"]
 script = '''
 DOCS_FOLDER=docs
 SCHEMA_FOLDER=schema
-#echo "🔎 Checking jsonschema2md installed..."
-#if ! command -v jsonschema2md &> /dev/null
-#then
-#    echo "\n❌   jsonschema2md could not be found"
-#    echo "  Consider installing jsonschema2md to generate documentation.\n"
-#    echo "＞ \`npm install -g @adobe/jsonschema2md\`\n\n"
-#    exit 1
-#fi
+echo "🔎 Checking jsonschema2md installed..."
+if ! which jsonschema2md >/dev/null;
+then
+    echo "\n❌   jsonschema2md could not be found"
+    echo "  Consider installing jsonschema2md to generate documentation.\n"
+    echo "＞ \`npm install -g @adobe/jsonschema2md\`\n\n"
+    exit 1
+fi
 
 mkdir -p $SCHEMA_FOLDER
 find contracts -type f -name '*.json' \

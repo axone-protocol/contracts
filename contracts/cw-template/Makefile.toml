@@ -1,0 +1,3 @@
+[tasks.schema]
+args = ["run", "--bin", "schema"]
+command = "cargo"

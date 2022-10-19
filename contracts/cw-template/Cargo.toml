@@ -2,7 +2,7 @@
 authors = ["OKP4"]
 edition = "2021"
 name = "cw-template"
-version = "0.1.0"
+version = "0.2.0"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -27,6 +27,7 @@ panic = 'abort'
 rpath = false
 
 [dependencies]
+cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
@@ -36,7 +37,6 @@ serde.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-cosmwasm-schema.workspace = true
 cw-multi-test.workspace = true
 
 [features]
@@ -51,5 +51,3 @@ optimize = """docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
   cosmwasm/rust-optimizer:0.12.6
 """
-
-

@@ -32,6 +32,7 @@ jobs:
         uses: avto-dev/markdown-lint@v1.5.0
         with:
           args: "**/*.md"
+          ignore: "docs/**/*.md"
 
   lint-yaml:
     runs-on: ubuntu-22.04
@@ -210,6 +211,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
@@ -220,9 +222,66 @@ jobs:
       - name: Install cargo make
         uses: davidB/rust-cargo-make@v1
 
-      - name: Test rust code
+      - name: Check contracts
         shell: bash
         run: cargo make check_contracts
+
+  check_docs_updated:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - name: Installing jsonschema2md
+        run: |
+          yarn global add @adobe/jsonschema2md
+          echo "$(yarn global bin)" >> $GITHUB_PATH
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: Setup rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.64
+          default: true
+          override: true
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Generate schema
+        run: cargo make schema
+
+      - name: Generate documentations
+        run: cargo make generate_docs
+
+      - name: Verify changed docs files
+        uses: tj-actions/verify-changed-files@v12
+        id: verify-changed-docs-files
+        with:
+          files: |
+            docs
+
+      - name: Run step only when files change.
+        if: contains(steps.verify-changed-docs-files.outputs.changed_files, 'docs')
+        run: |
+          echo "❌ Documentation files has been updated."
+          echo "  Changed files : ${{ steps.verify-changed-docs-files.outputs.changed_files }}"
+          echo "Please generate docs using \`cargo make generate_docs\` then commit this new documentation."
+          exit 1
 
   lint-branch-name:
     runs-on: ubuntu-22.04

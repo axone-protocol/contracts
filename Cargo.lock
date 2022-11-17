@@ -92,9 +92,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-schema"
-version = "1.1.5"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a227cfeb9a7152b26a354b1c990e930e962f75fd68f57ab5ae2ef888c8524292"
+checksum = "98c025d629589ca5d43fb8ff06decc387a4d01ead14f6b505300777fc6f01e1d"
 dependencies = [
  "cosmwasm-schema-derive",
  "schemars",
@@ -105,9 +105,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-schema-derive"
-version = "1.1.5"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3626cb42eef870de67f791e873711255325224d86f281bf628c42abd295f3a14"
+checksum = "6f09a65d22861a24a1b30eab6aa6759333723629bc2cb568cd22569745e1dcb2"
 dependencies = [
  "proc-macro2",
  "quote",

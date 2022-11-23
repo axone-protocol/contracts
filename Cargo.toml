@@ -3,7 +3,7 @@ members = ["contracts/*"]
 
 [workspace.dependencies]
 cosmwasm-schema = "1.1.5"
-cosmwasm-std = "1.1.5"
+cosmwasm-std = "1.1.8"
 cosmwasm-storage = "1.1.5"
 cw-multi-test = "0.15.1"
 cw-storage-plus = "0.15.1"

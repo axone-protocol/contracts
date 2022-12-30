@@ -2,13 +2,13 @@
 args = ["fmt"]
 command = "cargo"
 description = "Format rust sources files."
-install_crate = { rustup_component_name = "rustfmt" }
+dependencies = ["intall-rustfmt"]
 
 [tasks.lint-rust-format]
 args = ["fmt", "--all", "--", "--check"]
 command = "cargo"
 description = "Check format of sources files."
-install_crate = { rustup_component_name = "rustfmt" }
+dependencies = ["intall-rustfmt"]
 
 [tasks.lint-rust]
 args = [
@@ -24,19 +24,19 @@ args = [
 ]
 command = "cargo"
 description = "Check lint of all sources files."
-install_crate = { rustup_component_name = "clippy" }
+dependencies = ["install-clippy"]
 
 [tasks.lint-toml]
 args = ["lint"]
 command = "taplo"
 description = "Check lint of all toml files."
-install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
+dependencies = ["install-taplo-cli"]
 
 [tasks.format-toml]
 args = ["fmt"]
 command = "taplo"
 description = "Format toml file"
-install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
+dependencies = ["install-taplo-cli"]
 
 [tasks.lint]
 dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]
@@ -61,14 +61,12 @@ env = { RUSTFLAGS = "-Cinstrument-coverage" }
 [tasks.test]
 args = ["test", "--lib", "--tests", "--workspace", "--locked"]
 command = "cargo"
-dependencies = ["build-coverage"]
+dependencies = ["install-llvm-tools-preview", "build-coverage"]
 description = "Run all unit tests."
 env = { LLVM_PROFILE_FILE = "default.profraw", RUST_BACKTRACE = 1 }
-install_crate = { rustup_component_name = "llvm-tools-preview" }
 
 [tasks.test-coverage]
-dependencies = ["test"]
-install_crate = { crate_name = "grcov" }
+dependencies = ["install-grcov", "test"]
 script = '''
 grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "*cargo*" -o coverage.lcov
 '''
@@ -88,8 +86,7 @@ env = { RUSTFLAGS = "-C link-arg=-s" }
 workspace = true
 
 [tasks.check_contracts]
-dependencies = ["wasm"]
-install_crate = { crate_name = "cosmwasm-check" }
+dependencies = ["install-cosmwasm-check", "wasm"]
 script = '''
 cosmwasm-check ./target/wasm32-unknown-unknown/release/*.wasm
 '''
@@ -119,6 +116,24 @@ echo "📖 Documentation has been successfully generated and available at $(pwd)
 
 rm -rf $SCHEMA_FOLDER
 '''
+
+[tasks.install-llvm-tools-preview]
+install_crate = { rustup_component_name = "llvm-tools-preview" }
+
+[tasks.install-clippy]
+install_crate = { rustup_component_name = "clippy" }
+
+[tasks.install-rustfmt]
+install_crate = { rustup_component_name = "rustfmt" }
+
+[tasks.install-taplo-cli]
+install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
+
+[tasks.install-grcov]
+install_crate = { crate_name = "grcov" }
+
+[tasks.install-cosmwasm-check]
+install_crate = { crate_name = "cosmwasm-check" }
 
 [config]
 default_to_workspace = false

@@ -1,42 +1,42 @@
 [tasks.format-rust]
 args = ["fmt"]
 command = "cargo"
+dependencies = ["install-rustfmt"]
 description = "Format rust sources files."
-dependencies = ["intall-rustfmt"]
 
 [tasks.lint-rust-format]
 args = ["fmt", "--all", "--", "--check"]
 command = "cargo"
+dependencies = ["install-rustfmt"]
 description = "Check format of sources files."
-dependencies = ["intall-rustfmt"]
 
 [tasks.lint-rust]
 args = [
-  "clippy",
-  "--workspace",
-  "--locked",
-  "--all-targets",
-  "--",
-  "-D",
-  "clippy::all",
-  "-D",
-  "warnings",
+    "clippy",
+    "--workspace",
+    "--locked",
+    "--all-targets",
+    "--",
+    "-D",
+    "clippy::all",
+    "-D",
+    "warnings",
 ]
 command = "cargo"
-description = "Check lint of all sources files."
 dependencies = ["install-clippy"]
+description = "Check lint of all sources files."
 
 [tasks.lint-toml]
 args = ["lint"]
 command = "taplo"
-description = "Check lint of all toml files."
 dependencies = ["install-taplo-cli"]
+description = "Check lint of all toml files."
 
 [tasks.format-toml]
 args = ["fmt"]
 command = "taplo"
-description = "Format toml file"
 dependencies = ["install-taplo-cli"]
+description = "Format toml file"
 
 [tasks.lint]
 dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]

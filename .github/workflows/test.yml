@@ -38,9 +38,6 @@ jobs:
           default: true
           override: true
 
-      - name: Install grcov
-        run: if [[ ! -e ~/.cargo/bin/grcov ]]; then cargo install grcov; fi
-
       - name: Install cargo make
         uses: davidB/rust-cargo-make@v1
 

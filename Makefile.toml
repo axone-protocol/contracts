@@ -302,6 +302,24 @@ docker run --rm \
       --chain-id ${CHAIN}
 '''
 
+[tasks.chain-inspect-contract]
+script = '''
+if [ -z "$1" ]
+then
+  echo "⚠️ Please provide the constract code ID as the first argument."
+  exit 1
+fi
+code_id=$1
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    query wasm code-info $code_id \
+      --home ${CHAIN_HOME} \
+      --chain-id ${CHAIN}
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

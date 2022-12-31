@@ -118,6 +118,8 @@ rm -rf $SCHEMA_FOLDER
 '''
 
 [tasks.chain-clean]
+condition = { fail_message = "🚫 The chain is already running" }
+condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
 description = "Clean the chain data (⚠️ definitively)"
 script = '''
 echo "️🧹Cleaning chain ${CHAIN} under ${CHAIN_HOME}"
@@ -125,6 +127,8 @@ rm -rf ${CHAIN_HOME}
 '''
 
 [tasks.chain-add-keys]
+condition = { fail_message = "🚫 The chain is already initialized." }
+condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
 description = "Add a set of predefined keys (recovered from the seed phrases) to the chain."
 script = '''
 keys=(
@@ -150,7 +154,9 @@ done
 '''
 
 [tasks.chain-initialize]
-dependencies = ["chain-clean", "chain-add-keys"]
+condition = { fail_message = "🚫 The chain is already initialized." }
+condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
+dependencies = ["chain-add-keys"]
 description = "Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before."
 script = '''
 echo "🛠️ Initializing chain ${CHAIN} under ${CHAIN_HOME}"

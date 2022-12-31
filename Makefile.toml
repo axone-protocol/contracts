@@ -137,3 +137,24 @@ install_crate = { crate_name = "cosmwasm-check" }
 
 [config]
 default_to_workspace = false
+
+[env]
+BALANCE_ALICE = "100000000000uknow"
+BALANCE_BOB = "100000000000uknow"
+BALANCE_CHARLIE = "100000000000uknow"
+BALANCE_VALIDATOR = "1000000000uknow"
+CHAIN = "wasmd-localnet"
+CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
+CHAIN_MONIKER = "local-node"
+DIR_DEPLOY = "${DIR_TARGET}/deploy"
+DIR_TARGET = "./target"
+DOCKER_IMAGE_COSMWASMD = "cosmwasm/wasmd:v0.30.0"
+KEYRING_BACKEND = "test"
+MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
+MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"
+MNEMONIC_CHARLIE = "couple proud learn plunge neglect dice dry tail keen price tuition inherit ordinary portion abandon body kitten system word monitor lava quiz soup lift"
+MNEMONIC_VALIDATOR = "island position immense mom cross enemy grab little deputy tray hungry detect state helmet tomorrow trap expect admit inhale present vault reveal scene atom"
+SED_FLAG = { script = [
+  '''if [ ${SHELL_NAME} = 'Darwin' ]; then echo "\'\'"; else echo; fi''',
+] }
+SHELL_NAME = { script = ["uname -s"] }

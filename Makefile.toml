@@ -224,8 +224,7 @@ if [ ! -f ${CHAIN_HOME}/config/genesis.json ]; then
 fi
 
 docker run -d \
-  -p ${CHAIN_RPC_PORT}:26657 \
-  -p ${CHAIN_GRPC_PORT}:9090 \
+  --network host \
   -v `pwd`:/app \
   -w /app \
   --name ${CHAIN} \
@@ -250,6 +249,34 @@ condition_script = ["docker ps -a | grep ${CHAIN} > /dev/null"]
 script = '''
 echo "📜 Logs for chain ${CHAIN} under ${CHAIN_HOME}:"
 docker logs -f ${CHAIN}
+'''
+
+[tasks.chain-deploy-contract]
+dependencies = ["chain-start"]
+script = '''
+if [ -z "$1" ]
+then
+  echo "⚠️ Please provide the constract name (without extension) as the first argument."
+  exit 1
+fi
+contract=$1
+
+echo "📦 Deploying contract ${contract}.wasm (under ${DIR_WASM}) to chain ${CHAIN}"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    tx wasm store ${DIR_WASM}/${contract}.wasm \
+      --from validator \
+      --keyring-backend test \
+      --home ${CHAIN_HOME} \
+      --gas-prices 0.025uknow \
+      --gas auto \
+      --gas-adjustment 1.5 \
+      --chain-id ${CHAIN} \
+      --broadcast-mode block \
+      --yes
 '''
 
 [tasks.install-llvm-tools-preview]
@@ -284,6 +311,7 @@ CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
 CHAIN_MONIKER = "local-node"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
 DIR_TARGET = "./target"
+DIR_WASM   = "${DIR_TARGET}/wasm32-unknown-unknown/release"
 DOCKER_IMAGE_COSMWASMD = "cosmwasm/wasmd:v0.30.0"
 KEYRING_BACKEND = "test"
 MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"

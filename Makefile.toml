@@ -117,6 +117,12 @@ echo "📖 Documentation has been successfully generated and available at $(pwd)
 rm -rf $SCHEMA_FOLDER
 '''
 
+[tasks.chain-clean]
+script = '''
+echo "️🧹Cleaning chain ${CHAIN} under ${CHAIN_HOME}"
+rm -rf ${CHAIN_HOME}
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

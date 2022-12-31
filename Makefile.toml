@@ -288,6 +288,20 @@ find "${DIR_WASM}" -type f -name "*.wasm" -maxdepth 1 | while read file; do
 done
 '''
 
+[tasks.chain-list-contracts]
+script = '''
+echo "🔍 Listing contracts on chain ${CHAIN}"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    query wasm list-code \
+      --limit 1000 \
+      --home ${CHAIN_HOME} \
+      --chain-id ${CHAIN}
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

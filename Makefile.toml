@@ -235,6 +235,15 @@ docker run -d \
       --home ${CHAIN_HOME}
 '''
 
+[tasks.chain-stop]
+condition = { fail_message = "🚫 The chain is not running" }
+condition_script = ["docker ps -a | grep ${CHAIN} > /dev/null"]
+script = '''
+echo "🛑 Stopping chain ${CHAIN} under ${CHAIN_HOME}"
+docker stop ${CHAIN}
+docker rm ${CHAIN}
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

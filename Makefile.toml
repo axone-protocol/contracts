@@ -322,7 +322,7 @@ description = "Inspect a specific contract deployed to the chain."
 script = '''
 if [ -z "$1" ]
 then
-  echo "❌ Please provide the constract code ID as the first argument."
+  echo "❌ Please provide the contract code ID as the first argument."
   exit 1
 fi
 code_id=$1

@@ -60,7 +60,7 @@ The Smart Contracts are under unit testing. The tests can be launched with the f
 cargo make test-coverage
 ```
 
-# 🏓 Play with the Smart Contracts
+## 🏓 Play with the Smart Contracts
 
 The project comes with a set of convenient tasks to manage the Smart Contracts and the blockchain.
 To see the list of available tasks, run the following command:
@@ -142,6 +142,12 @@ cargo make chain-clean
 
 Please be cautious when running this command as it will completely clean the chain's home directory and the action is
 irreversible.
+
+## Resources
+
+- [CosmWasm Docs](https://docs.cosmwasm.com/)
+- [OKP4 Whitepaper](https://docs.okp4.network/whitepaper/abstract)
+- [OKP4 Blockchain](https://githhub.com/okp4/okp4d)
 
 ## You want to get involved? 😍
 

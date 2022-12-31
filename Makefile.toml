@@ -212,6 +212,29 @@ docker run --rm \
 	    --home ${CHAIN_HOME}
 '''
 
+[tasks.chain-start]
+condition = { fail_message = "🚫 The chain is already running" }
+condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
+script = '''
+echo "🚀 Starting chain ${CHAIN} under ${CHAIN_HOME}"
+
+if [ ! -f ${CHAIN_HOME}/config/genesis.json ]; then
+  echo "⚠️ The chain seems to be uninitialised. Try: cargo make chain-initialize"
+  exit 1
+fi
+
+docker run -d \
+  -p ${CHAIN_RPC_PORT}:26657 \
+  -p ${CHAIN_GRPC_PORT}:9090 \
+  -v `pwd`:/app \
+  -w /app \
+  --name ${CHAIN} \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    start \
+      --moniker ${CHAIN} \
+      --home ${CHAIN_HOME}
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

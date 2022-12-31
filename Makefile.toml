@@ -12,15 +12,15 @@ description = "Check format of sources files."
 
 [tasks.lint-rust]
 args = [
-    "clippy",
-    "--workspace",
-    "--locked",
-    "--all-targets",
-    "--",
-    "-D",
-    "clippy::all",
-    "-D",
-    "warnings",
+  "clippy",
+  "--workspace",
+  "--locked",
+  "--all-targets",
+  "--",
+  "-D",
+  "clippy::all",
+  "-D",
+  "warnings",
 ]
 command = "cargo"
 dependencies = ["install-clippy"]
@@ -242,6 +242,14 @@ script = '''
 echo "🛑 Stopping chain ${CHAIN} under ${CHAIN_HOME}"
 docker stop ${CHAIN}
 docker rm ${CHAIN}
+'''
+
+[tasks.chain-logs]
+condition = { fail_message = "🚫 The chain is not running" }
+condition_script = ["docker ps -a | grep ${CHAIN} > /dev/null"]
+script = '''
+echo "📜 Logs for chain ${CHAIN} under ${CHAIN_HOME}:"
+docker logs -f ${CHAIN}
 '''
 
 [tasks.install-llvm-tools-preview]

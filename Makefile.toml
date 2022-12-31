@@ -147,6 +147,71 @@ for entry in "${keys[@]}" ; do
 done
 '''
 
+[tasks.chain-initialize]
+dependencies = ["chain-clean", "chain-add-keys"]
+script = '''
+echo "🛠️ Initializing chain ${CHAIN} under ${CHAIN_HOME}"
+docker run --rm \
+  -v `pwd`:/app \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    init ${CHAIN_MONIKER} \
+      --chain-id=${CHAIN} \
+      --home ${CHAIN_HOME}
+sed -i ${SED_FLAG} 's/"stake"/"uknow"/g' ${CHAIN_HOME}/config/genesis.json
+sed -i ${SED_FLAG} 's/"time_iota_ms": "1000"/"time_iota_ms": "10"/' ${CHAIN_HOME}/config/genesis.json
+
+docker run --rm \
+  -v `pwd`:/app \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    add-genesis-account validator ${BALANCE_VALIDATOR} \
+      --keyring-backend test \
+      --home ${CHAIN_HOME}
+
+balances=(
+  "alice:${BALANCE_ALICE}"
+  "bob:${BALANCE_BOB}"
+  "charlie:${BALANCE_CHARLIE}"
+ )
+for entry in "${balances[@]}" ; do
+    name="${entry%%:*}"
+    balance="${entry##*:}"
+    docker run --rm -i \
+      -v `pwd`:/app \
+      -w /app \
+      ${DOCKER_IMAGE_COSMWASMD} wasmd \
+         add-genesis-account ${name} "${balance}"  \
+          --keyring-backend ${KEYRING_BACKEND} \
+          --home ${CHAIN_HOME}
+done
+
+NODE_ID=$(
+  docker run --rm \
+    -v `pwd`:/app \
+    -w /app \
+    ${DOCKER_IMAGE_COSMWASMD} wasmd \
+      tendermint show-node-id \
+        --home ${CHAIN_HOME}
+)
+docker run --rm \
+  -v `pwd`:/app \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    gentx validator 1000000uknow \
+      --node-id ${NODE_ID} \
+      --chain-id=${CHAIN} \
+      --keyring-backend test \
+      --home ${CHAIN_HOME}
+
+docker run --rm \
+  -v `pwd`:/app \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+	  collect-gentxs \
+	    --home ${CHAIN_HOME}
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

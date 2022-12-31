@@ -1,14 +1,14 @@
 [tasks.format-rust]
-args         = ["fmt"]
-command      = "cargo"
+args = ["fmt"]
+command = "cargo"
 dependencies = ["install-rustfmt"]
-description  = "Format rust sources files."
+description = "Format rust sources files."
 
 [tasks.lint-rust-format]
-args         = ["fmt", "--all", "--", "--check"]
-command      = "cargo"
+args = ["fmt", "--all", "--", "--check"]
+command = "cargo"
 dependencies = ["install-rustfmt"]
-description  = "Check format of sources files."
+description = "Check format of sources files."
 
 [tasks.lint-rust]
 args = [
@@ -27,16 +27,16 @@ dependencies = ["install-clippy"]
 description = "Check lint of all sources files."
 
 [tasks.lint-toml]
-args         = ["lint"]
-command      = "taplo"
+args = ["lint"]
+command = "taplo"
 dependencies = ["install-taplo-cli"]
-description  = "Check lint of all toml files."
+description = "Check lint of all toml files."
 
 [tasks.format-toml]
-args         = ["fmt"]
-command      = "taplo"
+args = ["fmt"]
+command = "taplo"
 dependencies = ["install-taplo-cli"]
-description  = "Format toml file"
+description = "Format toml file"
 
 [tasks.lint]
 dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]
@@ -45,25 +45,25 @@ dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]
 dependencies = ["format-rust", "format-toml"]
 
 [tasks.clean]
-args    = ["clean"]
+args = ["clean"]
 command = "cargo"
 
 [tasks.build]
-args    = ["build", "--release", "--locked"]
+args = ["build", "--release", "--locked"]
 command = "cargo"
 
 [tasks.build-coverage]
-args        = ["build"]
-command     = "cargo"
+args = ["build"]
+command = "cargo"
 description = "Compile the source code and create testable artifacts."
-env         = { RUSTFLAGS = "-Cinstrument-coverage" }
+env = { RUSTFLAGS = "-Cinstrument-coverage" }
 
 [tasks.test]
-args         = ["test", "--lib", "--tests", "--workspace", "--locked"]
-command      = "cargo"
+args = ["test", "--lib", "--tests", "--workspace", "--locked"]
+command = "cargo"
 dependencies = ["install-llvm-tools-preview", "build-coverage"]
-description  = "Run all unit tests."
-env          = { LLVM_PROFILE_FILE = "default.profraw", RUST_BACKTRACE = 1 }
+description = "Run all unit tests."
+env = { LLVM_PROFILE_FILE = "default.profraw", RUST_BACKTRACE = 1 }
 
 [tasks.test-coverage]
 dependencies = ["install-grcov", "test"]
@@ -77,10 +77,10 @@ rustup target add wasm32-unknown-unknown
 '''
 
 [tasks.wasm]
-args         = ["build", "--release", "--lib", "--target", "wasm32-unknown-unknown"]
-command      = "cargo"
+args = ["build", "--release", "--lib", "--target", "wasm32-unknown-unknown"]
+command = "cargo"
 dependencies = ["install_wasm"]
-env          = { RUSTFLAGS = "-C link-arg=-s" }
+env = { RUSTFLAGS = "-C link-arg=-s" }
 
 [tasks.schema]
 workspace = true
@@ -282,8 +282,8 @@ BALANCE_VALIDATOR = "1000000000uknow"
 CHAIN = "wasmd-localnet"
 CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
 CHAIN_MONIKER = "local-node"
-DIR_TARGET = "./target"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
+DIR_TARGET = "./target"
 DOCKER_IMAGE_COSMWASMD = "cosmwasm/wasmd:v0.30.0"
 KEYRING_BACKEND = "test"
 MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"

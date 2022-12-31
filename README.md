@@ -34,16 +34,13 @@ The project is structured around a set of Rust workspaces, each defining a smart
 
 ## 🏗 Build
 
-### Prerequisites
+### Pre-requisites
 
-Be sure you have [Rust](https://www.rust-lang.org/tools/install) properly installed with [cargo-make](https://github.com/sagiegurari/cargo-make).
+Be sure you have the following tools installed:
 
-```sh
-$ cargo make --version
-cargo-make 0.35.13
-```
-
-(your version may differ and that is fine)
+- [Rust](https://www.rust-lang.org/tools/install) v1.63.0 or higher
+- [cargo-make](https://github.com/sagiegurari/cargo-make) v0.36.3 or higher
+- [Docker](https://docs.docker.com/get-docker/)
 
 ### Compiling Smart Contracts to Wasm
 

@@ -279,6 +279,15 @@ docker run --rm \
       --yes
 '''
 
+[tasks.chain-deploy-contracts]
+script = '''
+find "${DIR_WASM}" -type f -name "*.wasm" -maxdepth 1 | while read file; do
+  wasm=$(basename $file)
+  contract=${wasm%.*}
+  cargo make chain-deploy-contract $contract
+done
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

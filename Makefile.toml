@@ -123,6 +123,30 @@ echo "️🧹Cleaning chain ${CHAIN} under ${CHAIN_HOME}"
 rm -rf ${CHAIN_HOME}
 '''
 
+[tasks.chain-add-keys]
+script = '''
+keys=(
+  "validator:${MNEMONIC_VALIDATOR}"
+  "alice:${MNEMONIC_ALICE}"
+  "bob:${MNEMONIC_BOB}"
+  "charlie:${MNEMONIC_CHARLIE}"
+ )
+for entry in "${keys[@]}" ; do
+    name="${entry%%:*}"
+    key="${entry##*:}"
+    echo "🗝️ Adding key ${name} for chain ${CHAIN}"
+    echo "${key}" \
+    | docker run --rm -i \
+        -v `pwd`:/app \
+        -w /app \
+        ${DOCKER_IMAGE_COSMWASMD} wasmd \
+          keys add ${name} \
+            --recover \
+            --keyring-backend ${KEYRING_BACKEND} \
+            --home ${CHAIN_HOME}
+done
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

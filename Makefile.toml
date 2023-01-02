@@ -126,10 +126,21 @@ echo "️🧹Cleaning chain ${CHAIN} under ${CHAIN_HOME}"
 rm -rf ${CHAIN_HOME}
 '''
 
+[tasks.chain-init-folder]
+description = "Initialize deploy folder to make sure scripts have the right permission (needed for linux)"
+script = '''
+echo "️✨ Create deploy folder structure"
+mkdir -p ${DIR_DEPLOY}/${CHAIN}/config/keyring-test
+mkdir -p ${DIR_DEPLOY}/${CHAIN}/config/gentx
+mkdir -p ${DIR_DEPLOY}/${CHAIN}/keyring-test
+mkdir -p ${DIR_DEPLOY}/${CHAIN}/data
+'''
+
 [tasks.chain-add-keys]
 condition = { fail_message = "🚫 The chain is already initialized." }
 condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
 description = "Add a set of predefined keys (recovered from the seed phrases) to the chain."
+dependencies = ["chain-init-folder"]
 script = '''
 keys=(
   "validator:${MNEMONIC_VALIDATOR}"

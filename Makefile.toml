@@ -118,7 +118,7 @@ rm -rf $SCHEMA_FOLDER
 '''
 
 [tasks.chain-clean]
-condition = { fail_message = "🚫 The chain is already running" }
+condition = { fail_message = "🚫 The chain is running" }
 condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
 description = "Clean the chain data (⚠️ definitively)"
 script = '''
@@ -280,7 +280,7 @@ description = "Deploy a specific contract to the chain. The contract must be com
 script = '''
 if [ -z "$1" ]
 then
-  echo "❌ Please provide the constract name (without extension) as the first argument."
+  echo "❌ Please provide the contract name (without extension) as the first argument."
   exit 1
 fi
 contract=$1

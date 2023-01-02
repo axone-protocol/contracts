@@ -12,15 +12,15 @@ description = "Check format of sources files."
 
 [tasks.lint-rust]
 args = [
-    "clippy",
-    "--workspace",
-    "--locked",
-    "--all-targets",
-    "--",
-    "-D",
-    "clippy::all",
-    "-D",
-    "warnings",
+  "clippy",
+  "--workspace",
+  "--locked",
+  "--all-targets",
+  "--",
+  "-D",
+  "clippy::all",
+  "-D",
+  "warnings",
 ]
 command = "cargo"
 dependencies = ["install-clippy"]
@@ -99,7 +99,7 @@ SCHEMA_FOLDER=schema
 echo "🔎 Checking jsonschema2md installed..."
 if ! which jsonschema2md >/dev/null;
 then
-    echo "\n❌   jsonschema2md could not be found"
+    echo "\n❌ jsonschema2md could not be found"
     echo "  Consider installing jsonschema2md to generate documentation.\n"
     echo "＞ \`npm install -g @adobe/jsonschema2md\`\n\n"
     exit 1
@@ -115,6 +115,236 @@ jsonschema2md -d schema -o $DOCS_FOLDER --schema-extension json --schema-out $DO
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 
 rm -rf $SCHEMA_FOLDER
+'''
+
+[tasks.chain-clean]
+condition = { fail_message = "🚫 The chain is running" }
+condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
+description = "Clean the chain data (⚠️ definitively)"
+script = '''
+echo "️🧹Cleaning chain ${CHAIN} under ${CHAIN_HOME}"
+rm -rf ${CHAIN_HOME}
+'''
+
+[tasks.chain-init-folder]
+description = "Initialize deploy folder to make sure scripts have the right permission (needed for linux)"
+script = '''
+echo "️✨ Create deploy folder structure"
+mkdir -p ${DIR_DEPLOY}/${CHAIN}/config/keyring-test
+mkdir -p ${DIR_DEPLOY}/${CHAIN}/config/gentx
+mkdir -p ${DIR_DEPLOY}/${CHAIN}/keyring-test
+mkdir -p ${DIR_DEPLOY}/${CHAIN}/data
+'''
+
+[tasks.chain-add-keys]
+condition = { fail_message = "🚫 The chain is already initialized." }
+condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
+description = "Add a set of predefined keys (recovered from the seed phrases) to the chain."
+dependencies = ["chain-init-folder"]
+script = '''
+keys=(
+  "validator:${MNEMONIC_VALIDATOR}"
+  "alice:${MNEMONIC_ALICE}"
+  "bob:${MNEMONIC_BOB}"
+  "charlie:${MNEMONIC_CHARLIE}"
+ )
+for entry in "${keys[@]}" ; do
+    name="${entry%%:*}"
+    key="${entry##*:}"
+    echo "🗝️ Adding key ${name} for chain ${CHAIN}"
+    echo "${key}" \
+    | docker run --rm -i \
+        -v `pwd`:/app \
+        -w /app \
+        ${DOCKER_IMAGE_COSMWASMD} wasmd \
+          keys add ${name} \
+            --recover \
+            --keyring-backend ${KEYRING_BACKEND} \
+            --home ${CHAIN_HOME}
+done
+'''
+
+[tasks.chain-initialize]
+condition = { fail_message = "🚫 The chain is already initialized." }
+condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
+dependencies = ["chain-add-keys"]
+description = "Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before."
+script = '''
+echo "🛠️ Initializing chain ${CHAIN} under ${CHAIN_HOME}"
+docker run --rm \
+  -v `pwd`:/app \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    init ${CHAIN_MONIKER} \
+      --chain-id=${CHAIN} \
+      --home ${CHAIN_HOME}
+sed -i ${SED_FLAG} 's/"stake"/"uknow"/g' ${CHAIN_HOME}/config/genesis.json
+sed -i ${SED_FLAG} 's/"time_iota_ms": "1000"/"time_iota_ms": "10"/' ${CHAIN_HOME}/config/genesis.json
+
+docker run --rm \
+  -v `pwd`:/app \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    add-genesis-account validator ${BALANCE_VALIDATOR} \
+      --keyring-backend test \
+      --home ${CHAIN_HOME}
+
+balances=(
+  "alice:${BALANCE_ALICE}"
+  "bob:${BALANCE_BOB}"
+  "charlie:${BALANCE_CHARLIE}"
+ )
+for entry in "${balances[@]}" ; do
+    name="${entry%%:*}"
+    balance="${entry##*:}"
+    docker run --rm -i \
+      -v `pwd`:/app \
+      -w /app \
+      ${DOCKER_IMAGE_COSMWASMD} wasmd \
+         add-genesis-account ${name} "${balance}"  \
+          --keyring-backend ${KEYRING_BACKEND} \
+          --home ${CHAIN_HOME}
+done
+
+NODE_ID=$(
+  docker run --rm \
+    -v `pwd`:/app \
+    -w /app \
+    ${DOCKER_IMAGE_COSMWASMD} wasmd \
+      tendermint show-node-id \
+        --home ${CHAIN_HOME}
+)
+docker run --rm \
+  -v `pwd`:/app \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    gentx validator 1000000uknow \
+      --node-id ${NODE_ID} \
+      --chain-id=${CHAIN} \
+      --keyring-backend test \
+      --home ${CHAIN_HOME}
+
+docker run --rm \
+  -v `pwd`:/app \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+	  collect-gentxs \
+	    --home ${CHAIN_HOME}
+'''
+
+[tasks.chain-start]
+condition = { fail_message = "🚫 The chain is already running" }
+condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
+description = "Run the full node wasmd application using the chain's home directory under a Docker container."
+script = '''
+echo "🚀 Starting chain ${CHAIN} under ${CHAIN_HOME}"
+
+if [ ! -f ${CHAIN_HOME}/config/genesis.json ]; then
+  echo "❌ The chain seems to be uninitialised. Try: cargo make chain-initialize"
+  exit 1
+fi
+
+docker run -d \
+  --network host \
+  -v `pwd`:/app \
+  -w /app \
+  --name ${CHAIN} \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    start \
+      --moniker ${CHAIN} \
+      --home ${CHAIN_HOME}
+'''
+
+[tasks.chain-stop]
+condition = { fail_message = "🚫 The chain is not running" }
+condition_script = ["docker ps -a | grep ${CHAIN} > /dev/null"]
+description = "Stop the chain's container."
+script = '''
+echo "🛑 Stopping chain ${CHAIN} under ${CHAIN_HOME}"
+docker stop ${CHAIN}
+docker rm ${CHAIN}
+'''
+
+[tasks.chain-logs]
+condition = { fail_message = "🚫 The chain is not running" }
+condition_script = ["docker ps -a | grep ${CHAIN} > /dev/null"]
+description = "Show the chain's container logs."
+script = '''
+echo "📜 Logs for chain ${CHAIN} under ${CHAIN_HOME}:"
+docker logs -f ${CHAIN}
+'''
+
+[tasks.chain-deploy-contract]
+dependencies = ["chain-start"]
+description = "Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...)."
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract name (without extension) as the first argument."
+  exit 1
+fi
+contract=$1
+
+echo "📦 Deploying contract ${contract}.wasm (under ${DIR_WASM}) to chain ${CHAIN}"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    tx wasm store ${DIR_WASM}/${contract}.wasm \
+      --from validator \
+      --keyring-backend test \
+      --home ${CHAIN_HOME} \
+      --gas-prices 0.025uknow \
+      --gas auto \
+      --gas-adjustment 1.5 \
+      --chain-id ${CHAIN} \
+      --broadcast-mode block \
+      --yes
+'''
+
+[tasks.chain-deploy-contracts]
+description = "Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...)."
+script = '''
+find "${DIR_WASM}" -type f -name "*.wasm" -maxdepth 1 | while read file; do
+  wasm=$(basename $file)
+  contract=${wasm%.*}
+  cargo make chain-deploy-contract $contract
+done
+'''
+
+[tasks.chain-list-contracts]
+description = "List all the contracts deployed to the chain."
+script = '''
+echo "🔍 Listing contracts on chain ${CHAIN}"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    query wasm list-code \
+      --limit 1000 \
+      --home ${CHAIN_HOME} \
+      --chain-id ${CHAIN}
+'''
+
+[tasks.chain-inspect-contract]
+description = "Inspect a specific contract deployed to the chain."
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract code ID as the first argument."
+  exit 1
+fi
+code_id=$1
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    query wasm code-info $code_id \
+      --home ${CHAIN_HOME} \
+      --chain-id ${CHAIN}
 '''
 
 [tasks.install-llvm-tools-preview]
@@ -137,3 +367,26 @@ install_crate = { crate_name = "cosmwasm-check" }
 
 [config]
 default_to_workspace = false
+min_version = "0.36.3"
+
+[env]
+BALANCE_ALICE = "100000000000uknow"
+BALANCE_BOB = "100000000000uknow"
+BALANCE_CHARLIE = "100000000000uknow"
+BALANCE_VALIDATOR = "1000000000uknow"
+CHAIN = "wasmd-localnet"
+CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
+CHAIN_MONIKER = "local-node"
+DIR_DEPLOY = "${DIR_TARGET}/deploy"
+DIR_TARGET = "./target"
+DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
+DOCKER_IMAGE_COSMWASMD = "cosmwasm/wasmd:v0.30.0"
+KEYRING_BACKEND = "test"
+MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
+MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"
+MNEMONIC_CHARLIE = "couple proud learn plunge neglect dice dry tail keen price tuition inherit ordinary portion abandon body kitten system word monitor lava quiz soup lift"
+MNEMONIC_VALIDATOR = "island position immense mom cross enemy grab little deputy tray hungry detect state helmet tomorrow trap expect admit inhale present vault reveal scene atom"
+SED_FLAG = { script = [
+  '''if [ ${SHELL_NAME} = 'Darwin' ]; then echo "\'\'"; else echo; fi''',
+] }
+SHELL_NAME = { script = ["uname -s"] }

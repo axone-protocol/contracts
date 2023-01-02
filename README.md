@@ -34,16 +34,13 @@ The project is structured around a set of Rust workspaces, each defining a smart
 
 ## 🏗 Build
 
-### Prerequisites
+### Pre-requisites
 
-Be sure you have [Rust](https://www.rust-lang.org/tools/install) properly installed with [cargo-make](https://github.com/sagiegurari/cargo-make).
+Be sure you have the following tools installed:
 
-```sh
-$ cargo make --version
-cargo-make 0.35.13
-```
-
-(your version may differ and that is fine)
+- [Rust](https://www.rust-lang.org/tools/install) v1.63.0 or higher
+- [cargo-make](https://github.com/sagiegurari/cargo-make) v0.36.3 or higher
+- [Docker](https://docs.docker.com/get-docker/)
 
 ### Compiling Smart Contracts to Wasm
 
@@ -62,6 +59,96 @@ The Smart Contracts are under unit testing. The tests can be launched with the f
 ```sh
 cargo make test-coverage
 ```
+
+## 🏓 Play with the Smart Contracts
+
+The project comes with a set of convenient tasks to manage the Smart Contracts and the blockchain.
+To see the list of available tasks, run the following command:
+
+```sh
+cargo make --list-all-steps | grep chain- | sort
+```
+
+The list of available tasks is as follows:
+
+```text
+chain-add-keys - Add a set of predefined keys (recovered from the seed phrases) to the chain.
+chain-clean - Clean the chain data (⚠️ definitively)
+chain-deploy-contract - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
+chain-deploy-contracts - Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...).
+chain-init-folder - Initialize deploy folder to make sure scripts have the right permission (needed for linux)
+chain-initialize - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before.
+chain-inspect-contract - Inspect a specific contract deployed to the chain.
+chain-list-contracts - List all the contracts deployed to the chain.
+chain-logs - Show the chain's container logs.
+chain-start - Run the full node wasmd application using the chain's home directory under a Docker container.
+chain-stop - Stop the chain's container.
+```
+
+## Initialize the chain
+
+To initialize the chain, just run:
+
+```sh
+cargo make chain-initialize
+```
+
+This will initialize the chain's home directory and create a validator's key and a set of predefined keys
+(recovered from the seed phrases).
+
+## Start the chain
+
+To start the chain, just run:
+
+```sh
+cargo make chain-start
+```
+
+This will start the chain's container and run the full node wasmd application.
+
+You can check the chain's logs with:
+
+```sh
+cargo make chain-logs
+```
+
+## Deploy the Smart Contracts
+
+To deploy the Smart Contracts, just run:
+
+```sh
+cargo make chain-deploy-contracts
+```
+
+This will deploy all the available contracts to the chain. For this, the contracts must be compiled and the wasm files
+must be present in the artifacts directory. See the [Build](#-build) section for more details.
+
+Now, you can interact with the deployed smart contracts and test them out.
+
+## Stop the chain
+
+To stop the chain, just run:
+
+```sh
+cargo make chain-stop
+```
+
+## Clean the chain
+
+To clean the chain, just run:
+
+```sh
+cargo make chain-clean
+```
+
+Please be cautious when running this command as it will completely clean the chain's home directory and the action is
+irreversible.
+
+## Resources
+
+- [CosmWasm Docs](https://docs.cosmwasm.com/)
+- [OKP4 Whitepaper](https://docs.okp4.network/whitepaper/abstract)
+- [OKP4 Blockchain](https://githhub.com/okp4/okp4d)
 
 ## You want to get involved? 😍
 

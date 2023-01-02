@@ -15,7 +15,7 @@ This repository contains the Smart Contracts deployed on the [OKP4 network](http
 
 The list of currently implemented contracts is as follows:
 
-- [cw-template](./contracts/cw-template/README.md): base smart contract to start coding in the OKP4 blockchain.
+- [cw-template](./contracts/cw-template/README.md): base smart contract to start coding in the [OKP4](https://github.com/okp4d) blockchain.
 
 ## 🗂 Directory Structure
 
@@ -141,7 +141,7 @@ To clean the chain, just run:
 cargo make chain-clean
 ```
 
-Please be cautious when running this command as it will completely clean the chain's home directory and the action is
+⚠️ Please be cautious when running this command as it will completely clean the chain's home directory and the action is
 irreversible.
 
 ## Resources

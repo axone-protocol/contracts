@@ -156,7 +156,7 @@ for entry in "${keys[@]}" ; do
     | docker run --rm -i \
         -v `pwd`:/app \
         -w /app \
-        ${DOCKER_IMAGE_COSMWASMD} wasmd \
+        ${DOCKER_IMAGE_OKP4D} \
           keys add ${name} \
             --recover \
             --keyring-backend ${KEYRING_BACKEND} \
@@ -174,7 +174,7 @@ echo "🛠️ Initializing chain ${CHAIN} under ${CHAIN_HOME}"
 docker run --rm \
   -v `pwd`:/app \
   -w /app \
-  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+  ${DOCKER_IMAGE_OKP4D} \
     init ${CHAIN_MONIKER} \
       --chain-id=${CHAIN} \
       --home ${CHAIN_HOME}
@@ -184,7 +184,7 @@ sed -i ${SED_FLAG} 's/"time_iota_ms": "1000"/"time_iota_ms": "10"/' ${CHAIN_HOME
 docker run --rm \
   -v `pwd`:/app \
   -w /app \
-  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+  ${DOCKER_IMAGE_OKP4D} \
     add-genesis-account validator ${BALANCE_VALIDATOR} \
       --keyring-backend test \
       --home ${CHAIN_HOME}
@@ -200,7 +200,7 @@ for entry in "${balances[@]}" ; do
     docker run --rm -i \
       -v `pwd`:/app \
       -w /app \
-      ${DOCKER_IMAGE_COSMWASMD} wasmd \
+      ${DOCKER_IMAGE_OKP4D} \
          add-genesis-account ${name} "${balance}"  \
           --keyring-backend ${KEYRING_BACKEND} \
           --home ${CHAIN_HOME}
@@ -210,14 +210,14 @@ NODE_ID=$(
   docker run --rm \
     -v `pwd`:/app \
     -w /app \
-    ${DOCKER_IMAGE_COSMWASMD} wasmd \
+    ${DOCKER_IMAGE_OKP4D} \
       tendermint show-node-id \
         --home ${CHAIN_HOME}
 )
 docker run --rm \
   -v `pwd`:/app \
   -w /app \
-  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+  ${DOCKER_IMAGE_OKP4D} \
     gentx validator 1000000uknow \
       --node-id ${NODE_ID} \
       --chain-id=${CHAIN} \
@@ -227,7 +227,7 @@ docker run --rm \
 docker run --rm \
   -v `pwd`:/app \
   -w /app \
-  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+  ${DOCKER_IMAGE_OKP4D} \
 	  collect-gentxs \
 	    --home ${CHAIN_HOME}
 '''
@@ -235,7 +235,7 @@ docker run --rm \
 [tasks.chain-start]
 condition = { fail_message = "🚫 The chain is already running" }
 condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
-description = "Run the full node wasmd application using the chain's home directory under a Docker container."
+description = "Run the full node okp4d application using the chain's home directory under a Docker container."
 script = '''
 echo "🚀 Starting chain ${CHAIN} under ${CHAIN_HOME}"
 
@@ -249,7 +249,7 @@ docker run -d \
   -v `pwd`:/app \
   -w /app \
   --name ${CHAIN} \
-  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+  ${DOCKER_IMAGE_OKP4D} \
     start \
       --moniker ${CHAIN} \
       --home ${CHAIN_HOME}
@@ -290,7 +290,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+  ${DOCKER_IMAGE_OKP4D} \
     tx wasm store ${DIR_WASM}/${contract}.wasm \
       --from validator \
       --keyring-backend test \
@@ -321,7 +321,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+  ${DOCKER_IMAGE_OKP4D} \
     query wasm list-code \
       --limit 1000 \
       --home ${CHAIN_HOME} \
@@ -341,7 +341,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_COSMWASMD} wasmd \
+  ${DOCKER_IMAGE_OKP4D} \
     query wasm code-info $code_id \
       --home ${CHAIN_HOME} \
       --chain-id ${CHAIN}
@@ -374,13 +374,13 @@ BALANCE_ALICE = "100000000000uknow"
 BALANCE_BOB = "100000000000uknow"
 BALANCE_CHARLIE = "100000000000uknow"
 BALANCE_VALIDATOR = "1000000000uknow"
-CHAIN = "wasmd-localnet"
+CHAIN = "okp4d-localnet"
 CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
 CHAIN_MONIKER = "local-node"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
 DIR_TARGET = "./target"
 DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
-DOCKER_IMAGE_COSMWASMD = "cosmwasm/wasmd:v0.30.0"
+DOCKER_IMAGE_OKP4D = "okp4/okp4d:3.0.0"
 KEYRING_BACKEND = "test"
 MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
 MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"

@@ -1,0 +1,27 @@
+name: update-draft-docs
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Update draft docs repository
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: 'https://api.github.com/repos/okp4/docs/actions/workflows/39152549/dispatches'
+          method: 'POST'
+          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OKP4_TOKEN }}"}'
+          data: |-
+            {
+              "ref": "main",
+              "inputs": {
+                "version": "main",
+                "repository": "${{github.repository}}",
+                "section": "contracts",
+                "docs_directory": "docs/*"
+                "draft": "true"
+              }
+            }

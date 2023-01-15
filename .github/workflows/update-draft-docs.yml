@@ -21,7 +21,7 @@ jobs:
                 "version": "main",
                 "repository": "${{github.repository}}",
                 "section": "contracts",
-                "docs_directory": "docs/*"
+                "docs_directory": "docs/*",
                 "draft": "true"
               }
             }

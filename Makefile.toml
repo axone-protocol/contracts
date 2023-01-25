@@ -106,7 +106,7 @@ then
 fi
 
 mkdir -p $SCHEMA_FOLDER
-find contracts -type f -name '*.json' \
+find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
     -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
 
 echo "📚 Generating documentation..."

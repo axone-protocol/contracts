@@ -5,7 +5,7 @@ command = "cargo"
 [tasks.schema]
 dependencies = ["generate_schema"]
 script = '''
-SCHEMA=$(find schema -type f -name '*.json' -print0)
+SCHEMA=$(find schema -type f -maxdepth 1 -name '*.json' -print0)
 TITLE=$(jq -r .contract_name $SCHEMA)
 jq --arg description "$(cat README.md)" '. + {description: $description}' $SCHEMA > $SCHEMA.tmp && mv $SCHEMA.tmp $SCHEMA
 jq --arg title $TITLE '. + {title: $title}' $SCHEMA > $SCHEMA.tmp && mv $SCHEMA.tmp $SCHEMA

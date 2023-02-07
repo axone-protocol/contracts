@@ -14,8 +14,6 @@ pub enum QueryMsg {
     /// # Ask
     /// Ask returns the evaluation of the query using the program context through the against the
     /// logic module.
-    #[returns(AskReponse)]
-    Ask {
-        query: String,
-    },
+    #[returns(AskResponse)]
+    Ask { query: String },
 }

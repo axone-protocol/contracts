@@ -139,8 +139,8 @@ mkdir -p ${DIR_DEPLOY}/${CHAIN}/data
 [tasks.chain-add-keys]
 condition = { fail_message = "🚫 The chain is already initialized." }
 condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
-description = "Add a set of predefined keys (recovered from the seed phrases) to the chain."
 dependencies = ["chain-init-folder"]
+description = "Add a set of predefined keys (recovered from the seed phrases) to the chain."
 script = '''
 keys=(
   "validator:${MNEMONIC_VALIDATOR}"

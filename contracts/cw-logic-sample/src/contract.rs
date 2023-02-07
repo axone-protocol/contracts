@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
-use logic_bindings::{LogicCustomQuery, AskResponse};
+use logic_bindings::{AskResponse, LogicCustomQuery};
 
 use crate::error::ContractError;
 use crate::msg::{InstantiateMsg, QueryMsg};
@@ -33,7 +33,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Ask { query} => to_binary(&query::ask(deps, query)?),
+        QueryMsg::Ask { query } => to_binary(&query::ask(deps, query)?),
     }
 }
 
@@ -46,7 +46,8 @@ pub mod query {
         let req = LogicCustomQuery::Ask {
             program: state.program,
             query,
-        }.into();
+        }
+        .into();
 
         deps.querier.query(&req)
     }

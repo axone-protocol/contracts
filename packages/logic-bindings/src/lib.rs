@@ -1,3 +1,3 @@
 mod query;
 
-pub use query::{LogicCustomQuery, AskResponse, Answer, Result, Substitution, Term};
+pub use query::{Answer, AskResponse, LogicCustomQuery, Result, Substitution, Term};

@@ -12,7 +12,7 @@ Sample contract to query the OKP4 logic module.
 
 ### Instantiate
 
-The instantiation can a program in input:
+The instantiation can take a program in input:
 
 ```bash
 okp4d tx wasm instantiate $CODE \

@@ -12,8 +12,7 @@ pub struct InstantiateMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// # Ask
-    /// Ask returns the evaluation of the query using the program context through the against the
-    /// logic module.
+    /// Ask returns the evaluation of the query using the program context through the logic module.
     #[returns(AskResponse)]
     Ask { query: String },
 }

@@ -10,7 +10,7 @@
 
 ### Objects
 
-*   [Ask](./cw-logic-sample-querymsg-oneof-ask.md "Ask returns the evaluation of the query using the program context through the against the logic module") – `undefined#/query/oneOf/0`
+*   [Ask](./cw-logic-sample-querymsg-oneof-ask.md "Ask returns the evaluation of the query using the program context through the logic module") – `undefined#/query/oneOf/0`
 
 *   [AskResponse](./cw-logic-sample-responses-askresponse.md) – `undefined#/responses/ask`
 

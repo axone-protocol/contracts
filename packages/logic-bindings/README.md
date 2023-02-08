@@ -1,3 +1,3 @@
-# CW Logic Sample
+# Logic bindings
 
-Sample contract to query the okp4 logic module.
+Package that holds all bindings for querying the OKP4 logic module.

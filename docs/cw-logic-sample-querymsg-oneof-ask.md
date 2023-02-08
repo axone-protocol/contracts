@@ -4,7 +4,7 @@
 undefined#/query/oneOf/0
 ```
 
-Ask returns the evaluation of the query using the program context through the against the logic module.
+Ask returns the evaluation of the query using the program context through the logic module.
 
 | Abstract            | Extensible | Status         | Identifiable | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                   |
 | :------------------ | :--------- | :------------- | :----------- | :---------------- | :-------------------- | :------------------ | :--------------------------------------------------------------------------- |

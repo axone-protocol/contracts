@@ -1,8 +1,6 @@
-mod query;
-
-pub use query::{Answer, AskResponse, LogicCustomQuery, Result, Substitution, Term};
+#![cfg(not(target_arch = "wasm32"))]
 
 // Exposed for testing only
 // Both unit tests and integration tests are compiled to native code, so everything in here does not need to compile to Wasm.
-#[cfg(not(target_arch = "wasm32"))]
-pub mod testing;
+
+pub mod mock;

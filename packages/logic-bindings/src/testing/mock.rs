@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
-use cosmwasm_std::{Coin, OwnedDeps, QuerierResult, SystemError, SystemResult, to_binary, Uint128};
-use cosmwasm_std::testing::{BankQuerier, MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
-use serde::de::DeserializeOwned;
+use cosmwasm_std::{Coin, OwnedDeps, QuerierResult, SystemResult, to_binary};
+use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use crate::{Answer, AskResponse, LogicCustomQuery, Substitution, Term};
 
 /// Creates all external requirements that can be injected for unit tests.
@@ -50,15 +49,12 @@ impl LogicQuerier {
         Self { handler }
     }
 
+    #[allow(dead_code)]
     fn update_handler<LH: 'static>(&mut self, handler: LH)
         where
             LH: Fn(&LogicCustomQuery) -> QuerierResult,
     {
         self.handler = Box::from(handler)
-    }
-
-    fn query(&self, request: &LogicCustomQuery) -> QuerierResult {
-        (*self.handler)(request)
     }
 }
 
@@ -66,7 +62,7 @@ impl Default for LogicQuerier {
     fn default() -> Self {
         let handler = Box::from(|request: &LogicCustomQuery| -> QuerierResult {
             let result = match request {
-                LogicCustomQuery::Ask { program, query} => to_binary(&AskResponse {
+                LogicCustomQuery::Ask { .. } => to_binary(&AskResponse {
                     height: 1,
                     gas_used: 1000,
                     answer: Some(Answer {

@@ -14,7 +14,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut<LogicCustomQuery>,
+    deps: DepsMut<'_, LogicCustomQuery>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -31,7 +31,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps<LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ask { query } => to_binary(&query::ask(deps, query)?),
     }
@@ -40,7 +40,7 @@ pub fn query(deps: Deps<LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResul
 pub mod query {
     use super::*;
 
-    pub fn ask(deps: Deps<LogicCustomQuery>, query: String) -> StdResult<AskResponse> {
+    pub fn ask(deps: Deps<'_, LogicCustomQuery>, query: String) -> StdResult<AskResponse> {
         let state = STATE.load(deps.storage)?;
 
         let req = LogicCustomQuery::Ask {
@@ -55,10 +55,9 @@ pub mod query {
 
 #[cfg(test)]
 mod tests {
-    use std::marker::PhantomData;
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{Coin, coins, from_binary, OwnedDeps};
+    use cosmwasm_std::testing::{mock_env, mock_info};
+    use cosmwasm_std::{Coin, coins, from_binary};
     use logic_bindings::testing::mock::mock_dependencies_with_logic_and_balance;
 
 

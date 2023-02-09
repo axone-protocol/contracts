@@ -84,6 +84,6 @@ mod tests {
         )
         .unwrap();
         let value: AskResponse = from_binary(&res).unwrap();
-        assert_eq!(true, value.answer.unwrap().success);
+        assert!(value.answer.unwrap().success);
     }
 }

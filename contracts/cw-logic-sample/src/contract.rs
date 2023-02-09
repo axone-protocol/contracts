@@ -57,13 +57,13 @@ pub mod query {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_env, mock_info};
-    use cosmwasm_std::{Coin, coins, from_binary};
+    use cosmwasm_std::{coins, from_binary, Coin};
     use logic_bindings::testing::mock::mock_dependencies_with_logic_and_balance;
-
 
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_logic_and_balance(&[Coin::new(10000, "uknow".to_string())]);
+        let mut deps =
+            mock_dependencies_with_logic_and_balance(&[Coin::new(10000, "uknow".to_string())]);
 
         let msg = InstantiateMsg {
             program: "bank_balances_has_coin(A, D, V, S) :- bank_balances(A, R), member(D-V, R), compare(>, V, S).".to_string(),
@@ -75,7 +75,14 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         // it worked, let's check if logic querier is called to answer to the `Ask` query.
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ask { query: "".to_string() }).unwrap();
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Ask {
+                query: "".to_string(),
+            },
+        )
+        .unwrap();
         let value: AskResponse = from_binary(&res).unwrap();
         assert_eq!(true, value.answer.unwrap().success);
     }

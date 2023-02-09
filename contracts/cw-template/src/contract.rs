@@ -56,7 +56,11 @@ pub mod execute {
         Ok(Response::new().add_attribute("action", "increment"))
     }
 
-    pub fn reset(deps: DepsMut<'_>, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
+    pub fn reset(
+        deps: DepsMut<'_>,
+        info: MessageInfo,
+        count: i32,
+    ) -> Result<Response, ContractError> {
         STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
             if info.sender != state.owner {
                 return Err(ContractError::Unauthorized {});

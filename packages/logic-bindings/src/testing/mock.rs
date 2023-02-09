@@ -1,13 +1,14 @@
-use std::marker::PhantomData;
-use cosmwasm_std::{Coin, OwnedDeps, QuerierResult, SystemResult, to_binary};
-use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use crate::{Answer, AskResponse, LogicCustomQuery, Substitution, Term};
+use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::{to_binary, Coin, OwnedDeps, QuerierResult, SystemResult};
+use std::marker::PhantomData;
 
 /// Creates all external requirements that can be injected for unit tests.
 ///
 /// It sets the given balance for the contract itself, nothing else and set the custom default logic
 /// querier handler.
-pub fn mock_dependencies_with_logic_and_balance( contract_balance: &[Coin],
+pub fn mock_dependencies_with_logic_and_balance(
+    contract_balance: &[Coin],
 ) -> OwnedDeps<MockStorage, MockApi, MockQuerier<LogicCustomQuery>, LogicCustomQuery> {
     mock_dependencies_with_logic_and_balances(&[(MOCK_CONTRACT_ADDR, contract_balance)])
 }
@@ -16,14 +17,15 @@ pub fn mock_dependencies_with_logic_and_balance( contract_balance: &[Coin],
 ///
 /// Set the logic querier mock handler.
 /// Sets all balances provided (you must explicitly set contract balance if desired).
-pub fn mock_dependencies_with_logic_and_balances(balances: &[(&str, &[Coin])]) -> OwnedDeps<MockStorage, MockApi, MockQuerier<LogicCustomQuery>, LogicCustomQuery> {
+pub fn mock_dependencies_with_logic_and_balances(
+    balances: &[(&str, &[Coin])],
+) -> OwnedDeps<MockStorage, MockApi, MockQuerier<LogicCustomQuery>, LogicCustomQuery> {
     OwnedDeps {
         storage: MockStorage::default(),
         api: MockApi::default(),
         querier: MockLogicQuerier::new(LogicQuerier::default(), balances),
         custom_query_type: PhantomData,
     }
-
 }
 
 trait MockLogicQuerier {
@@ -51,8 +53,8 @@ impl LogicQuerier {
 
     #[allow(dead_code)]
     fn update_handler<LH: 'static>(&mut self, handler: LH)
-        where
-            LH: Fn(&LogicCustomQuery) -> QuerierResult,
+    where
+        LH: Fn(&LogicCustomQuery) -> QuerierResult,
     {
         self.handler = Box::from(handler)
     }
@@ -69,16 +71,15 @@ impl Default for LogicQuerier {
                         success: true,
                         has_more: false,
                         variables: vec!["foo".to_string()],
-                        results: vec![
-                            crate::Result {
-                                substitutions: vec![Substitution {
-                                    variable: "foo".to_string(),
-                                    term: Term {
-                                        name: "bar".to_string(),
-                                        arguments: vec![]
-                                    }
-                                }]  }
-                            ],
+                        results: vec![crate::Result {
+                            substitutions: vec![Substitution {
+                                variable: "foo".to_string(),
+                                term: Term {
+                                    name: "bar".to_string(),
+                                    arguments: vec![],
+                                },
+                            }],
+                        }],
                     }),
                 }),
             };

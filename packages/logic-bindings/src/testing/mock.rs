@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
-use cosmwasm_std::{Coin, OwnedDeps, QuerierResult, SystemError, SystemResult, Uint128};
+use cosmwasm_std::{Coin, OwnedDeps, QuerierResult, SystemError, SystemResult, to_binary, Uint128};
 use cosmwasm_std::testing::{BankQuerier, MOCK_CONTRACT_ADDR, MockApi, MockQuerier, MockStorage};
 use serde::de::DeserializeOwned;
-use crate::LogicCustomQuery;
+use crate::{Answer, AskResponse, LogicCustomQuery, Substitution, Term};
 
 /// Creates all external requirements that can be injected for unit tests.
 ///
@@ -39,7 +39,7 @@ impl MockLogicQuerier for MockQuerier<LogicCustomQuery> {
 
 struct LogicQuerier {
     /// A handler to handle Logic queries. This is set to a dummy handler that
-    /// always errors by default. Update it via `update_handler`.
+    /// always return a successful foo / bar response by default. Update it via `update_handler`.
     ///
     /// Use box to avoid the need of generic type.
     handler: Box<dyn for<'a> Fn(&'a LogicCustomQuery) -> QuerierResult>,
@@ -65,12 +65,28 @@ impl LogicQuerier {
 impl Default for LogicQuerier {
     fn default() -> Self {
         let handler = Box::from(|request: &LogicCustomQuery| -> QuerierResult {
-            let err = match request {
-                LogicCustomQuery::Ask { program, query} => SystemError::UnsupportedRequest {
-                    kind: "logic".to_string(),
-                },
+            let result = match request {
+                LogicCustomQuery::Ask { program, query} => to_binary(&AskResponse {
+                    height: 1,
+                    gas_used: 1000,
+                    answer: Some(Answer {
+                        success: true,
+                        has_more: false,
+                        variables: vec!["foo".to_string()],
+                        results: vec![
+                            crate::Result {
+                                substitutions: vec![Substitution {
+                                    variable: "foo".to_string(),
+                                    term: Term {
+                                        name: "bar".to_string(),
+                                        arguments: vec![]
+                                    }
+                                }]  }
+                            ],
+                    }),
+                }),
             };
-            SystemResult::Err(err)
+            SystemResult::Ok(result.into())
         });
         Self::new(handler)
     }

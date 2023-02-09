@@ -109,6 +109,11 @@ mkdir -p $SCHEMA_FOLDER
 find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
     -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
 
+for SCHEMA in $(ls $SCHEMA_FOLDER); do
+    awk "{sub(\"#/definitions\",\"./${SCHEMA}/#/definitions\")} {print}"  ${SCHEMA_FOLDER}/${SCHEMA} > ${SCHEMA_FOLDER}/tmp
+    mv ${SCHEMA_FOLDER}/tmp ${SCHEMA_FOLDER}/${SCHEMA}
+done
+
 echo "📚 Generating documentation..."
 rm -rf $DOCS_FOLDER
 jsonschema2md -d schema -o $DOCS_FOLDER --schema-extension json --schema-out $DOCS_FOLDER/schema
@@ -139,8 +144,8 @@ mkdir -p ${DIR_DEPLOY}/${CHAIN}/data
 [tasks.chain-add-keys]
 condition = { fail_message = "🚫 The chain is already initialized." }
 condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
-description = "Add a set of predefined keys (recovered from the seed phrases) to the chain."
 dependencies = ["chain-init-folder"]
+description = "Add a set of predefined keys (recovered from the seed phrases) to the chain."
 script = '''
 keys=(
   "validator:${MNEMONIC_VALIDATOR}"

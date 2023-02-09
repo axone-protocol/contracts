@@ -1,5 +1,5 @@
 [workspace]
-members = ["contracts/*"]
+members = ["contracts/*", "packages/*"]
 
 [workspace.dependencies]
 cosmwasm-schema = "1.2.1"

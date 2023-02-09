@@ -1,3 +1,15 @@
+#![forbid(unsafe_code)]
+#![deny(
+warnings,
+rust_2018_idioms,
+trivial_casts,
+trivial_numeric_casts,
+unused_lifetimes,
+unused_import_braces,
+unused_qualifications,
+unused_qualifications
+)]
+
 mod query;
 
 pub use query::{Answer, AskResponse, LogicCustomQuery, Result, Substitution, Term};

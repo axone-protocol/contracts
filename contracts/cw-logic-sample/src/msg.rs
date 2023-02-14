@@ -1,4 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+#[allow(unused_imports)]
 use logic_bindings::AskResponse;
 
 /// Instantiate messages

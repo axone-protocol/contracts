@@ -13,7 +13,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -33,7 +33,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -47,7 +47,7 @@ pub fn execute(
 pub mod execute {
     use super::*;
 
-    pub fn increment(deps: DepsMut) -> Result<Response, ContractError> {
+    pub fn increment(deps: DepsMut<'_>) -> Result<Response, ContractError> {
         STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
             state.count += 1;
             Ok(state)
@@ -56,7 +56,11 @@ pub mod execute {
         Ok(Response::new().add_attribute("action", "increment"))
     }
 
-    pub fn reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
+    pub fn reset(
+        deps: DepsMut<'_>,
+        info: MessageInfo,
+        count: i32,
+    ) -> Result<Response, ContractError> {
         STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
             if info.sender != state.owner {
                 return Err(ContractError::Unauthorized {});
@@ -69,7 +73,7 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCount {} => to_binary(&query::count(deps)?),
     }
@@ -78,7 +82,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub mod query {
     use super::*;
 
-    pub fn count(deps: Deps) -> StdResult<GetCountResponse> {
+    pub fn count(deps: Deps<'_>) -> StdResult<GetCountResponse> {
         let state = STATE.load(deps.storage)?;
         Ok(GetCountResponse { count: state.count })
     }

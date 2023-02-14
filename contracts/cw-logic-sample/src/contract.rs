@@ -14,7 +14,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut<LogicCustomQuery>,
+    deps: DepsMut<'_, LogicCustomQuery>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -31,7 +31,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps<LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ask { query } => to_binary(&query::ask(deps, query)?),
     }
@@ -40,7 +40,7 @@ pub fn query(deps: Deps<LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResul
 pub mod query {
     use super::*;
 
-    pub fn ask(deps: Deps<LogicCustomQuery>, query: String) -> StdResult<AskResponse> {
+    pub fn ask(deps: Deps<'_, LogicCustomQuery>, query: String) -> StdResult<AskResponse> {
         let state = STATE.load(deps.storage)?;
 
         let req = LogicCustomQuery::Ask {
@@ -50,5 +50,40 @@ pub mod query {
         .into();
 
         deps.querier.query(&req)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::testing::{mock_env, mock_info};
+    use cosmwasm_std::{coins, from_binary, Coin};
+    use logic_bindings::testing::mock::mock_dependencies_with_logic_and_balance;
+
+    #[test]
+    fn proper_initialization() {
+        let mut deps =
+            mock_dependencies_with_logic_and_balance(&[Coin::new(10000, "uknow".to_string())]);
+
+        let msg = InstantiateMsg {
+            program: "bank_balances_has_coin(A, D, V, S) :- bank_balances(A, R), member(D-V, R), compare(>, V, S).".to_string(),
+        };
+        let info = mock_info("creator", &coins(1000, "earth"));
+
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // it worked, let's check if logic querier is called to answer to the `Ask` query.
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Ask {
+                query: "".to_string(),
+            },
+        )
+        .unwrap();
+        let value: AskResponse = from_binary(&res).unwrap();
+        assert!(value.answer.unwrap().success);
     }
 }

@@ -8,4 +8,4 @@ pub struct State {
     pub program: String,
 }
 
-pub const STATE: Item<State> = Item::new("state");
+pub const STATE: Item<'_, State> = Item::new("state");

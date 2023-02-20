@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, Response};
+use cosmwasm_std::Binary;
 
 /// Instantiate messages
 #[cw_serde]
@@ -52,7 +52,7 @@ pub enum QueryMsg {
     #[returns(GetObjectResponse)]
     GetObject {
         /// The id of the object to get.
-        id: ObjectId
+        id: ObjectId,
     },
 
     /// # GetObjects
@@ -62,7 +62,7 @@ pub enum QueryMsg {
         /// The owner of the objects to get.
         address: Option<String>,
         /// The number of objects to return.
-        first: Option<usize>,
+        first: Option<u128>,
         /// The point in the sequence to start returning objects.
         after: Option<Cursor>,
     },
@@ -75,7 +75,7 @@ pub enum QueryMsg {
         /// The id of the object to get the pins for.
         id: ObjectId,
         /// The number of pins to return.
-        first: Option<usize>,
+        first: Option<u128>,
         /// The point in the sequence to start returning pins.
         after: Option<Cursor>,
     },
@@ -98,7 +98,7 @@ pub struct GetObjectResponse {
     pub id: ObjectId,
     pub owner: String,
     pub is_pinned: bool,
-    pub size: usize,
+    pub size: u128,
 }
 
 /// # GetObjectsResponse

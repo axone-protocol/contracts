@@ -1,10 +1,14 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
+use cosmwasm_std::Uint128;
 
 /// Instantiate messages
 #[cw_serde]
 pub struct InstantiateMsg {
+    /// The name of the bucket.
     pub bucket: String,
+    /// The address of the owner of the bucket.
+    pub owner: String,
 }
 
 /// ObjectId is the type of identifier of an object in the bucket.
@@ -47,35 +51,35 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// # GetObject
-    /// GetObject returns the object information with the given id.
-    #[returns(GetObjectResponse)]
-    GetObject {
+    /// # Object
+    /// Object returns the object information with the given id.
+    #[returns(ObjectResponse)]
+    Object {
         /// The id of the object to get.
         id: ObjectId,
     },
 
-    /// # GetObjects
-    /// GetObjects returns the list of objects in the bucket with support for pagination.
-    #[returns(GetObjectsResponse)]
-    GetObjects {
+    /// # Objects
+    /// Objects returns the list of objects in the bucket with support for pagination.
+    #[returns(ObjectsResponse)]
+    Objects {
         /// The owner of the objects to get.
         address: Option<String>,
         /// The number of objects to return.
-        first: Option<u128>,
+        first: Option<Uint128>,
         /// The point in the sequence to start returning objects.
         after: Option<Cursor>,
     },
 
-    /// # GetObjectPins
-    /// GetObjectPins returns the list of addresses that pinned the object with the given id with
+    /// # ObjectPins
+    /// ObjectPins returns the list of addresses that pinned the object with the given id with
     /// support for pagination.
-    #[returns(GetObjectPinsResponse)]
-    GetObjectPins {
+    #[returns(ObjectPinsResponse)]
+    ObjectPins {
         /// The id of the object to get the pins for.
         id: ObjectId,
         /// The number of pins to return.
-        first: Option<u128>,
+        first: Option<Uint128>,
         /// The point in the sequence to start returning pins.
         after: Option<Cursor>,
     },
@@ -91,29 +95,29 @@ pub struct PageInfo {
     pub end_cursor: Cursor,
 }
 
-/// # GetObjectResponse
-/// GetObjectResponse is the response of the GetObject query.
+/// # ObjectResponse
+/// ObjectResponse is the response of the GetObject query.
 #[cw_serde]
-pub struct GetObjectResponse {
+pub struct ObjectResponse {
     pub id: ObjectId,
     pub owner: String,
     pub is_pinned: bool,
-    pub size: u128,
+    pub size: Uint128,
 }
 
-/// # GetObjectsResponse
+/// # ObjectsResponse
 /// GetObjectsResponse is the response of the GetObjects query.
 #[cw_serde]
-pub struct GetObjectsResponse {
+pub struct ObjectsResponse {
     /// The list of objects in the bucket.
-    pub data: Vec<GetObjectResponse>,
+    pub data: Vec<ObjectResponse>,
     pub page_info: PageInfo,
 }
 
-/// # GetObjectPinsResponse
-/// GetObjectPinsResponse is the response of the GetObjectPins query.
+/// # ObjectPinsResponse
+/// ObjectPinsResponse is the response of the GetObjectPins query.
 #[cw_serde]
-pub struct GetObjectPinsResponse {
+pub struct ObjectPinsResponse {
     /// The list of addresses that pinned the object.
     pub data: Vec<String>,
     pub page_info: PageInfo,

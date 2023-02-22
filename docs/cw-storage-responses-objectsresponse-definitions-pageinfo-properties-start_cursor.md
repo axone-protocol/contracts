@@ -1,0 +1,15 @@
+# Untitled string in cw-storage Schema
+
+```txt
+undefined#/responses/objects/definitions/PageInfo/properties/start_cursor
+```
+
+The cursor to the next page.
+
+| Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                         |
+| :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------- |
+| Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-storage.json\*](schema/cw-storage.json "open original schema") |
+
+## start\_cursor Type
+
+`string`

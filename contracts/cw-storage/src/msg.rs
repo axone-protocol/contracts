@@ -2,20 +2,35 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
 use cosmwasm_std::Uint128;
 
-/// Instantiate messages
-#[cw_serde]
-pub struct InstantiateMsg {
-    /// The name of the bucket.
-    pub bucket: String,
-    /// The address of the owner of the bucket.
-    pub owner: String,
-}
-
 /// ObjectId is the type of identifier of an object in the bucket.
 type ObjectId = String;
 
 /// Cursor is the opaque type of cursor used for pagination.
 type Cursor = String;
+
+/// BucketLimits is the type of the limits of a bucket.
+///
+/// The limits are optional and if not set, there is no limit.
+#[cw_serde]
+pub struct BucketLimits {
+    /// The maximum total size of the objects in the bucket.
+    pub max_total_size: Option<Uint128>,
+    /// The maximum number of objects in the bucket.
+    pub max_objects: Option<Uint128>,
+    /// The maximum size of the objects in the bucket.
+    pub max_object_size: Option<Uint128>,
+    /// The maximum number of pins in the bucket for an object.
+    pub max_object_pins: Option<Uint128>,
+}
+
+/// Instantiate messages
+#[cw_serde]
+pub struct InstantiateMsg {
+    /// The name of the bucket.
+    pub bucket: String,
+    /// The limits of the bucket.
+    pub limits: BucketLimits,
+}
 
 /// Execute messages
 #[cw_serde]
@@ -97,9 +112,13 @@ pub enum QueryMsg {
 /// PageInfo is the page information returned for paginated queries.
 #[cw_serde]
 pub struct PageInfo {
+    /// Tells if there is a next page.
     pub has_next_page: bool,
+    /// Tells if there is a previous page.
     pub has_previous_page: bool,
+    /// The cursor to the next page.
     pub start_cursor: Cursor,
+    /// The cursor to the previous page.
     pub end_cursor: Cursor,
 }
 
@@ -107,9 +126,13 @@ pub struct PageInfo {
 /// ObjectInfoResponse is the response of the ObjectInfo query.
 #[cw_serde]
 pub struct ObjectInfoResponse {
+    /// The id of the object.
     pub id: ObjectId,
+    /// The owner of the object.
     pub owner: String,
+    /// Tells if the object is pinned by at least one address.
     pub is_pinned: bool,
+    /// The size of the object.
     pub size: Uint128,
 }
 
@@ -119,6 +142,7 @@ pub struct ObjectInfoResponse {
 pub struct ObjectsInfoResponse {
     /// The list of objects in the bucket.
     pub data: Vec<ObjectInfoResponse>,
+    /// The page information.
     pub page_info: PageInfo,
 }
 
@@ -128,5 +152,6 @@ pub struct ObjectsInfoResponse {
 pub struct ObjectPinsResponse {
     /// The list of addresses that pinned the object.
     pub data: Vec<String>,
+    /// The page information.
     pub page_info: PageInfo,
 }

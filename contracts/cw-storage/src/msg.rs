@@ -25,7 +25,7 @@ pub enum ExecuteMsg {
     /// The object is referenced by the hash of its content and this value is returned.
     /// If the object is already stored, this is a no-op.
     /// If pin is true, the object is pinned for the sender.
-    StoreObject { object: Binary, pin: bool },
+    StoreObject { data: Binary, pin: bool },
 
     /// # ForgetObject
     /// ForgetObject first unpin the object from the bucket for the considered sender, then remove
@@ -51,24 +51,32 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// # Object
-    /// Object returns the object information with the given id.
-    #[returns(ObjectResponse)]
-    Object {
+    /// # ObjectInfo
+    /// ObjectInfo returns the object information with the given id.
+    #[returns(ObjectInfoResponse)]
+    ObjectInfo {
         /// The id of the object to get.
         id: ObjectId,
     },
 
-    /// # Objects
-    /// Objects returns the list of objects in the bucket with support for pagination.
-    #[returns(ObjectsResponse)]
-    Objects {
+    /// # ObjectsInfo
+    /// ObjectsInfo returns the list of objects in the bucket with support for pagination.
+    #[returns(ObjectsInfoResponse)]
+    ObjectsInfo {
         /// The owner of the objects to get.
         address: Option<String>,
         /// The number of objects to return.
         first: Option<Uint128>,
         /// The point in the sequence to start returning objects.
         after: Option<Cursor>,
+    },
+
+    /// # ObjectData
+    /// ObjectData returns the content of the object with the given id.
+    #[returns(Binary)]
+    ObjectData {
+        /// The id of the object to get.
+        id: ObjectId,
     },
 
     /// # ObjectPins
@@ -95,22 +103,22 @@ pub struct PageInfo {
     pub end_cursor: Cursor,
 }
 
-/// # ObjectResponse
-/// ObjectResponse is the response of the GetObject query.
+/// # ObjectInfoResponse
+/// ObjectInfoResponse is the response of the ObjectInfo query.
 #[cw_serde]
-pub struct ObjectResponse {
+pub struct ObjectInfoResponse {
     pub id: ObjectId,
     pub owner: String,
     pub is_pinned: bool,
     pub size: Uint128,
 }
 
-/// # ObjectsResponse
-/// GetObjectsResponse is the response of the GetObjects query.
+/// # ObjectsInfoResponse
+/// ObjectsInfoResponse is the response of the ObjectsInfo query.
 #[cw_serde]
-pub struct ObjectsResponse {
+pub struct ObjectsInfoResponse {
     /// The list of objects in the bucket.
-    pub data: Vec<ObjectResponse>,
+    pub data: Vec<ObjectInfoResponse>,
     pub page_info: PageInfo,
 }
 

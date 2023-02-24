@@ -1,27 +1,13 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
 use cosmwasm_std::Uint128;
+use crate::state::BucketLimits;
 
 /// ObjectId is the type of identifier of an object in the bucket.
 type ObjectId = String;
 
 /// Cursor is the opaque type of cursor used for pagination.
 type Cursor = String;
-
-/// BucketLimits is the type of the limits of a bucket.
-///
-/// The limits are optional and if not set, there is no limit.
-#[cw_serde]
-pub struct BucketLimits {
-    /// The maximum total size of the objects in the bucket.
-    pub max_total_size: Option<Uint128>,
-    /// The maximum number of objects in the bucket.
-    pub max_objects: Option<Uint128>,
-    /// The maximum size of the objects in the bucket.
-    pub max_object_size: Option<Uint128>,
-    /// The maximum number of pins in the bucket for an object.
-    pub max_object_pins: Option<Uint128>,
-}
 
 /// Instantiate messages
 #[cw_serde]

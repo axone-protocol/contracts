@@ -17,4 +17,16 @@ pub enum ContractError {
 pub enum BucketError {
     #[error("Name of bucket could not be empty")]
     EmptyName,
+
+    #[error("Object max size exceeded")]
+    ObjectMaxSizeLimitExceeded {},
+
+    #[error("Maximum objects number exceeded")]
+    MaxObjectsLimitExceeded {},
+
+    #[error("Maximum total size exceeded")]
+    BucketSizeLimitExceeded {},
+
+    #[error("Maximum object pins number exceeded")]
+    MaxObjectPinsLimitExceeded {},
 }

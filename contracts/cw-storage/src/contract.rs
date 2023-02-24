@@ -145,12 +145,13 @@ pub mod query {
         objects()
             .load(deps.storage, id)
             .map(|object| ObjectResponse {
-                id: object.id,
+                id: object.id.clone(),
                 size: object.size.into(),
                 owner: object.owner.into(),
                 is_pinned: pins()
                     .idx
                     .object
+                    .prefix(object.id)
                     .keys_raw(deps.storage, None, None, Order::Ascending)
                     .next()
                     .is_some(),

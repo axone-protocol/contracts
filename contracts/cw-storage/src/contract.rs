@@ -1,14 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, Order,
 };
 use cw2::set_contract_version;
-use ContractError::NotImplemented;
+use crate::ContractError::{NotImplemented, ObjectMaxSizeLimitExceeded, MaxObjectPinsLimitExceeded, MaxObjectsLimitExceeded, BucketSizeLimitExceeded};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Bucket, BUCKET};
+use crate::state::{Bucket, BUCKET, DATA, Object, objects, Pin, pins};
+use crate::crypto::sha256_hash;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:storage";
@@ -31,15 +32,82 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _msg: ExecuteMsg,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    Err(NotImplemented {})
+    match msg {
+        ExecuteMsg::StoreObject {data, pin} => execute::store_object(deps, info, data, pin),
+        _ => Err(NotImplemented {})
+    }
 }
 
-pub mod execute {}
+pub mod execute {
+    use super::*;
+
+    pub fn store_object(
+        deps: DepsMut,
+        info: MessageInfo,
+        data: Binary,
+        pin: bool,
+    ) -> Result<Response, ContractError> {
+        let bucket_limits = BUCKET.load(deps.storage)?.limits;
+
+        let size = data.len() as u128;
+        match bucket_limits.max_object_size {
+            Some(max) if size > max.u128() => Err(ObjectMaxSizeLimitExceeded {}),
+            _ => Ok({})
+        }?;
+
+        let object_count = objects()
+            .keys_raw(deps.storage, None, None, Order::Ascending)
+            .count() as u128;
+        match bucket_limits.max_objects {
+            Some(max) if object_count >= max.u128() => Err(MaxObjectsLimitExceeded {}),
+            _ => Ok({})
+        }?;
+
+        if pin && bucket_limits.max_object_pins.filter(|max: &Uint128| max.u128() < 1u128).is_some(){
+            return Err(MaxObjectPinsLimitExceeded {})
+        }
+
+        BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
+            bucket.size += size;
+            match bucket.limits.max_total_size {
+                Some(max) if bucket.size > max.u128() => Err(BucketSizeLimitExceeded {}),
+                _ => Ok(bucket)
+            }
+        })?;
+
+        let hash = sha256_hash(&data.0);
+        let res = Response::new()
+            .add_attribute("action", "store_object")
+            .add_attribute("id", hash.clone());
+
+        let data_path = DATA.key(hash.clone());
+        if data_path.has(deps.storage) {
+            // TODO: maybe throw an error if the owner is different?
+            return Ok(res)
+        }
+
+        data_path.save(deps.storage, &data.0)?;
+        objects().save(deps.storage, hash.clone(), &Object {
+            id: hash.clone(),
+            owner: info.sender.clone(),
+            size,
+        })?;
+
+        if pin {
+            pins().save(deps.storage, (hash.clone(), info.sender.clone()), &Pin {
+                id: hash.into(),
+                address: info.sender,
+            })?;
+        }
+
+        Ok(res)
+    }
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {

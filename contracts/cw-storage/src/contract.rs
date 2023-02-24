@@ -165,6 +165,7 @@ mod tests {
     use crate::msg::{BucketLimits, BucketResponse};
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::{from_binary, Attribute, Uint128};
 
     #[test]
@@ -451,5 +452,73 @@ mod tests {
 
             assert_eq!(res.err(), case.1);
         }
+    }
+
+    #[test]
+    fn object() {
+        let mut deps = mock_dependencies();
+        let info = mock_info("creator", &[]);
+
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits {
+                max_objects: None,
+                max_object_size: None,
+                max_total_size: None,
+                max_object_pins: None,
+            },
+        };
+        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        match query::object(
+            deps.as_ref(),
+            ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
+        )
+        .err()
+        .unwrap()
+        {
+            NotFound { .. } => (),
+            _ => panic!("assertion failed"),
+        }
+
+        let data = general_purpose::STANDARD.encode("hello");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: true,
+        };
+        execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let res = query::object(
+            deps.as_ref(),
+            ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
+        )
+        .unwrap();
+        assert_eq!(
+            res.id,
+            ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+        );
+        assert_eq!(res.owner, info.sender);
+        assert_eq!(res.is_pinned, true);
+        assert_eq!(res.size.u128(), 5u128);
+
+        let data = general_purpose::STANDARD.encode("okp4");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let res = query::object(
+            deps.as_ref(),
+            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
+        )
+        .unwrap();
+        assert_eq!(
+            res.id,
+            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")
+        );
+        assert_eq!(res.owner, info.sender);
+        assert_eq!(res.is_pinned, false);
+        assert_eq!(res.size.u128(), 4u128);
     }
 }

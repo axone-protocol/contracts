@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, to_binary};
 use cw2::set_contract_version;
 use ContractError::NotImplemented;
 
@@ -41,8 +41,21 @@ pub fn execute(
 pub mod execute {}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    Err(StdError::generic_err("Not implemented"))
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
+        _ => Err(StdError::generic_err("Not implemented"))
+    }
+
 }
 
-pub mod query {}
+pub mod query {
+    use crate::msg::BucketResponse;
+    use super::*;
+
+    pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
+        let bucket = BUCKET.load(deps.storage)?;
+
+        Ok(BucketResponse { name: bucket.name, limits: bucket.limits })
+    }
+}

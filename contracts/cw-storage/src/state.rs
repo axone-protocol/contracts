@@ -82,3 +82,45 @@ pub fn objects<'a>() -> IndexedMap<'a, String, Object, ObjectIndexes<'a>> {
         },
     )
 }
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Pin {
+    /// The id of the object.
+    pub id: String,
+    /// The address that pinned the object.
+    pub address: Addr,
+}
+
+pub struct PinIndexes<'a> {
+    pub object: MultiIndex<'a, String, Pin, (String, Addr)>,
+    pub address: MultiIndex<'a, Addr, Pin, (String, Addr)>,
+}
+
+impl IndexList<Pin> for PinIndexes<'_> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item=&'_ dyn Index<Pin>> + '_> {
+        Box::new(
+            vec![
+                &self.object as &dyn Index<Pin>,
+                &self.address
+            ].into_iter()
+        )
+    }
+}
+
+pub fn pins<'a>() -> IndexedMap<'a, (String, Addr), Pin, PinIndexes<'a>> {
+    IndexedMap::new(
+        "PIN",
+        PinIndexes {
+            object: MultiIndex::new(
+                |_, pin| pin.id.clone(),
+                "PIN",
+                "PIN__OBJECT",
+            ),
+            address: MultiIndex::new(
+                |_, pin| pin.address.clone(),
+                "PIN",
+                "PIN__ADDRESS",
+            ),
+        }
+    )
+}

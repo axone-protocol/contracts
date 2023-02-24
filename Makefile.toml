@@ -377,7 +377,7 @@ then
 fi
 json=$3
 
-echo "📦 Instantiate contract ${code} to chain ${CHAIN} and json '${json}'"
+echo "📦 Instantiate contract ${code} to chain ${CHAIN}"
 docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
@@ -395,6 +395,35 @@ docker run --rm \
       --yes \
       --label $label \
       --no-admin
+'''
+
+[tasks.chain-query-contract]
+dependencies = ["chain-start"]
+description = "Query a specific contract to the chain. The contract must be already deployed and instantiated."
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract address as the first argument."
+  exit 1
+fi
+addr=$1
+
+if [ -z "$2" ]
+then
+  echo "❌ Please provide the contract query as the second argument."
+  exit 1
+fi
+query=$2
+
+echo "📦 Query contract ${addr} to chain ${CHAIN}"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_OKP4D} \
+    query wasm contract-state smart ${addr} "${query}" \
+      --output json \
+      | jq -r '.'
 '''
 
 [tasks.install-llvm-tools-preview]

@@ -4,10 +4,10 @@ use cosmwasm_std::Binary;
 use cosmwasm_std::Uint128;
 
 /// ObjectId is the type of identifier of an object in the bucket.
-type ObjectId = String;
+pub type ObjectId = String;
 
 /// Cursor is the opaque type of cursor used for pagination.
-type Cursor = String;
+pub type Cursor = String;
 
 /// Instantiate messages
 #[cw_serde]

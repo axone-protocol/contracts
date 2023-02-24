@@ -1,8 +1,8 @@
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
 use crate::msg::BucketLimits;
-use cosmwasm_std::Uint128;
-use cw_storage_plus::Item;
+use cosmwasm_std::{Addr, Uint128};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -51,3 +51,32 @@ impl From<BucketLimits> for Limits {
     }
 }
 pub const BUCKET: Item<Bucket> = Item::new("bucket");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Object {
+    /// The id of the object.
+    pub id: String,
+    /// The owner of the object.
+    pub owner: Addr,
+    /// The size of the object.
+    pub size: Uint128,
+}
+
+pub struct ObjectIndexes<'a> {
+    pub owner: MultiIndex<'a, Addr, Object, String>,
+}
+
+impl IndexList<Object> for ObjectIndexes<'_> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Object>> + '_> {
+        Box::new(vec![&self.owner as &dyn Index<Object>].into_iter())
+    }
+}
+
+pub fn objects<'a>() -> IndexedMap<'a, String, Object, ObjectIndexes<'a>> {
+    IndexedMap::new(
+        "OBJECT",
+        ObjectIndexes {
+            owner: MultiIndex::new(|_, object| object.owner.clone(), "OBJECT", "OBJECT__OWNER"),
+        },
+    )
+}

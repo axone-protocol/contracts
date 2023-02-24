@@ -2,9 +2,11 @@ use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
 use crate::msg::BucketLimits;
 use cosmwasm_std::{Addr, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+pub const DATA: Map<String, Vec<u8>> = Map::new("DATA");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Bucket {

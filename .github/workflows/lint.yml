@@ -239,7 +239,7 @@ jobs:
 
       - name: Installing jsonschema2md
         run: |
-          yarn global add @adobe/jsonschema2md
+          yarn global add @adobe/jsonschema2md@7.1.5
           echo "$(yarn global bin)" >> $GITHUB_PATH
 
       - name: Cache cargo registry

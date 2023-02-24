@@ -85,7 +85,7 @@ chain-start - Run the full node wasmd application using the chain's home directo
 chain-stop - Stop the chain's container.
 ```
 
-## Initialize the chain
+### Initialize the chain
 
 To initialize the chain, just run:
 
@@ -96,7 +96,7 @@ cargo make chain-initialize
 This will initialize the chain's home directory and create a validator's key and a set of predefined keys
 (recovered from the seed phrases).
 
-## Start the chain
+### Start the chain
 
 To start the chain, just run:
 
@@ -112,7 +112,7 @@ You can check the chain's logs with:
 cargo make chain-logs
 ```
 
-## Deploy the Smart Contracts
+### Deploy the Smart Contracts
 
 To deploy the Smart Contracts, just run:
 
@@ -125,7 +125,7 @@ must be present in the artifacts directory. See the [Build](#-build) section for
 
 Now, you can interact with the deployed smart contracts and test them out.
 
-## Stop the chain
+### Stop the chain
 
 To stop the chain, just run:
 
@@ -133,7 +133,7 @@ To stop the chain, just run:
 cargo make chain-stop
 ```
 
-## Clean the chain
+### Clean the chain
 
 To clean the chain, just run:
 
@@ -143,6 +143,42 @@ cargo make chain-clean
 
 ⚠️ Please be cautious when running this command as it will completely clean the chain's home directory and the action is
 irreversible.
+
+## Documentation
+
+To generate the documentation follow the steps below.
+
+### Tools installation
+
+Be sure you have the following tools installed:
+
+- [Yarn](https://classic.yarnpkg.com/en/docs/install) v1.22.10 or higher
+
+Then, install the dependencies:
+
+```sh
+yarn global add @adobe/jsonschema2md@7.1.5
+```
+
+### Generate the documentation
+
+To generate the documentation, just run:
+
+```sh
+cargo make schema
+cargo make generate_docs
+```
+
+You'll find the generated documentation under the `docs` folder.
+
+### Commit the documentation
+
+When developing a new contract, you should commit the generated documentation to the repository. For this, gerenate the
+documentation and commit the changes:
+
+```sh
+git commit -am "docs: update generated documentation"
+```
 
 ## Resources
 

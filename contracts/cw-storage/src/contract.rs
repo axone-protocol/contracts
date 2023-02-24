@@ -69,7 +69,7 @@ pub mod execute {
                 Limits {
                     max_objects: Some(max),
                     ..
-                } if object_count as u128 > max.u128() => {
+                } if object_count as u128 >= max.u128() => {
                     Err(BucketError::MaxObjectsLimitExceeded.into())
                 }
                 Limits {
@@ -355,16 +355,80 @@ mod tests {
     #[test]
     fn store_object_limits() {
         let cases = vec![
-            (BucketLimits {max_objects: Some(2u128.into()), max_object_size: None, max_total_size: None, max_object_pins: None}, None),
-            (BucketLimits {max_objects: None, max_object_size: Some(5u128.into()), max_total_size: None, max_object_pins: None}, None),
-            (BucketLimits {max_objects: None, max_object_size: None, max_total_size: Some(9u128.into()), max_object_pins: None}, None),
-            (BucketLimits {max_objects: None, max_object_size: None, max_total_size: None, max_object_pins: Some(1u128.into())}, None),
-            (BucketLimits {max_objects: Some(1u128.into()), max_object_size: None, max_total_size: None, max_object_pins: None}, Some(MaxObjectsLimitExceeded {})),
-            (BucketLimits {max_objects: None, max_object_size: Some(4u128.into()), max_total_size: None, max_object_pins: None}, Some(ObjectMaxSizeLimitExceeded {})),
-            (BucketLimits {max_objects: None, max_object_size: None, max_total_size: Some(8u128.into()), max_object_pins: None}, Some(BucketSizeLimitExceeded {})),
-            (BucketLimits {max_objects: None, max_object_size: None, max_total_size: None, max_object_pins: Some(0u128.into())}, Some(MaxObjectPinsLimitExceeded {})),
+            (
+                BucketLimits {
+                    max_objects: Some(2u128.into()),
+                    max_object_size: None,
+                    max_total_size: None,
+                    max_object_pins: None,
+                },
+                None,
+            ),
+            (
+                BucketLimits {
+                    max_objects: None,
+                    max_object_size: Some(5u128.into()),
+                    max_total_size: None,
+                    max_object_pins: None,
+                },
+                None,
+            ),
+            (
+                BucketLimits {
+                    max_objects: None,
+                    max_object_size: None,
+                    max_total_size: Some(9u128.into()),
+                    max_object_pins: None,
+                },
+                None,
+            ),
+            (
+                BucketLimits {
+                    max_objects: None,
+                    max_object_size: None,
+                    max_total_size: None,
+                    max_object_pins: Some(1u128.into()),
+                },
+                None,
+            ),
+            (
+                BucketLimits {
+                    max_objects: Some(1u128.into()),
+                    max_object_size: None,
+                    max_total_size: None,
+                    max_object_pins: None,
+                },
+                Some(MaxObjectsLimitExceeded {}),
+            ),
+            (
+                BucketLimits {
+                    max_objects: None,
+                    max_object_size: Some(4u128.into()),
+                    max_total_size: None,
+                    max_object_pins: None,
+                },
+                Some(ObjectMaxSizeLimitExceeded {}),
+            ),
+            (
+                BucketLimits {
+                    max_objects: None,
+                    max_object_size: None,
+                    max_total_size: Some(8u128.into()),
+                    max_object_pins: None,
+                },
+                Some(BucketSizeLimitExceeded {}),
+            ),
+            (
+                BucketLimits {
+                    max_objects: None,
+                    max_object_size: None,
+                    max_total_size: None,
+                    max_object_pins: Some(0u128.into()),
+                },
+                Some(MaxObjectPinsLimitExceeded {}),
+            ),
         ];
-        
+
         let obj1 = general_purpose::STANDARD.encode("okp4");
         let obj2 = general_purpose::STANDARD.encode("hello");
 
@@ -378,9 +442,15 @@ mod tests {
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-            let msg = ExecuteMsg::StoreObject { data: Binary::from_base64(obj1.as_str()).unwrap(), pin: false };
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(obj1.as_str()).unwrap(),
+                pin: false,
+            };
             execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-            let msg = ExecuteMsg::StoreObject { data: Binary::from_base64(obj2.as_str()).unwrap(), pin: true };
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(obj2.as_str()).unwrap(),
+                pin: true,
+            };
             let res = execute(deps.as_mut(), mock_env(), info.clone(), msg);
 
             assert_eq!(res.err(), case.1);

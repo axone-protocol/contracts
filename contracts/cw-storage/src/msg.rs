@@ -66,18 +66,23 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// # ObjectInfo
-    /// ObjectInfo returns the object information with the given id.
-    #[returns(ObjectInfoResponse)]
-    ObjectInfo {
+    /// # Bucket
+    /// Bucket returns the bucket information.
+    #[returns(BucketResponse)]
+    Bucket {},
+
+    /// # Object
+    /// Object returns the object information with the given id.
+    #[returns(ObjectResponse)]
+    Object {
         /// The id of the object to get.
         id: ObjectId,
     },
 
-    /// # ObjectsInfo
-    /// ObjectsInfo returns the list of objects in the bucket with support for pagination.
-    #[returns(ObjectsInfoResponse)]
-    ObjectsInfo {
+    /// # Objects
+    /// Objects returns the list of objects in the bucket with support for pagination.
+    #[returns(ObjectsResponse)]
+    Objects {
         /// The owner of the objects to get.
         address: Option<String>,
         /// The number of objects to return.
@@ -122,10 +127,20 @@ pub struct PageInfo {
     pub end_cursor: Cursor,
 }
 
-/// # ObjectInfoResponse
-/// ObjectInfoResponse is the response of the ObjectInfo query.
+/// # BucketResponse
+/// BucketResponse is the response of the Bucket query.
 #[cw_serde]
-pub struct ObjectInfoResponse {
+pub struct BucketResponse {
+    /// The name of the bucket.
+    pub name: String,
+    /// The limits of the bucket.
+    pub limits: BucketLimits,
+}
+
+/// # ObjectResponse
+/// ObjectResponse is the response of the Object query.
+#[cw_serde]
+pub struct ObjectResponse {
     /// The id of the object.
     pub id: ObjectId,
     /// The owner of the object.
@@ -136,12 +151,12 @@ pub struct ObjectInfoResponse {
     pub size: Uint128,
 }
 
-/// # ObjectsInfoResponse
-/// ObjectsInfoResponse is the response of the ObjectsInfo query.
+/// # ObjectsResponse
+/// ObjectsResponse is the response of the Objects query.
 #[cw_serde]
-pub struct ObjectsInfoResponse {
+pub struct ObjectsResponse {
     /// The list of objects in the bucket.
-    pub data: Vec<ObjectInfoResponse>,
+    pub data: Vec<ObjectResponse>,
     /// The page information.
     pub page_info: PageInfo,
 }

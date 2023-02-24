@@ -232,6 +232,7 @@ dependencies = [
 name = "cw-storage"
 version = "0.1.0"
 dependencies = [
+ "base16ct",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -240,6 +241,7 @@ dependencies = [
  "cw2",
  "schemars",
  "serde",
+ "sha2 0.10.6",
  "thiserror",
 ]
 

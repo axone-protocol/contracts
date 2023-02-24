@@ -35,6 +35,8 @@ cw2.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+sha2 = "0.10.6"
+base16ct = "0.1.1"
 
 [dev-dependencies]
 cw-multi-test.workspace = true

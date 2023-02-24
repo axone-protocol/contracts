@@ -6,6 +6,7 @@ use ContractError::NotImplemented;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::{Bucket, BUCKET};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:storage";
@@ -16,11 +17,15 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    Err(NotImplemented {})
+    let bucket = Bucket { name: msg.bucket, limits: msg.limits };
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    BUCKET.save(deps.storage, &bucket)?;
+
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

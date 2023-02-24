@@ -19,14 +19,14 @@ pub enum BucketError {
     EmptyName,
 
     #[error("Object max size exceeded")]
-    ObjectMaxSizeLimitExceeded {},
+    ObjectMaxSizeLimitExceeded,
 
     #[error("Maximum objects number exceeded")]
-    MaxObjectsLimitExceeded {},
+    MaxObjectsLimitExceeded,
 
     #[error("Maximum total size exceeded")]
-    BucketSizeLimitExceeded {},
+    BucketSizeLimitExceeded,
 
     #[error("Maximum object pins number exceeded")]
-    MaxObjectPinsLimitExceeded {},
+    MaxObjectPinsLimitExceeded,
 }

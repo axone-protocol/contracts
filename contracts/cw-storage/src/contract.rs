@@ -1,15 +1,16 @@
+use crate::error::BucketError;
+use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Order,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
-use crate::ContractError::{NotImplemented, ObjectMaxSizeLimitExceeded, MaxObjectPinsLimitExceeded, MaxObjectsLimitExceeded, BucketSizeLimitExceeded};
 
-use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, ObjectId};
-use crate::state::{Bucket, BUCKET, DATA, Object, objects, Pin, pins};
 use crate::crypto::sha256_hash;
+use crate::error::ContractError;
+use crate::msg::{ExecuteMsg, InstantiateMsg, ObjectId, QueryMsg};
+use crate::state::{objects, pins, Bucket, Object, Pin, BUCKET, DATA};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:storage";
@@ -38,14 +39,14 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::StoreObject {data, pin} => execute::store_object(deps, info, data, pin),
-        _ => Err(NotImplemented {})
+        ExecuteMsg::StoreObject { data, pin } => execute::store_object(deps, info, data, pin),
+        _ => Err(NotImplemented {}),
     }
 }
 
 pub mod execute {
-    use crate::state::BucketLimits;
     use super::*;
+    use crate::state::Limits;
 
     pub fn store_object(
         deps: DepsMut,
@@ -61,18 +62,26 @@ pub mod execute {
         BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
             bucket.size += size;
             match bucket.limits {
-                BucketLimits{
+                Limits {
                     max_object_size: Some(max),
-                    ..} if size > max.u128() => Err(ObjectMaxSizeLimitExceeded {}),
-                BucketLimits{
+                    ..
+                } if size > max.u128() => Err(BucketError::ObjectMaxSizeLimitExceeded.into()),
+                Limits {
                     max_objects: Some(max),
-                    ..} if object_count as u128 > max.u128() => Err(MaxObjectsLimitExceeded {}),
-                BucketLimits{
+                    ..
+                } if object_count as u128 > max.u128() => {
+                    Err(BucketError::MaxObjectsLimitExceeded.into())
+                }
+                Limits {
                     max_object_pins: Some(max),
-                    ..} if pin && max.u128() < 1u128 => Err(MaxObjectPinsLimitExceeded {}),
-                BucketLimits{
+                    ..
+                } if pin && max.u128() < 1u128 => {
+                    Err(BucketError::MaxObjectPinsLimitExceeded.into())
+                }
+                Limits {
                     max_total_size: Some(max),
-                    ..} if bucket.size > max.u128() => Err(BucketSizeLimitExceeded {}),
+                    ..
+                } if bucket.size > max.u128() => Err(BucketError::BucketSizeLimitExceeded.into()),
                 _ => Ok(bucket),
             }
         })?;
@@ -85,21 +94,29 @@ pub mod execute {
         let data_path = DATA.key(hash.clone());
         if data_path.has(deps.storage) {
             // TODO: maybe throw an error if the owner is different? Or if object already exists?
-            return Ok(res)
+            return Ok(res);
         }
 
         data_path.save(deps.storage, &data.0)?;
-        objects().save(deps.storage, hash.clone(), &Object {
-            id: hash.clone(),
-            owner: info.sender.clone(),
-            size,
-        })?;
+        objects().save(
+            deps.storage,
+            hash.clone(),
+            &Object {
+                id: hash.clone(),
+                owner: info.sender.clone(),
+                size,
+            },
+        )?;
 
         if pin {
-            pins().save(deps.storage, (hash.clone(), info.sender.clone()), &Pin {
-                id: hash.into(),
-                address: info.sender,
-            })?;
+            pins().save(
+                deps.storage,
+                (hash.clone(), info.sender.clone()),
+                &Pin {
+                    id: hash.into(),
+                    address: info.sender,
+                },
+            )?;
         }
 
         Ok(res)
@@ -110,7 +127,7 @@ pub mod execute {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
-        QueryMsg::Object {id} => to_binary(&query::object(deps, id)?),
+        QueryMsg::Object { id } => to_binary(&query::object(deps, id)?),
         _ => Err(StdError::generic_err("Not implemented")),
     }
 }
@@ -129,12 +146,15 @@ pub mod query {
     }
 
     pub fn object(deps: Deps, id: ObjectId) -> StdResult<ObjectResponse> {
-        objects().load(deps.storage, id)
-            .map(|object| ObjectResponse{
+        objects()
+            .load(deps.storage, id)
+            .map(|object| ObjectResponse {
                 id: object.id,
                 size: object.size.into(),
                 owner: object.owner.into(),
-                is_pinned: pins().idx.object
+                is_pinned: pins()
+                    .idx
+                    .object
                     .keys_raw(deps.storage, None, None, Order::Ascending)
                     .next()
                     .is_some(),
@@ -147,8 +167,9 @@ mod tests {
     use super::*;
     use crate::error::BucketError;
     use crate::msg::{BucketLimits, BucketResponse};
+    use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_binary, Uint128};
+    use cosmwasm_std::{from_binary, Attribute, Uint128};
 
     #[test]
     fn proper_initialization() {
@@ -243,5 +264,91 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foobar", value.name);
+    }
+
+    #[test]
+    fn store_object_without_limits() {
+        let mut deps = mock_dependencies();
+        let info = mock_info("creator", &[]);
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits {
+                max_objects: None,
+                max_object_size: None,
+                max_total_size: None,
+                max_object_pins: None,
+            },
+        };
+        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let obj1 = (
+            general_purpose::STANDARD.encode("hello"),
+            true,
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+            5,
+        );
+        let obj2 = (
+            general_purpose::STANDARD.encode("okp4"),
+            false,
+            "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+            4,
+        );
+
+        for obj in vec![obj1.clone(), obj2.clone()] {
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(obj.0.as_str()).unwrap(),
+                pin: obj.1,
+            };
+            let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+            assert_eq!(
+                res.attributes,
+                vec![
+                    Attribute::new("action", "store_object"),
+                    Attribute::new("id", obj.2),
+                ]
+            );
+
+            assert_eq!(
+                Binary::from_base64(obj.0.as_str()).unwrap(),
+                Binary::from(DATA.load(&deps.storage, String::from(obj.2)).unwrap()),
+            );
+
+            let created = objects().load(&deps.storage, String::from(obj.2)).unwrap();
+            assert_eq!(created.id, obj.2);
+            assert_eq!(created.owner, info.clone().sender);
+            assert_eq!(created.size, obj.3);
+
+            assert_eq!(
+                pins().has(&deps.storage, (String::from(obj.2), info.clone().sender)),
+                obj.1,
+            );
+        }
+
+        assert_eq!(BUCKET.load(&deps.storage).unwrap().size, obj1.3 + obj2.3);
+
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(obj1.0.as_str()).unwrap(),
+            pin: obj1.1,
+        };
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        assert_eq!(
+            res.attributes,
+            vec![
+                Attribute::new("action", "store_object"),
+                Attribute::new("id", obj1.2),
+            ]
+        );
+        assert_eq!(
+            objects()
+                .keys_raw(&deps.storage, None, None, Order::Ascending)
+                .count(),
+            2
+        );
+        assert_eq!(
+            pins()
+                .keys_raw(&deps.storage, None, None, Order::Ascending)
+                .count(),
+            1
+        );
     }
 }

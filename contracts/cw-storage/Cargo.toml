@@ -40,6 +40,7 @@ base16ct = "0.1.1"
 
 [dev-dependencies]
 cw-multi-test.workspace = true
+base64 = "0.21.0"
 
 [features]
 # for more explicit tests, cargo test --features=backtraces

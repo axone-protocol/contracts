@@ -65,7 +65,7 @@ pub mod execute {
                 Limits {
                     max_object_size: Some(max),
                     ..
-                } if size > max.u128() => Err(BucketError::ObjectMaxSizeLimitExceeded.into()),
+                } if size > max.u128() => Err(BucketError::MaxObjectSizeLimitExceeded.into()),
                 Limits {
                     max_objects: Some(max),
                     ..
@@ -81,7 +81,7 @@ pub mod execute {
                 Limits {
                     max_total_size: Some(max),
                     ..
-                } if bucket.size > max.u128() => Err(BucketError::BucketSizeLimitExceeded.into()),
+                } if bucket.size > max.u128() => Err(BucketError::MaxTotalSizeLimitExceeded.into()),
                 _ => Ok(bucket),
             }
         })?;
@@ -407,7 +407,7 @@ mod tests {
                     max_total_size: None,
                     max_object_pins: None,
                 },
-                Some(ObjectMaxSizeLimitExceeded {}),
+                Some(MaxObjectSizeLimitExceeded {}),
             ),
             (
                 BucketLimits {
@@ -416,7 +416,7 @@ mod tests {
                     max_total_size: Some(8u128.into()),
                     max_object_pins: None,
                 },
-                Some(BucketSizeLimitExceeded {}),
+                Some(MaxTotalSizeLimitExceeded {}),
             ),
             (
                 BucketLimits {

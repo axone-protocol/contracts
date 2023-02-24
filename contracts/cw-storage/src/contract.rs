@@ -59,3 +59,35 @@ pub mod query {
         Ok(BucketResponse { name: bucket.name, limits: bucket.limits })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{coins, from_binary};
+    use crate::msg::BucketResponse;
+    use crate::state::BucketLimits;
+
+    #[test]
+    fn proper_initialization() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg { bucket: "foo".to_string(), limits: BucketLimits {
+            max_total_size: None,
+            max_objects: None,
+            max_object_size: None,
+            max_object_pins: None,
+        } };
+        let info = mock_info("creator", &coins(1000, "uknow"));
+
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // it worked, let's query the state
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
+        let value: BucketResponse = from_binary(&res).unwrap();
+        assert_eq!("foo", value.name);
+    }
+
+}

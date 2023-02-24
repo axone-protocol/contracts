@@ -1,6 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, to_binary};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+};
 use cw2::set_contract_version;
 use ContractError::NotImplemented;
 
@@ -19,8 +21,10 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-
-    let bucket = Bucket { name: msg.bucket, limits: msg.limits };
+    let bucket = Bucket {
+        name: msg.bucket,
+        limits: msg.limits,
+    };
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     BUCKET.save(deps.storage, &bucket)?;
@@ -44,40 +48,45 @@ pub mod execute {}
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
-        _ => Err(StdError::generic_err("Not implemented"))
+        _ => Err(StdError::generic_err("Not implemented")),
     }
-
 }
 
 pub mod query {
-    use crate::msg::BucketResponse;
     use super::*;
+    use crate::msg::BucketResponse;
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
 
-        Ok(BucketResponse { name: bucket.name, limits: bucket.limits })
+        Ok(BucketResponse {
+            name: bucket.name,
+            limits: bucket.limits,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_binary, Uint128};
     use crate::msg::BucketResponse;
     use crate::state::BucketLimits;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{from_binary, Uint128};
 
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies();
 
-        let msg = InstantiateMsg { bucket: "foo".to_string(), limits: BucketLimits {
-            max_total_size: None,
-            max_objects: None,
-            max_object_size: None,
-            max_object_pins: None,
-        } };
+        let msg = InstantiateMsg {
+            bucket: "foo".to_string(),
+            limits: BucketLimits {
+                max_total_size: None,
+                max_objects: None,
+                max_object_size: None,
+                max_object_pins: None,
+            },
+        };
         let info = mock_info("creator", &[]);
 
         // we can just call .unwrap() to assert this was a success
@@ -94,12 +103,15 @@ mod tests {
     fn proper_limits_initialization() {
         let mut deps = mock_dependencies();
 
-        let msg = InstantiateMsg { bucket: "bar".to_string(), limits: BucketLimits {
-            max_total_size: Some(Uint128::new(20000)),
-            max_objects: Some(Uint128::new(10)),
-            max_object_size: Some(Uint128::new(2000)),
-            max_object_pins: Some(Uint128::new(1)),
-        } };
+        let msg = InstantiateMsg {
+            bucket: "bar".to_string(),
+            limits: BucketLimits {
+                max_total_size: Some(Uint128::new(20000)),
+                max_objects: Some(Uint128::new(10)),
+                max_object_size: Some(Uint128::new(2000)),
+                max_object_pins: Some(Uint128::new(1)),
+            },
+        };
         let info = mock_info("creator", &[]);
 
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -113,5 +125,4 @@ mod tests {
         assert_eq!(Uint128::new(2000), value.limits.max_object_size.unwrap());
         assert_eq!(Uint128::new(1), value.limits.max_object_pins.unwrap());
     }
-
 }

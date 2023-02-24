@@ -1,8 +1,8 @@
-use schemars::JsonSchema;
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Uint128;
 use cw_storage_plus::Item;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_schema::cw_serde;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Bucket {

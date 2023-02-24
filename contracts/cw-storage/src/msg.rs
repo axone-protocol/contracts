@@ -1,7 +1,7 @@
+use crate::state::BucketLimits;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
 use cosmwasm_std::Uint128;
-use crate::state::BucketLimits;
 
 /// ObjectId is the type of identifier of an object in the bucket.
 type ObjectId = String;

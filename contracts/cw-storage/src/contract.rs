@@ -64,7 +64,7 @@ pub mod query {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary};
+    use cosmwasm_std::{from_binary, Uint128};
     use crate::msg::BucketResponse;
     use crate::state::BucketLimits;
 
@@ -78,7 +78,7 @@ mod tests {
             max_object_size: None,
             max_object_pins: None,
         } };
-        let info = mock_info("creator", &coins(1000, "uknow"));
+        let info = mock_info("creator", &[]);
 
         // we can just call .unwrap() to assert this was a success
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -88,6 +88,30 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
+    }
+
+    #[test]
+    fn proper_limits_initialization() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg { bucket: "bar".to_string(), limits: BucketLimits {
+            max_total_size: Some(Uint128::new(20000)),
+            max_objects: Some(Uint128::new(10)),
+            max_object_size: Some(Uint128::new(2000)),
+            max_object_pins: Some(Uint128::new(1)),
+        } };
+        let info = mock_info("creator", &[]);
+
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        // it worked, let's query the state
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
+        let value: BucketResponse = from_binary(&res).unwrap();
+        assert_eq!("bar", value.name);
+        assert_eq!(Uint128::new(20000), value.limits.max_total_size.unwrap());
+        assert_eq!(Uint128::new(10), value.limits.max_objects.unwrap());
+        assert_eq!(Uint128::new(2000), value.limits.max_object_size.unwrap());
+        assert_eq!(Uint128::new(1), value.limits.max_object_pins.unwrap());
     }
 
 }

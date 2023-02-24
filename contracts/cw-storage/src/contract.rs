@@ -86,34 +86,30 @@ pub mod execute {
             }
         })?;
 
-        let hash = sha256_hash(&data.0);
+        let object = &Object {
+            id: sha256_hash(&data.0),
+            owner: info.sender.clone(),
+            size,
+        };
         let res = Response::new()
             .add_attribute("action", "store_object")
-            .add_attribute("id", hash.clone());
+            .add_attribute("id", object.id.clone());
 
-        let data_path = DATA.key(hash.clone());
+        let data_path = DATA.key(object.id.clone());
         if data_path.has(deps.storage) {
             // TODO: maybe throw an error if the owner is different? Or if object already exists?
             return Ok(res);
         }
 
         data_path.save(deps.storage, &data.0)?;
-        objects().save(
-            deps.storage,
-            hash.clone(),
-            &Object {
-                id: hash.clone(),
-                owner: info.sender.clone(),
-                size,
-            },
-        )?;
+        objects().save(deps.storage, object.id.clone(), object)?;
 
         if pin {
             pins().save(
                 deps.storage,
-                (hash.clone(), info.sender.clone()),
+                (object.id.clone(), info.sender.clone()),
                 &Pin {
-                    id: hash.into(),
+                    id: object.id.clone(),
                     address: info.sender,
                 },
             )?;

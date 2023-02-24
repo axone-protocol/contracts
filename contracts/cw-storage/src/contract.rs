@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128, Order,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Order,
 };
 use cw2::set_contract_version;
 use crate::ContractError::{NotImplemented, ObjectMaxSizeLimitExceeded, MaxObjectPinsLimitExceeded, MaxObjectsLimitExceeded, BucketSizeLimitExceeded};
@@ -44,6 +44,7 @@ pub fn execute(
 }
 
 pub mod execute {
+    use crate::state::BucketLimits;
     use super::*;
 
     pub fn store_object(
@@ -52,31 +53,27 @@ pub mod execute {
         data: Binary,
         pin: bool,
     ) -> Result<Response, ContractError> {
-        let bucket_limits = BUCKET.load(deps.storage)?.limits;
-
         let size = data.len() as u128;
-        match bucket_limits.max_object_size {
-            Some(max) if size > max.u128() => Err(ObjectMaxSizeLimitExceeded {}),
-            _ => Ok({})
-        }?;
-
+        // TODO: store object count in bucket instead of computing it?
         let object_count = objects()
             .keys_raw(deps.storage, None, None, Order::Ascending)
-            .count() as u128;
-        match bucket_limits.max_objects {
-            Some(max) if object_count >= max.u128() => Err(MaxObjectsLimitExceeded {}),
-            _ => Ok({})
-        }?;
-
-        if pin && bucket_limits.max_object_pins.filter(|max: &Uint128| max.u128() < 1u128).is_some(){
-            return Err(MaxObjectPinsLimitExceeded {})
-        }
-
+            .count();
         BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
             bucket.size += size;
-            match bucket.limits.max_total_size {
-                Some(max) if bucket.size > max.u128() => Err(BucketSizeLimitExceeded {}),
-                _ => Ok(bucket)
+            match bucket.limits {
+                BucketLimits{
+                    max_object_size: Some(max),
+                    ..} if size > max.u128() => Err(ObjectMaxSizeLimitExceeded {}),
+                BucketLimits{
+                    max_objects: Some(max),
+                    ..} if object_count as u128 > max.u128() => Err(MaxObjectsLimitExceeded {}),
+                BucketLimits{
+                    max_object_pins: Some(max),
+                    ..} if pin && max.u128() < 1u128 => Err(MaxObjectPinsLimitExceeded {}),
+                BucketLimits{
+                    max_total_size: Some(max),
+                    ..} if bucket.size > max.u128() => Err(BucketSizeLimitExceeded {}),
+                _ => Ok(bucket),
             }
         })?;
 
@@ -87,7 +84,7 @@ pub mod execute {
 
         let data_path = DATA.key(hash.clone());
         if data_path.has(deps.storage) {
-            // TODO: maybe throw an error if the owner is different?
+            // TODO: maybe throw an error if the owner is different? Or if object already exists?
             return Ok(res)
         }
 

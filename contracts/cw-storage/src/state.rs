@@ -14,6 +14,8 @@ pub struct Bucket {
     pub name: String,
     /// The limits of the bucket.
     pub limits: Limits,
+    /// The total size of the objects contained in the bucket.
+    pub size: u128,
 }
 
 impl Bucket {
@@ -23,7 +25,11 @@ impl Bucket {
             return Err(EmptyName);
         }
 
-        Ok(Self { name: n, limits })
+        Ok(Self {
+            name: n,
+            limits,
+            size: 0u128,
+        })
     }
 }
 
@@ -61,7 +67,7 @@ pub struct Object {
     /// The owner of the object.
     pub owner: Addr,
     /// The size of the object.
-    pub size: Uint128,
+    pub size: u128,
 }
 
 pub struct ObjectIndexes<'a> {
@@ -97,13 +103,8 @@ pub struct PinIndexes<'a> {
 }
 
 impl IndexList<Pin> for PinIndexes<'_> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item=&'_ dyn Index<Pin>> + '_> {
-        Box::new(
-            vec![
-                &self.object as &dyn Index<Pin>,
-                &self.address
-            ].into_iter()
-        )
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Pin>> + '_> {
+        Box::new(vec![&self.object as &dyn Index<Pin>, &self.address].into_iter())
     }
 }
 
@@ -111,16 +112,8 @@ pub fn pins<'a>() -> IndexedMap<'a, (String, Addr), Pin, PinIndexes<'a>> {
     IndexedMap::new(
         "PIN",
         PinIndexes {
-            object: MultiIndex::new(
-                |_, pin| pin.id.clone(),
-                "PIN",
-                "PIN__OBJECT",
-            ),
-            address: MultiIndex::new(
-                |_, pin| pin.address.clone(),
-                "PIN",
-                "PIN__ADDRESS",
-            ),
-        }
+            object: MultiIndex::new(|_, pin| pin.id.clone(), "PIN", "PIN__OBJECT"),
+            address: MultiIndex::new(|_, pin| pin.address.clone(), "PIN", "PIN__ADDRESS"),
+        },
     )
 }

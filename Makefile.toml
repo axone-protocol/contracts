@@ -352,6 +352,51 @@ docker run --rm \
       --chain-id ${CHAIN}
 '''
 
+[tasks.chain-instantiate-contract]
+dependencies = ["chain-start"]
+description = "Instantiate a specific contract to the chain. The contract must be already deployed."
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract code id as the first argument."
+  exit 1
+fi
+code=$1
+
+if [ -z "$2" ]
+then
+  echo "❌ Please provide the contract label as the second argument."
+  exit 1
+fi
+label=$2
+
+if [ -z "$3" ]
+then
+  echo "❌ Please provide the contract instantiation json input as the third argument."
+  exit 1
+fi
+json=$3
+
+echo "📦 Instantiate contract ${code} to chain ${CHAIN} and json '${json}'"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_OKP4D} \
+    tx wasm instantiate ${code} "${json}" \
+      --from validator \
+      --keyring-backend test \
+      --home ${CHAIN_HOME} \
+      --gas-prices 0.025uknow \
+      --gas auto \
+      --gas-adjustment 1.5 \
+      --chain-id ${CHAIN} \
+      --broadcast-mode block \
+      --yes \
+      --label $label \
+      --no-admin
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

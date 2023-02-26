@@ -140,6 +140,37 @@ pub struct BucketLimits {
     pub max_object_pins: Option<Uint128>,
 }
 
+impl BucketLimits {
+    pub const fn new() -> Self {
+        BucketLimits {
+            max_total_size: None,
+            max_objects: None,
+            max_object_size: None,
+            max_object_pins: None,
+        }
+    }
+
+    pub fn set_max_total_size(mut self, max_total_size: Uint128) -> Self {
+        self.max_total_size = Some(max_total_size);
+        self
+    }
+
+    pub fn set_max_objects(mut self, max_objects: Uint128) -> Self {
+        self.max_objects = Some(max_objects);
+        self
+    }
+
+    pub fn set_max_object_size(mut self, max_object_size: Uint128) -> Self {
+        self.max_object_size = Some(max_object_size);
+        self
+    }
+
+    pub fn set_object_pins(mut self, max_object_pins: Uint128) -> Self {
+        self.max_object_pins = Some(max_object_pins);
+        self
+    }
+}
+
 impl From<Limits> for BucketLimits {
     fn from(limits: Limits) -> Self {
         BucketLimits {

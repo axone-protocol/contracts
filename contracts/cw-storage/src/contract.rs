@@ -172,12 +172,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo".to_string(),
-            limits: BucketLimits {
-                max_total_size: None,
-                max_objects: None,
-                max_object_size: None,
-                max_object_pins: None,
-            },
+            limits: BucketLimits::new(),
         };
         let info = mock_info("creator", &[]);
 
@@ -267,12 +262,7 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits {
-                max_objects: None,
-                max_object_size: None,
-                max_total_size: None,
-                max_object_pins: None,
-            },
+            limits: BucketLimits::new(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -325,7 +315,7 @@ mod tests {
             data: Binary::from_base64(obj1.0.as_str()).unwrap(),
             pin: obj1.1,
         };
-        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(
             res.attributes,
             vec![
@@ -350,77 +340,31 @@ mod tests {
     #[test]
     fn store_object_limits() {
         let cases = vec![
+            (BucketLimits::new().set_max_objects(2u128.into()), None),
+            (BucketLimits::new().set_max_object_size(5u128.into()), None),
+            (BucketLimits::new().set_max_total_size(9u128.into()), None),
+            (BucketLimits::new().set_object_pins(1u128.into()), None),
             (
-                BucketLimits {
-                    max_objects: Some(2u128.into()),
-                    max_object_size: None,
-                    max_total_size: None,
-                    max_object_pins: None,
-                },
-                None,
+                BucketLimits::new().set_max_objects(1u128.into()),
+                Some(ContractError::Bucket(BucketError::MaxObjectsLimitExceeded)),
             ),
             (
-                BucketLimits {
-                    max_objects: None,
-                    max_object_size: Some(5u128.into()),
-                    max_total_size: None,
-                    max_object_pins: None,
-                },
-                None,
+                BucketLimits::new().set_max_object_size(4u128.into()),
+                Some(ContractError::Bucket(
+                    BucketError::MaxObjectSizeLimitExceeded,
+                )),
             ),
             (
-                BucketLimits {
-                    max_objects: None,
-                    max_object_size: None,
-                    max_total_size: Some(9u128.into()),
-                    max_object_pins: None,
-                },
-                None,
+                BucketLimits::new().set_max_total_size(8u128.into()),
+                Some(ContractError::Bucket(
+                    BucketError::MaxTotalSizeLimitExceeded,
+                )),
             ),
             (
-                BucketLimits {
-                    max_objects: None,
-                    max_object_size: None,
-                    max_total_size: None,
-                    max_object_pins: Some(1u128.into()),
-                },
-                None,
-            ),
-            (
-                BucketLimits {
-                    max_objects: Some(1u128.into()),
-                    max_object_size: None,
-                    max_total_size: None,
-                    max_object_pins: None,
-                },
-                Some(MaxObjectsLimitExceeded {}),
-            ),
-            (
-                BucketLimits {
-                    max_objects: None,
-                    max_object_size: Some(4u128.into()),
-                    max_total_size: None,
-                    max_object_pins: None,
-                },
-                Some(MaxObjectSizeLimitExceeded {}),
-            ),
-            (
-                BucketLimits {
-                    max_objects: None,
-                    max_object_size: None,
-                    max_total_size: Some(8u128.into()),
-                    max_object_pins: None,
-                },
-                Some(MaxTotalSizeLimitExceeded {}),
-            ),
-            (
-                BucketLimits {
-                    max_objects: None,
-                    max_object_size: None,
-                    max_total_size: None,
-                    max_object_pins: Some(0u128.into()),
-                },
-                Some(MaxObjectPinsLimitExceeded {}),
+                BucketLimits::new().set_object_pins(0u128.into()),
+                Some(ContractError::Bucket(
+                    BucketError::MaxObjectPinsLimitExceeded,
+                )),
             ),
         ];
 
@@ -459,12 +403,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits {
-                max_objects: None,
-                max_object_size: None,
-                max_total_size: None,
-                max_object_pins: None,
-            },
+            limits: BucketLimits::new(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -496,7 +435,7 @@ mod tests {
             ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
         );
         assert_eq!(res.owner, info.sender);
-        assert_eq!(res.is_pinned, true);
+        assert!(res.is_pinned);
         assert_eq!(res.size.u128(), 5u128);
 
         let data = general_purpose::STANDARD.encode("okp4");
@@ -516,7 +455,7 @@ mod tests {
             ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")
         );
         assert_eq!(res.owner, info.sender);
-        assert_eq!(res.is_pinned, false);
+        assert!(!res.is_pinned);
         assert_eq!(res.size.u128(), 4u128);
     }
 }

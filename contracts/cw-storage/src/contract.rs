@@ -55,12 +55,9 @@ pub mod execute {
         pin: bool,
     ) -> Result<Response, ContractError> {
         let size = data.len() as u128;
-        // TODO: store object count in bucket instead of computing it?
-        let object_count = objects()
-            .keys_raw(deps.storage, None, None, Order::Ascending)
-            .count();
         BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
             bucket.size += size;
+            bucket.object_count += 1;
             match bucket.limits {
                 Limits {
                     max_object_size: Some(max),
@@ -69,7 +66,7 @@ pub mod execute {
                 Limits {
                     max_objects: Some(max),
                     ..
-                } if object_count as u128 >= max.u128() => {
+                } if bucket.object_count > max.u128() => {
                     Err(BucketError::MaxObjectsLimitExceeded.into())
                 }
                 Limits {

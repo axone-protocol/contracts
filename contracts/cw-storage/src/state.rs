@@ -16,6 +16,8 @@ pub struct Bucket {
     pub limits: Limits,
     /// The total size of the objects contained in the bucket.
     pub size: u128,
+    /// The number of objects in the bucket.
+    pub object_count: u128,
 }
 
 impl Bucket {
@@ -29,6 +31,7 @@ impl Bucket {
             name: n,
             limits,
             size: 0u128,
+            object_count: 0u128,
         })
     }
 }

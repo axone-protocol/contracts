@@ -121,6 +121,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
         QueryMsg::Object { id } => to_binary(&query::object(deps, id)?),
+        QueryMsg::ObjectData { id } => to_binary(&query::data(deps, id)?),
         _ => Err(StdError::generic_err("Not implemented")),
     }
 }
@@ -153,6 +154,10 @@ pub mod query {
                     .next()
                     .is_some(),
             })
+    }
+
+    pub fn data(deps: Deps, id: ObjectId) -> StdResult<Binary> {
+        DATA.load(deps.storage, id).map(Binary::from)
     }
 }
 
@@ -457,5 +462,42 @@ mod tests {
         assert_eq!(res.owner, info.sender);
         assert!(!res.is_pinned);
         assert_eq!(res.size.u128(), 4u128);
+    }
+
+    #[test]
+    fn object_data() {
+        let mut deps = mock_dependencies();
+        let info = mock_info("creator", &[]);
+
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits::new(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        match query::object(
+            deps.as_ref(),
+            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
+        )
+        .err()
+        .unwrap()
+        {
+            NotFound { .. } => (),
+            _ => panic!("assertion failed"),
+        }
+
+        let data = general_purpose::STANDARD.encode("okp4");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let res = query::data(
+            deps.as_ref(),
+            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
+        )
+        .unwrap();
+        assert_eq!(res, Binary::from_base64(data.as_str()).unwrap());
     }
 }

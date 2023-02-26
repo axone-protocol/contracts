@@ -79,9 +79,11 @@ chain-deploy-contracts - Deploy all the available contracts to the chain (under 
 chain-init-folder - Initialize deploy folder to make sure scripts have the right permission (needed for linux)
 chain-initialize - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before.
 chain-inspect-contract - Inspect a specific contract deployed to the chain.
+chain-instantiate-contract - Instantiate a specific contract to the chain. The contract must be already deployed.
 chain-list-contracts - List all the contracts deployed to the chain.
 chain-logs - Show the chain's container logs.
-chain-start - Run the full node wasmd application using the chain's home directory under a Docker container.
+chain-query-contract - Query a specific contract to the chain. The contract must be already deployed and instantiated.
+chain-start - Run the full node okp4d application using the chain's home directory under a Docker container.
 chain-stop - Stop the chain's container.
 ```
 

@@ -8,6 +8,6 @@ cosmwasm-storage = "1.2.1"
 cw-multi-test = "0.15.1"
 cw-storage-plus = "0.15.1"
 cw2 = "0.15.1"
-schemars = "0.8.11"
+schemars = "0.8.12"
 serde = { version = "1.0.152", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.38" }

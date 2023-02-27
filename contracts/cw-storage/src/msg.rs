@@ -1,6 +1,7 @@
+use crate::state::Pagination;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Binary;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Binary, StdResult};
+use cosmwasm_std::{StdError, Uint128};
 
 /// ObjectId is the type of identifier of an object in the bucket.
 pub type ObjectId = String;
@@ -17,6 +18,8 @@ pub struct InstantiateMsg {
     pub bucket: String,
     /// The limits of the bucket.
     pub limits: BucketLimits,
+    /// The configuration for paginated query.
+    pub pagination: PaginationConfig,
 }
 
 /// Execute messages
@@ -73,7 +76,7 @@ pub enum QueryMsg {
         /// The owner of the objects to get.
         address: Option<String>,
         /// The number of objects to return.
-        first: Option<Uint128>,
+        first: Option<u32>,
         /// The point in the sequence to start returning objects.
         after: Option<Cursor>,
     },
@@ -94,7 +97,7 @@ pub enum QueryMsg {
         /// The id of the object to get the pins for.
         id: ObjectId,
         /// The number of pins to return.
-        first: Option<Uint128>,
+        first: Option<u32>,
         /// The point in the sequence to start returning pins.
         after: Option<Cursor>,
     },
@@ -118,6 +121,8 @@ pub struct BucketResponse {
     pub name: String,
     /// The limits of the bucket.
     pub limits: BucketLimits,
+    /// The configuration for paginated query.
+    pub pagination: PaginationConfig,
 }
 
 /// BucketLimits is the type of the limits of a bucket.
@@ -163,6 +168,88 @@ impl BucketLimits {
     pub fn set_max_object_pins(mut self, max_object_pins: Uint128) -> Self {
         self.max_object_pins = Some(max_object_pins);
         self
+    }
+}
+
+const MAX_PAGE_MAX_SIZE: u32 = u32::MAX - 1;
+const DEFAULT_PAGE_MAX_SIZE: u32 = 30;
+const DEFAULT_PAGE_DEFAULT_SIZE: u32 = 10;
+
+/// PaginationConfig is the type carrying configuration for paginated queries.
+///
+/// The fields are optional and if not set, there is a default configuration.
+#[cw_serde]
+pub struct PaginationConfig {
+    /// The maximum elements a page can contains.
+    ///
+    /// Shall be less than `u32::MAX - 1`.
+    /// Default to '30' if not set.
+    pub max_page_size: Option<u32>,
+    /// The default number of elements in a page.
+    ///
+    /// Shall be less or equal than `max_page_size`.
+    /// Default to '10' if not set.
+    pub default_page_size: Option<u32>,
+}
+
+impl PaginationConfig {
+    pub const fn new() -> Self {
+        PaginationConfig {
+            max_page_size: None,
+            default_page_size: None,
+        }
+    }
+
+    pub fn validate(&self) -> StdResult<()> {
+        if self
+            .max_page_size
+            .filter(|size| size > &MAX_PAGE_MAX_SIZE)
+            .is_some()
+        {
+            return Err(StdError::generic_err(
+                "'max_page_size' cannot exceed 'u32::MAX - 1'",
+            ));
+        }
+
+        if self
+            .default_page_size
+            .filter(|size| size > &self.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE))
+            .is_some()
+        {
+            return Err(StdError::generic_err(
+                "'default_page_size' cannot exceed 'max_page_size'",
+            ));
+        }
+
+        Ok(())
+    }
+
+    pub fn set_max_page_size(mut self, max_page_size: u32) -> Self {
+        self.max_page_size = Some(max_page_size);
+        self
+    }
+
+    pub fn set_default_page_size(mut self, default_page_size: u32) -> Self {
+        self.default_page_size = Some(default_page_size);
+        self
+    }
+}
+
+impl From<Pagination> for PaginationConfig {
+    fn from(value: Pagination) -> Self {
+        PaginationConfig {
+            max_page_size: Some(value.max_page_size),
+            default_page_size: Some(value.default_page_size),
+        }
+    }
+}
+
+impl Into<Pagination> for PaginationConfig {
+    fn into(self) -> Pagination {
+        Pagination {
+            max_page_size: self.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE),
+            default_page_size: self.default_page_size.unwrap_or(DEFAULT_PAGE_DEFAULT_SIZE),
+        }
     }
 }
 

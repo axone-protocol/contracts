@@ -9,7 +9,7 @@ use cw2::set_contract_version;
 
 use crate::crypto::sha256_hash;
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, ObjectId, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, ObjectId, PaginationConfig, QueryMsg};
 use crate::state::{objects, pins, Bucket, Object, Pin, BUCKET, DATA};
 
 // version info for migration info
@@ -23,7 +23,13 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let bucket = Bucket::new(info.sender, msg.bucket, msg.limits.into())?;
+    msg.pagination.validate()?;
+    let bucket = Bucket::new(
+        info.sender,
+        msg.bucket,
+        msg.limits.into(),
+        msg.pagination.into(),
+    )?;
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     BUCKET.save(deps.storage, &bucket)?;
@@ -215,6 +221,7 @@ pub mod query {
         Ok(BucketResponse {
             name: bucket.name,
             limits: bucket.limits.into(),
+            pagination: bucket.pagination.into(),
         })
     }
 
@@ -239,7 +246,8 @@ mod tests {
     use super::*;
     use crate::error::BucketError;
     use crate::error::BucketError::MaxObjectPinsLimitExceeded;
-    use crate::msg::{BucketLimits, BucketResponse};
+    use crate::msg::{BucketLimits, BucketResponse, ObjectResponse, PageInfo, PaginationConfig};
+    use crate::state::Pagination;
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
@@ -253,6 +261,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: "foo".to_string(),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         let info = mock_info("creator", &[]);
 
@@ -264,6 +273,9 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
+        assert_eq!(value.limits, BucketLimits::new());
+        assert_eq!(value.pagination.max_page_size, Some(30));
+        assert_eq!(value.pagination.default_page_size, Some(10));
 
         // check internal state too
         let bucket = BUCKET.load(&deps.storage).unwrap();
@@ -284,6 +296,9 @@ mod tests {
                 max_object_size: Some(Uint128::new(2000)),
                 max_object_pins: Some(Uint128::new(1)),
             },
+            pagination: PaginationConfig::new()
+                .set_max_page_size(50)
+                .set_default_page_size(30),
         };
         let info = mock_info("creator", &[]);
 
@@ -297,6 +312,52 @@ mod tests {
         assert_eq!(Uint128::new(10), value.limits.max_objects.unwrap());
         assert_eq!(Uint128::new(2000), value.limits.max_object_size.unwrap());
         assert_eq!(Uint128::new(1), value.limits.max_object_pins.unwrap());
+        assert_eq!(value.pagination.max_page_size, Some(50));
+        assert_eq!(value.pagination.default_page_size, Some(30));
+    }
+
+    #[test]
+    fn proper_pagination_initialization() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            bucket: "bar".to_string(),
+            limits: BucketLimits::new(),
+            pagination: PaginationConfig::new()
+                .set_max_page_size(50)
+                .set_default_page_size(30),
+        };
+        instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
+        let value: BucketResponse = from_binary(&res).unwrap();
+        assert_eq!(value.pagination.max_page_size, Some(50));
+        assert_eq!(value.pagination.default_page_size, Some(30));
+    }
+
+    #[test]
+    fn invalid_pagination_initialization() {
+        let cases = vec![
+            (
+                PaginationConfig::new().set_max_page_size(u32::MAX),
+                StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'"),
+            ),
+            (
+                PaginationConfig::new().set_default_page_size(31),
+                StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'"),
+            ),
+        ];
+        for case in cases {
+            let mut deps = mock_dependencies();
+            let msg = InstantiateMsg {
+                bucket: "bar".to_string(),
+                limits: BucketLimits::new(),
+                pagination: case.0,
+            };
+            match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
+                Err(err) => assert_eq!(err, ContractError::Std(case.1)),
+                _ => panic!("assertion failure!"),
+            }
+        }
     }
 
     #[test]
@@ -306,6 +367,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: "".to_string(),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         let info = mock_info("creator", &[]);
 
@@ -321,6 +383,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: "foo bar".to_string(),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         let info = mock_info("creator", &[]);
 
@@ -343,6 +406,7 @@ mod tests {
             InstantiateMsg {
                 bucket: "test".to_string(),
                 limits: BucketLimits::new(),
+                pagination: PaginationConfig::new(),
             },
         )
         .unwrap();
@@ -422,6 +486,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: String::from("test"),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -481,6 +546,7 @@ mod tests {
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
                 limits: case.0,
+                pagination: PaginationConfig::new(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -507,6 +573,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: String::from("test"),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -570,6 +637,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: String::from("test"),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -826,6 +894,7 @@ mod tests {
                 InstantiateMsg {
                     bucket: "test".to_string(),
                     limits: BucketLimits::new().set_max_object_pins(Uint128::new(2)),
+                    pagination: PaginationConfig::new(),
                 },
             )
             .unwrap();
@@ -1064,6 +1133,7 @@ mod tests {
                 InstantiateMsg {
                     bucket: "test".to_string(),
                     limits: BucketLimits::new(),
+                    pagination: PaginationConfig::new(),
                 },
             )
             .unwrap();

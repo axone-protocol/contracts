@@ -16,6 +16,8 @@ pub struct Bucket {
     pub name: String,
     /// The limits of the bucket.
     pub limits: Limits,
+    /// The configuration for paginated query.
+    pub pagination: Pagination,
     /// Some information on the current bucket usage.
     pub stat: BucketStat,
 }
@@ -29,7 +31,12 @@ pub struct BucketStat {
 }
 
 impl Bucket {
-    pub fn new(owner: Addr, name: String, limits: Limits) -> Result<Self, BucketError> {
+    pub fn new(
+        owner: Addr,
+        name: String,
+        limits: Limits,
+        pagination: Pagination,
+    ) -> Result<Self, BucketError> {
         let n: String = name.split_whitespace().collect();
         if n.is_empty() {
             return Err(EmptyName);
@@ -39,6 +46,7 @@ impl Bucket {
             owner,
             name: n,
             limits,
+            pagination,
             stat: BucketStat {
                 size: Uint128::zero(),
                 object_count: Uint128::zero(),
@@ -82,6 +90,15 @@ impl From<Limits> for BucketLimits {
             max_object_pins: limits.max_object_pins,
         }
     }
+}
+
+/// Pagination is the type carrying configuration for paginated queries.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Pagination {
+    /// The maximum elements a page can contains.
+    pub max_page_size: u32,
+    /// The default number of elements in a page.
+    pub default_page_size: u32,
 }
 
 pub const BUCKET: Item<Bucket> = Item::new("bucket");

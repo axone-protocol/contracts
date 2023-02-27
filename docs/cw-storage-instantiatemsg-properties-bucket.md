@@ -4,7 +4,7 @@
 undefined#/instantiate/properties/bucket
 ```
 
-The name of the bucket.
+The name of the bucket. The name could not be empty or contains whitespaces. If name contains whitespace, they will be removed.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                         |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------- |

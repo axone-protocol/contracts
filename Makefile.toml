@@ -352,6 +352,80 @@ docker run --rm \
       --chain-id ${CHAIN}
 '''
 
+[tasks.chain-instantiate-contract]
+dependencies = ["chain-start"]
+description = "Instantiate a specific contract to the chain. The contract must be already deployed."
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract code id as the first argument."
+  exit 1
+fi
+code=$1
+
+if [ -z "$2" ]
+then
+  echo "❌ Please provide the contract label as the second argument."
+  exit 1
+fi
+label=$2
+
+if [ -z "$3" ]
+then
+  echo "❌ Please provide the contract instantiation json input as the third argument."
+  exit 1
+fi
+json=$3
+
+echo "📦 Instantiate contract ${code} to chain ${CHAIN}"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_OKP4D} \
+    tx wasm instantiate ${code} "${json}" \
+      --from validator \
+      --keyring-backend test \
+      --home ${CHAIN_HOME} \
+      --gas-prices 0.025uknow \
+      --gas auto \
+      --gas-adjustment 1.5 \
+      --chain-id ${CHAIN} \
+      --broadcast-mode block \
+      --yes \
+      --label $label \
+      --no-admin
+'''
+
+[tasks.chain-query-contract]
+dependencies = ["chain-start"]
+description = "Query a specific contract to the chain. The contract must be already deployed and instantiated."
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract address as the first argument."
+  exit 1
+fi
+addr=$1
+
+if [ -z "$2" ]
+then
+  echo "❌ Please provide the contract query as the second argument."
+  exit 1
+fi
+query=$2
+
+echo "📦 Query contract ${addr} to chain ${CHAIN}"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_OKP4D} \
+    query wasm contract-state smart ${addr} "${query}" \
+      --output json \
+      | jq -r '.'
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 
@@ -379,13 +453,13 @@ BALANCE_ALICE = "100000000000uknow"
 BALANCE_BOB = "100000000000uknow"
 BALANCE_CHARLIE = "100000000000uknow"
 BALANCE_VALIDATOR = "1000000000uknow"
-CHAIN = "okp4d-localnet"
+CHAIN = "okp4-localnet"
 CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
 CHAIN_MONIKER = "local-node"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
 DIR_TARGET = "./target"
 DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
-DOCKER_IMAGE_OKP4D = "okp4/okp4d:3.0.0"
+DOCKER_IMAGE_OKP4D = "okp4/okp4d:4.0.0"
 KEYRING_BACKEND = "test"
 MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
 MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"

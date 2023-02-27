@@ -23,7 +23,7 @@ Instantiate messages
 
 ## bucket
 
-The name of the bucket.
+The name of the bucket. The name could not be empty or contains whitespaces. If name contains whitespace, they will be removed.
 
 `bucket`
 

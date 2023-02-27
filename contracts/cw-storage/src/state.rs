@@ -1,3 +1,5 @@
+use crate::error::BucketError;
+use crate::error::BucketError::EmptyName;
 use crate::msg::BucketLimits;
 use cosmwasm_std::Uint128;
 use cw_storage_plus::Item;
@@ -10,6 +12,16 @@ pub struct Bucket {
     pub name: String,
     /// The limits of the bucket.
     pub limits: Limits,
+}
+
+impl Bucket {
+    pub fn new(name: String, limits: Limits) -> Result<Self, BucketError> {
+        if name.is_empty() {
+            return Err(EmptyName);
+        }
+
+        Ok(Self { name, limits })
+    }
 }
 
 /// Limits is the type of the limits of a bucket.

@@ -21,10 +21,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let bucket = Bucket {
-        name: msg.bucket,
-        limits: msg.limits.into(),
-    };
+    let bucket = Bucket::new(msg.bucket, msg.limits.into())?;
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     BUCKET.save(deps.storage, &bucket)?;
@@ -69,6 +66,7 @@ pub mod query {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::BucketError;
     use crate::msg::{BucketLimits, BucketResponse};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{from_binary, Uint128};
@@ -123,5 +121,25 @@ mod tests {
         assert_eq!(Uint128::new(10), value.limits.max_objects.unwrap());
         assert_eq!(Uint128::new(2000), value.limits.max_object_size.unwrap());
         assert_eq!(Uint128::new(1), value.limits.max_object_pins.unwrap());
+    }
+
+    #[test]
+    fn empty_name_initialization() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg {
+            bucket: "".to_string(),
+            limits: BucketLimits {
+                max_total_size: None,
+                max_objects: None,
+                max_object_size: None,
+                max_object_pins: None,
+            },
+        };
+        let info = mock_info("creator", &[]);
+
+        let err = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap_err();
+
+        assert_eq!(err, ContractError::Bucket(BucketError::EmptyName));
     }
 }

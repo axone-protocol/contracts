@@ -47,6 +47,7 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::Limits;
+    use cosmwasm_std::Uint128;
 
     pub fn store_object(
         deps: DepsMut,
@@ -54,31 +55,29 @@ pub mod execute {
         data: Binary,
         pin: bool,
     ) -> Result<Response, ContractError> {
-        let size = data.len() as u128;
+        let size = (data.len() as u128).into();
         BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
             bucket.size += size;
-            bucket.object_count += 1;
+            bucket.object_count += Uint128::one();
             match bucket.limits {
                 Limits {
                     max_object_size: Some(max),
                     ..
-                } if size > max.u128() => Err(BucketError::MaxObjectSizeLimitExceeded.into()),
+                } if size > max => Err(BucketError::MaxObjectSizeLimitExceeded.into()),
                 Limits {
                     max_objects: Some(max),
                     ..
-                } if bucket.object_count > max.u128() => {
-                    Err(BucketError::MaxObjectsLimitExceeded.into())
-                }
+                } if bucket.object_count > max => Err(BucketError::MaxObjectsLimitExceeded.into()),
                 Limits {
                     max_object_pins: Some(max),
                     ..
-                } if pin && max.u128() < 1u128 => {
+                } if pin && max < Uint128::one() => {
                     Err(BucketError::MaxObjectPinsLimitExceeded.into())
                 }
                 Limits {
                     max_total_size: Some(max),
                     ..
-                } if bucket.size > max.u128() => Err(BucketError::MaxTotalSizeLimitExceeded.into()),
+                } if bucket.size > max => Err(BucketError::MaxTotalSizeLimitExceeded.into()),
                 _ => Ok(bucket),
             }
         })?;
@@ -144,7 +143,7 @@ pub mod query {
             .load(deps.storage, id)
             .map(|object| ObjectResponse {
                 id: object.id.clone(),
-                size: object.size.into(),
+                size: object.size,
                 owner: object.owner.into(),
                 is_pinned: pins()
                     .idx
@@ -306,7 +305,7 @@ mod tests {
             let created = objects().load(&deps.storage, String::from(obj.2)).unwrap();
             assert_eq!(created.id, obj.2);
             assert_eq!(created.owner, info.clone().sender);
-            assert_eq!(created.size, obj.3);
+            assert_eq!(created.size.u128(), obj.3);
 
             assert_eq!(
                 pins().has(&deps.storage, (String::from(obj.2), info.clone().sender)),
@@ -314,7 +313,9 @@ mod tests {
             );
         }
 
-        assert_eq!(BUCKET.load(&deps.storage).unwrap().size, obj1.3 + obj2.3);
+        let bucket = BUCKET.load(&deps.storage).unwrap();
+        assert_eq!(bucket.size.u128(), obj1.3 + obj2.3);
+        assert_eq!(bucket.object_count.u128(), 2);
 
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(obj1.0.as_str()).unwrap(),

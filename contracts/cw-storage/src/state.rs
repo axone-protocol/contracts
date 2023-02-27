@@ -15,9 +15,9 @@ pub struct Bucket {
     /// The limits of the bucket.
     pub limits: Limits,
     /// The total size of the objects contained in the bucket.
-    pub size: u128,
+    pub size: Uint128,
     /// The number of objects in the bucket.
-    pub object_count: u128,
+    pub object_count: Uint128,
 }
 
 impl Bucket {
@@ -30,8 +30,8 @@ impl Bucket {
         Ok(Self {
             name: n,
             limits,
-            size: 0u128,
-            object_count: 0u128,
+            size: Uint128::zero(),
+            object_count: Uint128::zero(),
         })
     }
 }
@@ -71,7 +71,7 @@ pub struct Object {
     /// The owner of the object.
     pub owner: Addr,
     /// The size of the object.
-    pub size: u128,
+    pub size: Uint128,
 }
 
 pub struct ObjectIndexes<'a> {

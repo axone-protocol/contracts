@@ -106,12 +106,8 @@ pub enum QueryMsg {
 pub struct PageInfo {
     /// Tells if there is a next page.
     pub has_next_page: bool,
-    /// Tells if there is a previous page.
-    pub has_previous_page: bool,
     /// The cursor to the next page.
-    pub start_cursor: Cursor,
-    /// The cursor to the previous page.
-    pub end_cursor: Cursor,
+    pub cursor: Cursor,
 }
 
 /// # BucketResponse

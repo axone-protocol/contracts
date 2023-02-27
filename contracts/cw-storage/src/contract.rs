@@ -93,8 +93,7 @@ pub mod execute {
 
         let data_path = DATA.key(object.id.clone());
         if data_path.has(deps.storage) {
-            // TODO: maybe throw an error if the owner is different? Or if object already exists?
-            return Ok(res);
+            return Err(ContractError::Bucket(BucketError::ObjectAlreadyStored));
         }
 
         data_path.save(deps.storage, &data.0)?;
@@ -316,19 +315,6 @@ mod tests {
         let bucket = BUCKET.load(&deps.storage).unwrap();
         assert_eq!(bucket.size.u128(), obj1.3 + obj2.3);
         assert_eq!(bucket.object_count.u128(), 2);
-
-        let msg = ExecuteMsg::StoreObject {
-            data: Binary::from_base64(obj1.0.as_str()).unwrap(),
-            pin: obj1.1,
-        };
-        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(
-            res.attributes,
-            vec![
-                Attribute::new("action", "store_object"),
-                Attribute::new("id", obj1.2),
-            ]
-        );
         assert_eq!(
             objects()
                 .keys_raw(&deps.storage, None, None, Order::Ascending)
@@ -340,6 +326,28 @@ mod tests {
                 .keys_raw(&deps.storage, None, None, Order::Ascending)
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn store_object_already_stored() {
+        let mut deps = mock_dependencies();
+        let info = mock_info("creator", &[]);
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits::new(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let object = general_purpose::STANDARD.encode("already existing object");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(object.as_str()).unwrap(),
+            pin: true,
+        };
+        execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
+        assert_eq!(
+            execute(deps.as_mut(), mock_env(), info, msg).err(),
+            Some(ContractError::Bucket(BucketError::ObjectAlreadyStored)),
         );
     }
 

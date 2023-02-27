@@ -29,4 +29,7 @@ pub enum BucketError {
 
     #[error("Maximum object pins number exceeded")]
     MaxObjectPinsLimitExceeded,
+
+    #[error("Object is already stored")]
+    ObjectAlreadyStored,
 }

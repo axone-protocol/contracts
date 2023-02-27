@@ -142,4 +142,27 @@ mod tests {
 
         assert_eq!(err, ContractError::Bucket(BucketError::EmptyName));
     }
+
+    #[test]
+    fn whitespace_initialization() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg {
+            bucket: "foo bar".to_string(),
+            limits: BucketLimits {
+                max_total_size: None,
+                max_objects: None,
+                max_object_size: None,
+                max_object_pins: None,
+            },
+        };
+        let info = mock_info("creator", &[]);
+
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
+        let value: BucketResponse = from_binary(&res).unwrap();
+        assert_eq!("foobar", value.name);
+    }
 }

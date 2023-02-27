@@ -16,11 +16,12 @@ pub struct Bucket {
 
 impl Bucket {
     pub fn new(name: String, limits: Limits) -> Result<Self, BucketError> {
-        if name.is_empty() {
+        let n: String = name.split_whitespace().collect();
+        if n.is_empty() {
             return Err(EmptyName);
         }
 
-        Ok(Self { name, limits })
+        Ok(Self { name: n, limits })
     }
 }
 

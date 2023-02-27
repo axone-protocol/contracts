@@ -13,6 +13,8 @@ type Cursor = String;
 #[cw_serde]
 pub struct InstantiateMsg {
     /// The name of the bucket.
+    /// The name could not be empty or contains whitespaces.
+    /// If name contains whitespace, they will be removed.
     pub bucket: String,
     /// The limits of the bucket.
     pub limits: BucketLimits,

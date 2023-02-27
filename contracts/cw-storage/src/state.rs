@@ -1,4 +1,4 @@
-use cosmwasm_schema::cw_serde;
+use crate::msg::BucketLimits;
 use cosmwasm_std::Uint128;
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
@@ -9,15 +9,14 @@ pub struct Bucket {
     /// The name of the bucket.
     pub name: String,
     /// The limits of the bucket.
-    pub limits: BucketLimits,
+    pub limits: Limits,
 }
 
-/// BucketLimits is the type of the limits of a bucket.
+/// Limits is the type of the limits of a bucket.
 ///
 /// The limits are optional and if not set, there is no limit.
-#[cw_serde]
-#[derive(Eq)]
-pub struct BucketLimits {
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Limits {
     /// The maximum total size of the objects in the bucket.
     pub max_total_size: Option<Uint128>,
     /// The maximum number of objects in the bucket.
@@ -28,4 +27,14 @@ pub struct BucketLimits {
     pub max_object_pins: Option<Uint128>,
 }
 
-pub const BUCKET: Item<'_, Bucket> = Item::new("bucket");
+impl From<BucketLimits> for Limits {
+    fn from(limits: BucketLimits) -> Self {
+        Limits {
+            max_total_size: limits.max_total_size,
+            max_objects: limits.max_objects,
+            max_object_size: limits.max_object_size,
+            max_object_pins: limits.max_object_pins,
+        }
+    }
+}
+pub const BUCKET: Item<Bucket> = Item::new("bucket");

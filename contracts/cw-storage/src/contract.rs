@@ -23,7 +23,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     let bucket = Bucket {
         name: msg.bucket,
-        limits: msg.limits,
+        limits: msg.limits.into(),
     };
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -61,7 +61,7 @@ pub mod query {
 
         Ok(BucketResponse {
             name: bucket.name,
-            limits: bucket.limits,
+            limits: bucket.limits.into(),
         })
     }
 }
@@ -69,8 +69,7 @@ pub mod query {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::BucketResponse;
-    use crate::state::BucketLimits;
+    use crate::msg::{BucketLimits, BucketResponse};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{from_binary, Uint128};
 

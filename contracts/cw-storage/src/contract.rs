@@ -2,9 +2,7 @@ use crate::error::BucketError;
 use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
-};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
 use crate::crypto::sha256_hash;
@@ -223,7 +221,7 @@ pub mod query {
         BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
     };
     use crate::pagination::PaginationHandler;
-    use cosmwasm_std::Addr;
+    use cosmwasm_std::{Addr, Order};
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;

@@ -206,14 +206,24 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
         QueryMsg::Object { id } => to_binary(&query::object(deps, id)?),
         QueryMsg::ObjectData { id } => to_binary(&query::data(deps, id)?),
-        _ => Err(StdError::generic_err("Not implemented")),
+        QueryMsg::Objects {
+            address,
+            after,
+            first,
+        } => to_binary(&query::fetch_objects(deps, address, after, first)?),
+        QueryMsg::ObjectPins { id, after, first } => {
+            to_binary(&query::object_pins(deps, id, after, first)?)
+        }
     }
 }
 
 pub mod query {
     use super::*;
-    use crate::msg::{BucketResponse, ObjectResponse};
-    use cosmwasm_std::Uint128;
+    use crate::cursor;
+    use crate::msg::{BucketResponse, Cursor, ObjectResponse, ObjectsResponse, PageInfo};
+    use cosmwasm_std::{Addr, Storage, Uint128};
+    use cw_storage_plus::Bound;
+    use std::cmp::min;
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -238,6 +248,24 @@ pub mod query {
 
     pub fn data(deps: Deps, id: ObjectId) -> StdResult<Binary> {
         DATA.load(deps.storage, id).map(Binary::from)
+    }
+
+    pub fn fetch_objects(
+        deps: Deps,
+        address: Option<String>,
+        after: Option<Cursor>,
+        first: Option<u32>,
+    ) -> StdResult<ObjectsResponse> {
+        Err(StdError::generic_err("Not implemented"))
+    }
+
+    pub fn object_pins(
+        deps: Deps,
+        id: ObjectId,
+        after: Option<Cursor>,
+        first: Option<u32>,
+    ) -> StdResult<ObjectsResponse> {
+        Err(StdError::generic_err("Not implemented"))
     }
 }
 

@@ -164,7 +164,7 @@ impl BucketLimits {
         self
     }
 
-    pub fn set_object_pins(mut self, max_object_pins: Uint128) -> Self {
+    pub fn set_max_object_pins(mut self, max_object_pins: Uint128) -> Self {
         self.max_object_pins = Some(max_object_pins);
         self
     }

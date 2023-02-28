@@ -340,6 +340,7 @@ mod tests {
             assert_eq!(created.id, obj.2);
             assert_eq!(created.owner, info.clone().sender);
             assert_eq!(created.size.u128(), obj.3);
+            assert_eq!(created.pin_count, if obj.1 { Uint128::one() } else { Uint128::zero() });
 
             assert_eq!(
                 pins().has(&deps.storage, (String::from(obj.2), info.clone().sender)),

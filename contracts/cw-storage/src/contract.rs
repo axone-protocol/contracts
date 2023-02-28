@@ -48,7 +48,10 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::Limits;
+    use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::Uint128;
+    use std::any::type_name;
+    use cosmwasm_std::Order::Ascending;
 
     pub fn store_object(
         deps: DepsMut,
@@ -197,22 +200,28 @@ pub mod query {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Deref;
     use super::*;
     use crate::error::BucketError;
     use crate::msg::{BucketLimits, BucketResponse};
     use base64::{engine::general_purpose, Engine as _};
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Attribute, Uint128};
+    use cosmwasm_std::{from_binary, Attribute, Uint128, OwnedDeps};
+    use crate::error::BucketError::MaxObjectPinsLimitExceeded;
+
+    fn default_instantiate(name: String) -> InstantiateMsg {
+        InstantiateMsg {
+            bucket: name,
+            limits: BucketLimits::new(),
+        }
+    }
 
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies();
 
-        let msg = InstantiateMsg {
-            bucket: "foo".to_string(),
-            limits: BucketLimits::new(),
-        };
+        let msg = default_instantiate("foo".to_string());
         let info = mock_info("creator", &[]);
 
         // we can just call .unwrap() to assert this was a success
@@ -262,15 +271,7 @@ mod tests {
     fn empty_name_initialization() {
         let mut deps = mock_dependencies();
 
-        let msg = InstantiateMsg {
-            bucket: "".to_string(),
-            limits: BucketLimits {
-                max_total_size: None,
-                max_objects: None,
-                max_object_size: None,
-                max_object_pins: None,
-            },
-        };
+        let msg = default_instantiate("".to_string());
         let info = mock_info("creator", &[]);
 
         let err = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap_err();
@@ -282,15 +283,7 @@ mod tests {
     fn whitespace_initialization() {
         let mut deps = mock_dependencies();
 
-        let msg = InstantiateMsg {
-            bucket: "foo bar".to_string(),
-            limits: BucketLimits {
-                max_total_size: None,
-                max_objects: None,
-                max_object_size: None,
-                max_object_pins: None,
-            },
-        };
+        let msg = default_instantiate("foo bar".to_string());
         let info = mock_info("creator", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -305,11 +298,10 @@ mod tests {
     fn store_object_without_limits() {
         let mut deps = mock_dependencies();
         let info = mock_info("creator", &[]);
-        let msg = InstantiateMsg {
-            bucket: String::from("test"),
-            limits: BucketLimits::new(),
-        };
-        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        instantiate(deps.as_mut(),
+                    mock_env(),
+                    info.clone(),
+                    default_instantiate("test".to_string())).unwrap();
 
         let obj1 = (
             general_purpose::STANDARD.encode("hello"),
@@ -553,5 +545,138 @@ mod tests {
         )
         .unwrap();
         assert_eq!(res, Binary::from_base64(data.as_str()).unwrap());
+    }
+
+    #[test]
+    fn pin_object() {
+        let mut deps = mock_dependencies();
+        let info = mock_info("creator", &[]);
+
+        instantiate(deps.as_mut(),
+                    mock_env(),
+                    info.clone(),
+                    default_instantiate("test".to_string())).unwrap();
+
+
+        let data = general_purpose::STANDARD.encode("okp4");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let pin_msg = ExecuteMsg::PinObject { id: ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6") };
+        execute(deps.as_mut(), mock_env(), info, pin_msg).unwrap();
+        assert_eq!(
+            pins()
+                .keys_raw(&deps.storage, None, None, Order::Ascending)
+                .count(),
+            1
+        );
+    }
+
+    struct TestPinCase {
+        objects: Vec<ObjectId>,
+        senders: Vec<MessageInfo>,
+        expected_count: usize,
+        expected_error: Option<ContractError>
+    }
+
+    #[test]
+    fn pin_object_tests() {
+
+        let cases = vec![
+            TestPinCase { // One object, 1 one pinner => 1 pin
+                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")],
+                senders: vec![mock_info("bob", &[])],
+                expected_count: 1,
+                expected_error: None,
+            },
+            TestPinCase { // Same object, two pinners => 2 pin
+                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")],
+                senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                expected_count: 2,
+                expected_error: None,
+            },
+            TestPinCase { // Same object, one pinner twice => 1 pin
+                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")],
+                senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
+                expected_count: 1,
+                expected_error: None,
+            },
+            TestPinCase { // two objects, same pinner => 2 pin
+                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")],
+                senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
+                expected_count: 2,
+                expected_error: None,
+            },
+            TestPinCase { // two objects, two pinner => 2 pin
+                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")],
+                senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                expected_count: 2,
+                expected_error: None,
+            },
+            TestPinCase { // two objects, two pinner, twice 1 pinner => 2 pin
+                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")],
+                senders: vec![mock_info("bob", &[]), mock_info("alice", &[]), mock_info("alice", &[])],
+                expected_count: 2,
+                expected_error: None,
+            },
+            TestPinCase { // exceed limits
+                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")],
+                senders: vec![mock_info("bob", &[]), mock_info("alice", &[]), mock_info("alice", &[])],
+                expected_count: 2,
+                expected_error: Some(ContractError::Bucket(MaxObjectPinsLimitExceeded)),
+            },
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+            let info = mock_info("creator", &[]);
+
+            instantiate(deps.as_mut(),
+                        mock_env(),
+                        info.clone(),
+                        default_instantiate("test".to_string())).unwrap();
+
+
+            let data = general_purpose::STANDARD.encode("okp4");
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+            };
+            let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            let data = general_purpose::STANDARD.encode("data");
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+            };
+            let res2 = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            let data = general_purpose::STANDARD.encode("hello");
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+            };
+            let res3 = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            let mut lastResult: Option<Result<Response, ContractError>> = None;
+            case.objects.iter()
+                .zip(case.senders)
+                .for_each(|(objectId, info)| {
+                lastResult = Some(execute(deps.as_mut(), mock_env(), info, ExecuteMsg::PinObject {id: objectId.clone() }));
+            });
+
+            match case.expected_error {
+                Some(err) => assert_eq!(lastResult.unwrap().unwrap_err(), err),
+                None => assert_eq!(
+                    pins()
+                        .keys_raw(&deps.storage, None, None, Order::Ascending)
+                        .count(),
+                    case.expected_count
+                )
+            }
+        }
     }
 }

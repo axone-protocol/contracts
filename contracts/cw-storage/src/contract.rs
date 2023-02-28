@@ -48,8 +48,6 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::Limits;
-    use cosmwasm_std::Order::Ascending;
-    use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::Uint128;
     use std::any::type_name;
 
@@ -125,26 +123,25 @@ pub mod execute {
     pub fn pin_object(
         deps: DepsMut,
         info: MessageInfo,
-        objectId: ObjectId,
+        object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-
-        if pins().has(deps.storage, (objectId.clone(), info.sender.clone())) {
+        if pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
             return Ok(Response::new()
                 .add_attribute("action", "pin_object")
-                .add_attribute("id", objectId.clone()))
+                .add_attribute("id", object_id));
         }
 
         let bucket = BUCKET.load(deps.storage)?;
 
         let o = objects().update(
             deps.storage,
-            objectId.clone(),
-            |mut o| -> Result<Object, StdError> {
-                o.and_then(|mut e: Object| -> Option<Object> {
+            object_id.clone(),
+            |o| -> Result<Object, StdError> {
+                o.map(|mut e: Object| -> Object {
                     e.pin_count += Uint128::one();
-                    Some(e)
+                    e
                 })
-                .ok_or(StdError::not_found(type_name::<Object>()))
+                .ok_or_else(|| StdError::not_found(type_name::<Object>()))
             },
         )?;
 
@@ -152,21 +149,19 @@ pub mod execute {
             Limits {
                 max_object_pins: Some(max),
                 ..
-            } if max < o.pin_count => {
-                Err(BucketError::MaxObjectPinsLimitExceeded.into())
-            },
+            } if max < o.pin_count => Err(BucketError::MaxObjectPinsLimitExceeded.into()),
             _ => {
                 pins().save(
                     deps.storage,
-                    (objectId.clone(), info.sender.clone()),
+                    (object_id.clone(), info.sender.clone()),
                     &Pin {
-                        id: objectId.clone(),
+                        id: object_id.clone(),
                         address: info.sender,
                     },
                 )?;
                 Ok(Response::new()
                     .add_attribute("action", "pin_object")
-                    .add_attribute("id", objectId.clone()))
+                    .add_attribute("id", object_id))
             }
         }
     }
@@ -224,12 +219,9 @@ mod tests {
     use crate::error::BucketError::MaxObjectPinsLimitExceeded;
     use crate::msg::{BucketLimits, BucketResponse};
     use base64::{engine::general_purpose, Engine as _};
-    use cosmwasm_std::testing::{
-        mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage,
-    };
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Attribute, OwnedDeps, Uint128};
-    use std::ops::Deref;
+    use cosmwasm_std::{from_binary, Attribute, Uint128};
 
     #[test]
     fn proper_initialization() {
@@ -584,41 +576,6 @@ mod tests {
         assert_eq!(res, Binary::from_base64(data.as_str()).unwrap());
     }
 
-    #[test]
-    fn pin_object() {
-        let mut deps = mock_dependencies();
-        let info = mock_info("creator", &[]);
-
-        instantiate(
-            deps.as_mut(),
-            mock_env(),
-            info.clone(),
-            InstantiateMsg {
-                bucket: "test".to_string(),
-                limits: BucketLimits::new(),
-            },
-        )
-        .unwrap();
-
-        let data = general_purpose::STANDARD.encode("okp4");
-        let msg = ExecuteMsg::StoreObject {
-            data: Binary::from_base64(data.as_str()).unwrap(),
-            pin: false,
-        };
-        let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-
-        let pin_msg = ExecuteMsg::PinObject {
-            id: ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
-        };
-        execute(deps.as_mut(), mock_env(), info, pin_msg).unwrap();
-        assert_eq!(
-            pins()
-                .keys_raw(&deps.storage, None, None, Order::Ascending)
-                .count(),
-            1
-        );
-    }
-
     struct TestPinCase {
         objects: Vec<ObjectId>,
         senders: Vec<MessageInfo>,
@@ -628,7 +585,7 @@ mod tests {
     }
 
     #[test]
-    fn pin_object_tests() {
+    fn pin_object() {
         let cases = vec![
             TestPinCase {
                 // One object, 1 one pinner => 1 pin
@@ -643,7 +600,7 @@ mod tests {
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                     ),
                     Uint128::one(),
-                )]
+                )],
             },
             TestPinCase {
                 // Same object, two pinners => 2 pin
@@ -837,39 +794,39 @@ mod tests {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
             };
-            let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+            let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
             let data = general_purpose::STANDARD.encode("data");
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
             };
-            let res2 = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+            let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
             let data = general_purpose::STANDARD.encode("hello");
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
             };
-            let res3 = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+            let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-            let mut lastResult: Option<Result<Response, ContractError>> = None;
+            let mut last_result: Option<Result<Response, ContractError>> = None;
             case.objects
                 .iter()
                 .zip(case.senders)
-                .for_each(|(objectId, info)| {
-                    lastResult = Some(execute(
+                .for_each(|(object_id, info)| {
+                    last_result = Some(execute(
                         deps.as_mut(),
                         mock_env(),
                         info,
                         ExecuteMsg::PinObject {
-                            id: objectId.clone(),
+                            id: object_id.clone(),
                         },
                     ));
                 });
 
             match case.expected_error {
-                Some(err) => assert_eq!(lastResult.unwrap().unwrap_err(), err),
+                Some(err) => assert_eq!(last_result.unwrap().unwrap_err(), err),
                 _ => {
                     assert_eq!(
                         pins()
@@ -877,8 +834,11 @@ mod tests {
                             .count(),
                         case.expected_count
                     );
-                    for (objectId, count) in case.expected_object_pin_count {
-                        assert_eq!(objects().load(&deps.storage, objectId).unwrap().pin_count, count);
+                    for (object_id, count) in case.expected_object_pin_count {
+                        assert_eq!(
+                            objects().load(&deps.storage, object_id).unwrap().pin_count,
+                            count
+                        );
                     }
                 }
             }

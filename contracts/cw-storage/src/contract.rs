@@ -3,7 +3,7 @@ use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -238,12 +238,7 @@ pub mod query {
     pub fn object(deps: Deps, id: ObjectId) -> StdResult<ObjectResponse> {
         objects()
             .load(deps.storage, id)
-            .map(|object| ObjectResponse {
-                id: object.id.clone(),
-                size: object.size,
-                owner: object.owner.into(),
-                is_pinned: object.pin_count > Uint128::zero(),
-            })
+            .map(|object| map_object(object))
     }
 
     pub fn data(deps: Deps, id: ObjectId) -> StdResult<Binary> {
@@ -256,7 +251,60 @@ pub mod query {
         after: Option<Cursor>,
         first: Option<u32>,
     ) -> StdResult<ObjectsResponse> {
-        Err(StdError::generic_err("Not implemented"))
+        let page_size = match first {
+            Some(req) => {
+                if req > BUCKET.load(deps.storage)?.pagination.max_page_size {
+                    return Err(StdError::generic_err(
+                        "Requested page size exceed maximum allowed",
+                    ));
+                }
+                Ok(req)
+            }
+            _ => BUCKET
+                .load(deps.storage)
+                .map(|b| b.pagination.default_page_size),
+        }? as usize;
+
+        let min_bound = match after {
+            Some(cursor) => {
+                let id: String = cursor::decode(cursor)?;
+                Some(Bound::exclusive(id))
+            }
+            _ => None,
+        };
+
+        let iter = match address {
+            Some(raw_addr) => {
+                let addr = deps.api.addr_validate(raw_addr.as_str())?;
+                objects().idx.owner.prefix(addr).range(
+                    deps.storage,
+                    min_bound,
+                    None,
+                    Order::Ascending,
+                )
+            }
+            _ => objects().range(deps.storage, min_bound, None, Order::Ascending),
+        };
+
+        let raw_objects = iter.take(page_size + 1).collect::<StdResult<Vec<_>>>()?;
+        let mapped_objects: Vec<ObjectResponse> = raw_objects
+            .iter()
+            .take(page_size)
+            .map(|(_, object)| map_object(object.to_owned()))
+            .collect();
+
+        let cursor = mapped_objects
+            .last()
+            .map(|object| cursor::encode(object.id.clone()))
+            .unwrap_or("".to_string());
+
+        Ok(ObjectsResponse {
+            data: mapped_objects,
+            page_info: PageInfo {
+                has_next_page: raw_objects.len() > page_size,
+                cursor,
+            },
+        })
     }
 
     pub fn object_pins(
@@ -266,6 +314,15 @@ pub mod query {
         first: Option<u32>,
     ) -> StdResult<ObjectsResponse> {
         Err(StdError::generic_err("Not implemented"))
+    }
+
+    fn map_object(object: Object) -> ObjectResponse {
+        ObjectResponse {
+            id: object.id.clone(),
+            size: object.size,
+            owner: object.owner.into(),
+            is_pinned: object.pin_count > Uint128::zero(),
+        }
     }
 }
 

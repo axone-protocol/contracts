@@ -94,6 +94,8 @@ pub struct Object {
     pub owner: Addr,
     /// The size of the object.
     pub size: Uint128,
+    /// The number of pin on this object.
+    pub pin_count: Uint128,
 }
 
 pub struct ObjectIndexes<'a> {

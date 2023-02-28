@@ -94,6 +94,7 @@ pub mod execute {
             id: sha256_hash(&data.0),
             owner: info.sender.clone(),
             size,
+            pin_count: if pin { Uint128::one() } else { Uint128::zero() }
         };
         let res = Response::new()
             .add_attribute("action", "store_object")

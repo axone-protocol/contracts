@@ -1241,4 +1241,157 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn fetch_objects() {
+        let mut deps = mock_dependencies();
+        let info1 = mock_info("creator1", &[]);
+        let info2 = mock_info("creator2", &[]);
+
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+
+        let msg = QueryMsg::Objects {
+            address: None,
+            first: None,
+            after: None,
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(response.data.len(), 0);
+        assert_eq!(
+            response.page_info,
+            PageInfo {
+                has_next_page: false,
+                cursor: "".to_string()
+            }
+        );
+
+        let data = general_purpose::STANDARD.encode("object1");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        let data = general_purpose::STANDARD.encode("object2");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        let data = general_purpose::STANDARD.encode("object3");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info2.clone(), msg).unwrap();
+
+        let msg = QueryMsg::Objects {
+            address: None,
+            first: None,
+            after: None,
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(response.data.len(), 3);
+        assert_eq!(
+            response.page_info,
+            PageInfo {
+                has_next_page: false,
+                cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()
+            }
+        );
+
+        let msg = QueryMsg::Objects {
+            address: Some("creator2".to_string()),
+            first: None,
+            after: None,
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(response.data.len(), 1);
+        assert_eq!(
+            response.data.first().unwrap(),
+            &ObjectResponse {
+                id: "0a6d95579ba3dd2f79c870906fd894007ce449020d111d358894cfbbcd9a03a4".to_string(),
+                owner: "creator2".to_string(),
+                is_pinned: false,
+                size: 7u128.into()
+            }
+        );
+        assert_eq!(
+            response.page_info,
+            PageInfo {
+                has_next_page: false,
+                cursor: "y6tBWy5xCJ3M6p5ndvMhnWTTGei6sggpj4KuNjzKdpjNG9hLpQCM191q7rTzKzfcThHm7d9cgU3fsZi3kaYJdmu"
+                    .to_string()
+            }
+        );
+
+        let msg = QueryMsg::Objects {
+            address: Some("unknown".to_string()),
+            first: None,
+            after: None,
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(response.data, Vec::new());
+        assert_eq!(
+            response.page_info,
+            PageInfo {
+                has_next_page: false,
+                cursor: "".to_string()
+            }
+        );
+
+        let msg = QueryMsg::Objects {
+            address: Some("creator1".to_string()),
+            first: None,
+            after: None,
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(response.data.len(), 2);
+        assert_eq!(
+            response.page_info,
+            PageInfo {
+                has_next_page: false,
+                cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()
+            }
+        );
+        let msg = QueryMsg::Objects {
+            address: Some("creator1".to_string()),
+            first: Some(1),
+            after: None,
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(response.data.len(), 1);
+        assert_eq!(
+            response.page_info,
+            PageInfo {
+                has_next_page: true,
+                cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()
+            }
+        );
+        let msg = QueryMsg::Objects {
+            address: Some("creator1".to_string()),
+            first: Some(1),
+            after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()),
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(response.data.len(), 1);
+        assert_eq!(
+            response.page_info,
+            PageInfo {
+                has_next_page: false,
+                cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()
+            }
+        );
+    }
 }

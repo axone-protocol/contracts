@@ -40,6 +40,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::StoreObject { data, pin } => execute::store_object(deps, info, data, pin),
+        ExecuteMsg::PinObject { id } => execute::pin_object(deps, info, id),
         _ => Err(NotImplemented {}),
     }
 }
@@ -115,6 +116,37 @@ pub mod execute {
         }
 
         Ok(res)
+    }
+
+    pub fn pin_object(
+        deps: DepsMut,
+        info: MessageInfo,
+        objectId: ObjectId,
+    ) -> Result<Response, ContractError> {
+        let bucket = BUCKET.load(deps.storage)?;
+        let pins_count = pins().prefix(objectId.clone()).keys_raw(deps.storage, None, None, Ascending).count();
+
+        match bucket.limits {
+            Limits {
+                max_object_pins: Some(max),
+                ..
+            } if max < Uint128::new(u128::try_from(pins_count).unwrap()) => {
+                Err(BucketError::MaxObjectPinsLimitExceeded.into())
+            }
+            _ => {
+                pins().save(
+                    deps.storage,
+                    (objectId.clone(), info.sender.clone()),
+                    &Pin {
+                        id: objectId.clone(),
+                        address: info.sender,
+                    },
+                )?;
+                Ok(Response::new()
+                    .add_attribute("action", "pin_object")
+                    .add_attribute("id", objectId.clone()))
+            }
+        }
     }
 }
 

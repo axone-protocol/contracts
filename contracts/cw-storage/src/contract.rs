@@ -274,12 +274,14 @@ mod tests {
     use super::*;
     use crate::error::BucketError;
     use crate::error::BucketError::MaxObjectPinsLimitExceeded;
-    use crate::msg::{BucketLimits, BucketResponse, ObjectResponse, PageInfo, PaginationConfig};
+    use crate::msg::{
+        BucketLimits, BucketResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfig,
+    };
     use crate::state::Pagination;
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Attribute, Order, Uint128};
+    use cosmwasm_std::{from_binary, Api, Attribute, Order, Uint128};
     use std::any::type_name;
 
     #[test]
@@ -605,9 +607,12 @@ mod tests {
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        match query::object(
+        match query(
             deps.as_ref(),
-            ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
+            mock_env(),
+            QueryMsg::Object {
+                id: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824".to_string(),
+            },
         )
         .err()
         .unwrap()
@@ -623,18 +628,18 @@ mod tests {
         };
         execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let res = query::object(
-            deps.as_ref(),
-            ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
-        )
-        .unwrap();
+        let msg = QueryMsg::Object {
+            id: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824".to_string(),
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectResponse = from_binary(&result).unwrap();
         assert_eq!(
-            res.id,
+            response.id,
             ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
         );
-        assert_eq!(res.owner, info.sender);
-        assert!(res.is_pinned);
-        assert_eq!(res.size.u128(), 5u128);
+        assert_eq!(response.owner, info.sender);
+        assert!(response.is_pinned);
+        assert_eq!(response.size.u128(), 5u128);
 
         let data = general_purpose::STANDARD.encode("okp4");
         let msg = ExecuteMsg::StoreObject {
@@ -643,18 +648,18 @@ mod tests {
         };
         execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let res = query::object(
-            deps.as_ref(),
-            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
-        )
-        .unwrap();
+        let msg = QueryMsg::Object {
+            id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectResponse = from_binary(&result).unwrap();
         assert_eq!(
-            res.id,
+            response.id,
             ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")
         );
-        assert_eq!(res.owner, info.sender);
-        assert!(!res.is_pinned);
-        assert_eq!(res.size.u128(), 4u128);
+        assert_eq!(response.owner, info.sender);
+        assert!(!response.is_pinned);
+        assert_eq!(response.size.u128(), 4u128);
     }
 
     #[test]
@@ -669,9 +674,12 @@ mod tests {
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        match query::object(
+        match query(
             deps.as_ref(),
-            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
+            mock_env(),
+            QueryMsg::ObjectData {
+                id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
+            },
         )
         .err()
         .unwrap()
@@ -680,19 +688,18 @@ mod tests {
             _ => panic!("assertion failed"),
         }
 
-        let data = general_purpose::STANDARD.encode("okp4");
+        let data = Binary::from_base64(general_purpose::STANDARD.encode("okp4").as_str()).unwrap();
         let msg = ExecuteMsg::StoreObject {
-            data: Binary::from_base64(data.as_str()).unwrap(),
+            data: data.clone(),
             pin: false,
         };
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let res = query::data(
-            deps.as_ref(),
-            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
-        )
-        .unwrap();
-        assert_eq!(res, Binary::from_base64(data.as_str()).unwrap());
+        let msg = QueryMsg::ObjectData {
+            id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        assert_eq!(result, to_binary(&data).unwrap());
     }
 
     struct TestPinCase {

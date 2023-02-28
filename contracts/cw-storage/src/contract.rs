@@ -48,10 +48,10 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::Limits;
+    use cosmwasm_std::Order::Ascending;
     use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::Uint128;
     use std::any::type_name;
-    use cosmwasm_std::Order::Ascending;
 
     pub fn store_object(
         deps: DepsMut,
@@ -94,7 +94,7 @@ pub mod execute {
             id: sha256_hash(&data.0),
             owner: info.sender.clone(),
             size,
-            pin_count: if pin { Uint128::one() } else { Uint128::zero() }
+            pin_count: if pin { Uint128::one() } else { Uint128::zero() },
         };
         let res = Response::new()
             .add_attribute("action", "store_object")
@@ -127,16 +127,34 @@ pub mod execute {
         info: MessageInfo,
         objectId: ObjectId,
     ) -> Result<Response, ContractError> {
+
+        if pins().has(deps.storage, (objectId.clone(), info.sender.clone())) {
+            return Ok(Response::new()
+                .add_attribute("action", "pin_object")
+                .add_attribute("id", objectId.clone()))
+        }
+
         let bucket = BUCKET.load(deps.storage)?;
-        let pins_count = pins().prefix(objectId.clone()).keys_raw(deps.storage, None, None, Ascending).count();
+
+        let o = objects().update(
+            deps.storage,
+            objectId.clone(),
+            |mut o| -> Result<Object, StdError> {
+                o.and_then(|mut e: Object| -> Option<Object> {
+                    e.pin_count += Uint128::one();
+                    Some(e)
+                })
+                .ok_or(StdError::not_found(type_name::<Object>()))
+            },
+        )?;
 
         match bucket.limits {
             Limits {
                 max_object_pins: Some(max),
                 ..
-            } if max < Uint128::new(u128::try_from(pins_count).unwrap()) => {
+            } if max < o.pin_count => {
                 Err(BucketError::MaxObjectPinsLimitExceeded.into())
-            }
+            },
             _ => {
                 pins().save(
                     deps.storage,
@@ -201,28 +219,26 @@ pub mod query {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Deref;
     use super::*;
     use crate::error::BucketError;
+    use crate::error::BucketError::MaxObjectPinsLimitExceeded;
     use crate::msg::{BucketLimits, BucketResponse};
     use base64::{engine::general_purpose, Engine as _};
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage};
+    use cosmwasm_std::testing::{
+        mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage,
+    };
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Attribute, Uint128, OwnedDeps};
-    use crate::error::BucketError::MaxObjectPinsLimitExceeded;
-
-    fn default_instantiate(name: String) -> InstantiateMsg {
-        InstantiateMsg {
-            bucket: name,
-            limits: BucketLimits::new(),
-        }
-    }
+    use cosmwasm_std::{from_binary, Attribute, OwnedDeps, Uint128};
+    use std::ops::Deref;
 
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies();
 
-        let msg = default_instantiate("foo".to_string());
+        let msg = InstantiateMsg {
+            bucket: "foo".to_string(),
+            limits: BucketLimits::new(),
+        };
         let info = mock_info("creator", &[]);
 
         // we can just call .unwrap() to assert this was a success
@@ -272,7 +288,10 @@ mod tests {
     fn empty_name_initialization() {
         let mut deps = mock_dependencies();
 
-        let msg = default_instantiate("".to_string());
+        let msg = InstantiateMsg {
+            bucket: "".to_string(),
+            limits: BucketLimits::new(),
+        };
         let info = mock_info("creator", &[]);
 
         let err = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap_err();
@@ -284,7 +303,10 @@ mod tests {
     fn whitespace_initialization() {
         let mut deps = mock_dependencies();
 
-        let msg = default_instantiate("foo bar".to_string());
+        let msg = InstantiateMsg {
+            bucket: "foo bar".to_string(),
+            limits: BucketLimits::new(),
+        };
         let info = mock_info("creator", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -299,10 +321,16 @@ mod tests {
     fn store_object_without_limits() {
         let mut deps = mock_dependencies();
         let info = mock_info("creator", &[]);
-        instantiate(deps.as_mut(),
-                    mock_env(),
-                    info.clone(),
-                    default_instantiate("test".to_string())).unwrap();
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                bucket: "test".to_string(),
+                limits: BucketLimits::new(),
+            },
+        )
+        .unwrap();
 
         let obj1 = (
             general_purpose::STANDARD.encode("hello"),
@@ -340,7 +368,14 @@ mod tests {
             assert_eq!(created.id, obj.2);
             assert_eq!(created.owner, info.clone().sender);
             assert_eq!(created.size.u128(), obj.3);
-            assert_eq!(created.pin_count, if obj.1 { Uint128::one() } else { Uint128::zero() });
+            assert_eq!(
+                created.pin_count,
+                if obj.1 {
+                    Uint128::one()
+                } else {
+                    Uint128::zero()
+                }
+            );
 
             assert_eq!(
                 pins().has(&deps.storage, (String::from(obj.2), info.clone().sender)),
@@ -393,7 +428,7 @@ mod tests {
             (BucketLimits::new().set_max_objects(2u128.into()), None),
             (BucketLimits::new().set_max_object_size(5u128.into()), None),
             (BucketLimits::new().set_max_total_size(9u128.into()), None),
-            (BucketLimits::new().set_object_pins(1u128.into()), None),
+            (BucketLimits::new().set_max_object_pins(1u128.into()), None),
             (
                 BucketLimits::new().set_max_objects(1u128.into()),
                 Some(ContractError::Bucket(BucketError::MaxObjectsLimitExceeded(
@@ -414,7 +449,7 @@ mod tests {
                 )),
             ),
             (
-                BucketLimits::new().set_object_pins(0u128.into()),
+                BucketLimits::new().set_max_object_pins(0u128.into()),
                 Some(ContractError::Bucket(
                     BucketError::MaxObjectPinsLimitExceeded(1u128.into(), 0u128.into()),
                 )),
@@ -554,11 +589,16 @@ mod tests {
         let mut deps = mock_dependencies();
         let info = mock_info("creator", &[]);
 
-        instantiate(deps.as_mut(),
-                    mock_env(),
-                    info.clone(),
-                    default_instantiate("test".to_string())).unwrap();
-
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                bucket: "test".to_string(),
+                limits: BucketLimits::new(),
+            },
+        )
+        .unwrap();
 
         let data = general_purpose::STANDARD.encode("okp4");
         let msg = ExecuteMsg::StoreObject {
@@ -567,7 +607,9 @@ mod tests {
         };
         let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let pin_msg = ExecuteMsg::PinObject { id: ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6") };
+        let pin_msg = ExecuteMsg::PinObject {
+            id: ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
+        };
         execute(deps.as_mut(), mock_env(), info, pin_msg).unwrap();
         assert_eq!(
             pins()
@@ -581,54 +623,197 @@ mod tests {
         objects: Vec<ObjectId>,
         senders: Vec<MessageInfo>,
         expected_count: usize,
-        expected_error: Option<ContractError>
+        expected_error: Option<ContractError>,
+        expected_object_pin_count: Vec<(ObjectId, Uint128)>,
     }
 
     #[test]
     fn pin_object_tests() {
-
         let cases = vec![
-            TestPinCase { // One object, 1 one pinner => 1 pin
-                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")],
+            TestPinCase {
+                // One object, 1 one pinner => 1 pin
+                objects: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
                 senders: vec![mock_info("bob", &[])],
                 expected_count: 1,
                 expected_error: None,
+                expected_object_pin_count: vec![(
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    Uint128::one(),
+                )]
             },
-            TestPinCase { // Same object, two pinners => 2 pin
-                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")],
+            TestPinCase {
+                // Same object, two pinners => 2 pin
+                objects: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                ],
                 senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
                 expected_count: 2,
                 expected_error: None,
+                expected_object_pin_count: vec![(
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    Uint128::new(2),
+                )],
             },
-            TestPinCase { // Same object, one pinner twice => 1 pin
-                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")],
+            TestPinCase {
+                // Same object, one pinner twice => 1 pin
+                objects: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                ],
                 senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
                 expected_count: 1,
                 expected_error: None,
+                expected_object_pin_count: vec![(
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    Uint128::one(),
+                )],
             },
-            TestPinCase { // two objects, same pinner => 2 pin
-                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")],
+            TestPinCase {
+                // two objects, same pinner => 2 pin
+                objects: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                    ),
+                ],
                 senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
                 expected_count: 2,
                 expected_error: None,
+                expected_object_pin_count: vec![
+                    (
+                        ObjectId::from(
+                            "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                        ),
+                        Uint128::one(),
+                    ),
+                    (
+                        ObjectId::from(
+                            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                        ),
+                        Uint128::one(),
+                    ),
+                ],
             },
-            TestPinCase { // two objects, two pinner => 2 pin
-                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")],
+            TestPinCase {
+                // two objects, two pinner => 2 pin
+                objects: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                    ),
+                ],
                 senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
                 expected_count: 2,
                 expected_error: None,
+                expected_object_pin_count: vec![
+                    (
+                        ObjectId::from(
+                            "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                        ),
+                        Uint128::one(),
+                    ),
+                    (
+                        ObjectId::from(
+                            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                        ),
+                        Uint128::one(),
+                    ),
+                ],
             },
-            TestPinCase { // two objects, two pinner, twice 1 pinner => 2 pin
-                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")],
-                senders: vec![mock_info("bob", &[]), mock_info("alice", &[]), mock_info("alice", &[])],
+            TestPinCase {
+                // two objects, two pinner, twice 1 pinner => 2 pin
+                objects: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                    ),
+                    ObjectId::from(
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                    ),
+                ],
+                senders: vec![
+                    mock_info("bob", &[]),
+                    mock_info("alice", &[]),
+                    mock_info("alice", &[]),
+                ],
                 expected_count: 2,
                 expected_error: None,
+                expected_object_pin_count: vec![
+                    (
+                        ObjectId::from(
+                            "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                        ),
+                        Uint128::one(),
+                    ),
+                    (
+                        ObjectId::from(
+                            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                        ),
+                        Uint128::one(),
+                    ),
+                ],
             },
-            TestPinCase { // exceed limits
-                objects: vec![ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"), ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")],
-                senders: vec![mock_info("bob", &[]), mock_info("alice", &[]), mock_info("alice", &[])],
-                expected_count: 2,
+            TestPinCase {
+                // exceed limits
+                objects: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                    ),
+                    ObjectId::from(
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                    ),
+                    ObjectId::from(
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                    ),
+                ],
+                senders: vec![
+                    mock_info("bob", &[]),
+                    mock_info("alice", &[]),
+                    mock_info("martin", &[]),
+                    mock_info("pierre", &[]),
+                ],
+                expected_count: 3,
                 expected_error: Some(ContractError::Bucket(MaxObjectPinsLimitExceeded)),
+                expected_object_pin_count: vec![
+                    (
+                        ObjectId::from(
+                            "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                        ),
+                        Uint128::one(),
+                    ),
+                    (
+                        ObjectId::from(
+                            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                        ),
+                        Uint128::new(2),
+                    ),
+                ],
             },
         ];
 
@@ -636,11 +821,16 @@ mod tests {
             let mut deps = mock_dependencies();
             let info = mock_info("creator", &[]);
 
-            instantiate(deps.as_mut(),
-                        mock_env(),
-                        info.clone(),
-                        default_instantiate("test".to_string())).unwrap();
-
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg {
+                    bucket: "test".to_string(),
+                    limits: BucketLimits::new().set_max_object_pins(Uint128::new(2)),
+                },
+            )
+            .unwrap();
 
             let data = general_purpose::STANDARD.encode("okp4");
             let msg = ExecuteMsg::StoreObject {
@@ -664,20 +854,33 @@ mod tests {
             let res3 = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
             let mut lastResult: Option<Result<Response, ContractError>> = None;
-            case.objects.iter()
+            case.objects
+                .iter()
                 .zip(case.senders)
                 .for_each(|(objectId, info)| {
-                lastResult = Some(execute(deps.as_mut(), mock_env(), info, ExecuteMsg::PinObject {id: objectId.clone() }));
-            });
+                    lastResult = Some(execute(
+                        deps.as_mut(),
+                        mock_env(),
+                        info,
+                        ExecuteMsg::PinObject {
+                            id: objectId.clone(),
+                        },
+                    ));
+                });
 
             match case.expected_error {
                 Some(err) => assert_eq!(lastResult.unwrap().unwrap_err(), err),
-                None => assert_eq!(
-                    pins()
-                        .keys_raw(&deps.storage, None, None, Order::Ascending)
-                        .count(),
-                    case.expected_count
-                )
+                _ => {
+                    assert_eq!(
+                        pins()
+                            .keys_raw(&deps.storage, None, None, Order::Ascending)
+                            .count(),
+                        case.expected_count
+                    );
+                    for (objectId, count) in case.expected_object_pin_count {
+                        assert_eq!(objects().load(&deps.storage, objectId).unwrap().pin_count, count);
+                    }
+                }
             }
         }
     }

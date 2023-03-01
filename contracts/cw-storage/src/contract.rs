@@ -1530,4 +1530,145 @@ mod tests {
             _ => panic!("assertion failed"),
         }
     }
+
+    struct TestForgetCase {
+        pins: Vec<ObjectId>,
+        pins_senders: Vec<MessageInfo>,
+        forget_objects: Vec<ObjectId>,
+        expected_count: usize,
+        expected_total_size: Uint128,
+        expected_error: Option<ContractError>,
+    }
+
+    #[test]
+    fn forget_object() {
+        let cases = vec![
+            TestForgetCase {
+                pins: vec![],
+                pins_senders: vec![],
+                forget_objects: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
+                expected_count: 2,
+                expected_total_size: Uint128::new(9),
+                expected_error: None,
+            },
+            TestForgetCase {
+                pins: vec![],
+                pins_senders: vec![],
+                forget_objects: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                    ),
+                ],
+                expected_count: 1,
+                expected_total_size: Uint128::new(4),
+                expected_error: None,
+            },
+            TestForgetCase {
+                pins: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
+                pins_senders: vec![mock_info("bob", &[])],
+                forget_objects: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
+                expected_count: 3,
+                expected_total_size: Uint128::new(13),
+                expected_error: Some(ContractError::Pinned {}),
+            },
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+            let info = mock_info("creator", &[]);
+
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg {
+                    bucket: "test".to_string(),
+                    limits: BucketLimits::new(),
+                    pagination: PaginationConfig::new(),
+                },
+            )
+            .unwrap();
+
+            let data = general_purpose::STANDARD.encode("okp4");
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+            };
+            let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            let data = general_purpose::STANDARD.encode("data");
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+            };
+            let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            let data = general_purpose::STANDARD.encode("hello");
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+            };
+            let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            case.pins
+                .iter()
+                .zip(case.pins_senders)
+                .for_each(|(object_id, info)| {
+                    _ = execute(
+                        deps.as_mut(),
+                        mock_env(),
+                        info,
+                        ExecuteMsg::PinObject {
+                            id: object_id.clone(),
+                        },
+                    );
+                });
+
+            let mut last_result: Option<Result<Response, ContractError>> = None;
+
+            case.forget_objects.iter().for_each(|object_id| {
+                last_result = Some(execute(
+                    deps.as_mut(),
+                    mock_env(),
+                    mock_info("boby", &[]),
+                    ExecuteMsg::ForgetObject {
+                        id: object_id.clone(),
+                    },
+                ));
+            });
+
+            match case.expected_error {
+                Some(err) => assert_eq!(last_result.unwrap().unwrap_err(), err),
+                _ => {
+                    for object_id in case.forget_objects {
+                        assert_eq!(
+                            objects().load(&deps.storage, object_id).unwrap_err(),
+                            StdError::not_found(type_name::<Object>())
+                        );
+                    }
+                }
+            }
+            assert_eq!(
+                objects()
+                    .keys_raw(&deps.storage, None, None, Order::Ascending)
+                    .count(),
+                case.expected_count
+            );
+            let bucket = BUCKET.load(&deps.storage).unwrap();
+            assert_eq!(
+                bucket.stat.object_count,
+                Uint128::from(case.expected_count as u128)
+            );
+            assert_eq!(bucket.stat.size, case.expected_total_size);
+        }
+    }
 }

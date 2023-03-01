@@ -1,5 +1,4 @@
 use crate::msg::{Cursor, ObjectId};
-use crate::ContractError;
 use cosmwasm_std::{StdError, StdResult};
 
 pub fn encode(id: ObjectId) -> Cursor {

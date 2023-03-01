@@ -9,7 +9,7 @@ use cw2::set_contract_version;
 
 use crate::crypto::sha256_hash;
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, ObjectId, PaginationConfig, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, ObjectId, QueryMsg};
 use crate::state::{objects, pins, Bucket, Object, Pin, BUCKET, DATA};
 
 // version info for migration info
@@ -220,11 +220,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub mod query {
     use super::*;
     use crate::cursor;
-    use crate::msg::{BucketResponse, Cursor, ObjectResponse, ObjectsResponse, PageInfo};
+    use crate::msg::{
+        BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
+    };
     use crate::pagination_handler::PaginationHandler;
-    use cosmwasm_std::{Addr, Storage, Uint128};
-    use cw_storage_plus::Bound;
-    use std::cmp::min;
+    use cosmwasm_std::{Storage, Uint128};
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -270,7 +270,7 @@ pub mod query {
                 ),
                 _ => objects().range(deps.storage, min_bound, None, Order::Ascending),
             },
-            |c| cursor::decode(c),
+            cursor::decode,
             |o: &Object| cursor::encode(o.id.clone()),
             after,
             first,
@@ -283,11 +283,11 @@ pub mod query {
     }
 
     pub fn object_pins(
-        deps: Deps,
-        id: ObjectId,
-        after: Option<Cursor>,
-        first: Option<u32>,
-    ) -> StdResult<ObjectsResponse> {
+        _deps: Deps,
+        _id: ObjectId,
+        _after: Option<Cursor>,
+        _first: Option<u32>,
+    ) -> StdResult<ObjectPinsResponse> {
         Err(StdError::generic_err("Not implemented"))
     }
 
@@ -313,7 +313,7 @@ mod tests {
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Api, Attribute, Order, Uint128};
+    use cosmwasm_std::{from_binary, Attribute, Order, Uint128};
     use std::any::type_name;
 
     #[test]
@@ -1314,13 +1314,13 @@ mod tests {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
         };
-        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
         let data = general_purpose::STANDARD.encode("object3");
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
         };
-        execute(deps.as_mut(), mock_env(), info2.clone(), msg).unwrap();
+        execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
 
         let msg = QueryMsg::Objects {
             address: None,

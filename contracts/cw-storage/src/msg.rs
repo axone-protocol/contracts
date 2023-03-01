@@ -244,11 +244,11 @@ impl From<Pagination> for PaginationConfig {
     }
 }
 
-impl Into<Pagination> for PaginationConfig {
-    fn into(self) -> Pagination {
+impl From<PaginationConfig> for Pagination {
+    fn from(value: PaginationConfig) -> Self {
         Pagination {
-            max_page_size: self.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE),
-            default_page_size: self.default_page_size.unwrap_or(DEFAULT_PAGE_DEFAULT_SIZE),
+            max_page_size: value.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE),
+            default_page_size: value.default_page_size.unwrap_or(DEFAULT_PAGE_DEFAULT_SIZE),
         }
     }
 }

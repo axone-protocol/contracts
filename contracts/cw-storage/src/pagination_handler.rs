@@ -63,23 +63,20 @@ where
             _ => None,
         };
         let page_size = self.compute_page_size(first)?;
-        let mut raw_items: Vec<T> = iter_fn(min_bound)
+        let mut items: Vec<T> = iter_fn(min_bound)
             .take(page_size + 1)
             .map(|res: StdResult<(PK, T)>| res.map(|(_, item)| item))
             .collect::<StdResult<Vec<T>>>()?;
 
-        let has_next_page = raw_items.len() > page_size;
+        let has_next_page = items.len() > page_size;
         if has_next_page {
-            raw_items.pop();
+            items.pop();
         }
 
-        let cursor = raw_items
-            .last()
-            .map(|item| cursor_enc_fn(item))
-            .unwrap_or("".to_string());
+        let cursor = items.last().map(cursor_enc_fn).unwrap_or("".to_string());
 
         Ok((
-            raw_items,
+            items,
             PageInfo {
                 has_next_page,
                 cursor,

@@ -1,15 +1,15 @@
-# Untitled undefined type in cw-storage Schema
+# Untitled string in cw-storage Schema
 
 ```txt
-undefined#/query/oneOf/2/properties/objects/properties/first/anyOf/0
+undefined#/responses/object_pins/definitions/PageInfo/properties/cursor
 ```
 
-
+The cursor to the next page.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                         |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-storage.json\*](schema/cw-storage.json "open original schema") |
 
-## 0 Type
+## cursor Type
 
-unknown
+`string`

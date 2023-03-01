@@ -1,7 +1,7 @@
 # Untitled undefined type in cw-storage Schema
 
 ```txt
-undefined#/query/definitions
+undefined#/responses/bucket/properties/pagination/allOf/0
 ```
 
 
@@ -10,6 +10,6 @@ undefined#/query/definitions
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-storage.json\*](schema/cw-storage.json "open original schema") |
 
-## definitions Type
+## 0 Type
 
 unknown

@@ -16,10 +16,11 @@ BucketResponse is the response of the Bucket query.
 
 # bucket Properties
 
-| Property          | Type     | Required | Nullable       | Defined by                                                                                                             |
-| :---------------- | :------- | :------- | :------------- | :--------------------------------------------------------------------------------------------------------------------- |
-| [limits](#limits) | Merged   | Required | cannot be null | [cw-storage](cw-storage-responses-bucketresponse-properties-limits.md "undefined#/responses/bucket/properties/limits") |
-| [name](#name)     | `string` | Required | cannot be null | [cw-storage](cw-storage-responses-bucketresponse-properties-name.md "undefined#/responses/bucket/properties/name")     |
+| Property                  | Type     | Required | Nullable       | Defined by                                                                                                                     |
+| :------------------------ | :------- | :------- | :------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| [limits](#limits)         | Merged   | Required | cannot be null | [cw-storage](cw-storage-responses-bucketresponse-properties-limits.md "undefined#/responses/bucket/properties/limits")         |
+| [name](#name)             | `string` | Required | cannot be null | [cw-storage](cw-storage-responses-bucketresponse-properties-name.md "undefined#/responses/bucket/properties/name")             |
+| [pagination](#pagination) | Merged   | Required | cannot be null | [cw-storage](cw-storage-responses-bucketresponse-properties-pagination.md "undefined#/responses/bucket/properties/pagination") |
 
 ## limits
 
@@ -60,6 +61,28 @@ The name of the bucket.
 ### name Type
 
 `string`
+
+## pagination
+
+The configuration for paginated query.
+
+`pagination`
+
+*   is required
+
+*   Type: merged type ([Details](cw-storage-responses-bucketresponse-properties-pagination.md))
+
+*   cannot be null
+
+*   defined in: [cw-storage](cw-storage-responses-bucketresponse-properties-pagination.md "undefined#/responses/bucket/properties/pagination")
+
+### pagination Type
+
+merged type ([Details](cw-storage-responses-bucketresponse-properties-pagination.md))
+
+all of
+
+*   [Untitled undefined type in cw-storage](cw-storage-responses-bucketresponse-properties-pagination-allof-0.md "check type definition")
 
 # BucketResponse Definitions
 
@@ -173,6 +196,71 @@ any of
 *   [Untitled undefined type in cw-storage](cw-storage-responses-bucketresponse-definitions-bucketlimits-properties-max_total_size-anyof-0.md "check type definition")
 
 *   [Untitled null in cw-storage](cw-storage-responses-bucketresponse-definitions-bucketlimits-properties-max_total_size-anyof-1.md "check type definition")
+
+## Definitions group PaginationConfig
+
+Reference this group by using
+
+```json
+{"$ref":"undefined#/responses/bucket/definitions/PaginationConfig"}
+```
+
+| Property                                  | Type      | Required | Nullable    | Defined by                                                                                                                                                                                             |
+| :---------------------------------------- | :-------- | :------- | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [default\_page\_size](#default_page_size) | `integer` | Optional | can be null | [cw-storage](cw-storage-responses-bucketresponse-definitions-paginationconfig-properties-default_page_size.md "undefined#/responses/bucket/definitions/PaginationConfig/properties/default_page_size") |
+| [max\_page\_size](#max_page_size)         | `integer` | Optional | can be null | [cw-storage](cw-storage-responses-bucketresponse-definitions-paginationconfig-properties-max_page_size.md "undefined#/responses/bucket/definitions/PaginationConfig/properties/max_page_size")         |
+
+### default\_page\_size
+
+The default number of elements in a page.
+
+Shall be less or equal than `max_page_size`. Default to '10' if not set.
+
+`default_page_size`
+
+*   is optional
+
+*   Type: `integer`
+
+*   can be null
+
+*   defined in: [cw-storage](cw-storage-responses-bucketresponse-definitions-paginationconfig-properties-default_page_size.md "undefined#/responses/bucket/definitions/PaginationConfig/properties/default_page_size")
+
+#### default\_page\_size Type
+
+`integer`
+
+#### default\_page\_size Constraints
+
+**minimum**: the value of this number must greater than or equal to: `0`
+
+**unknown format**: the value of this string must follow the format: `uint32`
+
+### max\_page\_size
+
+The maximum elements a page can contains.
+
+Shall be less than `u32::MAX - 1`. Default to '30' if not set.
+
+`max_page_size`
+
+*   is optional
+
+*   Type: `integer`
+
+*   can be null
+
+*   defined in: [cw-storage](cw-storage-responses-bucketresponse-definitions-paginationconfig-properties-max_page_size.md "undefined#/responses/bucket/definitions/PaginationConfig/properties/max_page_size")
+
+#### max\_page\_size Type
+
+`integer`
+
+#### max\_page\_size Constraints
+
+**minimum**: the value of this number must greater than or equal to: `0`
+
+**unknown format**: the value of this string must follow the format: `uint32`
 
 ## Definitions group Uint128
 

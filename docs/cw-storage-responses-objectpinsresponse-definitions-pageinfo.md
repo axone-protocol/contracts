@@ -16,18 +16,16 @@ PageInfo is the page information returned for paginated queries.
 
 # PageInfo Properties
 
-| Property                                  | Type      | Required | Nullable       | Defined by                                                                                                                                                                                      |
-| :---------------------------------------- | :-------- | :------- | :------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [end\_cursor](#end_cursor)                | `string`  | Required | cannot be null | [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-end_cursor.md "undefined#/responses/object_pins/definitions/PageInfo/properties/end_cursor")               |
-| [has\_next\_page](#has_next_page)         | `boolean` | Required | cannot be null | [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-has_next_page.md "undefined#/responses/object_pins/definitions/PageInfo/properties/has_next_page")         |
-| [has\_previous\_page](#has_previous_page) | `boolean` | Required | cannot be null | [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-has_previous_page.md "undefined#/responses/object_pins/definitions/PageInfo/properties/has_previous_page") |
-| [start\_cursor](#start_cursor)            | `string`  | Required | cannot be null | [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-start_cursor.md "undefined#/responses/object_pins/definitions/PageInfo/properties/start_cursor")           |
+| Property                          | Type      | Required | Nullable       | Defined by                                                                                                                                                                              |
+| :-------------------------------- | :-------- | :------- | :------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [cursor](#cursor)                 | `string`  | Required | cannot be null | [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-cursor.md "undefined#/responses/object_pins/definitions/PageInfo/properties/cursor")               |
+| [has\_next\_page](#has_next_page) | `boolean` | Required | cannot be null | [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-has_next_page.md "undefined#/responses/object_pins/definitions/PageInfo/properties/has_next_page") |
 
-## end\_cursor
+## cursor
 
-The cursor to the previous page.
+The cursor to the next page.
 
-`end_cursor`
+`cursor`
 
 *   is required
 
@@ -35,9 +33,9 @@ The cursor to the previous page.
 
 *   cannot be null
 
-*   defined in: [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-end_cursor.md "undefined#/responses/object_pins/definitions/PageInfo/properties/end_cursor")
+*   defined in: [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-cursor.md "undefined#/responses/object_pins/definitions/PageInfo/properties/cursor")
 
-### end\_cursor Type
+### cursor Type
 
 `string`
 
@@ -58,39 +56,3 @@ Tells if there is a next page.
 ### has\_next\_page Type
 
 `boolean`
-
-## has\_previous\_page
-
-Tells if there is a previous page.
-
-`has_previous_page`
-
-*   is required
-
-*   Type: `boolean`
-
-*   cannot be null
-
-*   defined in: [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-has_previous_page.md "undefined#/responses/object_pins/definitions/PageInfo/properties/has_previous_page")
-
-### has\_previous\_page Type
-
-`boolean`
-
-## start\_cursor
-
-The cursor to the next page.
-
-`start_cursor`
-
-*   is required
-
-*   Type: `string`
-
-*   cannot be null
-
-*   defined in: [cw-storage](cw-storage-responses-objectpinsresponse-definitions-pageinfo-properties-start_cursor.md "undefined#/responses/object_pins/definitions/PageInfo/properties/start_cursor")
-
-### start\_cursor Type
-
-`string`

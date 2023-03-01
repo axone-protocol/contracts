@@ -430,6 +430,44 @@ docker run --rm \
       | jq -r '.'
 '''
 
+[tasks.chain-execute-contract]
+dependencies = ["chain-start"]
+description = "Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated."
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract address as the first argument."
+  exit 1
+fi
+addr=$1
+
+if [ -z "$2" ]
+then
+  echo "❌ Please provide the contract execute msg as the second argument."
+  exit 1
+fi
+msgs=$2
+
+echo "📦 Execute on contract ${addr} to chain ${CHAIN}"
+docker run --rm \
+  --network host \
+  -v `pwd`:/app:ro \
+  -w /app \
+  ${DOCKER_IMAGE_OKP4D} \
+    tx wasm execute ${addr} "${msgs}" \
+      --from validator \
+      --keyring-backend test \
+      --home ${CHAIN_HOME} \
+      --gas-prices 0.025uknow \
+      --gas auto \
+      --gas-adjustment 1.5 \
+      --chain-id ${CHAIN} \
+      --broadcast-mode block \
+      --yes \
+      --output json \
+      | jq -r '.'
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 

@@ -78,6 +78,7 @@ chain-add-keys - Add a set of predefined keys (recovered from the seed phrases) 
 chain-clean - Clean the chain data (⚠️ definitively)
 chain-deploy-contract - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
 chain-deploy-contracts - Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...).
+chain-execute-contract - Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated.
 chain-init-folder - Initialize deploy folder to make sure scripts have the right permission (needed for linux)
 chain-initialize - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before.
 chain-inspect-contract - Inspect a specific contract deployed to the chain.

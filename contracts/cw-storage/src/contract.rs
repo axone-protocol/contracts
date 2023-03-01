@@ -253,6 +253,7 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::{from_binary, Attribute, Uint128};
+    use std::any::type_name;
 
     #[test]
     fn proper_initialization() {
@@ -802,6 +803,21 @@ mod tests {
                         Uint128::new(2),
                     ),
                 ],
+            },
+            TestPinCase {
+                // Object not exists
+                objects: vec![ObjectId::from("NOTFOUND")],
+                senders: vec![mock_info("bob", &[])],
+                expected_count: 0,
+                expected_error: Some(ContractError::Std(StdError::not_found(
+                    type_name::<Object>(),
+                ))),
+                expected_object_pin_count: vec![(
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    Uint128::zero(),
+                )],
             },
         ];
 

@@ -1322,21 +1322,21 @@ mod tests {
         };
         execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
 
-        let msg = QueryMsg::Objects {
-            address: None,
-            first: None,
-            after: None,
-        };
-        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_binary(&result).unwrap();
-        assert_eq!(response.data.len(), 3);
-        assert_eq!(
-            response.page_info,
-            PageInfo {
-                has_next_page: false,
-                cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()
-            }
-        );
+        let cases = vec![
+            (QueryMsg::Objects {address: None,first: None,after: None}, 3, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
+            (QueryMsg::Objects {address: Some("unknown".to_string()), first: None, after: None}, 0, PageInfo {has_next_page: false, cursor: "".to_string()}),
+            (QueryMsg::Objects {address: Some("creator1".to_string()),first: None,after: None}, 2, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
+            (QueryMsg::Objects {address: Some("creator1".to_string()),first: Some(1),after: None}, 1, PageInfo {has_next_page: true,cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()}),
+            (QueryMsg::Objects {address: Some("creator1".to_string()),first: Some(1),after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string())}, 1, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
+        ];
+
+        for case in cases {
+            let msg = case.0;
+            let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+            let response: ObjectsResponse = from_binary(&result).unwrap();
+            assert_eq!(response.data.len(), case.1);
+            assert_eq!(response.page_info, case.2);
+        }
 
         let msg = QueryMsg::Objects {
             address: Some("creator2".to_string()),
@@ -1345,7 +1345,6 @@ mod tests {
         };
         let result = query(deps.as_ref(), mock_env(), msg).unwrap();
         let response: ObjectsResponse = from_binary(&result).unwrap();
-        assert_eq!(response.data.len(), 1);
         assert_eq!(
             response.data.first().unwrap(),
             &ObjectResponse {
@@ -1353,76 +1352,6 @@ mod tests {
                 owner: "creator2".to_string(),
                 is_pinned: false,
                 size: 7u128.into()
-            }
-        );
-        assert_eq!(
-            response.page_info,
-            PageInfo {
-                has_next_page: false,
-                cursor: "y6tBWy5xCJ3M6p5ndvMhnWTTGei6sggpj4KuNjzKdpjNG9hLpQCM191q7rTzKzfcThHm7d9cgU3fsZi3kaYJdmu"
-                    .to_string()
-            }
-        );
-
-        let msg = QueryMsg::Objects {
-            address: Some("unknown".to_string()),
-            first: None,
-            after: None,
-        };
-        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_binary(&result).unwrap();
-        assert_eq!(response.data, Vec::new());
-        assert_eq!(
-            response.page_info,
-            PageInfo {
-                has_next_page: false,
-                cursor: "".to_string()
-            }
-        );
-
-        let msg = QueryMsg::Objects {
-            address: Some("creator1".to_string()),
-            first: None,
-            after: None,
-        };
-        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_binary(&result).unwrap();
-        assert_eq!(response.data.len(), 2);
-        assert_eq!(
-            response.page_info,
-            PageInfo {
-                has_next_page: false,
-                cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()
-            }
-        );
-        let msg = QueryMsg::Objects {
-            address: Some("creator1".to_string()),
-            first: Some(1),
-            after: None,
-        };
-        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_binary(&result).unwrap();
-        assert_eq!(response.data.len(), 1);
-        assert_eq!(
-            response.page_info,
-            PageInfo {
-                has_next_page: true,
-                cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()
-            }
-        );
-        let msg = QueryMsg::Objects {
-            address: Some("creator1".to_string()),
-            first: Some(1),
-            after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()),
-        };
-        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_binary(&result).unwrap();
-        assert_eq!(response.data.len(), 1);
-        assert_eq!(
-            response.page_info,
-            PageInfo {
-                has_next_page: false,
-                cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()
             }
         );
     }

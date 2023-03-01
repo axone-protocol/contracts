@@ -41,6 +41,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::StoreObject { data, pin } => execute::store_object(deps, info, data, pin),
         ExecuteMsg::PinObject { id } => execute::pin_object(deps, info, id),
+        ExecuteMsg::UnpinObject { id } => execute::unpin_object(deps, info, id),
         _ => Err(NotImplemented {}),
     }
 }
@@ -164,6 +165,36 @@ pub mod execute {
                     .add_attribute("id", object_id))
             }
         }
+    }
+
+    pub fn unpin_object(
+        deps: DepsMut,
+        info: MessageInfo,
+        object_id: ObjectId,
+    ) -> Result<Response, ContractError> {
+        if !pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
+            return Ok(Response::new()
+                .add_attribute("action", "unpin_object")
+                .add_attribute("id", object_id));
+        }
+
+        objects().update(
+            deps.storage,
+            object_id.clone(),
+            |o| -> Result<Object, StdError> {
+                o.map(|mut e: Object| -> Object {
+                    e.pin_count -= Uint128::one();
+                    e
+                })
+                .ok_or_else(|| StdError::not_found(type_name::<Object>()))
+            },
+        )?;
+
+        pins().remove(deps.storage, (object_id.clone(), info.sender))?;
+
+        Ok(Response::new()
+            .add_attribute("action", "unpin_object")
+            .add_attribute("id", object_id))
     }
 }
 

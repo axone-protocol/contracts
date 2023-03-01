@@ -45,6 +45,7 @@ pub fn execute(
         ExecuteMsg::StoreObject { data, pin } => execute::store_object(deps, info, data, pin),
         ExecuteMsg::PinObject { id } => execute::pin_object(deps, info, id),
         ExecuteMsg::UnpinObject { id } => execute::unpin_object(deps, info, id),
+        ExecuteMsg::ForgetObject { id } => execute::forget_object(deps, info, id),
         _ => Err(NotImplemented {}),
     }
 }
@@ -52,7 +53,11 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::Limits;
-    use cosmwasm_std::{StdError, Uint128};
+    use crate::ContractError::Pinned;
+    use cosmwasm_std::Order::Ascending;
+    use cosmwasm_std::StdError::NotFound;
+    use cosmwasm_std::{Order, StdError, Uint128};
+    use cw_storage_plus::Bound;
     use std::any::type_name;
 
     pub fn store_object(
@@ -194,6 +199,34 @@ pub mod execute {
         pins().remove(deps.storage, (object_id, info.sender))?;
 
         Ok(res)
+    }
+
+    pub fn forget_object(
+        deps: DepsMut,
+        _info: MessageInfo,
+        object_id: ObjectId,
+    ) -> Result<Response, ContractError> {
+        if pins()
+            .idx
+            .object
+            .prefix(object_id.clone())
+            .keys_raw(deps.storage, None, None, Order::Ascending)
+            .next()
+            .is_some()
+        {
+            return Err(Pinned {});
+        }
+        let object = query::object(deps.as_ref(), object_id.clone())?;
+        BUCKET.update(deps.storage, |mut b| -> Result<_, ContractError> {
+            b.stat.object_count -= Uint128::one();
+            b.stat.size -= object.size;
+            Ok(b)
+        })?;
+
+        objects().remove(deps.storage, object_id.clone())?;
+        Ok(Response::new()
+            .add_attribute("action", "forget_object")
+            .add_attribute("id", object_id))
     }
 }
 

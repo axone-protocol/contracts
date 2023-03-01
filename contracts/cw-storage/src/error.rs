@@ -11,6 +11,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     Bucket(#[from] BucketError),
+
+    #[error("Object is pinned")]
+    Pinned {},
 }
 
 #[derive(Error, Debug, Eq, PartialEq)]

@@ -221,6 +221,7 @@ pub mod query {
     use super::*;
     use crate::cursor;
     use crate::msg::{BucketResponse, Cursor, ObjectResponse, ObjectsResponse, PageInfo};
+    use crate::pagination_handler::PaginationHandler;
     use cosmwasm_std::{Addr, Storage, Uint128};
     use cw_storage_plus::Bound;
     use std::cmp::min;
@@ -238,7 +239,7 @@ pub mod query {
     pub fn object(deps: Deps, id: ObjectId) -> StdResult<ObjectResponse> {
         objects()
             .load(deps.storage, id)
-            .map(|object| map_object(object))
+            .map(|object| map_object(&object))
     }
 
     pub fn data(deps: Deps, id: ObjectId) -> StdResult<Binary> {
@@ -251,59 +252,33 @@ pub mod query {
         after: Option<Cursor>,
         first: Option<u32>,
     ) -> StdResult<ObjectsResponse> {
-        let page_size = match first {
-            Some(req) => {
-                if req > BUCKET.load(deps.storage)?.pagination.max_page_size {
-                    return Err(StdError::generic_err(
-                        "Requested page size exceed maximum allowed",
-                    ));
-                }
-                Ok(req)
-            }
-            _ => BUCKET
-                .load(deps.storage)
-                .map(|b| b.pagination.default_page_size),
-        }? as usize;
-
-        let min_bound = match after {
-            Some(cursor) => {
-                let id: String = cursor::decode(cursor)?;
-                Some(Bound::exclusive(id))
-            }
+        let address = match address {
+            Some(raw) => Some(deps.api.addr_validate(&raw)?),
             _ => None,
         };
 
-        let iter = match address {
-            Some(raw_addr) => {
-                let addr = deps.api.addr_validate(raw_addr.as_str())?;
-                objects().idx.owner.prefix(addr).range(
+        let handler: PaginationHandler<Object, String> =
+            PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
+
+        let page: (Vec<Object>, PageInfo) = handler.query_page(
+            |min_bound| match address {
+                Some(addr) => objects().idx.owner.prefix(addr).range(
                     deps.storage,
                     min_bound,
                     None,
                     Order::Ascending,
-                )
-            }
-            _ => objects().range(deps.storage, min_bound, None, Order::Ascending),
-        };
-
-        let raw_objects = iter.take(page_size + 1).collect::<StdResult<Vec<_>>>()?;
-        let mapped_objects: Vec<ObjectResponse> = raw_objects
-            .iter()
-            .take(page_size)
-            .map(|(_, object)| map_object(object.to_owned()))
-            .collect();
-
-        let cursor = mapped_objects
-            .last()
-            .map(|object| cursor::encode(object.id.clone()))
-            .unwrap_or("".to_string());
+                ),
+                _ => objects().range(deps.storage, min_bound, None, Order::Ascending),
+            },
+            |c| cursor::decode(c),
+            |o: &Object| cursor::encode(o.id.clone()),
+            after,
+            first,
+        )?;
 
         Ok(ObjectsResponse {
-            data: mapped_objects,
-            page_info: PageInfo {
-                has_next_page: raw_objects.len() > page_size,
-                cursor,
-            },
+            data: page.0.iter().map(|object| map_object(object)).collect(),
+            page_info: page.1,
         })
     }
 
@@ -316,11 +291,11 @@ pub mod query {
         Err(StdError::generic_err("Not implemented"))
     }
 
-    fn map_object(object: Object) -> ObjectResponse {
+    fn map_object(object: &Object) -> ObjectResponse {
         ObjectResponse {
             id: object.id.clone(),
             size: object.size,
-            owner: object.owner.into(),
+            owner: object.owner.clone().into(),
             is_pinned: object.pin_count > Uint128::zero(),
         }
     }

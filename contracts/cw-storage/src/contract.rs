@@ -3,7 +3,7 @@ use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -55,7 +55,7 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::Limits;
-    use cosmwasm_std::Uint128;
+    use cosmwasm_std::{StdError, Uint128};
     use std::any::type_name;
 
     pub fn store_object(
@@ -224,7 +224,7 @@ pub mod query {
         BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
     };
     use crate::pagination_handler::PaginationHandler;
-    use cosmwasm_std::{Storage, Uint128};
+    use cosmwasm_std::{Addr, Uint128};
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -277,18 +277,47 @@ pub mod query {
         )?;
 
         Ok(ObjectsResponse {
-            data: page.0.iter().map(|object| map_object(object)).collect(),
+            data: page.0.iter().map(map_object).collect(),
             page_info: page.1,
         })
     }
 
     pub fn object_pins(
-        _deps: Deps,
-        _id: ObjectId,
-        _after: Option<Cursor>,
-        _first: Option<u32>,
+        deps: Deps,
+        id: ObjectId,
+        after: Option<Cursor>,
+        first: Option<u32>,
     ) -> StdResult<ObjectPinsResponse> {
-        Err(StdError::generic_err("Not implemented"))
+        let handler: PaginationHandler<Pin, (String, Addr)> =
+            PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
+
+        let page: (Vec<Pin>, PageInfo) = handler.query_page(
+            |min_bound| {
+                pins().idx.object.prefix(id.clone()).range(
+                    deps.storage,
+                    min_bound,
+                    None,
+                    Order::Ascending,
+                )
+            },
+            |c| {
+                cursor::decode(c)
+                    .and_then(|raw| deps.api.addr_validate(raw.as_str()))
+                    .map(|addr| (id.clone(), addr))
+            },
+            |pin: &Pin| cursor::encode(pin.clone().address.into_string()),
+            after,
+            first,
+        )?;
+
+        Ok(ObjectPinsResponse {
+            data: page
+                .0
+                .iter()
+                .map(|pin: &Pin| pin.address.as_str().to_string())
+                .collect(),
+            page_info: page.1,
+        })
     }
 
     fn map_object(object: &Object) -> ObjectResponse {
@@ -309,11 +338,10 @@ mod tests {
     use crate::msg::{
         BucketLimits, BucketResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfig,
     };
-    use crate::state::Pagination;
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Attribute, Order, Uint128};
+    use cosmwasm_std::{from_binary, Attribute, Order, StdError, Uint128};
     use std::any::type_name;
 
     #[test]

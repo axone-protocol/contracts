@@ -1,11 +1,12 @@
 use crate::msg::{Cursor, PageInfo};
 use crate::state::Pagination;
-use cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult};
 use cw_storage_plus::{Bound, PrimaryKey};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::marker::PhantomData;
 
+#[derive(Clone)]
 pub struct PaginationHandler<'a, T, PK>
 where
     T: Serialize + DeserializeOwned,
@@ -99,5 +100,237 @@ where
             _ => Ok(self.default_page_size),
         }
         .map(|size| size as usize)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::slice::Iter;
+
+    struct TestIter<'a> {
+        sub_iter: Iter<'a, i32>,
+        shall_err: bool,
+    }
+
+    impl<'a> TestIter<'a> {
+        fn map_to_result(&mut self, val: i32) -> StdResult<(i32, i32)> {
+            if self.shall_err {
+                return Err(StdError::generic_err("iter error".to_string()));
+            }
+            Ok((val, val))
+        }
+    }
+
+    impl<'a> Iterator for TestIter<'a> {
+        type Item = StdResult<(i32, i32)>;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            match self.sub_iter.next() {
+                Some(&x) => Some(self.map_to_result(x)),
+                _ => None,
+            }
+        }
+    }
+
+    #[test]
+    fn query_page() {
+        let data = &[1, 2, 3, 4, 5];
+        let handler: PaginationHandler<i32, i32> = Pagination {
+            max_page_size: 3,
+            default_page_size: 2,
+        }
+        .into();
+
+        let iter_fn = |min_bound: Option<Bound<i32>>| match min_bound {
+            Some(Bound::Exclusive((b, ..))) => Box::new(TestIter {
+                sub_iter: data[b as usize..].iter(),
+                shall_err: false,
+            })
+                as Box<dyn Iterator<Item = StdResult<(i32, i32)>>>,
+            _ => Box::new(TestIter {
+                sub_iter: data.iter(),
+                shall_err: false,
+            }),
+        };
+        let cursor_dec_fn =
+            |cursor: Cursor| cursor.parse::<i32>().map_err(|_| StdError::generic_err(""));
+        let cursor_enc_fn = |pk: &i32| pk.to_string();
+
+        let res = handler
+            .clone()
+            .query_page(
+                |_: Option<Bound<i32>>| {
+                    Box::new(TestIter {
+                        sub_iter: (&[] as &[i32]).iter(),
+                        shall_err: true,
+                    })
+                },
+                cursor_dec_fn,
+                cursor_enc_fn,
+                None,
+                None,
+            )
+            .unwrap();
+        assert_eq!(res.0, Vec::<i32>::new());
+        assert_eq!(
+            res.1,
+            PageInfo {
+                has_next_page: false,
+                cursor: "".to_string(),
+            }
+        );
+
+        let res = handler
+            .clone()
+            .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, None, None)
+            .unwrap();
+        assert_eq!(res.0, vec![1, 2]);
+        assert_eq!(
+            res.1,
+            PageInfo {
+                has_next_page: true,
+                cursor: "2".to_string(),
+            }
+        );
+
+        let res = handler
+            .clone()
+            .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, None, Some(1))
+            .unwrap();
+        assert_eq!(res.0, vec![1]);
+        assert_eq!(
+            res.1,
+            PageInfo {
+                has_next_page: true,
+                cursor: "1".to_string(),
+            }
+        );
+
+        let res = handler
+            .clone()
+            .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, None, Some(3))
+            .unwrap();
+        assert_eq!(res.0, vec![1, 2, 3]);
+        assert_eq!(
+            res.1,
+            PageInfo {
+                has_next_page: true,
+                cursor: "3".to_string(),
+            }
+        );
+
+        let res = handler
+            .clone()
+            .query_page(
+                iter_fn,
+                cursor_dec_fn,
+                cursor_enc_fn,
+                Some("1".to_string()),
+                None,
+            )
+            .unwrap();
+        assert_eq!(res.0, vec![2, 3]);
+        assert_eq!(
+            res.1,
+            PageInfo {
+                has_next_page: true,
+                cursor: "3".to_string(),
+            }
+        );
+
+        let res = handler
+            .clone()
+            .query_page(
+                iter_fn,
+                cursor_dec_fn,
+                cursor_enc_fn,
+                Some("2".to_ascii_lowercase()),
+                Some(3),
+            )
+            .unwrap();
+        assert_eq!(res.0, vec![3, 4, 5]);
+        assert_eq!(
+            res.1,
+            PageInfo {
+                has_next_page: false,
+                cursor: "5".to_string(),
+            }
+        );
+
+        let res = handler
+            .clone()
+            .query_page(
+                iter_fn,
+                cursor_dec_fn,
+                cursor_enc_fn,
+                Some("3".to_ascii_lowercase()),
+                Some(3),
+            )
+            .unwrap();
+        assert_eq!(res.0, vec![4, 5]);
+        assert_eq!(
+            res.1,
+            PageInfo {
+                has_next_page: false,
+                cursor: "5".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn query_page_err() {
+        let data = &[1, 2, 3, 4, 5];
+        let handler: PaginationHandler<i32, i32> = Pagination {
+            max_page_size: 3,
+            default_page_size: 2,
+        }
+        .into();
+
+        let iter_fn = |_: Option<Bound<i32>>| {
+            Box::new(TestIter {
+                sub_iter: data.iter(),
+                shall_err: false,
+            }) as Box<dyn Iterator<Item = StdResult<(i32, i32)>>>
+        };
+        let cursor_dec_fn =
+            |cursor: Cursor| cursor.parse::<i32>().map_err(|_| StdError::generic_err(""));
+        let cursor_enc_fn = |pk: &i32| pk.to_string();
+
+        let res = handler.clone().query_page(
+            |_: Option<Bound<i32>>| {
+                Box::new(TestIter {
+                    sub_iter: data.iter(),
+                    shall_err: true,
+                })
+            },
+            cursor_dec_fn,
+            cursor_enc_fn,
+            None,
+            None,
+        );
+        assert_eq!(res, Err(StdError::generic_err("iter error".to_string())));
+
+        let res = handler
+            .clone()
+            .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, None, Some(4));
+        assert_eq!(
+            res,
+            Err(StdError::generic_err(
+                "Requested page size exceed maximum allowed".to_string()
+            ))
+        );
+
+        let res = handler.clone().query_page(
+            iter_fn,
+            |_| Err(StdError::generic_err("cursor decode error")),
+            cursor_enc_fn,
+            Some("1".to_string()),
+            None,
+        );
+        assert_eq!(
+            res,
+            Err(StdError::generic_err("cursor decode error".to_string()))
+        );
     }
 }

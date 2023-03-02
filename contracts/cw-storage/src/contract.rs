@@ -3,7 +3,7 @@ use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -211,6 +211,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub mod query {
     use super::*;
     use crate::msg::{BucketResponse, ObjectResponse};
+    use cosmwasm_std::Uint128;
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -228,13 +229,7 @@ pub mod query {
                 id: object.id.clone(),
                 size: object.size,
                 owner: object.owner.into(),
-                is_pinned: pins()
-                    .idx
-                    .object
-                    .prefix(object.id)
-                    .keys_raw(deps.storage, None, None, Order::Ascending)
-                    .next()
-                    .is_some(),
+                is_pinned: object.pin_count > Uint128::zero(),
             })
     }
 
@@ -252,7 +247,7 @@ mod tests {
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Attribute, Uint128};
+    use cosmwasm_std::{from_binary, Attribute, Order, Uint128};
     use std::any::type_name;
 
     #[test]

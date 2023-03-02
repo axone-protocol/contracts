@@ -172,29 +172,23 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
+        let object_path = objects().key(object_id.clone());
+        let mut object = object_path.load(deps.storage)?;
+
+        let res = Response::new()
+            .add_attribute("action", "unpin_object")
+            .add_attribute("id", object_id.clone());
+
         if !pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
-            return Ok(Response::new()
-                .add_attribute("action", "unpin_object")
-                .add_attribute("id", object_id));
+            return Ok(res);
         }
 
-        objects().update(
-            deps.storage,
-            object_id.clone(),
-            |o| -> Result<Object, StdError> {
-                o.map(|mut e: Object| -> Object {
-                    e.pin_count -= Uint128::one();
-                    e
-                })
-                .ok_or_else(|| StdError::not_found(type_name::<Object>()))
-            },
-        )?;
+        object.pin_count -= Uint128::one();
+        object_path.save(deps.storage, &object)?;
 
-        pins().remove(deps.storage, (object_id.clone(), info.sender))?;
+        pins().remove(deps.storage, (object_id, info.sender))?;
 
-        Ok(Response::new()
-            .add_attribute("action", "unpin_object")
-            .add_attribute("id", object_id))
+        Ok(res)
     }
 }
 
@@ -1032,6 +1026,25 @@ mod tests {
                         Uint128::new(2),
                     ),
                 ],
+            },
+            TestUnpinCase {
+                // Object not exists
+                pin: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
+                pin_senders: vec![mock_info("bob", &[])],
+                unpin: vec![ObjectId::from("NOTFOUND")],
+                unpin_senders: vec![mock_info("martin", &[])],
+                expected_count: 1,
+                expected_error: Some(ContractError::Std(StdError::not_found(
+                    type_name::<Object>(),
+                ))),
+                expected_object_pin_count: vec![(
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    Uint128::one(),
+                )],
             },
         ];
 

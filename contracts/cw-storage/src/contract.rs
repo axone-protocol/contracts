@@ -224,7 +224,7 @@ pub mod query {
         BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
     };
     use crate::pagination_handler::PaginationHandler;
-    use cosmwasm_std::{Addr, Uint128};
+    use cosmwasm_std::Addr;
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -239,7 +239,7 @@ pub mod query {
     pub fn object(deps: Deps, id: ObjectId) -> StdResult<ObjectResponse> {
         objects()
             .load(deps.storage, id)
-            .map(|object| map_object(&object))
+            .map(|object| (&object).into())
     }
 
     pub fn data(deps: Deps, id: ObjectId) -> StdResult<Binary> {
@@ -277,7 +277,7 @@ pub mod query {
         )?;
 
         Ok(ObjectsResponse {
-            data: page.0.iter().map(map_object).collect(),
+            data: page.0.iter().map(|object| object.into()).collect(),
             page_info: page.1,
         })
     }
@@ -318,15 +318,6 @@ pub mod query {
                 .collect(),
             page_info: page.1,
         })
-    }
-
-    fn map_object(object: &Object) -> ObjectResponse {
-        ObjectResponse {
-            id: object.id.clone(),
-            size: object.size,
-            owner: object.owner.clone().into(),
-            is_pinned: object.pin_count > Uint128::zero(),
-        }
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::state::Pagination;
+use crate::state::{Limits, Object, Pagination};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, StdResult};
 use cosmwasm_std::{StdError, Uint128};
@@ -265,6 +265,17 @@ pub struct ObjectResponse {
     pub is_pinned: bool,
     /// The size of the object.
     pub size: Uint128,
+}
+
+impl From<&Object> for ObjectResponse {
+    fn from(object: &Object) -> Self {
+        ObjectResponse {
+            id: object.id.clone(),
+            size: object.size,
+            owner: object.owner.clone().into(),
+            is_pinned: object.pin_count > Uint128::zero(),
+        }
+    }
 }
 
 /// # ObjectsResponse

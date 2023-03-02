@@ -73,7 +73,10 @@ where
             items.pop();
         }
 
-        let cursor = items.last().map(cursor_enc_fn).unwrap_or("".to_string());
+        let cursor = items
+            .last()
+            .map(cursor_enc_fn)
+            .unwrap_or_else(|| "".to_string());
 
         Ok((
             items,
@@ -178,101 +181,71 @@ mod tests {
             }
         );
 
-        let res = handler
-            .clone()
-            .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, None, None)
-            .unwrap();
-        assert_eq!(res.0, vec![1, 2]);
-        assert_eq!(
-            res.1,
-            PageInfo {
-                has_next_page: true,
-                cursor: "2".to_string(),
-            }
-        );
-
-        let res = handler
-            .clone()
-            .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, None, Some(1))
-            .unwrap();
-        assert_eq!(res.0, vec![1]);
-        assert_eq!(
-            res.1,
-            PageInfo {
-                has_next_page: true,
-                cursor: "1".to_string(),
-            }
-        );
-
-        let res = handler
-            .clone()
-            .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, None, Some(3))
-            .unwrap();
-        assert_eq!(res.0, vec![1, 2, 3]);
-        assert_eq!(
-            res.1,
-            PageInfo {
-                has_next_page: true,
-                cursor: "3".to_string(),
-            }
-        );
-
-        let res = handler
-            .clone()
-            .query_page(
-                iter_fn,
-                cursor_dec_fn,
-                cursor_enc_fn,
+        let cases = vec![
+            (
+                None,
+                None,
+                vec![1, 2],
+                PageInfo {
+                    has_next_page: true,
+                    cursor: "2".to_string(),
+                },
+            ),
+            (
+                None,
+                Some(1),
+                vec![1],
+                PageInfo {
+                    has_next_page: true,
+                    cursor: "1".to_string(),
+                },
+            ),
+            (
+                None,
+                Some(3),
+                vec![1, 2, 3],
+                PageInfo {
+                    has_next_page: true,
+                    cursor: "3".to_string(),
+                },
+            ),
+            (
                 Some("1".to_string()),
                 None,
-            )
-            .unwrap();
-        assert_eq!(res.0, vec![2, 3]);
-        assert_eq!(
-            res.1,
-            PageInfo {
-                has_next_page: true,
-                cursor: "3".to_string(),
-            }
-        );
-
-        let res = handler
-            .clone()
-            .query_page(
-                iter_fn,
-                cursor_dec_fn,
-                cursor_enc_fn,
-                Some("2".to_ascii_lowercase()),
+                vec![2, 3],
+                PageInfo {
+                    has_next_page: true,
+                    cursor: "3".to_string(),
+                },
+            ),
+            (
+                Some("2".to_string()),
                 Some(3),
-            )
-            .unwrap();
-        assert_eq!(res.0, vec![3, 4, 5]);
-        assert_eq!(
-            res.1,
-            PageInfo {
-                has_next_page: false,
-                cursor: "5".to_string(),
-            }
-        );
-
-        let res = handler
-            .clone()
-            .query_page(
-                iter_fn,
-                cursor_dec_fn,
-                cursor_enc_fn,
-                Some("3".to_ascii_lowercase()),
+                vec![3, 4, 5],
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "5".to_string(),
+                },
+            ),
+            (
+                Some("3".to_string()),
                 Some(3),
-            )
-            .unwrap();
-        assert_eq!(res.0, vec![4, 5]);
-        assert_eq!(
-            res.1,
-            PageInfo {
-                has_next_page: false,
-                cursor: "5".to_string(),
-            }
-        );
+                vec![4, 5],
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "5".to_string(),
+                },
+            ),
+        ];
+
+        for case in cases {
+            let res = handler
+                .clone()
+                .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, case.0, case.1)
+                .unwrap();
+            assert_eq!(res.0, case.2);
+            assert_eq!(res.1, case.3);
+        }
     }
 
     #[test]

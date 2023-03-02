@@ -1,5 +1,4 @@
 use crate::error::BucketError;
-use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
@@ -46,7 +45,6 @@ pub fn execute(
         ExecuteMsg::PinObject { id } => execute::pin_object(deps, info, id),
         ExecuteMsg::UnpinObject { id } => execute::unpin_object(deps, info, id),
         ExecuteMsg::ForgetObject { id } => execute::forget_object(deps, info, id),
-        _ => Err(NotImplemented {}),
     }
 }
 
@@ -54,10 +52,7 @@ pub mod execute {
     use super::*;
     use crate::state::Limits;
     use crate::ContractError::Pinned;
-    use cosmwasm_std::Order::Ascending;
-    use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::{Order, StdError, Uint128};
-    use cw_storage_plus::Bound;
     use std::any::type_name;
 
     pub fn store_object(

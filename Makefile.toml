@@ -438,7 +438,7 @@ install_crate = { rustup_component_name = "rustfmt" }
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
 
 [tasks.install-tarpaulin]
-install_crate = { crate_name = "tarpaulin" }
+install_crate = { crate_name = "cargo-tarpaulin" }
 
 [tasks.install-cosmwasm-check]
 install_crate = { crate_name = "cosmwasm-check" }

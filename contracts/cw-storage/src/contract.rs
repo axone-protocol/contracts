@@ -327,7 +327,8 @@ mod tests {
     use crate::error::BucketError;
     use crate::error::BucketError::MaxObjectPinsLimitExceeded;
     use crate::msg::{
-        BucketLimits, BucketResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfig,
+        BucketLimits, BucketResponse, ObjectPinsResponse, ObjectResponse, ObjectsResponse,
+        PageInfo, PaginationConfig,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -1373,5 +1374,128 @@ mod tests {
                 size: 7u128.into()
             }
         );
+    }
+
+    #[test]
+    fn object_pins() {
+        let mut deps = mock_dependencies();
+        let info1 = mock_info("creator1", &[]);
+        let info2 = mock_info("creator2", &[]);
+
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+
+        let data = general_purpose::STANDARD.encode("object1");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        // 1: 445008b7f2932922bdb184771d9978516a4f89d77000c2d6eab18b0894aac3a7
+        let data = general_purpose::STANDARD.encode("object2");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: true,
+        };
+        execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
+        // 2: abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56
+        let msg = ExecuteMsg::PinObject {
+            id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56".to_string(),
+        };
+        execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
+
+        let cases = vec![
+            (
+                QueryMsg::ObjectPins {
+                    id: "445008b7f2932922bdb184771d9978516a4f89d77000c2d6eab18b0894aac3a7"
+                        .to_string(),
+                    first: None,
+                    after: None,
+                },
+                Vec::<String>::new(),
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "".to_string(),
+                },
+            ),
+            (
+                QueryMsg::ObjectPins {
+                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                        .to_string(),
+                    first: None,
+                    after: None,
+                },
+                vec!["creator1".to_string(), "creator2".to_string()],
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "Hdm2eF21ryF".to_string(),
+                },
+            ),
+            (
+                QueryMsg::ObjectPins {
+                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                        .to_string(),
+                    first: Some(1),
+                    after: None,
+                },
+                vec!["creator1".to_string()],
+                PageInfo {
+                    has_next_page: true,
+                    cursor: "Hdm2eF21ryE".to_string(),
+                },
+            ),
+            (
+                QueryMsg::ObjectPins {
+                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                        .to_string(),
+                    first: Some(1),
+                    after: Some("Hdm2eF21ryE".to_string()),
+                },
+                vec!["creator2".to_string()],
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "Hdm2eF21ryF".to_string(),
+                },
+            ),
+        ];
+
+        for case in cases {
+            let result = query(deps.as_ref(), mock_env(), case.0).unwrap();
+            let response: ObjectPinsResponse = from_binary(&result).unwrap();
+            assert_eq!(response.data, case.1);
+            assert_eq!(response.page_info, case.2);
+        }
+    }
+
+    #[test]
+    fn object_pins_non_existing() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
+        };
+        instantiate(deps.as_mut(), mock_env(), mock_info("creator1", &[]), msg).unwrap();
+
+        match query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::ObjectPins {
+                id: "unknown".to_string(),
+                after: None,
+                first: None,
+            },
+        )
+        .err()
+        .unwrap()
+        {
+            NotFound { .. } => (),
+            _ => panic!("assertion failed"),
+        }
     }
 }

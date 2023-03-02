@@ -288,6 +288,8 @@ pub mod query {
         after: Option<Cursor>,
         first: Option<u32>,
     ) -> StdResult<ObjectPinsResponse> {
+        objects().load(deps.storage, id.clone())?;
+
         let handler: PaginationHandler<Pin, (String, Addr)> =
             PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
 

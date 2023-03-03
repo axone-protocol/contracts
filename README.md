@@ -6,6 +6,7 @@
 [![build](https://img.shields.io/github/actions/workflow/status/okp4/contracts/build.yml?label=build&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/build.yml)
 [![lint](https://img.shields.io/github/actions/workflow/status/okp4/contracts/lint.yml?label=lint&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/lint.yml)
 [![test](https://img.shields.io/github/actions/workflow/status/okp4/contracts/test.yml?label=test&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/test.yml)
+[![coverage](https://img.shields.io/codecov/c/github/okp4/contracts?style=for-the-badge)](https://app.codecov.io/gh/okp4/contracts)
 [![conventional commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg?style=for-the-badge&logo=conventionalcommits)](https://conventionalcommits.org)
 [![license](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=for-the-badge)](https://opensource.org/licenses/BSD-3-Clause)
 

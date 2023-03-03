@@ -66,10 +66,9 @@ description = "Run all unit tests."
 env = { LLVM_PROFILE_FILE = "default.profraw", RUST_BACKTRACE = 1 }
 
 [tasks.test-coverage]
-dependencies = ["install-grcov", "test"]
-script = '''
-grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "*cargo*" -o coverage.lcov
-'''
+dependencies = ["install-tarpaulin"]
+command = "cargo"
+args = ["tarpaulin", "-o", "lcov"]
 
 [tasks.install_wasm]
 script = '''
@@ -438,8 +437,8 @@ install_crate = { rustup_component_name = "rustfmt" }
 [tasks.install-taplo-cli]
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
 
-[tasks.install-grcov]
-install_crate = { crate_name = "grcov" }
+[tasks.install-tarpaulin]
+install_crate = { crate_name = "cargo-tarpaulin" }
 
 [tasks.install-cosmwasm-check]
 install_crate = { crate_name = "cosmwasm-check" }

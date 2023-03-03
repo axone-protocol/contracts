@@ -43,3 +43,9 @@ jobs:
 
       - name: Test rust code
         run: cargo make test-coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./lcov.info
+          fail_ci_if_error: false

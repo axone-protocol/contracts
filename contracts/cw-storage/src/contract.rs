@@ -223,7 +223,7 @@ pub mod query {
     use crate::msg::{
         BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
     };
-    use crate::pagination_handler::PaginationHandler;
+    use crate::pagination::PaginationHandler;
     use cosmwasm_std::Addr;
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {

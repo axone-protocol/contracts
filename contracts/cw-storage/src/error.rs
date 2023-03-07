@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -18,17 +18,17 @@ pub enum BucketError {
     #[error("Name of bucket could not be empty")]
     EmptyName,
 
-    #[error("Maximum total size exceeded")]
-    MaxTotalSizeLimitExceeded,
+    #[error("Maximum total size exceeded: {0} / {1}")]
+    MaxTotalSizeLimitExceeded(Uint128, Uint128),
 
-    #[error("Maximum objects number exceeded")]
-    MaxObjectsLimitExceeded,
+    #[error("Maximum objects number exceeded: {0} / {1}")]
+    MaxObjectsLimitExceeded(Uint128, Uint128),
 
-    #[error("Maximum object size exceeded")]
-    MaxObjectSizeLimitExceeded,
+    #[error("Maximum object size exceeded: {0} / {1}")]
+    MaxObjectSizeLimitExceeded(Uint128, Uint128),
 
-    #[error("Maximum object pins number exceeded")]
-    MaxObjectPinsLimitExceeded,
+    #[error("Maximum object pins number exceeded: {0} / {1}")]
+    MaxObjectPinsLimitExceeded(Uint128, Uint128),
 
     #[error("Object is already stored")]
     ObjectAlreadyStored,

@@ -63,21 +63,25 @@ pub mod execute {
                 Limits {
                     max_object_size: Some(max),
                     ..
-                } if size > max => Err(BucketError::MaxObjectSizeLimitExceeded.into()),
+                } if size > max => Err(BucketError::MaxObjectSizeLimitExceeded(size, max).into()),
                 Limits {
                     max_objects: Some(max),
                     ..
-                } if bucket.object_count > max => Err(BucketError::MaxObjectsLimitExceeded.into()),
+                } if bucket.object_count > max => {
+                    Err(BucketError::MaxObjectsLimitExceeded(bucket.object_count, max).into())
+                }
                 Limits {
                     max_object_pins: Some(max),
                     ..
                 } if pin && max < Uint128::one() => {
-                    Err(BucketError::MaxObjectPinsLimitExceeded.into())
+                    Err(BucketError::MaxObjectPinsLimitExceeded(Uint128::one(), max).into())
                 }
                 Limits {
                     max_total_size: Some(max),
                     ..
-                } if bucket.size > max => Err(BucketError::MaxTotalSizeLimitExceeded.into()),
+                } if bucket.size > max => {
+                    Err(BucketError::MaxTotalSizeLimitExceeded(bucket.size, max).into())
+                }
                 _ => Ok(bucket),
             }
         })?;
@@ -360,24 +364,27 @@ mod tests {
             (BucketLimits::new().set_object_pins(1u128.into()), None),
             (
                 BucketLimits::new().set_max_objects(1u128.into()),
-                Some(ContractError::Bucket(BucketError::MaxObjectsLimitExceeded)),
+                Some(ContractError::Bucket(BucketError::MaxObjectsLimitExceeded(
+                    2u128.into(),
+                    1u128.into(),
+                ))),
             ),
             (
                 BucketLimits::new().set_max_object_size(4u128.into()),
                 Some(ContractError::Bucket(
-                    BucketError::MaxObjectSizeLimitExceeded,
+                    BucketError::MaxObjectSizeLimitExceeded(5u128.into(), 4u128.into()),
                 )),
             ),
             (
                 BucketLimits::new().set_max_total_size(8u128.into()),
                 Some(ContractError::Bucket(
-                    BucketError::MaxTotalSizeLimitExceeded,
+                    BucketError::MaxTotalSizeLimitExceeded(9u128.into(), 8u128.into()),
                 )),
             ),
             (
                 BucketLimits::new().set_object_pins(0u128.into()),
                 Some(ContractError::Bucket(
-                    BucketError::MaxObjectPinsLimitExceeded,
+                    BucketError::MaxObjectPinsLimitExceeded(1u128.into(), 0u128.into()),
                 )),
             ),
         ];

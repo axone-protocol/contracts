@@ -57,8 +57,8 @@ pub mod execute {
     ) -> Result<Response, ContractError> {
         let size = (data.len() as u128).into();
         BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
-            bucket.size += size;
-            bucket.object_count += Uint128::one();
+            bucket.stat.size += size;
+            bucket.stat.object_count += Uint128::one();
             match bucket.limits {
                 Limits {
                     max_object_size: Some(max),
@@ -67,8 +67,8 @@ pub mod execute {
                 Limits {
                     max_objects: Some(max),
                     ..
-                } if bucket.object_count > max => {
-                    Err(BucketError::MaxObjectsLimitExceeded(bucket.object_count, max).into())
+                } if bucket.stat.object_count > max => {
+                    Err(BucketError::MaxObjectsLimitExceeded(bucket.stat.object_count, max).into())
                 }
                 Limits {
                     max_object_pins: Some(max),
@@ -79,8 +79,8 @@ pub mod execute {
                 Limits {
                     max_total_size: Some(max),
                     ..
-                } if bucket.size > max => {
-                    Err(BucketError::MaxTotalSizeLimitExceeded(bucket.size, max).into())
+                } if bucket.stat.size > max => {
+                    Err(BucketError::MaxTotalSizeLimitExceeded(bucket.stat.size, max).into())
                 }
                 _ => Ok(bucket),
             }
@@ -317,8 +317,8 @@ mod tests {
         }
 
         let bucket = BUCKET.load(&deps.storage).unwrap();
-        assert_eq!(bucket.size.u128(), obj1.3 + obj2.3);
-        assert_eq!(bucket.object_count.u128(), 2);
+        assert_eq!(bucket.stat.size.u128(), obj1.3 + obj2.3);
+        assert_eq!(bucket.stat.object_count.u128(), 2);
         assert_eq!(
             objects()
                 .keys_raw(&deps.storage, None, None, Order::Ascending)

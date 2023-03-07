@@ -14,6 +14,12 @@ pub struct Bucket {
     pub name: String,
     /// The limits of the bucket.
     pub limits: Limits,
+    /// Some information on the current bucket usage.
+    pub stat: BucketStat,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct BucketStat {
     /// The total size of the objects contained in the bucket.
     pub size: Uint128,
     /// The number of objects in the bucket.
@@ -30,8 +36,10 @@ impl Bucket {
         Ok(Self {
             name: n,
             limits,
-            size: Uint128::zero(),
-            object_count: Uint128::zero(),
+            stat: BucketStat {
+                size: Uint128::zero(),
+                object_count: Uint128::zero(),
+            },
         })
     }
 }

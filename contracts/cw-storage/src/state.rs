@@ -62,6 +62,17 @@ impl From<BucketLimits> for Limits {
     }
 }
 
+impl From<Limits> for BucketLimits {
+    fn from(limits: Limits) -> Self {
+        BucketLimits {
+            max_total_size: limits.max_total_size,
+            max_objects: limits.max_objects,
+            max_object_size: limits.max_object_size,
+            max_object_pins: limits.max_object_pins,
+        }
+    }
+}
+
 pub const BUCKET: Item<Bucket> = Item::new("bucket");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

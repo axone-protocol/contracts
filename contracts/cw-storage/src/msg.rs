@@ -1,4 +1,3 @@
-use crate::state::Limits;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
 use cosmwasm_std::Uint128;
@@ -168,17 +167,6 @@ impl BucketLimits {
     pub fn set_object_pins(mut self, max_object_pins: Uint128) -> Self {
         self.max_object_pins = Some(max_object_pins);
         self
-    }
-}
-
-impl From<Limits> for BucketLimits {
-    fn from(limits: Limits) -> Self {
-        BucketLimits {
-            max_total_size: limits.max_total_size,
-            max_objects: limits.max_objects,
-            max_object_size: limits.max_object_size,
-            max_object_pins: limits.max_object_pins,
-        }
     }
 }
 

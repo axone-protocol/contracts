@@ -10,6 +10,8 @@ pub const DATA: Map<String, Vec<u8>> = Map::new("DATA");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Bucket {
+    /// The owner of the bucket.
+    pub owner: Addr,
     /// The name of the bucket.
     pub name: String,
     /// The limits of the bucket.
@@ -27,13 +29,14 @@ pub struct BucketStat {
 }
 
 impl Bucket {
-    pub fn new(name: String, limits: Limits) -> Result<Self, BucketError> {
+    pub fn new(owner: Addr, name: String, limits: Limits) -> Result<Self, BucketError> {
         let n: String = name.split_whitespace().collect();
         if n.is_empty() {
             return Err(EmptyName);
         }
 
         Ok(Self {
+            owner,
             name: n,
             limits,
             stat: BucketStat {

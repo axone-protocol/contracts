@@ -20,10 +20,10 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let bucket = Bucket::new(msg.bucket, msg.limits.into())?;
+    let bucket = Bucket::new(info.sender, msg.bucket, msg.limits.into())?;
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     BUCKET.save(deps.storage, &bucket)?;
@@ -191,6 +191,12 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
+
+        // check internal state too
+        let bucket = BUCKET.load(&deps.storage).unwrap();
+        assert_eq!("creator", bucket.owner.into_string());
+        assert_eq!(Uint128::zero(), bucket.stat.size);
+        assert_eq!(Uint128::zero(), bucket.stat.object_count);
     }
 
     #[test]

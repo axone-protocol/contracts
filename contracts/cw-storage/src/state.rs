@@ -1,6 +1,6 @@
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
-use crate::msg::BucketLimits;
+use crate::msg::{BucketLimits, ObjectResponse, PaginationConfig};
 use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
@@ -101,6 +101,24 @@ pub struct Pagination {
     pub default_page_size: u32,
 }
 
+impl From<Pagination> for PaginationConfig {
+    fn from(value: Pagination) -> Self {
+        PaginationConfig {
+            max_page_size: Some(value.max_page_size),
+            default_page_size: Some(value.default_page_size),
+        }
+    }
+}
+
+impl From<PaginationConfig> for Pagination {
+    fn from(value: PaginationConfig) -> Self {
+        Pagination {
+            max_page_size: value.max_page_size(),
+            default_page_size: value.default_page_size(),
+        }
+    }
+}
+
 pub const BUCKET: Item<Bucket> = Item::new("bucket");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -113,6 +131,17 @@ pub struct Object {
     pub size: Uint128,
     /// The number of pin on this object.
     pub pin_count: Uint128,
+}
+
+impl From<&Object> for ObjectResponse {
+    fn from(object: &Object) -> Self {
+        ObjectResponse {
+            id: object.id.clone(),
+            size: object.size,
+            owner: object.owner.clone().into(),
+            is_pinned: object.pin_count > Uint128::zero(),
+        }
+    }
 }
 
 pub struct ObjectIndexes<'a> {

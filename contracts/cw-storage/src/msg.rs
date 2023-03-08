@@ -1,4 +1,3 @@
-use crate::state::{Limits, Object, Pagination};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, StdResult};
 use cosmwasm_std::{StdError, Uint128};
@@ -213,7 +212,7 @@ impl PaginationConfig {
 
         if self
             .default_page_size
-            .filter(|size| size > &self.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE))
+            .filter(|size| size > &self.max_page_size())
             .is_some()
         {
             return Err(StdError::generic_err(
@@ -224,6 +223,14 @@ impl PaginationConfig {
         Ok(())
     }
 
+    pub fn max_page_size(&self) -> u32 {
+        self.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE)
+    }
+
+    pub fn default_page_size(&self) -> u32 {
+        self.default_page_size.unwrap_or(DEFAULT_PAGE_DEFAULT_SIZE)
+    }
+
     pub fn set_max_page_size(mut self, max_page_size: u32) -> Self {
         self.max_page_size = Some(max_page_size);
         self
@@ -232,24 +239,6 @@ impl PaginationConfig {
     pub fn set_default_page_size(mut self, default_page_size: u32) -> Self {
         self.default_page_size = Some(default_page_size);
         self
-    }
-}
-
-impl From<Pagination> for PaginationConfig {
-    fn from(value: Pagination) -> Self {
-        PaginationConfig {
-            max_page_size: Some(value.max_page_size),
-            default_page_size: Some(value.default_page_size),
-        }
-    }
-}
-
-impl From<PaginationConfig> for Pagination {
-    fn from(value: PaginationConfig) -> Self {
-        Pagination {
-            max_page_size: value.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE),
-            default_page_size: value.default_page_size.unwrap_or(DEFAULT_PAGE_DEFAULT_SIZE),
-        }
     }
 }
 
@@ -265,17 +254,6 @@ pub struct ObjectResponse {
     pub is_pinned: bool,
     /// The size of the object.
     pub size: Uint128,
-}
-
-impl From<&Object> for ObjectResponse {
-    fn from(object: &Object) -> Self {
-        ObjectResponse {
-            id: object.id.clone(),
-            size: object.size,
-            owner: object.owner.clone().into(),
-            is_pinned: object.pin_count > Uint128::zero(),
-        }
-    }
 }
 
 /// # ObjectsResponse

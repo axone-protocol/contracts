@@ -150,7 +150,9 @@ pub mod execute {
             Limits {
                 max_object_pins: Some(max),
                 ..
-            } if max < o.pin_count => Err(BucketError::MaxObjectPinsLimitExceeded.into()),
+            } if max < o.pin_count => {
+                Err(BucketError::MaxObjectPinsLimitExceeded(o.pin_count, max).into())
+            }
             _ => {
                 pins().save(
                     deps.storage,
@@ -777,7 +779,10 @@ mod tests {
                     mock_info("pierre", &[]),
                 ],
                 expected_count: 3,
-                expected_error: Some(ContractError::Bucket(MaxObjectPinsLimitExceeded)),
+                expected_error: Some(ContractError::Bucket(MaxObjectPinsLimitExceeded(
+                    Uint128::new(3),
+                    Uint128::new(2),
+                ))),
                 expected_object_pin_count: vec![
                     (
                         ObjectId::from(

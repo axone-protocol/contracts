@@ -66,9 +66,9 @@ description = "Run all unit tests."
 env = { LLVM_PROFILE_FILE = "default.profraw", RUST_BACKTRACE = 1 }
 
 [tasks.test-coverage]
-dependencies = ["install-tarpaulin"]
-command = "cargo"
 args = ["tarpaulin", "-o", "lcov"]
+command = "cargo"
+dependencies = ["install-tarpaulin"]
 
 [tasks.install_wasm]
 script = '''

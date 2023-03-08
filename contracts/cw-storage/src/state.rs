@@ -1,27 +1,49 @@
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
 use crate::msg::BucketLimits;
-use cosmwasm_std::Uint128;
-use cw_storage_plus::Item;
+use cosmwasm_std::{Addr, Uint128};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub const DATA: Map<String, Vec<u8>> = Map::new("DATA");
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Bucket {
+    /// The owner of the bucket.
+    pub owner: Addr,
     /// The name of the bucket.
     pub name: String,
     /// The limits of the bucket.
     pub limits: Limits,
+    /// Some information on the current bucket usage.
+    pub stat: BucketStat,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct BucketStat {
+    /// The total size of the objects contained in the bucket.
+    pub size: Uint128,
+    /// The number of objects in the bucket.
+    pub object_count: Uint128,
 }
 
 impl Bucket {
-    pub fn new(name: String, limits: Limits) -> Result<Self, BucketError> {
+    pub fn new(owner: Addr, name: String, limits: Limits) -> Result<Self, BucketError> {
         let n: String = name.split_whitespace().collect();
         if n.is_empty() {
             return Err(EmptyName);
         }
 
-        Ok(Self { name: n, limits })
+        Ok(Self {
+            owner,
+            name: n,
+            limits,
+            stat: BucketStat {
+                size: Uint128::zero(),
+                object_count: Uint128::zero(),
+            },
+        })
     }
 }
 
@@ -50,4 +72,72 @@ impl From<BucketLimits> for Limits {
         }
     }
 }
+
+impl From<Limits> for BucketLimits {
+    fn from(limits: Limits) -> Self {
+        BucketLimits {
+            max_total_size: limits.max_total_size,
+            max_objects: limits.max_objects,
+            max_object_size: limits.max_object_size,
+            max_object_pins: limits.max_object_pins,
+        }
+    }
+}
+
 pub const BUCKET: Item<Bucket> = Item::new("bucket");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Object {
+    /// The id of the object.
+    pub id: String,
+    /// The owner of the object.
+    pub owner: Addr,
+    /// The size of the object.
+    pub size: Uint128,
+}
+
+pub struct ObjectIndexes<'a> {
+    pub owner: MultiIndex<'a, Addr, Object, String>,
+}
+
+impl IndexList<Object> for ObjectIndexes<'_> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Object>> + '_> {
+        Box::new(vec![&self.owner as &dyn Index<Object>].into_iter())
+    }
+}
+
+pub fn objects<'a>() -> IndexedMap<'a, String, Object, ObjectIndexes<'a>> {
+    IndexedMap::new(
+        "OBJECT",
+        ObjectIndexes {
+            owner: MultiIndex::new(|_, object| object.owner.clone(), "OBJECT", "OBJECT__OWNER"),
+        },
+    )
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Pin {
+    /// The id of the object.
+    pub id: String,
+    /// The address that pinned the object.
+    pub address: Addr,
+}
+
+pub struct PinIndexes<'a> {
+    pub object: MultiIndex<'a, String, Pin, (String, Addr)>,
+}
+
+impl IndexList<Pin> for PinIndexes<'_> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Pin>> + '_> {
+        Box::new(vec![&self.object as &dyn Index<Pin>].into_iter())
+    }
+}
+
+pub fn pins<'a>() -> IndexedMap<'a, (String, Addr), Pin, PinIndexes<'a>> {
+    IndexedMap::new(
+        "PIN",
+        PinIndexes {
+            object: MultiIndex::new(|_, pin| pin.id.clone(), "PIN", "PIN__OBJECT"),
+        },
+    )
+}

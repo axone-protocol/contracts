@@ -1,13 +1,12 @@
-use crate::state::Limits;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
 use cosmwasm_std::Uint128;
 
 /// ObjectId is the type of identifier of an object in the bucket.
-type ObjectId = String;
+pub type ObjectId = String;
 
 /// Cursor is the opaque type of cursor used for pagination.
-type Cursor = String;
+pub type Cursor = String;
 
 /// Instantiate messages
 #[cw_serde]
@@ -26,7 +25,7 @@ pub enum ExecuteMsg {
     /// # StoreObject
     /// StoreObject store an object to the bucket and make the sender the owner of the object.
     /// The object is referenced by the hash of its content and this value is returned.
-    /// If the object is already stored, this is a no-op.
+    /// If the object is already stored, an error is returned.
     /// If pin is true, the object is pinned for the sender.
     StoreObject { data: Binary, pin: bool },
 
@@ -140,14 +139,34 @@ pub struct BucketLimits {
     pub max_object_pins: Option<Uint128>,
 }
 
-impl From<Limits> for BucketLimits {
-    fn from(limits: Limits) -> Self {
+impl BucketLimits {
+    pub const fn new() -> Self {
         BucketLimits {
-            max_total_size: limits.max_total_size,
-            max_objects: limits.max_objects,
-            max_object_size: limits.max_object_size,
-            max_object_pins: limits.max_object_pins,
+            max_total_size: None,
+            max_objects: None,
+            max_object_size: None,
+            max_object_pins: None,
         }
+    }
+
+    pub fn set_max_total_size(mut self, max_total_size: Uint128) -> Self {
+        self.max_total_size = Some(max_total_size);
+        self
+    }
+
+    pub fn set_max_objects(mut self, max_objects: Uint128) -> Self {
+        self.max_objects = Some(max_objects);
+        self
+    }
+
+    pub fn set_max_object_size(mut self, max_object_size: Uint128) -> Self {
+        self.max_object_size = Some(max_object_size);
+        self
+    }
+
+    pub fn set_object_pins(mut self, max_object_pins: Uint128) -> Self {
+        self.max_object_pins = Some(max_object_pins);
+        self
     }
 }
 

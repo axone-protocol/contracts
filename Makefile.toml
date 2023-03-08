@@ -104,21 +104,26 @@ then
     exit 1
 fi
 
+echo "📚 Generating documentation..."
+
 mkdir -p $SCHEMA_FOLDER
 find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
     -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
 
 for SCHEMA in $(ls $SCHEMA_FOLDER); do
     awk "{sub(\"#/definitions\",\"./${SCHEMA}/#/definitions\")} {print}"  ${SCHEMA_FOLDER}/${SCHEMA} > ${SCHEMA_FOLDER}/tmp
+
     mv ${SCHEMA_FOLDER}/tmp ${SCHEMA_FOLDER}/${SCHEMA}
 done
 
-echo "📚 Generating documentation..."
 rm -rf $DOCS_FOLDER
+
 jsonschema2md -d schema -o $DOCS_FOLDER --schema-extension json --schema-out $DOCS_FOLDER/schema
-echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
+sed -i ${SED_FLAG} -E 's/([a-zA-Z]+)<([a-zA-Z0-9]+)>/<code>\1\&lt;\2\&gt;\<\/code>/g' $DOCS_FOLDER/*.md
 
 rm -rf $SCHEMA_FOLDER
+
+echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 '''
 
 [tasks.chain-clean]

@@ -126,13 +126,13 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-        if pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
-            return Ok(Response::new()
-                .add_attribute("action", "pin_object")
-                .add_attribute("id", object_id));
-        }
+        let res = Response::new()
+            .add_attribute("action", "pin_object")
+            .add_attribute("id", object_id.clone());
 
-        let bucket = BUCKET.load(deps.storage)?;
+        if pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
+            return Ok(res);
+        }
 
         let o = objects().update(
             deps.storage,
@@ -146,6 +146,8 @@ pub mod execute {
             },
         )?;
 
+        let bucket = BUCKET.load(deps.storage)?;
+
         match bucket.limits {
             Limits {
                 max_object_pins: Some(max),
@@ -158,13 +160,11 @@ pub mod execute {
                     deps.storage,
                     (object_id.clone(), info.sender.clone()),
                     &Pin {
-                        id: object_id.clone(),
+                        id: object_id,
                         address: info.sender,
                     },
                 )?;
-                Ok(Response::new()
-                    .add_attribute("action", "pin_object")
-                    .add_attribute("id", object_id))
+                Ok(res)
             }
         }
     }

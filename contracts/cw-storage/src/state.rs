@@ -31,7 +31,7 @@ pub struct BucketStat {
 }
 
 impl Bucket {
-    pub fn new(
+    pub fn try_new(
         owner: Addr,
         name: String,
         limits: Limits,

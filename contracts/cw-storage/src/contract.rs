@@ -23,7 +23,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let bucket = Bucket::new(
+    let bucket = Bucket::try_new(
         info.sender,
         msg.bucket,
         msg.limits.into(),

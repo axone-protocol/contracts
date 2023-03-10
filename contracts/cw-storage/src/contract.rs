@@ -23,12 +23,11 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    msg.pagination.validate()?;
     let bucket = Bucket::new(
         info.sender,
         msg.bucket,
         msg.limits.into(),
-        msg.pagination.into(),
+        msg.pagination.try_into()?,
     )?;
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

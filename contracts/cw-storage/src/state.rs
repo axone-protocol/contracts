@@ -1,7 +1,7 @@
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
 use crate::msg::{BucketLimits, ObjectResponse, PaginationConfig};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, StdError, StdResult, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -101,6 +101,29 @@ pub struct Pagination {
     pub default_page_size: u32,
 }
 
+const MAX_PAGE_MAX_SIZE: u32 = u32::MAX - 1;
+
+impl Pagination {
+    fn try_new(max_page_size: u32, default_page_size: u32) -> StdResult<Pagination> {
+        if max_page_size > MAX_PAGE_MAX_SIZE {
+            return Err(StdError::generic_err(
+                "'max_page_size' cannot exceed 'u32::MAX - 1'",
+            ));
+        }
+
+        if default_page_size > max_page_size {
+            return Err(StdError::generic_err(
+                "'default_page_size' cannot exceed 'max_page_size'",
+            ));
+        }
+
+        Ok(Pagination {
+            max_page_size,
+            default_page_size,
+        })
+    }
+}
+
 impl From<Pagination> for PaginationConfig {
     fn from(value: Pagination) -> Self {
         PaginationConfig {
@@ -110,12 +133,11 @@ impl From<Pagination> for PaginationConfig {
     }
 }
 
-impl From<PaginationConfig> for Pagination {
-    fn from(value: PaginationConfig) -> Self {
-        Pagination {
-            max_page_size: value.max_page_size(),
-            default_page_size: value.default_page_size(),
-        }
+impl TryFrom<PaginationConfig> for Pagination {
+    type Error = StdError;
+
+    fn try_from(value: PaginationConfig) -> StdResult<Pagination> {
+        Pagination::try_new(value.max_page_size(), value.default_page_size())
     }
 }
 

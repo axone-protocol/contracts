@@ -1,6 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, StdResult};
-use cosmwasm_std::{StdError, Uint128};
+use cosmwasm_std::{Binary, Uint128};
 
 /// ObjectId is the type of identifier of an object in the bucket.
 pub type ObjectId = String;
@@ -170,7 +169,6 @@ impl BucketLimits {
     }
 }
 
-const MAX_PAGE_MAX_SIZE: u32 = u32::MAX - 1;
 const DEFAULT_PAGE_MAX_SIZE: u32 = 30;
 const DEFAULT_PAGE_DEFAULT_SIZE: u32 = 10;
 
@@ -197,30 +195,6 @@ impl PaginationConfig {
             max_page_size: None,
             default_page_size: None,
         }
-    }
-
-    pub fn validate(&self) -> StdResult<()> {
-        if self
-            .max_page_size
-            .filter(|size| size > &MAX_PAGE_MAX_SIZE)
-            .is_some()
-        {
-            return Err(StdError::generic_err(
-                "'max_page_size' cannot exceed 'u32::MAX - 1'",
-            ));
-        }
-
-        if self
-            .default_page_size
-            .filter(|size| size > &self.max_page_size())
-            .is_some()
-        {
-            return Err(StdError::generic_err(
-                "'default_page_size' cannot exceed 'max_page_size'",
-            ));
-        }
-
-        Ok(())
     }
 
     pub fn max_page_size(&self) -> u32 {

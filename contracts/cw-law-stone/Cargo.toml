@@ -35,6 +35,7 @@ cw2.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+logic-bindings = { version = "0.2", path = "../../packages/logic-bindings" }
 
 [dev-dependencies]
 cw-multi-test.workspace = true

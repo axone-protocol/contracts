@@ -210,6 +210,7 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "logic-bindings",
  "schemars",
  "serde",
  "thiserror",

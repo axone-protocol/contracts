@@ -201,6 +201,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-law-stone"
+version = "0.2.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "cw-logic-sample"
 version = "0.2.0"
 dependencies = [

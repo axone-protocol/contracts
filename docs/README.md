@@ -2,6 +2,8 @@
 
 ## Top-level Schemas
 
+*   [cw-law-stone](./cw-law-stone.md "CW Law StoneOverviewThe cw-law-stone smart contract aims to provide GaaS (i") – `-`
+
 *   [cw-logic-sample](./cw-logic-sample.md "CW Logic SampleSample contract to query the OKP4 logic module") – `-`
 
 *   [cw-storage](./cw-storage.md "CW StorageOverviewThe cw-storage smart contract enables the storage of arbitrary objects in any Cosmos blockchains using the CosmWasm framework") – `-`
@@ -12,7 +14,11 @@
 
 ### Objects
 
+*   [Ask](./cw-law-stone-querymsg-oneof-ask.md "If not broken, ask the logic module the provided query with the law program loaded") – `undefined#/query/oneOf/0`
+
 *   [Ask](./cw-logic-sample-querymsg-oneof-ask.md "Ask returns the evaluation of the query using the program context through the logic module") – `undefined#/query/oneOf/0`
+
+*   [AskResponse](./cw-law-stone-responses-askresponse.md) – `undefined#/responses/ask`
 
 *   [AskResponse](./cw-logic-sample-responses-askresponse.md) – `undefined#/responses/ask`
 
@@ -27,6 +33,8 @@
 *   [GetCountResponse](./cw-template-responses-getcountresponse.md "We define a custom struct for each query response") – `undefined#/responses/get_count`
 
 *   [Increment](./cw-template-executemsg-oneof-increment.md "Execute an increment message") – `undefined#/execute/oneOf/0`
+
+*   [InstantiateMsg](./cw-law-stone-instantiatemsg.md "Instantiate message") – `undefined#/instantiate`
 
 *   [InstantiateMsg](./cw-logic-sample-instantiatemsg.md "Instantiate messages") – `undefined#/instantiate`
 
@@ -61,6 +69,16 @@
 *   [StoreObject](./cw-storage-executemsg-oneof-storeobject.md "StoreObject store an object to the bucket and make the sender the owner of the object") – `undefined#/execute/oneOf/0`
 
 *   [UnpinObject](./cw-storage-executemsg-oneof-unpinobject.md "UnpinObject unpins the object in the bucket for the considered sender") – `undefined#/execute/oneOf/3`
+
+*   [Untitled object in cw-law-stone](./cw-law-stone-querymsg-oneof-ask-properties-ask.md) – `undefined#/query/oneOf/0/properties/ask`
+
+*   [Untitled object in cw-law-stone](./cw-law-stone-responses-askresponse-definitions-answer.md) – `undefined#/responses/ask/definitions/Answer`
+
+*   [Untitled object in cw-law-stone](./cw-law-stone-responses-askresponse-definitions-result.md) – `undefined#/responses/ask/definitions/Result`
+
+*   [Untitled object in cw-law-stone](./cw-law-stone-responses-askresponse-definitions-substitution.md) – `undefined#/responses/ask/definitions/Substitution`
+
+*   [Untitled object in cw-law-stone](./cw-law-stone-responses-askresponse-definitions-term.md) – `undefined#/responses/ask/definitions/Term`
 
 *   [Untitled object in cw-logic-sample](./cw-logic-sample-querymsg-oneof-ask-properties-ask.md) – `undefined#/query/oneOf/0/properties/ask`
 
@@ -101,6 +119,14 @@
 *   [Untitled object in cw-template](./cw-template-querymsg-oneof-getcount-properties-get_count.md) – `undefined#/query/oneOf/0/properties/get_count`
 
 ### Arrays
+
+*   [Untitled array in cw-law-stone](./cw-law-stone-responses-askresponse-definitions-answer-properties-results.md) – `undefined#/responses/ask/definitions/Answer/properties/results`
+
+*   [Untitled array in cw-law-stone](./cw-law-stone-responses-askresponse-definitions-answer-properties-variables.md) – `undefined#/responses/ask/definitions/Answer/properties/variables`
+
+*   [Untitled array in cw-law-stone](./cw-law-stone-responses-askresponse-definitions-result-properties-substitutions.md) – `undefined#/responses/ask/definitions/Result/properties/substitutions`
+
+*   [Untitled array in cw-law-stone](./cw-law-stone-responses-askresponse-definitions-term-properties-arguments.md) – `undefined#/responses/ask/definitions/Term/properties/arguments`
 
 *   [Untitled array in cw-logic-sample](./cw-logic-sample-responses-askresponse-definitions-answer-properties-results.md) – `undefined#/responses/ask/definitions/Answer/properties/results`
 

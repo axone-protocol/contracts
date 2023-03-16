@@ -1,21 +1,15 @@
-# QueryMsg Schema
+# Untitled string in cw-law-stone Schema
 
 ```txt
-undefined#/query
+undefined#/responses/program/properties/storage_address
 ```
 
-Query messages
+The `cw-storage` contract address on which the law program is stored.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                             |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :--------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-law-stone.json\*](schema/cw-law-stone.json "open original schema") |
 
-## query Type
+## storage\_address Type
 
-merged type ([QueryMsg](cw-law-stone-querymsg.md))
-
-one (and only one) of
-
-*   [Ask](cw-law-stone-querymsg-oneof-ask.md "check type definition")
-
-*   [Program](cw-law-stone-querymsg-oneof-program.md "check type definition")
+`string`

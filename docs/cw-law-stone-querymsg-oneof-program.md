@@ -1,21 +1,23 @@
-# QueryMsg Schema
+# Program Schema
 
 ```txt
-undefined#/query
+undefined#/query/oneOf/1
 ```
 
-Query messages
+If not broken, returns the law program location information.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                             |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :--------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-law-stone.json\*](schema/cw-law-stone.json "open original schema") |
 
-## query Type
+## 1 Type
 
-merged type ([QueryMsg](cw-law-stone-querymsg.md))
+`string` ([Program](cw-law-stone-querymsg-oneof-program.md))
 
-one (and only one) of
+## 1 Constraints
 
-*   [Ask](cw-law-stone-querymsg-oneof-ask.md "check type definition")
+**enum**: the value of this property must be equal to one of the following values:
 
-*   [Program](cw-law-stone-querymsg-oneof-program.md "check type definition")
+| Value       | Explanation |
+| :---------- | :---------- |
+| `"program"` |             |

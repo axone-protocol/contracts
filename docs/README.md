@@ -64,6 +64,8 @@
 
 *   [PinObject](./cw-storage-executemsg-oneof-pinobject.md "PinObject pins the object in the bucket for the considered sender") – `undefined#/execute/oneOf/2`
 
+*   [ProgramResponse](./cw-law-stone-responses-programresponse.md "ProgramResponse carry elements to locate the program in a cw-storage contract") – `undefined#/responses/program`
+
 *   [Reset](./cw-template-executemsg-oneof-reset.md "Reset counter to the specified value") – `undefined#/execute/oneOf/1`
 
 *   [StoreObject](./cw-storage-executemsg-oneof-storeobject.md "StoreObject store an object to the bucket and make the sender the owner of the object") – `undefined#/execute/oneOf/0`

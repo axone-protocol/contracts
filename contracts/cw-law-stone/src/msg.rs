@@ -16,13 +16,13 @@ pub struct InstantiateMsg {
 /// Execute messages
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// # Break
+    /// # BreakStone
     /// Break the stone making this contract unusable, by clearing all the related resources:
     /// - Unpin all the pinned objects on `cw-storage` contracts, if any.
     /// - Forget the main program (i.e. or at least unpin it).
     /// Only the contract admin is authorized to break it, if any.
     /// If already broken, this is a no-op.
-    Break,
+    BreakStone,
 }
 
 /// Query messages

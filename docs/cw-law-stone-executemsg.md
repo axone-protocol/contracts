@@ -16,4 +16,4 @@ merged type ([ExecuteMsg](cw-law-stone-executemsg.md))
 
 one (and only one) of
 
-*   [Break](cw-law-stone-executemsg-oneof-break.md "check type definition")
+*   [BreakStone](cw-law-stone-executemsg-oneof-breakstone.md "check type definition")

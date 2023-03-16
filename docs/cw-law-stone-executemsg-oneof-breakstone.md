@@ -1,4 +1,4 @@
-# Break Schema
+# BreakStone Schema
 
 ```txt
 undefined#/execute/oneOf/0
@@ -12,12 +12,12 @@ Break the stone making this contract unusable, by clearing all the related resou
 
 ## 0 Type
 
-`string` ([Break](cw-law-stone-executemsg-oneof-break.md))
+`string` ([BreakStone](cw-law-stone-executemsg-oneof-breakstone.md))
 
 ## 0 Constraints
 
 **enum**: the value of this property must be equal to one of the following values:
 
-| Value     | Explanation |
-| :-------- | :---------- |
-| `"break"` |             |
+| Value           | Explanation |
+| :-------------- | :---------- |
+| `"break_stone"` |             |

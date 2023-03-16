@@ -33,4 +33,20 @@ pub enum QueryMsg {
     /// If not broken, ask the logic module the provided query with the law program loaded.
     #[returns(AskResponse)]
     Ask { query: String },
+
+    /// # Program
+    /// If not broken, returns the law program location information.
+    #[returns(ProgramResponse)]
+    Program,
+}
+
+/// # ProgramResponse
+/// ProgramResponse carry elements to locate the program in a `cw-storage` contract.
+#[cw_serde]
+pub struct ProgramResponse {
+    /// The program object id in the `cw-storage` contract.
+    pub object_id: String,
+
+    /// The `cw-storage` contract address on which the law program is stored.
+    pub storage_address: String,
 }

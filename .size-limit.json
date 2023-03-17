@@ -16,5 +16,11 @@
     "running": false,
     "brotli": false,
     "gzip": false
+  },
+  {
+    "path": "target/wasm32-unknown-unknown/release/cw_law_stone.wasm",
+    "running": false,
+    "brotli": false,
+    "gzip": false
   }
 ]

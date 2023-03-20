@@ -1,16 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cw_storage_plus::Item;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct Law {
-    /// The `cw-storage` object link to the Prolog program carrying law rules and facts.
-    pub program: Object,
-
-    /// The list of all `cw-storage` dependencies of the law program.
-    pub dependencies: Vec<String>,
-}
+use cw_storage_plus::{Item, Map};
 
 /// Represent a link to an Object stored in the `cw-storage` contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -22,4 +13,6 @@ pub struct Object {
     pub storage_address: String,
 }
 
-pub const LAW: Item<'_, Law> = Item::new("law");
+pub const PROGRAM: Item<'_, Object> = Item::new("program");
+
+pub const DEPENDENCIES: Map<'_, &str, Object> = Map::new("dependencies");

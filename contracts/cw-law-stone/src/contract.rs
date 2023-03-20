@@ -42,7 +42,7 @@ pub fn query(_deps: Deps<'_>, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use crate::state::LAW;
     use cosmwasm_std::testing::{mock_env, mock_info, MockQuerierCustomHandlerResult};
     use cosmwasm_std::{ to_binary, SystemResult, SystemError};
     use logic_bindings::{Answer, AskResponse, LogicCustomQuery, Substitution, Term, Result as LogicResult};
@@ -84,11 +84,16 @@ mod tests {
 
         let msg = InstantiateMsg {
             program: Default::default(),
-            storage_address: "".to_string(),
+            storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
         };
         let info = mock_info("creator", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
+
+        // check internal state too
+        let law = LAW.load(&deps.storage).unwrap();
+        assert_eq!(law.program.storage_address, "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string());
+        assert_eq!(law.dependencies, vec!["file1".to_string()]);
     }
 }

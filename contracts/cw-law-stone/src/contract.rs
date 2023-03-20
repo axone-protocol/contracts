@@ -49,12 +49,26 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut<'_>,
-    _env: Env,
-    _info: MessageInfo,
-    _msg: ExecuteMsg,
+    deps: DepsMut<'_>,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    Err(NotImplemented {})
+    match msg {
+        ExecuteMsg::BreakStone => execute::break_stone(deps, env, info),
+    }
+}
+
+pub mod execute {
+    use super::*;
+
+    pub fn break_stone(
+        _deps: DepsMut<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> Result<Response, ContractError> {
+        Err(NotImplemented {})
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

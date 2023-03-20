@@ -13,6 +13,7 @@ pub struct Law {
 }
 
 /// Represent a link to an Object stored in the `cw-storage` contract.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Object {
     /// The object id in the `cw-storage` contract.
     pub object_id: String,

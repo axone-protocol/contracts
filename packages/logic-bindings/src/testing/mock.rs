@@ -13,6 +13,17 @@ pub fn mock_dependencies_with_logic_and_balance(
     mock_dependencies_with_logic_and_balances(&[(MOCK_CONTRACT_ADDR, contract_balance)])
 }
 
+pub fn mock_dependencies_with_logic_handler<LH: 'static>(handler: LH) -> OwnedDeps<MockStorage, MockApi, MockQuerier<LogicCustomQuery>, LogicCustomQuery>
+    where
+        LH: Fn(&LogicCustomQuery) -> QuerierResult,  {
+    OwnedDeps {
+        storage: MockStorage::default(),
+        api: MockApi::default(),
+        querier: MockLogicQuerier::new(LogicQuerier::new(Box::new(handler)), &[]),
+        custom_query_type: PhantomData,
+    }
+}
+
 /// Initializes the querier along with the mock_dependencies.
 ///
 /// Set the logic querier mock handler.

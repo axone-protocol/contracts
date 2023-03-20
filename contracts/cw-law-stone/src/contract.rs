@@ -71,7 +71,7 @@ pub mod query {
     use crate::state::PROGRAM;
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
-        let program = PROGRAM.load(deps.storage)?;
+        let program = PROGRAM.load(deps.storage)?.law;
         Ok(ProgramResponse::from(program))
     }
 }
@@ -91,7 +91,7 @@ pub fn reply(
 pub mod reply {
     use super::*;
     use crate::helper::{ask_response_to_objects, get_reply_event_attribute};
-    use crate::state::{Object, DEPENDENCIES, PROGRAM};
+    use crate::state::{LawStone, Object, DEPENDENCIES, PROGRAM};
     use url::Url;
 
     pub fn store_program_reply(
@@ -113,25 +113,28 @@ pub mod reply {
                     ))
                 })
             })
-            .map(|obj_id| Object {
-                object_id: obj_id,
-                storage_address: context.clone(),
+            .map(|obj_id| LawStone {
+                broken: false,
+                law: Object {
+                    object_id: obj_id,
+                    storage_address: context.clone(),
+                },
             })
-            .and_then(|program| -> Result<Vec<SubMsg>, ContractError> {
+            .and_then(|stone| -> Result<Vec<SubMsg>, ContractError> {
                 PROGRAM
-                    .save(deps.storage, &program)
+                    .save(deps.storage, &stone)
                     .map_err(ContractError::from)?;
 
                 // Clean instantiate context
                 INSTANTIATE_CONTEXT.remove(deps.storage);
 
-                let req = build_source_files_query(program.clone())?.into();
+                let req = build_source_files_query(stone.law.clone())?.into();
                 let res = deps.querier.query(&req).map_err(ContractError::from)?;
 
                 let objects = ask_response_to_objects(res, "Files".to_string())?;
                 let mut msgs = Vec::with_capacity(objects.len());
                 for obj in objects {
-                    if obj.object_id == program.object_id {
+                    if obj.object_id == stone.object_id {
                         continue;
                     }
                     DEPENDENCIES.save(deps.storage, obj.object_id.as_str(), &obj)?;
@@ -169,7 +172,7 @@ pub mod reply {
 mod tests {
     use super::*;
     use crate::msg::ProgramResponse;
-    use crate::state::{Object, DEPENDENCIES, PROGRAM};
+    use crate::state::{LawStone, Object, DEPENDENCIES, PROGRAM};
     use cosmwasm_std::testing::{mock_env, mock_info, MockQuerierCustomHandlerResult};
     use cosmwasm_std::{
         from_binary, to_binary, CosmosMsg, Event, Order, SubMsgResponse, SubMsgResult, SystemError,
@@ -281,9 +284,12 @@ mod tests {
         PROGRAM
             .save(
                 deps.as_mut().storage,
-                &Object {
-                    object_id: object_id.clone(),
-                    storage_address: storage_addr.clone(),
+                &LawStone {
+                    broken: false,
+                    law: Object {
+                        object_id: object_id.clone(),
+                        storage_address: storage_addr.clone(),
+                    },
                 },
             )
             .unwrap();

@@ -13,6 +13,12 @@ use url::Url;
 /// State to store context during contract instantiation
 pub const INSTANTIATE_CONTEXT: Item<'_, String> = Item::new("instantiate");
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct LawStone {
+    pub broken: bool,
+    pub law: Object,
+}
+
 /// Represent a link to an Object stored in the `cw-storage` contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Object {
@@ -96,7 +102,7 @@ impl TryInto<Url> for Object {
     }
 }
 
-pub const PROGRAM: Item<'_, Object> = Item::new("program");
+pub const PROGRAM: Item<'_, LawStone> = Item::new("program");
 
 pub const DEPENDENCIES: Map<'_, &str, Object> = Map::new("dependencies");
 

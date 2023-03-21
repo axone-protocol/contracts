@@ -3,7 +3,7 @@ use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -23,7 +23,12 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let bucket = Bucket::new(info.sender, msg.bucket, msg.limits.into())?;
+    let bucket = Bucket::try_new(
+        info.sender,
+        msg.bucket,
+        msg.limits.into(),
+        msg.pagination.try_into()?,
+    )?;
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     BUCKET.save(deps.storage, &bucket)?;
@@ -49,7 +54,7 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::Limits;
-    use cosmwasm_std::Uint128;
+    use cosmwasm_std::{StdError, Uint128};
     use std::any::type_name;
 
     pub fn store_object(
@@ -200,14 +205,25 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
         QueryMsg::Object { id } => to_binary(&query::object(deps, id)?),
         QueryMsg::ObjectData { id } => to_binary(&query::data(deps, id)?),
-        _ => Err(StdError::generic_err("Not implemented")),
+        QueryMsg::Objects {
+            address,
+            after,
+            first,
+        } => to_binary(&query::fetch_objects(deps, address, after, first)?),
+        QueryMsg::ObjectPins { id, after, first } => {
+            to_binary(&query::object_pins(deps, id, after, first)?)
+        }
     }
 }
 
 pub mod query {
     use super::*;
-    use crate::msg::{BucketResponse, ObjectResponse};
-    use cosmwasm_std::Uint128;
+    use crate::cursor;
+    use crate::msg::{
+        BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
+    };
+    use crate::pagination::PaginationHandler;
+    use cosmwasm_std::Addr;
 
     pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -215,22 +231,94 @@ pub mod query {
         Ok(BucketResponse {
             name: bucket.name,
             limits: bucket.limits.into(),
+            pagination: bucket.pagination.into(),
         })
     }
 
     pub fn object(deps: Deps, id: ObjectId) -> StdResult<ObjectResponse> {
         objects()
             .load(deps.storage, id)
-            .map(|object| ObjectResponse {
-                id: object.id.clone(),
-                size: object.size,
-                owner: object.owner.into(),
-                is_pinned: object.pin_count > Uint128::zero(),
-            })
+            .map(|object| (&object).into())
     }
 
     pub fn data(deps: Deps, id: ObjectId) -> StdResult<Binary> {
         DATA.load(deps.storage, id).map(Binary::from)
+    }
+
+    pub fn fetch_objects(
+        deps: Deps,
+        address: Option<String>,
+        after: Option<Cursor>,
+        first: Option<u32>,
+    ) -> StdResult<ObjectsResponse> {
+        let address = match address {
+            Some(raw) => Some(deps.api.addr_validate(&raw)?),
+            _ => None,
+        };
+
+        let handler: PaginationHandler<Object, String> =
+            PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
+
+        let page: (Vec<Object>, PageInfo) = handler.query_page(
+            |min_bound| match address {
+                Some(addr) => objects().idx.owner.prefix(addr).range(
+                    deps.storage,
+                    min_bound,
+                    None,
+                    Order::Ascending,
+                ),
+                _ => objects().range(deps.storage, min_bound, None, Order::Ascending),
+            },
+            cursor::decode,
+            |o: &Object| cursor::encode(o.id.clone()),
+            after,
+            first,
+        )?;
+
+        Ok(ObjectsResponse {
+            data: page.0.iter().map(|object| object.into()).collect(),
+            page_info: page.1,
+        })
+    }
+
+    pub fn object_pins(
+        deps: Deps,
+        id: ObjectId,
+        after: Option<Cursor>,
+        first: Option<u32>,
+    ) -> StdResult<ObjectPinsResponse> {
+        objects().load(deps.storage, id.clone())?;
+
+        let handler: PaginationHandler<Pin, (String, Addr)> =
+            PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
+
+        let page: (Vec<Pin>, PageInfo) = handler.query_page(
+            |min_bound| {
+                pins().idx.object.prefix(id.clone()).range(
+                    deps.storage,
+                    min_bound,
+                    None,
+                    Order::Ascending,
+                )
+            },
+            |c| {
+                cursor::decode(c)
+                    .and_then(|raw| deps.api.addr_validate(raw.as_str()))
+                    .map(|addr| (id.clone(), addr))
+            },
+            |pin: &Pin| cursor::encode(pin.clone().address.into_string()),
+            after,
+            first,
+        )?;
+
+        Ok(ObjectPinsResponse {
+            data: page
+                .0
+                .iter()
+                .map(|pin: &Pin| pin.address.as_str().to_string())
+                .collect(),
+            page_info: page.1,
+        })
     }
 }
 
@@ -239,11 +327,14 @@ mod tests {
     use super::*;
     use crate::error::BucketError;
     use crate::error::BucketError::MaxObjectPinsLimitExceeded;
-    use crate::msg::{BucketLimits, BucketResponse};
+    use crate::msg::{
+        BucketLimits, BucketResponse, ObjectPinsResponse, ObjectResponse, ObjectsResponse,
+        PageInfo, PaginationConfig,
+    };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Attribute, Order, Uint128};
+    use cosmwasm_std::{from_binary, Attribute, Order, StdError, Uint128};
     use std::any::type_name;
 
     #[test]
@@ -253,6 +344,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: "foo".to_string(),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         let info = mock_info("creator", &[]);
 
@@ -264,6 +356,9 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
+        assert_eq!(value.limits, BucketLimits::new());
+        assert_eq!(value.pagination.max_page_size, Some(30));
+        assert_eq!(value.pagination.default_page_size, Some(10));
 
         // check internal state too
         let bucket = BUCKET.load(&deps.storage).unwrap();
@@ -284,6 +379,9 @@ mod tests {
                 max_object_size: Some(Uint128::new(2000)),
                 max_object_pins: Some(Uint128::new(1)),
             },
+            pagination: PaginationConfig::new()
+                .set_max_page_size(50)
+                .set_default_page_size(30),
         };
         let info = mock_info("creator", &[]);
 
@@ -297,6 +395,52 @@ mod tests {
         assert_eq!(Uint128::new(10), value.limits.max_objects.unwrap());
         assert_eq!(Uint128::new(2000), value.limits.max_object_size.unwrap());
         assert_eq!(Uint128::new(1), value.limits.max_object_pins.unwrap());
+        assert_eq!(value.pagination.max_page_size, Some(50));
+        assert_eq!(value.pagination.default_page_size, Some(30));
+    }
+
+    #[test]
+    fn proper_pagination_initialization() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            bucket: "bar".to_string(),
+            limits: BucketLimits::new(),
+            pagination: PaginationConfig::new()
+                .set_max_page_size(50)
+                .set_default_page_size(30),
+        };
+        instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
+        let value: BucketResponse = from_binary(&res).unwrap();
+        assert_eq!(value.pagination.max_page_size, Some(50));
+        assert_eq!(value.pagination.default_page_size, Some(30));
+    }
+
+    #[test]
+    fn invalid_pagination_initialization() {
+        let cases = vec![
+            (
+                PaginationConfig::new().set_max_page_size(u32::MAX),
+                StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'"),
+            ),
+            (
+                PaginationConfig::new().set_default_page_size(31),
+                StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'"),
+            ),
+        ];
+        for case in cases {
+            let mut deps = mock_dependencies();
+            let msg = InstantiateMsg {
+                bucket: "bar".to_string(),
+                limits: BucketLimits::new(),
+                pagination: case.0,
+            };
+            match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
+                Err(err) => assert_eq!(err, ContractError::Std(case.1)),
+                _ => panic!("assertion failure!"),
+            }
+        }
     }
 
     #[test]
@@ -306,6 +450,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: "".to_string(),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         let info = mock_info("creator", &[]);
 
@@ -321,6 +466,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: "foo bar".to_string(),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         let info = mock_info("creator", &[]);
 
@@ -343,6 +489,7 @@ mod tests {
             InstantiateMsg {
                 bucket: "test".to_string(),
                 limits: BucketLimits::new(),
+                pagination: PaginationConfig::new(),
             },
         )
         .unwrap();
@@ -422,6 +569,7 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: String::from("test"),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -481,6 +629,7 @@ mod tests {
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
                 limits: case.0,
+                pagination: PaginationConfig::new(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -507,12 +656,16 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: String::from("test"),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        match query::object(
+        match query(
             deps.as_ref(),
-            ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
+            mock_env(),
+            QueryMsg::Object {
+                id: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824".to_string(),
+            },
         )
         .err()
         .unwrap()
@@ -528,18 +681,18 @@ mod tests {
         };
         execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let res = query::object(
-            deps.as_ref(),
-            ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
-        )
-        .unwrap();
+        let msg = QueryMsg::Object {
+            id: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824".to_string(),
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectResponse = from_binary(&result).unwrap();
         assert_eq!(
-            res.id,
+            response.id,
             ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
         );
-        assert_eq!(res.owner, info.sender);
-        assert!(res.is_pinned);
-        assert_eq!(res.size.u128(), 5u128);
+        assert_eq!(response.owner, info.sender);
+        assert!(response.is_pinned);
+        assert_eq!(response.size.u128(), 5u128);
 
         let data = general_purpose::STANDARD.encode("okp4");
         let msg = ExecuteMsg::StoreObject {
@@ -548,18 +701,18 @@ mod tests {
         };
         execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let res = query::object(
-            deps.as_ref(),
-            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
-        )
-        .unwrap();
+        let msg = QueryMsg::Object {
+            id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectResponse = from_binary(&result).unwrap();
         assert_eq!(
-            res.id,
+            response.id,
             ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")
         );
-        assert_eq!(res.owner, info.sender);
-        assert!(!res.is_pinned);
-        assert_eq!(res.size.u128(), 4u128);
+        assert_eq!(response.owner, info.sender);
+        assert!(!response.is_pinned);
+        assert_eq!(response.size.u128(), 4u128);
     }
 
     #[test]
@@ -570,12 +723,16 @@ mod tests {
         let msg = InstantiateMsg {
             bucket: String::from("test"),
             limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        match query::object(
+        match query(
             deps.as_ref(),
-            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
+            mock_env(),
+            QueryMsg::ObjectData {
+                id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
+            },
         )
         .err()
         .unwrap()
@@ -584,19 +741,18 @@ mod tests {
             _ => panic!("assertion failed"),
         }
 
-        let data = general_purpose::STANDARD.encode("okp4");
+        let data = Binary::from_base64(general_purpose::STANDARD.encode("okp4").as_str()).unwrap();
         let msg = ExecuteMsg::StoreObject {
-            data: Binary::from_base64(data.as_str()).unwrap(),
+            data: data.clone(),
             pin: false,
         };
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let res = query::data(
-            deps.as_ref(),
-            ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"),
-        )
-        .unwrap();
-        assert_eq!(res, Binary::from_base64(data.as_str()).unwrap());
+        let msg = QueryMsg::ObjectData {
+            id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        assert_eq!(result, to_binary(&data).unwrap());
     }
 
     struct TestPinCase {
@@ -826,6 +982,7 @@ mod tests {
                 InstantiateMsg {
                     bucket: "test".to_string(),
                     limits: BucketLimits::new().set_max_object_pins(Uint128::new(2)),
+                    pagination: PaginationConfig::new(),
                 },
             )
             .unwrap();
@@ -1064,6 +1221,7 @@ mod tests {
                 InstantiateMsg {
                     bucket: "test".to_string(),
                     limits: BucketLimits::new(),
+                    pagination: PaginationConfig::new(),
                 },
             )
             .unwrap();
@@ -1134,6 +1292,211 @@ mod tests {
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn fetch_objects() {
+        let mut deps = mock_dependencies();
+        let info1 = mock_info("creator1", &[]);
+        let info2 = mock_info("creator2", &[]);
+
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+
+        let msg = QueryMsg::Objects {
+            address: None,
+            first: None,
+            after: None,
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(response.data.len(), 0);
+        assert_eq!(
+            response.page_info,
+            PageInfo {
+                has_next_page: false,
+                cursor: "".to_string()
+            }
+        );
+
+        let data = general_purpose::STANDARD.encode("object1");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        let data = general_purpose::STANDARD.encode("object2");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
+        let data = general_purpose::STANDARD.encode("object3");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
+
+        let cases = vec![
+            (QueryMsg::Objects {address: None,first: None,after: None}, 3, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
+            (QueryMsg::Objects {address: Some("unknown".to_string()), first: None, after: None}, 0, PageInfo {has_next_page: false, cursor: "".to_string()}),
+            (QueryMsg::Objects {address: Some("creator1".to_string()),first: None,after: None}, 2, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
+            (QueryMsg::Objects {address: Some("creator1".to_string()),first: Some(1),after: None}, 1, PageInfo {has_next_page: true,cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()}),
+            (QueryMsg::Objects {address: Some("creator1".to_string()),first: Some(1),after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string())}, 1, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
+        ];
+
+        for case in cases {
+            let msg = case.0;
+            let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+            let response: ObjectsResponse = from_binary(&result).unwrap();
+            assert_eq!(response.data.len(), case.1);
+            assert_eq!(response.page_info, case.2);
+        }
+
+        let msg = QueryMsg::Objects {
+            address: Some("creator2".to_string()),
+            first: None,
+            after: None,
+        };
+        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let response: ObjectsResponse = from_binary(&result).unwrap();
+        assert_eq!(
+            response.data.first().unwrap(),
+            &ObjectResponse {
+                id: "0a6d95579ba3dd2f79c870906fd894007ce449020d111d358894cfbbcd9a03a4".to_string(),
+                owner: "creator2".to_string(),
+                is_pinned: false,
+                size: 7u128.into()
+            }
+        );
+    }
+
+    #[test]
+    fn object_pins() {
+        let mut deps = mock_dependencies();
+        let info1 = mock_info("creator1", &[]);
+        let info2 = mock_info("creator2", &[]);
+
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+
+        let data = general_purpose::STANDARD.encode("object1");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: false,
+        };
+        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        // 1: 445008b7f2932922bdb184771d9978516a4f89d77000c2d6eab18b0894aac3a7
+        let data = general_purpose::STANDARD.encode("object2");
+        let msg = ExecuteMsg::StoreObject {
+            data: Binary::from_base64(data.as_str()).unwrap(),
+            pin: true,
+        };
+        execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
+        // 2: abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56
+        let msg = ExecuteMsg::PinObject {
+            id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56".to_string(),
+        };
+        execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
+
+        let cases = vec![
+            (
+                QueryMsg::ObjectPins {
+                    id: "445008b7f2932922bdb184771d9978516a4f89d77000c2d6eab18b0894aac3a7"
+                        .to_string(),
+                    first: None,
+                    after: None,
+                },
+                Vec::<String>::new(),
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "".to_string(),
+                },
+            ),
+            (
+                QueryMsg::ObjectPins {
+                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                        .to_string(),
+                    first: None,
+                    after: None,
+                },
+                vec!["creator1".to_string(), "creator2".to_string()],
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "Hdm2eF21ryF".to_string(),
+                },
+            ),
+            (
+                QueryMsg::ObjectPins {
+                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                        .to_string(),
+                    first: Some(1),
+                    after: None,
+                },
+                vec!["creator1".to_string()],
+                PageInfo {
+                    has_next_page: true,
+                    cursor: "Hdm2eF21ryE".to_string(),
+                },
+            ),
+            (
+                QueryMsg::ObjectPins {
+                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                        .to_string(),
+                    first: Some(1),
+                    after: Some("Hdm2eF21ryE".to_string()),
+                },
+                vec!["creator2".to_string()],
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "Hdm2eF21ryF".to_string(),
+                },
+            ),
+        ];
+
+        for case in cases {
+            let result = query(deps.as_ref(), mock_env(), case.0).unwrap();
+            let response: ObjectPinsResponse = from_binary(&result).unwrap();
+            assert_eq!(response.data, case.1);
+            assert_eq!(response.page_info, case.2);
+        }
+    }
+
+    #[test]
+    fn object_pins_non_existing() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            limits: BucketLimits::new(),
+            pagination: PaginationConfig::new(),
+        };
+        instantiate(deps.as_mut(), mock_env(), mock_info("creator1", &[]), msg).unwrap();
+
+        match query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::ObjectPins {
+                id: "unknown".to_string(),
+                after: None,
+                first: None,
+            },
+        )
+        .err()
+        .unwrap()
+        {
+            NotFound { .. } => (),
+            _ => panic!("assertion failed"),
         }
     }
 }

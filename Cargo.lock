@@ -51,6 +51,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bs58"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
+
+[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -256,6 +262,7 @@ version = "0.1.0"
 dependencies = [
  "base16ct",
  "base64 0.21.0",
+ "bs58",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",

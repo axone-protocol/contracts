@@ -6,9 +6,9 @@ undefined#/query
 
 Query messages
 
-| Abstract               | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                         |
-| :--------------------- | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------- |
-| Cannot be instantiated | Yes        | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-storage.json\*](schema/cw-storage.json "open original schema") |
+| Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                         |
+| :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------- |
+| Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-storage.json\*](schema/cw-storage.json "open original schema") |
 
 ## query Type
 
@@ -25,16 +25,3 @@ one (and only one) of
 *   [ObjectData](cw-storage-querymsg-oneof-objectdata.md "check type definition")
 
 *   [ObjectPins](cw-storage-querymsg-oneof-objectpins.md "check type definition")
-
-# QueryMsg Definitions
-
-## Definitions group Uint128
-
-Reference this group by using
-
-```json
-{"$ref":"undefined#/query/definitions/Uint128"}
-```
-
-| Property | Type | Required | Nullable | Defined by |
-| :------- | :--- | :------- | :------- | :--------- |

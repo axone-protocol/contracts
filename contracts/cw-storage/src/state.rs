@@ -1,7 +1,7 @@
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
-use crate::msg::BucketLimits;
-use cosmwasm_std::{Addr, Uint128};
+use crate::msg::{BucketLimits, ObjectResponse, PaginationConfig};
+use cosmwasm_std::{Addr, StdError, StdResult, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -16,6 +16,8 @@ pub struct Bucket {
     pub name: String,
     /// The limits of the bucket.
     pub limits: Limits,
+    /// The configuration for paginated query.
+    pub pagination: Pagination,
     /// Some information on the current bucket usage.
     pub stat: BucketStat,
 }
@@ -29,7 +31,12 @@ pub struct BucketStat {
 }
 
 impl Bucket {
-    pub fn new(owner: Addr, name: String, limits: Limits) -> Result<Self, BucketError> {
+    pub fn try_new(
+        owner: Addr,
+        name: String,
+        limits: Limits,
+        pagination: Pagination,
+    ) -> Result<Self, BucketError> {
         let n: String = name.split_whitespace().collect();
         if n.is_empty() {
             return Err(EmptyName);
@@ -39,6 +46,7 @@ impl Bucket {
             owner,
             name: n,
             limits,
+            pagination,
             stat: BucketStat {
                 size: Uint128::zero(),
                 object_count: Uint128::zero(),
@@ -84,6 +92,55 @@ impl From<Limits> for BucketLimits {
     }
 }
 
+/// Pagination is the type carrying configuration for paginated queries.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Pagination {
+    /// The maximum elements a page can contains.
+    pub max_page_size: u32,
+    /// The default number of elements in a page.
+    pub default_page_size: u32,
+}
+
+const MAX_PAGE_MAX_SIZE: u32 = u32::MAX - 1;
+
+impl Pagination {
+    fn try_new(max_page_size: u32, default_page_size: u32) -> StdResult<Pagination> {
+        if max_page_size > MAX_PAGE_MAX_SIZE {
+            return Err(StdError::generic_err(
+                "'max_page_size' cannot exceed 'u32::MAX - 1'",
+            ));
+        }
+
+        if default_page_size > max_page_size {
+            return Err(StdError::generic_err(
+                "'default_page_size' cannot exceed 'max_page_size'",
+            ));
+        }
+
+        Ok(Pagination {
+            max_page_size,
+            default_page_size,
+        })
+    }
+}
+
+impl From<Pagination> for PaginationConfig {
+    fn from(value: Pagination) -> Self {
+        PaginationConfig {
+            max_page_size: Some(value.max_page_size),
+            default_page_size: Some(value.default_page_size),
+        }
+    }
+}
+
+impl TryFrom<PaginationConfig> for Pagination {
+    type Error = StdError;
+
+    fn try_from(value: PaginationConfig) -> StdResult<Pagination> {
+        Pagination::try_new(value.max_page_size(), value.default_page_size())
+    }
+}
+
 pub const BUCKET: Item<Bucket> = Item::new("bucket");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -96,6 +153,17 @@ pub struct Object {
     pub size: Uint128,
     /// The number of pin on this object.
     pub pin_count: Uint128,
+}
+
+impl From<&Object> for ObjectResponse {
+    fn from(object: &Object) -> Self {
+        ObjectResponse {
+            id: object.id.clone(),
+            size: object.size,
+            owner: object.owner.clone().into(),
+            is_pinned: object.pin_count > Uint128::zero(),
+        }
+    }
 }
 
 pub struct ObjectIndexes<'a> {

@@ -1,15 +1,19 @@
-# Untitled string in cw-storage Schema
+# Untitled undefined type in cw-storage Schema
 
 ```txt
-undefined#/responses/objects/definitions/PageInfo/properties/end_cursor
+undefined#/instantiate/properties/pagination
 ```
 
-The cursor to the previous page.
+The configuration for paginated query.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                         |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-storage.json\*](schema/cw-storage.json "open original schema") |
 
-## end\_cursor Type
+## pagination Type
 
-`string`
+merged type ([Details](cw-storage-instantiatemsg-properties-pagination.md))
+
+all of
+
+*   [Untitled undefined type in cw-storage](cw-storage-instantiatemsg-properties-pagination-allof-0.md "check type definition")

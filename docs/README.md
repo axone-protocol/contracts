@@ -94,6 +94,8 @@
 
 *   [Untitled object in cw-storage](./cw-storage-instantiatemsg-definitions-bucketlimits.md "BucketLimits is the type of the limits of a bucket") – `undefined#/instantiate/definitions/BucketLimits`
 
+*   [Untitled object in cw-storage](./cw-storage-instantiatemsg-definitions-paginationconfig.md "PaginationConfig is the type carrying configuration for paginated queries") – `undefined#/instantiate/definitions/PaginationConfig`
+
 *   [Untitled object in cw-storage](./cw-storage-executemsg-oneof-storeobject-properties-store_object.md) – `undefined#/execute/oneOf/0/properties/store_object`
 
 *   [Untitled object in cw-storage](./cw-storage-executemsg-oneof-forgetobject-properties-forget_object.md) – `undefined#/execute/oneOf/1/properties/forget_object`
@@ -113,6 +115,8 @@
 *   [Untitled object in cw-storage](./cw-storage-querymsg-oneof-objectpins-properties-object_pins.md) – `undefined#/query/oneOf/4/properties/object_pins`
 
 *   [Untitled object in cw-storage](./cw-storage-responses-bucketresponse-definitions-bucketlimits.md "BucketLimits is the type of the limits of a bucket") – `undefined#/responses/bucket/definitions/BucketLimits`
+
+*   [Untitled object in cw-storage](./cw-storage-responses-bucketresponse-definitions-paginationconfig.md "PaginationConfig is the type carrying configuration for paginated queries") – `undefined#/responses/bucket/definitions/PaginationConfig`
 
 *   [Untitled object in cw-template](./cw-template-executemsg-oneof-increment-properties-increment.md) – `undefined#/execute/oneOf/0/properties/increment`
 

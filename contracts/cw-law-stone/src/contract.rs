@@ -7,6 +7,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_storage::msg::ExecuteMsg as StorageMsg;
+use cw_utils::parse_reply_execute_data;
 use logic_bindings::LogicCustomQuery;
 
 use crate::error::ContractError;
@@ -187,17 +188,22 @@ mod tests {
     use super::*;
     use crate::msg::ProgramResponse;
     use crate::state::{LawStone, Object, DEPENDENCIES, PROGRAM};
-    use cosmwasm_std::testing::{mock_env, mock_info, MockQuerierCustomHandlerResult};
-    use cosmwasm_std::{
-        from_binary, to_binary, CosmosMsg, Event, Order, SubMsgResponse, SubMsgResult, SystemError,
-        SystemResult,
+    use cosmwasm_std::testing::{
+        mock_dependencies, mock_env, mock_info, MockQuerierCustomHandlerResult,
     };
+    use cosmwasm_std::{
+        from_binary, to_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
+        SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
+    };
+    use cw_storage::msg::{ObjectPinsResponse, PageInfo};
+    use cw_storage::msg::{ObjectResponse, QueryMsg as StorageQuery};
     use logic_bindings::testing::mock::{
         mock_dependencies_with_logic_and_balance, mock_dependencies_with_logic_handler,
     };
     use logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution, Term,
     };
+    use std::collections::VecDeque;
     use url::Url;
 
     fn custom_logic_handler_with_dependencies(
@@ -401,7 +407,7 @@ mod tests {
             let res = response.unwrap();
 
             let program = PROGRAM.load(&deps.storage).unwrap();
-            assert_eq!(case.clone().object_id, program.object_id);
+            assert_eq!(case.clone().object_id, program.law.object_id);
 
             let deps_len_requirement = case.clone().dependencies.len();
 
@@ -488,6 +494,157 @@ mod tests {
                 assert_eq!(query, "consult('cosmwasm:cw-storage:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
+        }
+    }
+
+    #[test]
+    fn break_stone() {
+        let cases = vec![
+            (2, vec![]),
+            (1, vec![]),
+            (
+                1,
+                vec![Object {
+                    storage_address: "addr1".to_string(),
+                    object_id: "object1".to_string(),
+                }],
+            ),
+            (
+                3,
+                vec![
+                    Object {
+                        storage_address: "addr1".to_string(),
+                        object_id: "object1".to_string(),
+                    },
+                    Object {
+                        storage_address: "addr2".to_string(),
+                        object_id: "object2".to_string(),
+                    },
+                ],
+            ),
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+            deps.querier.update_wasm(move |req| match req {
+                WasmQuery::ContractInfo { .. } => {
+                    let mut contract_info = ContractInfoResponse::default();
+                    contract_info.admin = Some("creator".to_string());
+                    SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+                }
+                WasmQuery::Smart { contract_addr, msg } if contract_addr == "cw-storage1" => {
+                    match from_binary(&msg) {
+                        Ok(StorageQuery::ObjectPins {
+                            id,
+                            first: Some(1u32),
+                            after: None,
+                        }) if id == "program-id" => SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&ObjectPinsResponse {
+                                data: vec!["creator".to_string()],
+                                page_info: PageInfo {
+                                    has_next_page: case.0 > 1,
+                                    cursor: "".to_string(),
+                                },
+                            })
+                            .unwrap(),
+                        )),
+                        _ => SystemResult::Err(SystemError::Unknown {}),
+                    }
+                }
+                _ => SystemResult::Err(SystemError::Unknown {}),
+            });
+
+            PROGRAM
+                .save(
+                    &mut deps.storage,
+                    &LawStone {
+                        broken: false,
+                        law: Object {
+                            object_id: "program-id".to_string(),
+                            storage_address: "cw-storage1".to_string(),
+                        },
+                    },
+                )
+                .unwrap();
+            for dep in case.1.clone() {
+                let mut id = dep.storage_address.to_owned();
+                id.push_str(dep.object_id.as_str());
+                DEPENDENCIES
+                    .save(&mut deps.storage, id.as_str(), &dep.clone())
+                    .unwrap();
+            }
+
+            let info = mock_info("creator", &[]);
+            let res = execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                ExecuteMsg::BreakStone,
+            )
+            .unwrap();
+
+            assert_eq!(PROGRAM.load(&mut deps.storage).unwrap().broken, true);
+
+            let mut sub_msgs: VecDeque<SubMsg> = res.messages.into();
+            match sub_msgs.pop_front() {
+                Some(SubMsg {
+                    msg: cosmos_msg, ..
+                }) => match cosmos_msg {
+                    CosmosMsg::Wasm(WasmMsg::Execute {
+                        contract_addr, msg, ..
+                    }) => {
+                        assert_eq!(contract_addr, "cw-storage1".to_string());
+                        if case.0 > 1 {
+                            match from_binary(&msg) {
+                                Ok(StorageMsg::UnpinObject { id }) => {
+                                    assert_eq!(id, "program-id".to_string());
+                                }
+                                _ => assert!(
+                                    false,
+                                    "storage message should be a UnpinObject message"
+                                ),
+                            }
+                        } else {
+                            match from_binary(&msg) {
+                                Ok(StorageMsg::ForgetObject { id }) => {
+                                    assert_eq!(id, "program-id".to_string());
+                                }
+                                _ => assert!(
+                                    false,
+                                    "storage message should be a ForgetObject message"
+                                ),
+                            }
+                        }
+                    }
+                    _ => assert!(false, "sub message should be a WasmMsg message"),
+                },
+                _ => assert!(false, "result should contains sub messages"),
+            }
+
+            for dep in case.1 {
+                match sub_msgs.pop_front() {
+                    Some(SubMsg {
+                        msg: cosmos_msg, ..
+                    }) => match cosmos_msg {
+                        CosmosMsg::Wasm(WasmMsg::Execute {
+                            contract_addr, msg, ..
+                        }) => {
+                            assert_eq!(contract_addr, dep.storage_address);
+                            match from_binary(&msg) {
+                                Ok(StorageMsg::UnpinObject { id }) => {
+                                    assert_eq!(id, dep.object_id);
+                                }
+                                _ => assert!(
+                                    false,
+                                    "storage message should be a UnpinObject message"
+                                ),
+                            }
+                        }
+                        _ => assert!(false, "sub message should be a WasmMsg message"),
+                    },
+                    _ => assert!(false, "result should contains sub messages"),
+                }
+            }
         }
     }
 }

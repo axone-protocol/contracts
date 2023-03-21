@@ -20,6 +20,9 @@ pub enum ContractError {
 
     #[error("Failed parse dependency uri {uri:?}: {error:?}")]
     LogicLoadUri { error: UriError, uri: String },
+
+    #[error("Only the contract admin can perform this operation.")]
+    Unauthorized {},
 }
 
 impl ContractError {

@@ -647,4 +647,77 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn break_stone_admin() {
+        let cases = vec![
+            (
+                "not-admin",
+                true,
+                false,
+                Some(ContractError::Unauthorized {}),
+            ),
+            (
+                "not-admin",
+                true,
+                true,
+                Some(ContractError::Unauthorized {}),
+            ),
+            ("admin", true, false, None),
+            ("anyone", false, false, None),
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+            deps.querier.update_wasm(move |req| match req {
+                WasmQuery::ContractInfo { .. } => {
+                    let mut contract_info = ContractInfoResponse::default();
+                    contract_info.admin = match case.1 {
+                        true => Some("admin".to_string()),
+                        false => None,
+                    };
+                    SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+                }
+                WasmQuery::Smart { .. } => SystemResult::Ok(ContractResult::Ok(
+                    to_binary(&ObjectPinsResponse {
+                        data: vec!["creator".to_string()],
+                        page_info: PageInfo {
+                            has_next_page: false,
+                            cursor: "".to_string(),
+                        },
+                    })
+                    .unwrap(),
+                )),
+                _ => SystemResult::Err(SystemError::Unknown {}),
+            });
+
+            PROGRAM
+                .save(
+                    &mut deps.storage,
+                    &LawStone {
+                        broken: case.2,
+                        law: Object {
+                            object_id: "id".to_string(),
+                            storage_address: "addr".to_string(),
+                        },
+                    },
+                )
+                .unwrap();
+
+            let res = execute(
+                deps.as_mut(),
+                mock_env(),
+                mock_info(case.0, &[]),
+                ExecuteMsg::BreakStone,
+            );
+
+            match case.3 {
+                Some(err) => {
+                    assert_eq!(res.is_err(), true);
+                    assert_eq!(res.err().unwrap(), err);
+                }
+                None => assert_eq!(res.is_ok(), true),
+            };
+        }
+    }
 }

@@ -51,7 +51,7 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::Limits;
-    use crate::ContractError::Pinned;
+    use crate::ContractError::ObjectAlreadyPinned;
     use cosmwasm_std::{Order, StdError, Uint128};
     use std::any::type_name;
 
@@ -213,7 +213,7 @@ pub mod execute {
             .next()
             .is_some()
         {
-            return Err(Pinned {});
+            return Err(ObjectAlreadyPinned {});
         }
         let object = query::object(deps.as_ref(), object_id.clone())?;
         BUCKET.update(deps.storage, |mut b| -> Result<_, ContractError> {
@@ -1581,7 +1581,7 @@ mod tests {
                 forget_senders: vec![mock_info("alice", &[])], // the sender is different from the pinner, so error
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
-                expected_error: Some(ContractError::Pinned {}),
+                expected_error: Some(ContractError::ObjectAlreadyPinned {}),
             },
             TestForgetCase {
                 pins: vec![ObjectId::from(
@@ -1612,7 +1612,7 @@ mod tests {
                 forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
-                expected_error: Some(ContractError::Pinned {}),
+                expected_error: Some(ContractError::ObjectAlreadyPinned {}),
             },
         ];
 

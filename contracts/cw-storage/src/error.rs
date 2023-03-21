@@ -9,8 +9,8 @@ pub enum ContractError {
     #[error("{0}")]
     Bucket(#[from] BucketError),
 
-    #[error("Object is pinned")]
-    Pinned {},
+    #[error("Object is already pinned")]
+    ObjectAlreadyPinned {},
 }
 
 #[derive(Error, Debug, Eq, PartialEq)]

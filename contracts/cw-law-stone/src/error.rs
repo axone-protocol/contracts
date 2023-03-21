@@ -9,9 +9,6 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("Not implemented")]
-    NotImplemented {},
-
     #[error("{0}")]
     Parse(#[from] ParseReplyError),
 
@@ -30,7 +27,7 @@ impl ContractError {
         ContractError::LogicLoadUri { error, uri }
     }
 }
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum UriError {
     #[error("{0}")]
     Parse(#[from] ParseError),

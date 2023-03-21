@@ -1,4 +1,3 @@
-use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -6,8 +5,9 @@ use cosmwasm_std::{
     SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
-use cw_storage::msg::ExecuteMsg as StorageMsg;
-use cw_utils::parse_reply_execute_data;
+use cw_storage::msg::{
+    ExecuteMsg as StorageMsg, ObjectPinsResponse, PageInfo, QueryMsg as StorageQuery,
+};
 use logic_bindings::LogicCustomQuery;
 
 use crate::error::ContractError;
@@ -62,13 +62,75 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
+    use crate::state::{Object, DEPENDENCIES, PROGRAM};
+    use cosmwasm_std::Order;
 
     pub fn break_stone(
-        _deps: DepsMut<'_>,
-        _env: Env,
-        _info: MessageInfo,
+        deps: DepsMut<'_>,
+        env: Env,
+        info: MessageInfo,
     ) -> Result<Response, ContractError> {
-        Err(NotImplemented {})
+        match deps
+            .querier
+            .query_wasm_contract_info(env.contract.address)?
+            .admin
+        {
+            Some(admin_addr) if admin_addr != info.sender.to_string() => {
+                Err(ContractError::Unauthorized {})
+            }
+            _ => Ok({}),
+        }?;
+
+        let resp = Response::new().add_attribute("action", "break_stone");
+
+        let mut stone = PROGRAM.load(deps.storage)?;
+        if stone.broken {
+            return Ok(resp);
+        }
+        stone.broken = true;
+        PROGRAM.save(deps.storage, &stone)?;
+
+        let law_release_msg = match deps
+            .querier
+            .query_wasm_smart::<ObjectPinsResponse>(
+                stone.law.storage_address.clone(),
+                &StorageQuery::ObjectPins {
+                    id: stone.law.object_id.clone(),
+                    first: Some(1u32),
+                    after: None,
+                },
+            )?
+            .page_info
+            .has_next_page
+        {
+            true => StorageMsg::UnpinObject {
+                id: stone.law.object_id,
+            },
+            _ => StorageMsg::ForgetObject {
+                id: stone.law.object_id,
+            },
+        };
+
+        Ok(resp
+            .add_message(WasmMsg::Execute {
+                contract_addr: stone.law.storage_address,
+                msg: to_binary(&law_release_msg)?,
+                funds: vec![],
+            })
+            .add_messages(
+                DEPENDENCIES
+                    .range(deps.storage, None, None, Order::Ascending)
+                    .map(|res: StdResult<(String, Object)>| {
+                        res.and_then(|(_, obj)| {
+                            Ok(WasmMsg::Execute {
+                                contract_addr: obj.storage_address,
+                                msg: to_binary(&StorageMsg::UnpinObject { id: obj.object_id })?,
+                                funds: vec![],
+                            })
+                        })
+                    })
+                    .collect::<StdResult<Vec<WasmMsg>>>()?,
+            ))
     }
 }
 
@@ -195,8 +257,6 @@ mod tests {
         from_binary, to_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
         SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
-    use cw_storage::msg::{ObjectPinsResponse, PageInfo};
-    use cw_storage::msg::{ObjectResponse, QueryMsg as StorageQuery};
     use logic_bindings::testing::mock::{
         mock_dependencies_with_logic_and_balance, mock_dependencies_with_logic_handler,
     };

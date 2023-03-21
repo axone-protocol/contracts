@@ -720,4 +720,49 @@ mod tests {
             };
         }
     }
+
+    #[test]
+    fn break_broken_stone() {
+        let mut deps = mock_dependencies();
+        deps.querier.update_wasm(|req| match req {
+            WasmQuery::ContractInfo { .. } => {
+                let mut contract_info = ContractInfoResponse::default();
+                contract_info.admin = Some("creator".to_string());
+                SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+            }
+            _ => SystemResult::Err(SystemError::Unknown {}),
+        });
+
+        PROGRAM
+            .save(
+                &mut deps.storage,
+                &LawStone {
+                    broken: true,
+                    law: Object {
+                        object_id: "id".to_string(),
+                        storage_address: "addr".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+        DEPENDENCIES
+            .save(
+                &mut deps.storage,
+                "id",
+                &Object {
+                    object_id: "id2".to_string(),
+                    storage_address: "addr2".to_string(),
+                },
+            )
+            .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("creator", &[]),
+            ExecuteMsg::BreakStone,
+        );
+        assert_eq!(res.is_ok(), true);
+        assert_eq!(res.ok().unwrap().messages.len(), 0);
+    }
 }

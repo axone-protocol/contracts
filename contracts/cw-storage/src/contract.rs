@@ -1530,6 +1530,7 @@ mod tests {
         pins: Vec<ObjectId>,
         pins_senders: Vec<MessageInfo>,
         forget_objects: Vec<ObjectId>,
+        forget_senders: Vec<MessageInfo>,
         expected_count: usize,
         expected_total_size: Uint128,
         expected_error: Option<ContractError>,
@@ -1544,6 +1545,7 @@ mod tests {
                 forget_objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
+                forget_senders: vec![mock_info("bob", &[])],
                 expected_count: 2,
                 expected_total_size: Uint128::new(9),
                 expected_error: None,
@@ -1559,6 +1561,7 @@ mod tests {
                         "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
                     ),
                 ],
+                forget_senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
                 expected_count: 1,
                 expected_total_size: Uint128::new(4),
                 expected_error: None,
@@ -1571,6 +1574,38 @@ mod tests {
                 forget_objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
+                forget_senders: vec![mock_info("alice", &[])], // the sender is different from the pinner, so error
+                expected_count: 3,
+                expected_total_size: Uint128::new(13),
+                expected_error: Some(ContractError::Pinned {}),
+            },
+            TestForgetCase {
+                pins: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
+                pins_senders: vec![mock_info("bob", &[])],
+                forget_objects: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
+                forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, so forget should work
+                expected_count: 2,
+                expected_total_size: Uint128::new(13),
+                expected_error: None,
+            },
+            TestForgetCase {
+                pins: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                ],
+                pins_senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                forget_objects: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
+                forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
                 expected_error: Some(ContractError::Pinned {}),
@@ -1630,16 +1665,19 @@ mod tests {
 
             let mut last_result: Option<Result<Response, ContractError>> = None;
 
-            case.forget_objects.iter().for_each(|object_id| {
-                last_result = Some(execute(
-                    deps.as_mut(),
-                    mock_env(),
-                    mock_info("boby", &[]),
-                    ExecuteMsg::ForgetObject {
-                        id: object_id.clone(),
-                    },
-                ));
-            });
+            case.forget_objects
+                .iter()
+                .zip(case.forget_senders)
+                .for_each(|(object_id, info)| {
+                    last_result = Some(execute(
+                        deps.as_mut(),
+                        mock_env(),
+                        info,
+                        ExecuteMsg::ForgetObject {
+                            id: object_id.clone(),
+                        },
+                    ));
+                });
 
             match case.expected_error {
                 Some(err) => assert_eq!(last_result.unwrap().unwrap_err(), err),

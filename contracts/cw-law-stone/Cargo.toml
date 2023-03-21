@@ -32,10 +32,10 @@ cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw2.workspace = true
+logic-bindings = { version = "0.2", path = "../../packages/logic-bindings" }
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-logic-bindings = { version = "0.2", path = "../../packages/logic-bindings" }
 
 [dev-dependencies]
 cw-multi-test.workspace = true

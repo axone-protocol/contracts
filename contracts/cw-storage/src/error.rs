@@ -6,11 +6,11 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("Not implemented")]
-    NotImplemented {},
-
     #[error("{0}")]
     Bucket(#[from] BucketError),
+
+    #[error("Object is already pinned")]
+    ObjectAlreadyPinned {},
 }
 
 #[derive(Error, Debug, Eq, PartialEq)]

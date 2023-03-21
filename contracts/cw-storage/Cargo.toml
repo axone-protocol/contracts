@@ -28,6 +28,7 @@ rpath = false
 
 [dependencies]
 base16ct = "0.1.1"
+bs58 = "0.4.0"
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
@@ -37,7 +38,6 @@ schemars.workspace = true
 serde.workspace = true
 sha2 = "0.10.6"
 thiserror.workspace = true
-bs58 = "0.4.0"
 
 [dev-dependencies]
 base64 = "0.21.0"

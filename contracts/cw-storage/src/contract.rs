@@ -198,9 +198,13 @@ pub mod execute {
 
     pub fn forget_object(
         deps: DepsMut,
-        _info: MessageInfo,
+        info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
+        if pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
+            pins().remove(deps.storage, (object_id.clone(), info.sender))?;
+        }
+
         if pins()
             .idx
             .object
@@ -1589,7 +1593,7 @@ mod tests {
                 )],
                 forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, so forget should work
                 expected_count: 2,
-                expected_total_size: Uint128::new(13),
+                expected_total_size: Uint128::new(9),
                 expected_error: None,
             },
             TestForgetCase {

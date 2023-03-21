@@ -32,6 +32,7 @@ cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
 cw-storage = { path = "../cw-storage" }
 cw-storage-plus.workspace = true
+cw-utils.worksapce = true
 cw2.workspace = true
 logic-bindings = { version = "0.2", path = "../../packages/logic-bindings" }
 schemars.workspace = true

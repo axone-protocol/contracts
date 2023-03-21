@@ -7,6 +7,7 @@ cosmwasm-std = "1.2.2"
 cosmwasm-storage = "1.2.2"
 cw-multi-test = "0.15.1"
 cw-storage-plus = "0.15.1"
+cw-utils = "1.0.1"
 cw2 = "0.15.1"
 schemars = "0.8.12"
 serde = { version = "1.0.158", default-features = false, features = ["derive"] }

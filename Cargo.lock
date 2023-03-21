@@ -216,6 +216,7 @@ dependencies = [
  "cw-multi-test",
  "cw-storage",
  "cw-storage-plus",
+ "cw-utils",
  "cw2",
  "logic-bindings",
  "schemars",

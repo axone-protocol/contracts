@@ -6,9 +6,6 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("Not implemented")]
-    NotImplemented {},
-
     #[error("{0}")]
     Bucket(#[from] BucketError),
 

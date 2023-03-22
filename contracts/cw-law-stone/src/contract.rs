@@ -12,6 +12,7 @@ use logic_bindings::LogicCustomQuery;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::INSTANTIATE_CONTEXT;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:law-stone";
@@ -29,15 +30,17 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let store_msg = StorageMsg::StoreObject {
-        data: msg.program,
+        data: msg.program.clone(),
         pin: true,
     };
 
     let store_program_msg = WasmMsg::Execute {
-        contract_addr: msg.storage_address,
+        contract_addr: msg.storage_address.clone(),
         msg: to_binary(&store_msg)?,
         funds: vec![],
     };
+
+    INSTANTIATE_CONTEXT.save(deps.storage, &(msg.storage_address, msg.program))?;
 
     Ok(Response::new().add_submessage(SubMsg::reply_on_success(
         store_program_msg,
@@ -171,6 +174,10 @@ mod tests {
             },
             _ => assert!(false, "cosmos sub message should be a Wasm message execute"),
         }
+        assert_eq!("okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
+                   INSTANTIATE_CONTEXT.load(&deps.storage).unwrap().0);
+        assert_eq!(program,
+                   INSTANTIATE_CONTEXT.load(&deps.storage).unwrap().1)
     }
 
     struct StoreTestCase {

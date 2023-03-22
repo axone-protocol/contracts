@@ -1,7 +1,11 @@
+use cosmwasm_std::Binary;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cw_storage_plus::{Item, Map};
+
+/// State to store context during contract instantiation
+pub const INSTANTIATE_CONTEXT: Item<'_, (String, Binary)> = Item::new("instantiate");
 
 /// Represent a link to an Object stored in the `cw-storage` contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

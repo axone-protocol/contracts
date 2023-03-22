@@ -1,0 +1,36 @@
+branches:
+  - main
+
+plugins:
+  - - "@semantic-release/commit-analyzer"
+    - preset: conventionalcommits
+  - - "@semantic-release/release-notes-generator"
+    - preset: conventionalcommits
+  - - "@semantic-release/changelog"
+    - changelogFile: CHANGELOG.md
+      changelogTitle: "# ØKP4 contracts"
+  - - "@google/semantic-release-replace-plugin"
+    - replacements:
+        - files:
+            - contracts/*/Cargo.toml
+            - packages/*/Cargo.toml
+          from: ^version = "\d+\.\d+\.\d+"$
+          to: version = "${nextRelease.version}"
+  - - "@semantic-release/exec"
+    - prepareCmd: |
+        cargo make generate_docs
+        cargo make release_assets
+  - - "@semantic-release/github"
+    - assets:
+        - path: "./target/wasm32-unknown-unknown/release/cw_storage.wasm"
+        - path: "./target/wasm32-unknown-unknown/release/cw_law_stone.wasm"
+        - path: "./target/wasm32-unknown-unknown/release/sha256sum.txt"
+        - path: "./docs/schema/cw-storage.json"
+        - path: "./docs/schema/cw-law-stone.json"
+  - - "@semantic-release/git"
+    - assets:
+        - CHANGELOG.md
+        - contracts/*/Cargo.toml
+        - packages/*/Cargo.toml
+        - docs/**
+      message: "chore(release): perform release ${nextRelease.version}"

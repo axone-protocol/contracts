@@ -126,6 +126,21 @@ rm -rf $SCHEMA_FOLDER
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 '''
 
+[tasks.release_assets]
+dependencies = ["wasm"]
+script = '''
+echo "🐾 Generating release binary checksums into ${DIR_WASM}"
+{
+  cd ${DIR_WASM}
+  rm sha256sum.txt || true
+  touch sha256sum.txt
+
+  for asset in `ls *.wasm`; do
+    shasum -a 256 ${asset} >> sha256sum.txt
+  done
+}
+'''
+
 [tasks.chain-clean]
 condition = { fail_message = "🚫 The chain is running" }
 condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]

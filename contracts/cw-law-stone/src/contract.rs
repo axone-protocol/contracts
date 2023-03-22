@@ -13,6 +13,7 @@ use logic_bindings::LogicCustomQuery;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::INSTANTIATE_CONTEXT;
+use crate::helper::ask_response_to_submsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:law-stone";
@@ -76,16 +77,46 @@ pub fn reply(
 }
 
 pub mod reply {
+    use cosmwasm_std::{Attribute, from_binary};
+    use cw_storage::msg::BucketResponse;
+    use cw_storage::msg::ExecuteMsg::StoreObject;
+    use logic_bindings::{AskResponse, Substitution};
+    use crate::helper::get_reply_event_attribute;
+    use crate::state::{PROGRAM, Object};
     use super::*;
 
     pub fn store_program_reply(
-        _deps: DepsMut<'_, LogicCustomQuery>,
+        deps: DepsMut<'_, LogicCustomQuery>,
         _env: Env,
         msg: Reply,
     ) -> Result<Response, ContractError> {
-        let _ = parse_reply_execute_data(msg)?;
-        Err(StdError::generic_err("Not implemented").into())
+
+        let context = INSTANTIATE_CONTEXT.load(deps.storage)?;
+
+        msg.result.into_result()
+            .map_err(|_| ContractError::EmptyReply)
+            .and_then(|e| get_reply_event_attribute(e.events, "id".to_string()).ok_or(ContractError::NoObjectId))
+            .map(|obj_id| Object {
+                object_id: obj_id.to_string(),
+                storage_address: context.0.clone()
+            })
+            .and_then(|obj| -> Result<(), ContractError> {
+                PROGRAM.save(deps.storage, &obj).map_err(|e| ContractError::from(e))
+            })
+            .and_then(|_| -> Result<AskResponse, ContractError> {
+                let req = LogicCustomQuery::Ask { program: from_binary(&context.1)?, query: "source_files(Files).".to_string() }.into();
+                deps.querier.query(&req).map_err(|e| ContractError::from(e))
+            })
+            .and_then(|res| ask_response_to_submsg(res, context.0, "Files".to_string()))
+            .map(|msg| {
+                // Clean instantiate context
+                INSTANTIATE_CONTEXT.remove(deps.storage);
+                Response::new()
+                    .add_submessages(msg)
+            })
     }
+
+
 }
 
 #[cfg(test)]
@@ -93,10 +124,7 @@ mod tests {
     use super::*;
     use crate::state::{DEPENDENCIES, PROGRAM};
     use cosmwasm_std::testing::{mock_env, mock_info, MockQuerierCustomHandlerResult};
-    use cosmwasm_std::{
-        from_binary, to_binary, CosmosMsg, Order, SubMsgResponse, SubMsgResult, SystemError,
-        SystemResult,
-    };
+    use cosmwasm_std::{from_binary, to_binary, CosmosMsg, Order, SubMsgResponse, SubMsgResult, SystemError, SystemResult, Event, Attribute};
     use logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
     use logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution, Term,
@@ -234,20 +262,22 @@ mod tests {
                 custom_logic_handler_with_dependencies(uris.to_vec(), request)
             });
 
-            let object = ObjectResponse {
-                id: case.object_id.clone(),
-                owner: "creator".to_string(),
-                is_pinned: true,
-                size: Default::default(),
-            };
             let reply = Reply {
                 id: STORE_PROGRAM_REPLY_ID,
                 result: SubMsgResult::Ok(SubMsgResponse {
-                    events: vec![],
-                    data: Some(to_binary(&object).unwrap()),
+                    events: vec![
+                        Event::new("e".to_string()).add_attribute("id".to_string(), case.object_id.clone())
+                    ],
+                    data: None,
                 }),
             };
-            let res = reply::store_program_reply(deps.as_mut(), mock_env(), reply).unwrap();
+
+            // Configure the instantiate context
+            let program = to_binary("foo(_) :- true.").unwrap();
+            INSTANTIATE_CONTEXT.save(deps.as_mut().storage, &("okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(), program)).unwrap();
+
+            let response = reply::store_program_reply(deps.as_mut(), mock_env(), reply);
+            let res = response.unwrap();
 
             let program = PROGRAM.load(&deps.storage).unwrap();
             assert_eq!(case.object_id.clone(), program.object_id);

@@ -12,4 +12,13 @@ pub enum ContractError {
 
     #[error("{0}")]
     Parse(#[from] ParseReplyError),
+
+    #[error("Could not find ObjectId of stored program")]
+    NoObjectId,
+
+    #[error("Empty data on reply")]
+    EmptyReply,
+
+    #[error("Invalid reply message: {0}")]
+    InvalidReplyMsg(StdError),
 }

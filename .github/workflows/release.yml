@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    if: github.ref == 'refs/heads/main' && github.actor == 'bot-anik'
+    uses: ./.github/workflows/lint.yml
+
+  build:
+    if: github.ref == 'refs/heads/main' && github.actor == 'bot-anik'
+    uses: ./.github/workflows/build.yml
+
+  test:
+    if: github.ref == 'refs/heads/main' && github.actor == 'bot-anik'
+    uses: ./.github/workflows/test.yml
+
+  perfom-release:
+    if: github.ref == 'refs/heads/main' && github.actor == 'bot-anik'
+    needs:
+      - lint
+      - build
+      - test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.OKP4_TOKEN }}
+
+      - name: Setup rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.64
+          default: true
+          override: true
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Release project
+        uses: cycjimmy/semantic-release-action@v3
+        with:
+          semantic_version: 19.0.2
+          branch: main
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/exec
+            @semantic-release/git
+            @google/semantic-release-replace-plugin
+          extends: |
+            conventional-changelog-conventionalcommits
+        env:
+          GITHUB_TOKEN: ${{ secrets.OKP4_TOKEN }}
+          GIT_AUTHOR_NAME: ${{ secrets.OKP4_BOT_GIT_AUTHOR_NAME }}
+          GIT_AUTHOR_EMAIL: ${{ secrets.OKP4_BOT_GIT_AUTHOR_EMAIL }}
+          GIT_COMMITTER_NAME: ${{ secrets.OKP4_BOT_GIT_COMMITTER_NAME }}
+          GIT_COMMITTER_EMAIL: ${{ secrets.OKP4_BOT_GIT_COMMITTER_EMAIL }}

@@ -6,14 +6,12 @@ use cosmwasm_std::{
     SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
-use cw_storage::msg::{ExecuteMsg as StorageMsg, ObjectResponse};
-use cw_utils::parse_reply_execute_data;
+use cw_storage::msg::ExecuteMsg as StorageMsg;
 use logic_bindings::LogicCustomQuery;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::INSTANTIATE_CONTEXT;
-use crate::helper::ask_response_to_submsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:law-stone";
@@ -77,68 +75,114 @@ pub fn reply(
 }
 
 pub mod reply {
-    use cosmwasm_std::{Attribute, from_binary, QueryRequest};
-    use cw_storage::msg::BucketResponse;
-    use cw_storage::msg::ExecuteMsg::StoreObject;
-    use logic_bindings::{AskResponse, Substitution};
-    use crate::helper::get_reply_event_attribute;
-    use crate::state::{PROGRAM, Object};
     use super::*;
+    use crate::helper::{ask_response_to_objects, get_reply_event_attribute};
+    use crate::state::{Object, DEPENDENCIES, PROGRAM};
+    use url::Url;
 
     pub fn store_program_reply(
         deps: DepsMut<'_, LogicCustomQuery>,
         _env: Env,
         msg: Reply,
     ) -> Result<Response, ContractError> {
-
         let context = INSTANTIATE_CONTEXT.load(deps.storage)?;
 
-        msg.result.into_result()
+        msg.result
+            .into_result()
             .map_err(|_| ContractError::EmptyReply)
-            .and_then(|e| get_reply_event_attribute(e.events, "id".to_string()).ok_or(ContractError::NoObjectId))
+            .and_then(|e| {
+                get_reply_event_attribute(e.events, "id".to_string())
+                    .ok_or(ContractError::NoObjectId)
+            })
             .map(|obj_id| Object {
                 object_id: obj_id.to_string(),
-                storage_address: context.0.clone()
+                storage_address: context.0.clone(),
             })
-            .and_then(|obj| -> Result<(), ContractError> {
-                PROGRAM.save(deps.storage, &obj).map_err(|e| ContractError::from(e))
-            })
-            .and_then(|_| -> Result<AskResponse, ContractError> {
-                let req = build_source_files_query(context.1)?.into();
-                deps.querier.query(&req).map_err(|e| ContractError::from(e))
-            })
-            .and_then(|res| ask_response_to_submsg(res, context.0, "Files".to_string()))
-            .map(|msg| {
+            .and_then(|program| -> Result<Vec<SubMsg>, ContractError> {
+                PROGRAM
+                    .save(deps.storage, &program)
+                    .map_err(|e| ContractError::from(e))?;
+
                 // Clean instantiate context
                 INSTANTIATE_CONTEXT.remove(deps.storage);
-                Response::new()
-                    .add_submessages(msg)
+
+                let req = build_source_files_query(program.clone())?.into();
+                let res = deps
+                    .querier
+                    .query(&req)
+                    .map_err(|e| ContractError::from(e))?;
+
+                let objects = ask_response_to_objects(res, "Files".to_string())?;
+                let mut msgs = Vec::with_capacity(objects.len());
+                for obj in objects {
+                    if obj.object_id == program.object_id {
+                        continue;
+                    }
+                    DEPENDENCIES.save(deps.storage, obj.object_id.as_str(), &obj)?;
+
+                    msgs.push(SubMsg::new(WasmMsg::Execute {
+                        msg: to_binary(&StorageMsg::PinObject {
+                            id: obj.clone().object_id,
+                        })?,
+                        contract_addr: obj.clone().storage_address,
+                        funds: vec![],
+                    }));
+                }
+
+                Ok(msgs)
             })
+            .map(|msg| Response::new().add_submessages(msg))
     }
 
-    fn build_source_files_query(program: Binary) -> Result<LogicCustomQuery, ContractError> {
-        Ok(LogicCustomQuery::Ask { program: String::from_utf8(program.to_vec()).map_err(|e| StdError::invalid_utf8(e.to_string()))?, query: "source_files(Files).".to_string() })
+    pub fn build_source_files_query(program: Object) -> Result<LogicCustomQuery, ContractError> {
+        let program_uri: Url = program.try_into()?;
+
+        Ok(LogicCustomQuery::Ask {
+            program: "source_files(Files) :- bagof(File, source_file(File), Files).".to_string(),
+            query: [
+                "consult('",
+                program_uri.as_str(),
+                "'), source_files(Files).",
+            ]
+            .join("")
+            .to_string(),
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{DEPENDENCIES, PROGRAM};
+    use crate::state::{Object, DEPENDENCIES, PROGRAM};
     use cosmwasm_std::testing::{mock_env, mock_info, MockQuerierCustomHandlerResult};
-    use cosmwasm_std::{from_binary, to_binary, CosmosMsg, Order, SubMsgResponse, SubMsgResult, SystemError, SystemResult, Event, Attribute};
+    use cosmwasm_std::{
+        from_binary, to_binary, CosmosMsg, Event, Order, SubMsgResponse, SubMsgResult, SystemError,
+        SystemResult,
+    };
     use logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
     use logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution, Term,
     };
+    use url::Url;
 
     fn custom_logic_handler_with_dependencies(
         dependencies: Vec<String>,
+        program: Object,
         request: &LogicCustomQuery,
     ) -> MockQuerierCustomHandlerResult {
-        let deps_name = format!("[{}]", &dependencies.join(","));
+        let program_uri: Url = program.clone().try_into().unwrap();
+        let mut updated_deps = dependencies.clone();
+        updated_deps.push(program_uri.to_string());
+        let deps_name = format!("[{}]", &updated_deps.join(","));
+        let LogicCustomQuery::Ask {
+            program: exp_program,
+            query: exp_query,
+            ..
+        } = reply::build_source_files_query(program).unwrap();
         match request {
-            LogicCustomQuery::Ask { query, .. } if query == "source_files(Files)." => {
+            LogicCustomQuery::Ask { program, query }
+                if *query == exp_query && *program == exp_program =>
+            {
                 SystemResult::Ok(
                     to_binary(&AskResponse {
                         height: 1,
@@ -170,9 +214,8 @@ mod tests {
 
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_logic_handler(|request| {
-            custom_logic_handler_with_dependencies(vec![], request)
-        });
+        let mut deps =
+            mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
         let program = to_binary("foo(_) :- true.").unwrap();
 
         let msg = InstantiateMsg {
@@ -204,12 +247,14 @@ mod tests {
             },
             _ => assert!(false, "cosmos sub message should be a Wasm message execute"),
         }
-        assert_eq!("okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
-                   INSTANTIATE_CONTEXT.load(&deps.storage).unwrap().0);
-        assert_eq!(program,
-                   INSTANTIATE_CONTEXT.load(&deps.storage).unwrap().1)
+        assert_eq!(
+            "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
+            INSTANTIATE_CONTEXT.load(&deps.storage).unwrap().0
+        );
+        assert_eq!(program, INSTANTIATE_CONTEXT.load(&deps.storage).unwrap().1)
     }
 
+    #[derive(Clone)]
     struct StoreTestCase {
         dependencies: Vec<(String, String, String)>, // URI, contract address, object id
         object_id: String,
@@ -247,7 +292,7 @@ mod tests {
                         "0689c526187c6785dfcce28f8df19138da292598dc19548a852de1792062f271".to_string() // object id
                     ),
                 ],
-                object_id: "0689c526187c6785dfcce28f8df19138da292598dc19548a852de1792062f271"
+                object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
                     .to_string(),
             },
         ];
@@ -260,31 +305,49 @@ mod tests {
                     .map(|(uri, _, _)| uri)
                     .collect::<Vec<String>>(),
             );
+            let program_object_id = case.clone().object_id;
             let mut deps = mock_dependencies_with_logic_handler(move |request| {
-                custom_logic_handler_with_dependencies(uris.to_vec(), request)
+                custom_logic_handler_with_dependencies(
+                    uris.to_vec(),
+                    Object {
+                        object_id: program_object_id.clone(),
+                        storage_address:
+                            "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s"
+                                .to_string(),
+                    },
+                    request,
+                )
             });
 
             let reply = Reply {
                 id: STORE_PROGRAM_REPLY_ID,
                 result: SubMsgResult::Ok(SubMsgResponse {
-                    events: vec![
-                        Event::new("e".to_string()).add_attribute("id".to_string(), case.object_id.clone())
-                    ],
+                    events: vec![Event::new("e".to_string())
+                        .add_attribute("id".to_string(), case.clone().object_id)],
                     data: None,
                 }),
             };
 
             // Configure the instantiate context
             let program = Binary::from_base64("Zm9vKF8pIDotIHRydWUu").unwrap();
-            INSTANTIATE_CONTEXT.save(deps.as_mut().storage, &("okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(), program)).unwrap();
+            INSTANTIATE_CONTEXT
+                .save(
+                    deps.as_mut().storage,
+                    &(
+                        "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s"
+                            .to_string(),
+                        program,
+                    ),
+                )
+                .unwrap();
 
             let response = reply::store_program_reply(deps.as_mut(), mock_env(), reply);
             let res = response.unwrap();
 
             let program = PROGRAM.load(&deps.storage).unwrap();
-            assert_eq!(case.object_id.clone(), program.object_id);
+            assert_eq!(case.clone().object_id, program.object_id);
 
-            let deps_len_requirement = case.dependencies.len();
+            let deps_len_requirement = case.clone().dependencies.len();
 
             if deps_len_requirement > 0 {
                 assert_eq!(
@@ -293,7 +356,7 @@ mod tests {
                         .keys_raw(&deps.storage, None, None, Order::Ascending)
                         .count()
                 );
-                for (_, contract_addr, object_id) in case.dependencies {
+                for (_, contract_addr, object_id) in case.clone().dependencies {
                     let o = DEPENDENCIES.load(&deps.storage, object_id.as_str());
                     assert!(
                         o.is_ok(),
@@ -352,6 +415,27 @@ mod tests {
                     "each dependencies should be pinned by a PinObject message"
                 )
             }
+        }
+    }
+
+    #[test]
+    fn build_source_files_query() {
+        let result = reply::build_source_files_query(Object {
+            object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
+                .to_string(),
+            storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                .to_string(),
+        });
+
+        match result {
+            Ok(LogicCustomQuery::Ask { program, query }) => {
+                assert_eq!(
+                    program,
+                    "source_files(Files) :- bagof(File, source_file(File), Files)."
+                );
+                assert_eq!(query, "consult('cosmwasm:cw-storage:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
+            }
+            _ => assert!(false, "Expected Ok(LogicCustomQuery)."),
         }
     }
 }

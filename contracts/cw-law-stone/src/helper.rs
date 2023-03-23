@@ -6,7 +6,6 @@ use crate::ContractError;
 use crate::state::Object;
 use cw_storage::msg::ExecuteMsg as StorageMsg;
 use crate::ContractError::NotImplemented;
-use crate::uri::uri_to_object;
 
 pub fn get_reply_event_attribute(events: Vec<Event>, key: String) -> Option<String> {
     let r = events.iter()
@@ -39,7 +38,8 @@ pub fn ask_response_to_submsg(res: AskResponse, storage_addr: String, variable: 
 
     let mut msgs = vec![];
     for uri in uris {
-        let object = uri_to_object(uri)?;
+        let url = Url::parse(uri.as_str()).map_err(|e| ContractError::dependency_uri(e.into(), uri.clone()))?;
+        let object = Object::try_from(url).map_err(|e| ContractError::dependency_uri(e,  uri))?;
         let msg = WasmMsg::Execute {
             contract_addr: storage_addr.to_string(),
             msg: to_binary(&StorageMsg::PinObject {

@@ -221,6 +221,7 @@ dependencies = [
  "logic-bindings",
  "schemars",
  "serde",
+ "serde-json-wasm",
  "thiserror",
  "url",
 ]

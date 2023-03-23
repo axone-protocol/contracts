@@ -32,7 +32,7 @@ pub fn ask_response_to_objects(
     let uris = res
         .answer
         .map(|a| a.results)
-        .unwrap_or(vec![])
+        .unwrap_or_default()
         .iter()
         .flat_map(|result| result.substitutions.clone())
         .filter(|s| s.variable == variable)

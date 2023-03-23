@@ -93,11 +93,11 @@ pub mod reply {
                 ContractError::InvalidReplyMsg(StdError::generic_err("no message in reply"))
             })
             .and_then(|e| {
-                get_reply_event_attribute(e.events, "id".to_string()).ok_or(
+                get_reply_event_attribute(e.events, "id".to_string()).ok_or_else(|| {
                     ContractError::InvalidReplyMsg(StdError::generic_err(
                         "reply event doesn't contains object id",
-                    )),
-                )
+                    ))
+                })
             })
             .map(|obj_id| Object {
                 object_id: obj_id,
@@ -402,7 +402,10 @@ mod tests {
                 )
             }
 
-            assert!(INSTANTIATE_CONTEXT.load(&deps.storage).is_err(), "the instantiate context should be cleaned at the end")
+            assert!(
+                INSTANTIATE_CONTEXT.load(&deps.storage).is_err(),
+                "the instantiate context should be cleaned at the end"
+            )
         }
     }
 

@@ -39,8 +39,8 @@ impl TryFrom<Url> for Object {
         }
 
         let path = value.path().to_string();
-        let paths = path.split(":").collect::<Vec<&str>>();
-        if paths.len() == 0 || paths.len() > 2 {
+        let paths = path.split(':').collect::<Vec<&str>>();
+        if paths.is_empty() || paths.len() > 2 {
             return Err(UriError::IncompatiblePath);
         }
         let storage_address = paths.last().ok_or(UriError::IncompatiblePath)?.to_string();

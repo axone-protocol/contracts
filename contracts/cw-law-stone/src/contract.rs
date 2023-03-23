@@ -100,22 +100,19 @@ pub mod reply {
                 )
             })
             .map(|obj_id| Object {
-                object_id: obj_id.to_string(),
+                object_id: obj_id,
                 storage_address: context.0.clone(),
             })
             .and_then(|program| -> Result<Vec<SubMsg>, ContractError> {
                 PROGRAM
                     .save(deps.storage, &program)
-                    .map_err(|e| ContractError::from(e))?;
+                    .map_err(ContractError::from)?;
 
                 // Clean instantiate context
                 INSTANTIATE_CONTEXT.remove(deps.storage);
 
                 let req = build_source_files_query(program.clone())?.into();
-                let res = deps
-                    .querier
-                    .query(&req)
-                    .map_err(|e| ContractError::from(e))?;
+                let res = deps.querier.query(&req).map_err(ContractError::from)?;
 
                 let objects = ask_response_to_objects(res, "Files".to_string())?;
                 let mut msgs = Vec::with_capacity(objects.len());
@@ -149,8 +146,7 @@ pub mod reply {
                 program_uri.as_str(),
                 "'), source_files(Files).",
             ]
-            .join("")
-            .to_string(),
+            .join(""),
         })
     }
 }
@@ -176,7 +172,7 @@ mod tests {
         request: &LogicCustomQuery,
     ) -> MockQuerierCustomHandlerResult {
         let program_uri: Url = program.clone().try_into().unwrap();
-        let mut updated_deps = dependencies.clone();
+        let mut updated_deps = dependencies;
         updated_deps.push(program_uri.to_string());
         let deps_name = format!("[{}]", &updated_deps.join(","));
         let LogicCustomQuery::Ask {
@@ -245,12 +241,12 @@ mod tests {
                             assert_eq!(data, program);
                             assert!(pin, "the main program should be pinned");
                         }
-                        _ => assert!(false, "storage message should be a StoreObject message"),
+                        _ => panic!("storage message should be a StoreObject message"),
                     }
                 }
-                _ => assert!(false, "wasm message should be a Storage message"),
+                _ => panic!("wasm message should be a Storage message"),
             },
-            _ => assert!(false, "cosmos sub message should be a Wasm message execute"),
+            _ => panic!("cosmos sub message should be a Wasm message execute"),
         }
         assert_eq!(
             "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
@@ -395,21 +391,12 @@ mod tests {
                                 let result: StorageMsg = from_binary(msg).unwrap();
                                 match result {
                                     StorageMsg::PinObject { id } => Some(id),
-                                    _ => {
-                                        assert!(false, "should contains only PinObject message(s)");
-                                        None
-                                    }
+                                    _ => panic!("should contains only PinObject message(s)"),
                                 }
                             }
-                            _ => {
-                                assert!(false, "wasm message should be a Storage message");
-                                None
-                            }
+                            _ => panic!("wasm message should be a Storage message"),
                         },
-                        _ => {
-                            assert!(false, "cosmos sub message should be a Wasm message execute");
-                            None
-                        }
+                        _ => panic!("cosmos sub message should be a Wasm message execute"),
                     }
                 })
                 .collect();
@@ -440,7 +427,7 @@ mod tests {
                 );
                 assert_eq!(query, "consult('cosmwasm:cw-storage:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
             }
-            _ => assert!(false, "Expected Ok(LogicCustomQuery)."),
+            _ => panic!("Expected Ok(LogicCustomQuery)."),
         }
     }
 }

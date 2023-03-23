@@ -5,18 +5,12 @@ use logic_bindings::{AskResponse, Substitution};
 use url::Url;
 
 pub fn get_reply_event_attribute(events: Vec<Event>, key: String) -> Option<String> {
-    let r = events
+    return events
         .iter()
         .flat_map(|e| e.attributes.clone())
         .filter(|a| a.key == key)
         .map(|a| a.value)
-        .collect::<Vec<String>>();
-
-    if r.len() > 0 {
-        Some(r[0].clone())
-    } else {
-        None
-    }
+        .next();
 }
 
 /// Files terms is List atom, List is represented as String in prolog, filter to remove
@@ -25,9 +19,9 @@ fn filter_source_files(substitution: Substitution) -> Vec<String> {
     substitution
         .term
         .name
-        .split(",")
+        .split(',')
         .into_iter()
-        .map(|s| s.replace(&['\'', '[', ']'], ""))
+        .map(|s| s.replace(['\'', '[', ']'], ""))
         .collect::<Vec<String>>()
 }
 
@@ -42,7 +36,7 @@ pub fn ask_response_to_objects(
         .iter()
         .flat_map(|result| result.substitutions.clone())
         .filter(|s| s.variable == variable)
-        .flat_map(|s| filter_source_files(s))
+        .flat_map(filter_source_files)
         .collect::<Vec<String>>();
 
     let mut objects = vec![];
@@ -53,5 +47,5 @@ pub fn ask_response_to_objects(
 
         objects.push(object)
     }
-    return Ok(objects);
+    Ok(objects)
 }

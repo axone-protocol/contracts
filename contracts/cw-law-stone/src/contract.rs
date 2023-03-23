@@ -77,7 +77,7 @@ pub fn reply(
 }
 
 pub mod reply {
-    use cosmwasm_std::{Attribute, from_binary};
+    use cosmwasm_std::{Attribute, from_binary, QueryRequest};
     use cw_storage::msg::BucketResponse;
     use cw_storage::msg::ExecuteMsg::StoreObject;
     use logic_bindings::{AskResponse, Substitution};
@@ -104,7 +104,7 @@ pub mod reply {
                 PROGRAM.save(deps.storage, &obj).map_err(|e| ContractError::from(e))
             })
             .and_then(|_| -> Result<AskResponse, ContractError> {
-                let req = LogicCustomQuery::Ask { program: from_binary(&context.1)?, query: "source_files(Files).".to_string() }.into();
+                let req: QueryRequest<LogicCustomQuery> = LogicCustomQuery::Ask { program: String::from_utf8(context.1.to_vec()).map_err(|e| StdError::invalid_utf8(e.to_string()))?, query: "source_files(Files).".to_string() }.into();
                 deps.querier.query(&req).map_err(|e| ContractError::from(e))
             })
             .and_then(|res| ask_response_to_submsg(res, context.0, "Files".to_string()))
@@ -273,7 +273,7 @@ mod tests {
             };
 
             // Configure the instantiate context
-            let program = to_binary("foo(_) :- true.").unwrap();
+            let program = Binary::from_base64("Zm9vKF8pIDotIHRydWUu").unwrap();
             INSTANTIATE_CONTEXT.save(deps.as_mut().storage, &("okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(), program)).unwrap();
 
             let response = reply::store_program_reply(deps.as_mut(), mock_env(), reply);

@@ -39,7 +39,7 @@ pub fn instantiate(
         funds: vec![],
     };
 
-    INSTANTIATE_CONTEXT.save(deps.storage, &(msg.storage_address, msg.program))?;
+    INSTANTIATE_CONTEXT.save(deps.storage, &msg.storage_address)?;
 
     Ok(Response::new().add_submessage(SubMsg::reply_on_success(
         store_program_msg,
@@ -101,7 +101,7 @@ pub mod reply {
             })
             .map(|obj_id| Object {
                 object_id: obj_id,
-                storage_address: context.0.clone(),
+                storage_address: context.clone(),
             })
             .and_then(|program| -> Result<Vec<SubMsg>, ContractError> {
                 PROGRAM
@@ -250,9 +250,8 @@ mod tests {
         }
         assert_eq!(
             "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
-            INSTANTIATE_CONTEXT.load(&deps.storage).unwrap().0
+            INSTANTIATE_CONTEXT.load(&deps.storage).unwrap()
         );
-        assert_eq!(program, INSTANTIATE_CONTEXT.load(&deps.storage).unwrap().1)
     }
 
     #[derive(Clone)]
@@ -330,15 +329,10 @@ mod tests {
             };
 
             // Configure the instantiate context
-            let program = Binary::from_base64("Zm9vKF8pIDotIHRydWUu").unwrap();
             INSTANTIATE_CONTEXT
                 .save(
                     deps.as_mut().storage,
-                    &(
-                        "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s"
-                            .to_string(),
-                        program,
-                    ),
+                    &"okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(),
                 )
                 .unwrap();
 
@@ -407,6 +401,8 @@ mod tests {
                     "each dependencies should be pinned by a PinObject message"
                 )
             }
+
+            assert!(INSTANTIATE_CONTEXT.load(&deps.storage).is_err(), "the instantiate context should be cleaned at the end")
         }
     }
 

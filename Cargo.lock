@@ -218,6 +218,7 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "cw2",
+ "form_urlencoded",
  "logic-bindings",
  "schemars",
  "serde",

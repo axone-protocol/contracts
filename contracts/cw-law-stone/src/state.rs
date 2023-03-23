@@ -1,15 +1,14 @@
-use std::borrow::Cow;
-use std::collections::HashMap;
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, StdError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
+use crate::error::UriError;
+use crate::ContractError;
+use cw_storage::msg::QueryMsg as StorageQuery;
+use cw_storage::msg::QueryMsg;
 use cw_storage_plus::{Item, Map};
 use url::Url;
-use crate::ContractError;
-use crate::ContractError::NotImplemented;
-use crate::error::UriError;
-use cw_storage::msg::QueryMsg;
 
 /// State to store context during contract instantiation
 pub const INSTANTIATE_CONTEXT: Item<'_, (String, Binary)> = Item::new("instantiate");
@@ -26,35 +25,74 @@ pub struct Object {
 
 impl Object {
     const COSMWASM_SCHEME: &'static str = "cosmwasm";
-    const COSMWASM_PATH_KEY: &'static str = "cw-storage";
 }
+
 impl TryFrom<Url> for Object {
     type Error = UriError;
 
     fn try_from(value: Url) -> Result<Self, UriError> {
         if value.scheme() != Object::COSMWASM_SCHEME {
-            return Err(UriError::WrongScheme { scheme: value.scheme().to_string(), wanted: vec![Object::COSMWASM_SCHEME.to_string()] })
+            return Err(UriError::WrongScheme {
+                scheme: value.scheme().to_string(),
+                wanted: vec![Object::COSMWASM_SCHEME.to_string()],
+            });
         }
 
         let path = value.path().to_string();
         let paths = path.split(":").collect::<Vec<&str>>();
         if paths.len() == 0 || paths.len() > 2 {
-            return Err(UriError::IncompatiblePath)
+            return Err(UriError::IncompatiblePath);
         }
         let storage_address = paths.last().ok_or(UriError::IncompatiblePath)?.to_string();
 
-        let queries = value.query_pairs().into_owned().collect::<HashMap<String, String>>();
+        let queries = value
+            .query_pairs()
+            .into_owned()
+            .collect::<HashMap<String, String>>();
 
         if let Some(query) = queries.get("query") {
             let json: QueryMsg = serde_json_wasm::from_str(query.as_str())?;
 
             return match json {
-                QueryMsg::ObjectData { id: object_id } => Ok(Object { object_id, storage_address }),
-                _ => Err(UriError::IncompatibleQuery)
-            }
+                QueryMsg::ObjectData { id: object_id } => Ok(Object {
+                    object_id,
+                    storage_address,
+                }),
+                _ => Err(UriError::IncompatibleQuery),
+            };
         }
 
         Err(UriError::MissingQueryKey)
+    }
+}
+
+impl TryInto<Url> for Object {
+    type Error = ContractError;
+
+    fn try_into(self) -> Result<Url, Self::Error> {
+        let raw = [
+            Object::COSMWASM_SCHEME,
+            ":cw-storage:",
+            self.storage_address.as_str(),
+            "?",
+            form_urlencoded::Serializer::new(String::new())
+                .append_pair(
+                    "query",
+                    serde_json_wasm::to_string(&StorageQuery::ObjectData { id: self.object_id })
+                        .map_err(|e| {
+                            ContractError::Std(StdError::serialize_err("StorageQuery", e))
+                        })?
+                        .as_str(),
+                )
+                .finish()
+                .as_str(),
+        ]
+        .join("");
+
+        Url::parse(&raw).map_err(|e| ContractError::DependencyUri {
+            uri: raw,
+            error: UriError::Parse(e),
+        })
     }
 }
 
@@ -118,12 +156,11 @@ mod tests {
 
                     if let Some(err) = case.1 {
                         assert_eq!(err.to_string(), result.unwrap_err().to_string())
-                    }
-                    else if let Some(o) = case.2 {
+                    } else if let Some(o) = case.2 {
                         assert_eq!(o, result.unwrap())
                     }
                 }
-                Err(_) => panic!("no error should be thrown")
+                Err(_) => panic!("no error should be thrown"),
             }
         }
     }

@@ -15,27 +15,16 @@ pub enum ContractError {
     #[error("{0}")]
     Parse(#[from] ParseReplyError),
 
-    #[error("Could not find ObjectId of stored program")]
-    NoObjectId,
-
-    #[error("Empty data on reply")]
-    EmptyReply,
-
     #[error("Invalid reply message: {0}")]
     InvalidReplyMsg(StdError),
 
     #[error("Failed parse dependency uri {uri:?}: {error:?}")]
-    DependencyUri {
-        error: UriError,
-        uri: String
-    }
+    LogicLoadUri { error: UriError, uri: String },
 }
 
 impl ContractError {
     pub fn dependency_uri(error: UriError, uri: String) -> ContractError {
-        ContractError::DependencyUri {
-            error, uri
-        }
+        ContractError::LogicLoadUri { error, uri }
     }
 }
 #[derive(Error, Debug)]
@@ -44,7 +33,7 @@ pub enum UriError {
     Parse(#[from] ParseError),
 
     #[error("Incompatible uri scheme {scheme:?}. Should be {wanted:?}")]
-    WrongScheme{ scheme: String, wanted: Vec<String> },
+    WrongScheme { scheme: String, wanted: Vec<String> },
 
     #[error("The given path doesn't correspond to a cw-storage uri")]
     IncompatiblePath,
@@ -58,4 +47,3 @@ pub enum UriError {
     #[error("The given query is not compatible")]
     IncompatibleQuery,
 }
-

@@ -89,7 +89,7 @@ impl TryInto<Url> for Object {
         ]
         .join("");
 
-        Url::parse(&raw).map_err(|e| ContractError::DependencyUri {
+        Url::parse(&raw).map_err(|e| ContractError::LogicLoadUri {
             uri: raw,
             error: UriError::Parse(e),
         })

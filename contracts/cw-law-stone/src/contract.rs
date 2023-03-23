@@ -89,10 +89,15 @@ pub mod reply {
 
         msg.result
             .into_result()
-            .map_err(|_| ContractError::EmptyReply)
+            .map_err(|_| {
+                ContractError::InvalidReplyMsg(StdError::generic_err("no message in reply"))
+            })
             .and_then(|e| {
-                get_reply_event_attribute(e.events, "id".to_string())
-                    .ok_or(ContractError::NoObjectId)
+                get_reply_event_attribute(e.events, "id".to_string()).ok_or(
+                    ContractError::InvalidReplyMsg(StdError::generic_err(
+                        "reply event doesn't contains object id",
+                    )),
+                )
             })
             .map(|obj_id| Object {
                 object_id: obj_id.to_string(),

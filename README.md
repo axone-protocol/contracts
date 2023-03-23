@@ -16,7 +16,8 @@ This repository contains the Smart Contracts deployed on the [OKP4 network](http
 
 The list of currently implemented contracts is as follows:
 
-- [cw-template](./contracts/cw-template/README.md): base smart contract to start coding in the [OKP4](https://github.com/okp4d) blockchain.
+- [cw-storage](./contracts/cw-storage/README.md): enables the storage of arbitrary `objects`.
+- [cw-law-stone](./contracts/cw-law-stone/README.md): guarantee availability and immutability of logic Prolog rules.
 
 ## 🗂 Directory Structure
 
@@ -29,6 +30,11 @@ The project is structured around a set of Rust workspaces, each defining a smart
 │       ├── Cargo.toml
 │       ├── examples
 │       ├── schema
+│       └── src
+├── packages
+│   └── <package>
+│       ├── Cargo.toml
+│       ├── examples
 │       └── src
 └─── Cargo.toml
 ```

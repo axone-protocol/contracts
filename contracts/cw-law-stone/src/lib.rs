@@ -15,5 +15,6 @@ mod error;
 pub mod msg;
 pub mod state;
 mod helper;
+mod uri;
 
 pub use crate::error::ContractError;

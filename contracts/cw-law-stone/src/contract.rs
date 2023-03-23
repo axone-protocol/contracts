@@ -104,7 +104,7 @@ pub mod reply {
                 PROGRAM.save(deps.storage, &obj).map_err(|e| ContractError::from(e))
             })
             .and_then(|_| -> Result<AskResponse, ContractError> {
-                let req: QueryRequest<LogicCustomQuery> = LogicCustomQuery::Ask { program: String::from_utf8(context.1.to_vec()).map_err(|e| StdError::invalid_utf8(e.to_string()))?, query: "source_files(Files).".to_string() }.into();
+                let req = build_source_files_query(context.1)?.into();
                 deps.querier.query(&req).map_err(|e| ContractError::from(e))
             })
             .and_then(|res| ask_response_to_submsg(res, context.0, "Files".to_string()))
@@ -116,7 +116,9 @@ pub mod reply {
             })
     }
 
-
+    fn build_source_files_query(program: Binary) -> Result<LogicCustomQuery, ContractError> {
+        Ok(LogicCustomQuery::Ask { program: String::from_utf8(program.to_vec()).map_err(|e| StdError::invalid_utf8(e.to_string()))?, query: "source_files(Files).".to_string() })
+    }
 }
 
 #[cfg(test)]

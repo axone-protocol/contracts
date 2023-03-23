@@ -1,10 +1,12 @@
 use std::env::var;
 use cosmwasm_std::{Attribute, Event, SubMsg, to_binary, WasmMsg};
+use url::Url;
 use logic_bindings::{AskResponse, Substitution};
 use crate::ContractError;
 use crate::state::Object;
 use cw_storage::msg::ExecuteMsg as StorageMsg;
 use crate::ContractError::NotImplemented;
+use crate::uri::uri_to_object;
 
 pub fn get_reply_event_attribute(events: Vec<Event>, key: String) -> Option<String> {
     let r = events.iter()
@@ -23,10 +25,6 @@ fn filter_source_files(substitution: Substitution) -> Vec<String> {
         .into_iter()
         .map(|s| s.replace(&['\'', '[', ']'], ""))
         .collect::<Vec<String>>()
-}
-
-fn uri_to_object(uri: String) -> Result<Object, ContractError> {
-    Err(NotImplemented {})
 }
 
 pub fn ask_response_to_submsg(res: AskResponse, storage_addr: String, variable: String) -> Result<Vec<SubMsg>, ContractError> {

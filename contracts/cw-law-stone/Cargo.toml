@@ -38,6 +38,7 @@ logic-bindings = { version = "0.2", path = "../../packages/logic-bindings" }
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+url = "2.3.1"
 
 [dev-dependencies]
 cw-multi-test.workspace = true

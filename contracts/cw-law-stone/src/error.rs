@@ -49,11 +49,11 @@ pub enum UriError {
     IncompatibleQuery,
 }
 
-impl Into<StdError> for ContractError {
-    fn into(self) -> StdError {
-        match self {
+impl From<ContractError> for StdError {
+    fn from(value: ContractError) -> Self {
+        match value {
             Std(e) => e,
-            _ => StdError::generic_err(self.to_string()),
+            _ => StdError::generic_err(value.to_string()),
         }
     }
 }

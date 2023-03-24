@@ -37,7 +37,7 @@ By using the `Ask` query we can provide Prolog predicates to be evaluated agains
 
 ```bash
 okp4d query wasm contract smart $CONTRACT_ADDR \
-    '{"ask": {"query": "can('change_governance', 'did:key:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6')."}}'
+    "{\"ask\": {\"query\": \"can('change_governance', 'did:key:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').\"}}"
 ```
 
 ## Break

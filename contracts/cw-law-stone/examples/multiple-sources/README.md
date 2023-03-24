@@ -30,7 +30,7 @@ Where:
 First the `template.pl` program must be stored on a `cw-storage` and the `gov.pl` updated with the right URI in the `consult(File).` predicate, the URI should be in the form:
 
 ```bash
-cosmwasm:cw-storage:${STORAGE_ADDRESS}?query=%7B%22object_data%22%3A%7B%22id%22%3A%2220a9286b574c41af1d6742964fba0a161fb5c446b4720c2f928bdb33afcb2406%22%7D%7D
+cosmwasm:cw-storage:${STORAGE_ADDRESS}?query=%7B%22object_data%22%3A%7B%22id%22%3A%221a88ca1632c7323c0aa594000cda26ed9f48b36351c29c3d1e35e0a0474e862e%22%7D%7D
 ```
 
 The instantiate will take as parameters the base64 encoded program and the address of a `cw-storage` contract, on which the program will be stored and pinned, the `template.pl` object will also be pinned to ensure all the needed resources stays available:
@@ -53,7 +53,7 @@ By using the `Ask` query we can provide Prolog predicates to be evaluated agains
 
 ```bash
 okp4d query wasm contract smart $CONTRACT_ADDR \
-    '{"ask": {"query": "can('change_governance', 'did:key:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6')."}}'
+    "{\"ask\": {\"query\": \"can('change_governance', 'did:key:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').\"}}"
 ```
 
 ## Break

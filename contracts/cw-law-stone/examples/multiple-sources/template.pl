@@ -3,16 +3,13 @@ valid_did(DID, Addr) :-
     allow_did_method(Method),
     allow_addr(Addr).
 
-min_amount(Action, MinAmount) :-
-    Action == exec_workflow,
+min_amount(exec_workflow, MinAmount) :-
     min_exec_workflow_amount(MinAmount).
 
-min_amount(Action, MinAmount) :-
-    Action == create_dataset,
+min_amount(create_dataset, MinAmount) :-
     min_create_dataset_amount(MinAmount).
 
-min_amount(Action, MinAmount) :-
-    Action == create_service,
+min_amount(create_service, MinAmount) :-
     min_create_service_amount(MinAmount).
 
 has_sufficient_balance(Addr, MinAmount) :-
@@ -21,8 +18,7 @@ has_sufficient_balance(Addr, MinAmount) :-
     allow_denom(Denom),
     Amount @>= MinAmount.
 
-can(Action, DID) :-
-    Action == change_governance,
+can(change_governance, DID) :-
     valid_did(DID, Addr),
     admin_addr(Addr).
 

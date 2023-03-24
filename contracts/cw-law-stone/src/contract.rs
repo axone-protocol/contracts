@@ -447,51 +447,85 @@ mod tests {
 
     #[test]
     fn ask() {
-        let q = "test(Foo).".to_string();
-        let object_id =
-            "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string();
-        let storage_addr =
-            "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string();
-
-        let p = Box::new((q.clone(), object_id.clone(), storage_addr.clone()));
-        let mut deps = mock_dependencies_with_logic_handler(move |request| {
-            let (qq, o, s) = p.as_ref();
-            custom_logic_handler_with_query(
-                qq.to_string(),
+        let cases = vec![
+            (
+                false,                    // broken
+                "test(Foo).".to_string(), // query
                 Object {
-                    object_id: o.to_string(),
-                    storage_address: s.to_string(),
+                    object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
+                        .to_string(),
+                    storage_address:
+                        "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                            .to_string(),
                 },
-                request,
-            )
-        });
-
-        PROGRAM
-            .save(
-                deps.as_mut().storage,
-                &Object {
-                    object_id: object_id.clone(),
-                    storage_address: storage_addr.clone(),
+                Some("Foo"), // Variable result
+                None,        // Expected error
+            ),
+            (
+                true,                     // broken
+                "test(Foo).".to_string(), // query
+                Object {
+                    object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
+                        .to_string(),
+                    storage_address:
+                        "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                            .to_string(),
                 },
-            )
-            .unwrap();
+                None,                                         // Variable result
+                Some(StdError::generic_err("Law is broken")), // Expected error
+            ),
+        ];
 
-        let res = query(
-            deps.as_ref(),
-            mock_env(),
-            QueryMsg::Ask {
-                query: q.to_string(),
-            },
-        )
-        .unwrap();
-        let result: AskResponse = from_binary(&res).unwrap();
+        for case in cases {
+            let p = Box::new((
+                case.1.clone(),
+                case.2.object_id.to_string(),
+                case.2.storage_address.to_string(),
+            ));
+            let mut deps = mock_dependencies_with_logic_handler(move |request| {
+                let (query, o, s) = p.as_ref();
+                custom_logic_handler_with_query(
+                    query.to_string(),
+                    Object {
+                        object_id: o.to_string(),
+                        storage_address: s.to_string(),
+                    },
+                    request,
+                )
+            });
 
-        assert!(result.answer.is_some());
-        assert!(result
-            .answer
-            .unwrap()
-            .variables
-            .contains(&"Foo".to_string()));
+            PROGRAM
+                .save(
+                    deps.as_mut().storage,
+                    &LawStone {
+                        broken: case.0,
+                        law: case.2.clone(),
+                    },
+                )
+                .unwrap();
+
+            let res = query(deps.as_ref(), mock_env(), QueryMsg::Ask { query: case.1 });
+
+            match res {
+                Ok(result) => {
+                    let result: AskResponse = from_binary(&result).unwrap();
+
+                    assert!(case.3.is_some());
+                    assert!(result.answer.is_some());
+                    assert!(result
+                        .answer
+                        .unwrap()
+                        .variables
+                        .contains(&case.3.unwrap().to_string()));
+
+                    assert!(case.4.is_none(), "query doesn't return error")
+                }
+                Err(e) => {
+                    assert!(case.4.is_some(), "query return error");
+                    assert_eq!(e, case.4.unwrap())
+                }
+            }
+        }
     }
 
     #[derive(Clone)]

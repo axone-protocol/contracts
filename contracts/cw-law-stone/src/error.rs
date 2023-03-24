@@ -27,7 +27,7 @@ impl ContractError {
         ContractError::LogicLoadUri { error, uri }
     }
 }
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum UriError {
     #[error("{0}")]
     Parse(#[from] ParseError),

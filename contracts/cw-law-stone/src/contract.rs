@@ -5,9 +5,7 @@ use cosmwasm_std::{
     SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
-use cw_storage::msg::{
-    ExecuteMsg as StorageMsg, ObjectPinsResponse, PageInfo, QueryMsg as StorageQuery,
-};
+use cw_storage::msg::{ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery};
 use logic_bindings::LogicCustomQuery;
 
 use crate::error::ContractError;
@@ -75,10 +73,8 @@ pub mod execute {
             .query_wasm_contract_info(env.contract.address)?
             .admin
         {
-            Some(admin_addr) if admin_addr != info.sender.to_string() => {
-                Err(ContractError::Unauthorized {})
-            }
-            _ => Ok({}),
+            Some(admin_addr) if admin_addr != info.sender => Err(ContractError::Unauthorized {}),
+            _ => Ok(()),
         }?;
 
         let resp = Response::new().add_attribute("action", "break_stone");
@@ -148,8 +144,8 @@ pub mod query {
     use crate::state::PROGRAM;
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
-        let program = PROGRAM.load(deps.storage)?.law;
-        Ok(ProgramResponse::from(program))
+        let program = PROGRAM.load(deps.storage)?.into();
+        Ok(program)
     }
 }
 
@@ -211,7 +207,7 @@ pub mod reply {
                 let objects = ask_response_to_objects(res, "Files".to_string())?;
                 let mut msgs = Vec::with_capacity(objects.len());
                 for obj in objects {
-                    if obj.object_id == stone.object_id {
+                    if obj.object_id == stone.law.object_id {
                         continue;
                     }
                     DEPENDENCIES.save(deps.storage, obj.object_id.as_str(), &obj)?;
@@ -257,6 +253,7 @@ mod tests {
         from_binary, to_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
         SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
+    use cw_storage::msg::PageInfo;
     use logic_bindings::testing::mock::{
         mock_dependencies_with_logic_and_balance, mock_dependencies_with_logic_handler,
     };
@@ -467,6 +464,7 @@ mod tests {
             let res = response.unwrap();
 
             let program = PROGRAM.load(&deps.storage).unwrap();
+            assert!(!program.broken);
             assert_eq!(case.clone().object_id, program.law.object_id);
 
             let deps_len_requirement = case.clone().dependencies.len();
@@ -593,7 +591,7 @@ mod tests {
                     SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
                 }
                 WasmQuery::Smart { contract_addr, msg } if contract_addr == "cw-storage1" => {
-                    match from_binary(&msg) {
+                    match from_binary(msg) {
                         Ok(StorageQuery::ObjectPins {
                             id,
                             first: Some(1u32),
@@ -643,7 +641,7 @@ mod tests {
             )
             .unwrap();
 
-            assert_eq!(PROGRAM.load(&mut deps.storage).unwrap().broken, true);
+            assert!(PROGRAM.load(&deps.storage).unwrap().broken);
 
             let mut sub_msgs: VecDeque<SubMsg> = res.messages.into();
             match sub_msgs.pop_front() {
@@ -659,26 +657,20 @@ mod tests {
                                 Ok(StorageMsg::UnpinObject { id }) => {
                                     assert_eq!(id, "program-id".to_string());
                                 }
-                                _ => assert!(
-                                    false,
-                                    "storage message should be a UnpinObject message"
-                                ),
+                                _ => panic!("storage message should be a UnpinObject message"),
                             }
                         } else {
                             match from_binary(&msg) {
                                 Ok(StorageMsg::ForgetObject { id }) => {
                                     assert_eq!(id, "program-id".to_string());
                                 }
-                                _ => assert!(
-                                    false,
-                                    "storage message should be a ForgetObject message"
-                                ),
+                                _ => panic!("storage message should be a ForgetObject message"),
                             }
                         }
                     }
-                    _ => assert!(false, "sub message should be a WasmMsg message"),
+                    _ => panic!("sub message should be a WasmMsg message"),
                 },
-                _ => assert!(false, "result should contains sub messages"),
+                _ => panic!("result should contains sub messages"),
             }
 
             for dep in case.1 {
@@ -694,15 +686,12 @@ mod tests {
                                 Ok(StorageMsg::UnpinObject { id }) => {
                                     assert_eq!(id, dep.object_id);
                                 }
-                                _ => assert!(
-                                    false,
-                                    "storage message should be a UnpinObject message"
-                                ),
+                                _ => panic!("storage message should be a UnpinObject message"),
                             }
                         }
-                        _ => assert!(false, "sub message should be a WasmMsg message"),
+                        _ => panic!("sub message should be a WasmMsg message"),
                     },
-                    _ => assert!(false, "result should contains sub messages"),
+                    _ => panic!("result should contains sub messages"),
                 }
             }
         }
@@ -773,10 +762,10 @@ mod tests {
 
             match case.3 {
                 Some(err) => {
-                    assert_eq!(res.is_err(), true);
+                    assert!(res.is_err());
                     assert_eq!(res.err().unwrap(), err);
                 }
-                None => assert_eq!(res.is_ok(), true),
+                None => assert!(res.is_ok()),
             };
         }
     }
@@ -822,7 +811,7 @@ mod tests {
             mock_info("creator", &[]),
             ExecuteMsg::BreakStone,
         );
-        assert_eq!(res.is_ok(), true);
+        assert!(res.is_ok());
         assert_eq!(res.ok().unwrap().messages.len(), 0);
     }
 }

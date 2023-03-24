@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::error::UriError;
+use crate::msg::ProgramResponse;
 use crate::ContractError;
 use cw_storage::msg::QueryMsg as StorageQuery;
 use cw_storage::msg::QueryMsg;
@@ -17,6 +18,15 @@ pub const INSTANTIATE_CONTEXT: Item<'_, String> = Item::new("instantiate");
 pub struct LawStone {
     pub broken: bool,
     pub law: Object,
+}
+
+impl From<LawStone> for ProgramResponse {
+    fn from(value: LawStone) -> ProgramResponse {
+        ProgramResponse {
+            object_id: value.law.object_id,
+            storage_address: value.law.storage_address,
+        }
+    }
 }
 
 /// Represent a link to an Object stored in the `cw-storage` contract.

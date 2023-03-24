@@ -3,6 +3,7 @@ use cw_utils::ParseReplyError;
 use serde_json_wasm::de::Error;
 use thiserror::Error;
 use url::ParseError;
+use crate::ContractError::Std;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -46,4 +47,13 @@ pub enum UriError {
 
     #[error("The given query is not compatible")]
     IncompatibleQuery,
+}
+
+impl Into<StdError> for ContractError {
+    fn into(self) -> StdError {
+        match self {
+            Std(e) => e,
+            _ => StdError::generic_err(self.to_string()),
+        }
+    }
 }

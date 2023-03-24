@@ -133,19 +133,44 @@ pub mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Ask { .. } => Err(StdError::generic_err("not implemented")),
+        QueryMsg::Ask { query } => to_binary(&query::ask(deps, query)?),
         QueryMsg::Program => to_binary(&query::program(deps)?),
     }
 }
 
 pub mod query {
+    use cosmwasm_std::QueryRequest;
+    use url::Url;
+    use logic_bindings::AskResponse;
     use super::*;
     use crate::msg::ProgramResponse;
-    use crate::state::PROGRAM;
+    use crate::state::{Object, PROGRAM};
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
         let program = PROGRAM.load(deps.storage)?.into();
         Ok(program)
+    }
+
+    pub fn ask(deps: Deps<'_, LogicCustomQuery>, query: String) -> StdResult<AskResponse> {
+        let program = PROGRAM.load(deps.storage)?;
+        let req: QueryRequest<LogicCustomQuery> = build_ask_query(program, query)?.into();
+
+        deps.querier.query(&req)
+    }
+
+    pub fn build_ask_query(program: Object, query: String) -> StdResult<LogicCustomQuery> {
+        let program_uri: Url = program.try_into().map_err(|e: ContractError| -> StdError { e.into() })?;
+
+        Ok(LogicCustomQuery::Ask {
+            program: "".to_string(),
+            query: [
+                "consult('",
+                program_uri.as_str(),
+                "'), ",
+                query.as_str(),
+            ]
+                .join(""),
+        })
     }
 }
 

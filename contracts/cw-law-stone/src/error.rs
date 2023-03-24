@@ -1,3 +1,4 @@
+use crate::ContractError::Std;
 use cosmwasm_std::StdError;
 use cw_utils::ParseReplyError;
 use serde_json_wasm::de::Error;
@@ -46,4 +47,13 @@ pub enum UriError {
 
     #[error("The given query is not compatible")]
     IncompatibleQuery,
+}
+
+impl From<ContractError> for StdError {
+    fn from(value: ContractError) -> Self {
+        match value {
+            Std(e) => e,
+            _ => StdError::generic_err(value.to_string()),
+        }
+    }
 }

@@ -133,7 +133,7 @@ pub mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Ask { .. } => Err(StdError::generic_err("not implemented")),
+        QueryMsg::Ask { query } => to_binary(&query::ask(deps, query)?),
         QueryMsg::Program => to_binary(&query::program(deps)?),
     }
 }
@@ -141,11 +141,35 @@ pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdR
 pub mod query {
     use super::*;
     use crate::msg::ProgramResponse;
-    use crate::state::PROGRAM;
+    use crate::state::{Object, PROGRAM};
+    use cosmwasm_std::QueryRequest;
+    use logic_bindings::AskResponse;
+    use url::Url;
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
         let program = PROGRAM.load(deps.storage)?.into();
         Ok(program)
+    }
+
+    pub fn ask(deps: Deps<'_, LogicCustomQuery>, query: String) -> StdResult<AskResponse> {
+        let stone = PROGRAM.load(deps.storage)?;
+        if stone.broken {
+            return Err(StdError::generic_err("Law is broken"));
+        }
+
+        let req: QueryRequest<LogicCustomQuery> = build_ask_query(stone.law, query)?.into();
+        deps.querier.query(&req)
+    }
+
+    pub fn build_ask_query(program: Object, query: String) -> StdResult<LogicCustomQuery> {
+        let program_uri: Url = program
+            .try_into()
+            .map_err(|e: ContractError| -> StdError { e.into() })?;
+
+        Ok(LogicCustomQuery::Ask {
+            program: "".to_string(),
+            query: ["consult('", program_uri.as_str(), "'), ", query.as_str()].join(""),
+        })
     }
 }
 
@@ -350,6 +374,7 @@ mod tests {
             INSTANTIATE_CONTEXT.load(&deps.storage).unwrap()
         );
     }
+
     #[test]
     fn program() {
         let mut deps = mock_dependencies_with_logic_and_balance(&[]);
@@ -376,6 +401,131 @@ mod tests {
 
         assert_eq!(object_id, result.object_id);
         assert_eq!(storage_addr, result.storage_address);
+    }
+
+    fn custom_logic_handler_with_query(
+        query: String,
+        program: Object,
+        request: &LogicCustomQuery,
+    ) -> MockQuerierCustomHandlerResult {
+        let LogicCustomQuery::Ask {
+            program: exp_program,
+            query: exp_query,
+            ..
+        } = query::build_ask_query(program, query.to_string()).unwrap();
+        match request {
+            LogicCustomQuery::Ask {
+                program,
+                query: queryy,
+            } if *queryy == exp_query && *program == exp_program => SystemResult::Ok(
+                to_binary(&AskResponse {
+                    height: 1,
+                    gas_used: 1000,
+                    answer: Some(Answer {
+                        success: true,
+                        has_more: false,
+                        variables: vec!["Foo".to_string()],
+                        results: vec![LogicResult {
+                            substitutions: vec![Substitution {
+                                variable: "Foo".to_string(),
+                                term: Term {
+                                    name: "bar".to_string(),
+                                    arguments: vec![],
+                                },
+                            }],
+                        }],
+                    }),
+                })
+                .into(),
+            ),
+            _ => SystemResult::Err(SystemError::InvalidRequest {
+                error: format!("Ask `{0}` predicate not called", query),
+                request: Default::default(),
+            }),
+        }
+    }
+
+    #[test]
+    fn ask() {
+        let cases = vec![
+            (
+                false,                    // broken
+                "test(Foo).".to_string(), // query
+                Object {
+                    object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
+                        .to_string(),
+                    storage_address:
+                        "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                            .to_string(),
+                },
+                Some("Foo"), // Variable result
+                None,        // Expected error
+            ),
+            (
+                true,                     // broken
+                "test(Foo).".to_string(), // query
+                Object {
+                    object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
+                        .to_string(),
+                    storage_address:
+                        "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                            .to_string(),
+                },
+                None,                                         // Variable result
+                Some(StdError::generic_err("Law is broken")), // Expected error
+            ),
+        ];
+
+        for case in cases {
+            let p = Box::new((
+                case.1.clone(),
+                case.2.object_id.to_string(),
+                case.2.storage_address.to_string(),
+            ));
+            let mut deps = mock_dependencies_with_logic_handler(move |request| {
+                let (query, o, s) = p.as_ref();
+                custom_logic_handler_with_query(
+                    query.to_string(),
+                    Object {
+                        object_id: o.to_string(),
+                        storage_address: s.to_string(),
+                    },
+                    request,
+                )
+            });
+
+            PROGRAM
+                .save(
+                    deps.as_mut().storage,
+                    &LawStone {
+                        broken: case.0,
+                        law: case.2.clone(),
+                    },
+                )
+                .unwrap();
+
+            let res = query(deps.as_ref(), mock_env(), QueryMsg::Ask { query: case.1 });
+
+            match res {
+                Ok(result) => {
+                    let result: AskResponse = from_binary(&result).unwrap();
+
+                    assert!(case.3.is_some());
+                    assert!(result.answer.is_some());
+                    assert!(result
+                        .answer
+                        .unwrap()
+                        .variables
+                        .contains(&case.3.unwrap().to_string()));
+
+                    assert!(case.4.is_none(), "query doesn't return error")
+                }
+                Err(e) => {
+                    assert!(case.4.is_some(), "query return error");
+                    assert_eq!(e, case.4.unwrap())
+                }
+            }
+        }
     }
 
     #[derive(Clone)]
@@ -550,6 +700,27 @@ mod tests {
                     "source_files(Files) :- bagof(File, source_file(File), Files)."
                 );
                 assert_eq!(query, "consult('cosmwasm:cw-storage:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
+            }
+            _ => panic!("Expected Ok(LogicCustomQuery)."),
+        }
+    }
+
+    #[test]
+    fn build_ask_query() {
+        let result = query::build_ask_query(
+            Object {
+                object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
+                    .to_string(),
+                storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                    .to_string(),
+            },
+            "test(X).".to_string(),
+        );
+
+        match result {
+            Ok(LogicCustomQuery::Ask { program, query }) => {
+                assert_eq!(program, "");
+                assert_eq!(query, "consult('cosmwasm:cw-storage:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), test(X).")
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
         }

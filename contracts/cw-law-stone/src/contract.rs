@@ -1,4 +1,3 @@
-use crate::ContractError::NotImplemented;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -6,7 +5,7 @@ use cosmwasm_std::{
     SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
-use cw_storage::msg::ExecuteMsg as StorageMsg;
+use cw_storage::msg::{ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery};
 use logic_bindings::LogicCustomQuery;
 
 use crate::error::ContractError;
@@ -49,12 +48,86 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut<'_>,
-    _env: Env,
-    _info: MessageInfo,
-    _msg: ExecuteMsg,
+    deps: DepsMut<'_>,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    Err(NotImplemented {})
+    match msg {
+        ExecuteMsg::BreakStone => execute::break_stone(deps, env, info),
+    }
+}
+
+pub mod execute {
+    use super::*;
+    use crate::state::{Object, DEPENDENCIES, PROGRAM};
+    use cosmwasm_std::Order;
+
+    pub fn break_stone(
+        deps: DepsMut<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> Result<Response, ContractError> {
+        match deps
+            .querier
+            .query_wasm_contract_info(env.contract.address)?
+            .admin
+        {
+            Some(admin_addr) if admin_addr != info.sender => Err(ContractError::Unauthorized {}),
+            _ => Ok(()),
+        }?;
+
+        let resp = Response::new().add_attribute("action", "break_stone");
+
+        let mut stone = PROGRAM.load(deps.storage)?;
+        if stone.broken {
+            return Ok(resp);
+        }
+        stone.broken = true;
+        PROGRAM.save(deps.storage, &stone)?;
+
+        let law_release_msg = match deps
+            .querier
+            .query_wasm_smart::<ObjectPinsResponse>(
+                stone.law.storage_address.clone(),
+                &StorageQuery::ObjectPins {
+                    id: stone.law.object_id.clone(),
+                    first: Some(1u32),
+                    after: None,
+                },
+            )?
+            .page_info
+            .has_next_page
+        {
+            true => StorageMsg::UnpinObject {
+                id: stone.law.object_id,
+            },
+            _ => StorageMsg::ForgetObject {
+                id: stone.law.object_id,
+            },
+        };
+
+        Ok(resp
+            .add_message(WasmMsg::Execute {
+                contract_addr: stone.law.storage_address,
+                msg: to_binary(&law_release_msg)?,
+                funds: vec![],
+            })
+            .add_messages(
+                DEPENDENCIES
+                    .range(deps.storage, None, None, Order::Ascending)
+                    .map(|res: StdResult<(String, Object)>| {
+                        res.and_then(|(_, obj)| {
+                            Ok(WasmMsg::Execute {
+                                contract_addr: obj.storage_address,
+                                msg: to_binary(&StorageMsg::UnpinObject { id: obj.object_id })?,
+                                funds: vec![],
+                            })
+                        })
+                    })
+                    .collect::<StdResult<Vec<WasmMsg>>>()?,
+            ))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -71,8 +144,8 @@ pub mod query {
     use crate::state::PROGRAM;
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
-        let program = PROGRAM.load(deps.storage)?;
-        Ok(ProgramResponse::from(program))
+        let program = PROGRAM.load(deps.storage)?.into();
+        Ok(program)
     }
 }
 
@@ -91,7 +164,7 @@ pub fn reply(
 pub mod reply {
     use super::*;
     use crate::helper::{ask_response_to_objects, get_reply_event_attribute};
-    use crate::state::{Object, DEPENDENCIES, PROGRAM};
+    use crate::state::{LawStone, Object, DEPENDENCIES, PROGRAM};
     use url::Url;
 
     pub fn store_program_reply(
@@ -113,25 +186,28 @@ pub mod reply {
                     ))
                 })
             })
-            .map(|obj_id| Object {
-                object_id: obj_id,
-                storage_address: context.clone(),
+            .map(|obj_id| LawStone {
+                broken: false,
+                law: Object {
+                    object_id: obj_id,
+                    storage_address: context.clone(),
+                },
             })
-            .and_then(|program| -> Result<Vec<SubMsg>, ContractError> {
+            .and_then(|stone| -> Result<Vec<SubMsg>, ContractError> {
                 PROGRAM
-                    .save(deps.storage, &program)
+                    .save(deps.storage, &stone)
                     .map_err(ContractError::from)?;
 
                 // Clean instantiate context
                 INSTANTIATE_CONTEXT.remove(deps.storage);
 
-                let req = build_source_files_query(program.clone())?.into();
+                let req = build_source_files_query(stone.law.clone())?.into();
                 let res = deps.querier.query(&req).map_err(ContractError::from)?;
 
                 let objects = ask_response_to_objects(res, "Files".to_string())?;
                 let mut msgs = Vec::with_capacity(objects.len());
                 for obj in objects {
-                    if obj.object_id == program.object_id {
+                    if obj.object_id == stone.law.object_id {
                         continue;
                     }
                     DEPENDENCIES.save(deps.storage, obj.object_id.as_str(), &obj)?;
@@ -169,18 +245,22 @@ pub mod reply {
 mod tests {
     use super::*;
     use crate::msg::ProgramResponse;
-    use crate::state::{Object, DEPENDENCIES, PROGRAM};
-    use cosmwasm_std::testing::{mock_env, mock_info, MockQuerierCustomHandlerResult};
-    use cosmwasm_std::{
-        from_binary, to_binary, CosmosMsg, Event, Order, SubMsgResponse, SubMsgResult, SystemError,
-        SystemResult,
+    use crate::state::{LawStone, Object, DEPENDENCIES, PROGRAM};
+    use cosmwasm_std::testing::{
+        mock_dependencies, mock_env, mock_info, MockQuerierCustomHandlerResult,
     };
+    use cosmwasm_std::{
+        from_binary, to_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
+        SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
+    };
+    use cw_storage::msg::PageInfo;
     use logic_bindings::testing::mock::{
         mock_dependencies_with_logic_and_balance, mock_dependencies_with_logic_handler,
     };
     use logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution, Term,
     };
+    use std::collections::VecDeque;
     use url::Url;
 
     fn custom_logic_handler_with_dependencies(
@@ -281,9 +361,12 @@ mod tests {
         PROGRAM
             .save(
                 deps.as_mut().storage,
-                &Object {
-                    object_id: object_id.clone(),
-                    storage_address: storage_addr.clone(),
+                &LawStone {
+                    broken: false,
+                    law: Object {
+                        object_id: object_id.clone(),
+                        storage_address: storage_addr.clone(),
+                    },
                 },
             )
             .unwrap();
@@ -381,7 +464,8 @@ mod tests {
             let res = response.unwrap();
 
             let program = PROGRAM.load(&deps.storage).unwrap();
-            assert_eq!(case.clone().object_id, program.object_id);
+            assert!(!program.broken);
+            assert_eq!(case.clone().object_id, program.law.object_id);
 
             let deps_len_requirement = case.clone().dependencies.len();
 
@@ -469,5 +553,265 @@ mod tests {
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
         }
+    }
+
+    #[test]
+    fn break_stone() {
+        let cases = vec![
+            (2, vec![]),
+            (1, vec![]),
+            (
+                1,
+                vec![Object {
+                    storage_address: "addr1".to_string(),
+                    object_id: "object1".to_string(),
+                }],
+            ),
+            (
+                3,
+                vec![
+                    Object {
+                        storage_address: "addr1".to_string(),
+                        object_id: "object1".to_string(),
+                    },
+                    Object {
+                        storage_address: "addr2".to_string(),
+                        object_id: "object2".to_string(),
+                    },
+                ],
+            ),
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+            deps.querier.update_wasm(move |req| match req {
+                WasmQuery::ContractInfo { .. } => {
+                    let mut contract_info = ContractInfoResponse::default();
+                    contract_info.admin = Some("creator".to_string());
+                    SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+                }
+                WasmQuery::Smart { contract_addr, msg } if contract_addr == "cw-storage1" => {
+                    match from_binary(msg) {
+                        Ok(StorageQuery::ObjectPins {
+                            id,
+                            first: Some(1u32),
+                            after: None,
+                        }) if id == "program-id" => SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&ObjectPinsResponse {
+                                data: vec!["creator".to_string()],
+                                page_info: PageInfo {
+                                    has_next_page: case.0 > 1,
+                                    cursor: "".to_string(),
+                                },
+                            })
+                            .unwrap(),
+                        )),
+                        _ => SystemResult::Err(SystemError::Unknown {}),
+                    }
+                }
+                _ => SystemResult::Err(SystemError::Unknown {}),
+            });
+
+            PROGRAM
+                .save(
+                    &mut deps.storage,
+                    &LawStone {
+                        broken: false,
+                        law: Object {
+                            object_id: "program-id".to_string(),
+                            storage_address: "cw-storage1".to_string(),
+                        },
+                    },
+                )
+                .unwrap();
+            for dep in case.1.clone() {
+                let mut id = dep.storage_address.to_owned();
+                id.push_str(dep.object_id.as_str());
+                DEPENDENCIES
+                    .save(&mut deps.storage, id.as_str(), &dep.clone())
+                    .unwrap();
+            }
+
+            let info = mock_info("creator", &[]);
+            let res = execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                ExecuteMsg::BreakStone,
+            )
+            .unwrap();
+
+            assert!(PROGRAM.load(&deps.storage).unwrap().broken);
+
+            let mut sub_msgs: VecDeque<SubMsg> = res.messages.into();
+            match sub_msgs.pop_front() {
+                Some(SubMsg {
+                    msg: cosmos_msg, ..
+                }) => match cosmos_msg {
+                    CosmosMsg::Wasm(WasmMsg::Execute {
+                        contract_addr, msg, ..
+                    }) => {
+                        assert_eq!(contract_addr, "cw-storage1".to_string());
+                        if case.0 > 1 {
+                            match from_binary(&msg) {
+                                Ok(StorageMsg::UnpinObject { id }) => {
+                                    assert_eq!(id, "program-id".to_string());
+                                }
+                                _ => panic!("storage message should be a UnpinObject message"),
+                            }
+                        } else {
+                            match from_binary(&msg) {
+                                Ok(StorageMsg::ForgetObject { id }) => {
+                                    assert_eq!(id, "program-id".to_string());
+                                }
+                                _ => panic!("storage message should be a ForgetObject message"),
+                            }
+                        }
+                    }
+                    _ => panic!("sub message should be a WasmMsg message"),
+                },
+                _ => panic!("result should contains sub messages"),
+            }
+
+            for dep in case.1 {
+                match sub_msgs.pop_front() {
+                    Some(SubMsg {
+                        msg: cosmos_msg, ..
+                    }) => match cosmos_msg {
+                        CosmosMsg::Wasm(WasmMsg::Execute {
+                            contract_addr, msg, ..
+                        }) => {
+                            assert_eq!(contract_addr, dep.storage_address);
+                            match from_binary(&msg) {
+                                Ok(StorageMsg::UnpinObject { id }) => {
+                                    assert_eq!(id, dep.object_id);
+                                }
+                                _ => panic!("storage message should be a UnpinObject message"),
+                            }
+                        }
+                        _ => panic!("sub message should be a WasmMsg message"),
+                    },
+                    _ => panic!("result should contains sub messages"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn break_stone_admin() {
+        let cases = vec![
+            (
+                "not-admin",
+                true,
+                false,
+                Some(ContractError::Unauthorized {}),
+            ),
+            (
+                "not-admin",
+                true,
+                true,
+                Some(ContractError::Unauthorized {}),
+            ),
+            ("admin", true, false, None),
+            ("anyone", false, false, None),
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+            deps.querier.update_wasm(move |req| match req {
+                WasmQuery::ContractInfo { .. } => {
+                    let mut contract_info = ContractInfoResponse::default();
+                    contract_info.admin = match case.1 {
+                        true => Some("admin".to_string()),
+                        false => None,
+                    };
+                    SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+                }
+                WasmQuery::Smart { .. } => SystemResult::Ok(ContractResult::Ok(
+                    to_binary(&ObjectPinsResponse {
+                        data: vec!["creator".to_string()],
+                        page_info: PageInfo {
+                            has_next_page: false,
+                            cursor: "".to_string(),
+                        },
+                    })
+                    .unwrap(),
+                )),
+                _ => SystemResult::Err(SystemError::Unknown {}),
+            });
+
+            PROGRAM
+                .save(
+                    &mut deps.storage,
+                    &LawStone {
+                        broken: case.2,
+                        law: Object {
+                            object_id: "id".to_string(),
+                            storage_address: "addr".to_string(),
+                        },
+                    },
+                )
+                .unwrap();
+
+            let res = execute(
+                deps.as_mut(),
+                mock_env(),
+                mock_info(case.0, &[]),
+                ExecuteMsg::BreakStone,
+            );
+
+            match case.3 {
+                Some(err) => {
+                    assert!(res.is_err());
+                    assert_eq!(res.err().unwrap(), err);
+                }
+                None => assert!(res.is_ok()),
+            };
+        }
+    }
+
+    #[test]
+    fn break_broken_stone() {
+        let mut deps = mock_dependencies();
+        deps.querier.update_wasm(|req| match req {
+            WasmQuery::ContractInfo { .. } => {
+                let mut contract_info = ContractInfoResponse::default();
+                contract_info.admin = Some("creator".to_string());
+                SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+            }
+            _ => SystemResult::Err(SystemError::Unknown {}),
+        });
+
+        PROGRAM
+            .save(
+                &mut deps.storage,
+                &LawStone {
+                    broken: true,
+                    law: Object {
+                        object_id: "id".to_string(),
+                        storage_address: "addr".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+        DEPENDENCIES
+            .save(
+                &mut deps.storage,
+                "id",
+                &Object {
+                    object_id: "id2".to_string(),
+                    storage_address: "addr2".to_string(),
+                },
+            )
+            .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("creator", &[]),
+            ExecuteMsg::BreakStone,
+        );
+        assert!(res.is_ok());
+        assert_eq!(res.ok().unwrap().messages.len(), 0);
     }
 }

@@ -4,13 +4,10 @@ use serde_json_wasm::de::Error;
 use thiserror::Error;
 use url::ParseError;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
-
-    #[error("Not implemented")]
-    NotImplemented {},
 
     #[error("{0}")]
     Parse(#[from] ParseReplyError),
@@ -20,6 +17,9 @@ pub enum ContractError {
 
     #[error("Failed parse dependency uri {uri:?}: {error:?}")]
     LogicLoadUri { error: UriError, uri: String },
+
+    #[error("Only the contract admin can perform this operation.")]
+    Unauthorized {},
 }
 
 impl ContractError {
@@ -27,7 +27,7 @@ impl ContractError {
         ContractError::LogicLoadUri { error, uri }
     }
 }
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum UriError {
     #[error("{0}")]
     Parse(#[from] ParseError),

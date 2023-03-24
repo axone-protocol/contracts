@@ -27,6 +27,7 @@ panic = 'abort'
 rpath = false
 
 [dependencies]
+logic-bindings.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
@@ -35,7 +36,6 @@ cw-storage-plus.workspace = true
 cw-utils.worksapce = true
 cw2.workspace = true
 form_urlencoded = "1.1.0"
-logic-bindings = { version = "0.2", path = "../../packages/logic-bindings" }
 schemars.workspace = true
 serde-json-wasm.workspace = true
 serde.workspace = true

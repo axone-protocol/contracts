@@ -2,6 +2,7 @@
 members = ["contracts/*", "packages/*"]
 
 [workspace.dependencies]
+logic-bindings = { path = "packages/logic-bindings" }
 cosmwasm-schema = "1.2.3"
 cosmwasm-std = "1.2.3"
 cosmwasm-storage = "1.2.3"

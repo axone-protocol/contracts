@@ -371,6 +371,7 @@ mod tests {
             INSTANTIATE_CONTEXT.load(&deps.storage).unwrap()
         );
     }
+
     #[test]
     fn program() {
         let mut deps = mock_dependencies_with_logic_and_balance(&[]);
@@ -397,6 +398,97 @@ mod tests {
 
         assert_eq!(object_id, result.object_id);
         assert_eq!(storage_addr, result.storage_address);
+    }
+
+    fn custom_logic_handler_with_query(
+        query: String,
+        program: Object,
+        request: &LogicCustomQuery,
+    ) -> MockQuerierCustomHandlerResult {
+        let LogicCustomQuery::Ask {
+            program: exp_program,
+            query: exp_query,
+            ..
+        } = query::build_ask_query(program, query.to_string()).unwrap();
+        match request {
+            LogicCustomQuery::Ask {
+                program,
+                query: queryy,
+            } if *queryy == exp_query && *program == exp_program => SystemResult::Ok(
+                to_binary(&AskResponse {
+                    height: 1,
+                    gas_used: 1000,
+                    answer: Some(Answer {
+                        success: true,
+                        has_more: false,
+                        variables: vec!["Foo".to_string()],
+                        results: vec![LogicResult {
+                            substitutions: vec![Substitution {
+                                variable: "Foo".to_string(),
+                                term: Term {
+                                    name: "bar".to_string(),
+                                    arguments: vec![],
+                                },
+                            }],
+                        }],
+                    }),
+                })
+                .into(),
+            ),
+            _ => SystemResult::Err(SystemError::InvalidRequest {
+                error: format!("Ask `{0}` predicate not called", query),
+                request: Default::default(),
+            }),
+        }
+    }
+
+    #[test]
+    fn ask() {
+        let q = "test(Foo).".to_string();
+        let object_id =
+            "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string();
+        let storage_addr =
+            "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string();
+
+        let p = Box::new((q.clone(), object_id.clone(), storage_addr.clone()));
+        let mut deps = mock_dependencies_with_logic_handler(move |request| {
+            let (qq, o, s) = p.as_ref();
+            custom_logic_handler_with_query(
+                qq.to_string(),
+                Object {
+                    object_id: o.to_string(),
+                    storage_address: s.to_string(),
+                },
+                request,
+            )
+        });
+
+        PROGRAM
+            .save(
+                deps.as_mut().storage,
+                &Object {
+                    object_id: object_id.clone(),
+                    storage_address: storage_addr.clone(),
+                },
+            )
+            .unwrap();
+
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Ask {
+                query: q.to_string(),
+            },
+        )
+        .unwrap();
+        let result: AskResponse = from_binary(&res).unwrap();
+
+        assert!(result.answer.is_some());
+        assert!(result
+            .answer
+            .unwrap()
+            .variables
+            .contains(&"Foo".to_string()));
     }
 
     #[derive(Clone)]

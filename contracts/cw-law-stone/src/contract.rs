@@ -139,12 +139,12 @@ pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdR
 }
 
 pub mod query {
-    use cosmwasm_std::QueryRequest;
-    use url::Url;
-    use logic_bindings::AskResponse;
     use super::*;
     use crate::msg::ProgramResponse;
     use crate::state::{Object, PROGRAM};
+    use cosmwasm_std::QueryRequest;
+    use logic_bindings::AskResponse;
+    use url::Url;
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
         let program = PROGRAM.load(deps.storage)?.into();
@@ -159,17 +159,13 @@ pub mod query {
     }
 
     pub fn build_ask_query(program: Object, query: String) -> StdResult<LogicCustomQuery> {
-        let program_uri: Url = program.try_into().map_err(|e: ContractError| -> StdError { e.into() })?;
+        let program_uri: Url = program
+            .try_into()
+            .map_err(|e: ContractError| -> StdError { e.into() })?;
 
         Ok(LogicCustomQuery::Ask {
             program: "".to_string(),
-            query: [
-                "consult('",
-                program_uri.as_str(),
-                "'), ",
-                query.as_str(),
-            ]
-                .join(""),
+            query: ["consult('", program_uri.as_str(), "'), ", query.as_str()].join(""),
         })
     }
 }
@@ -575,6 +571,27 @@ mod tests {
                     "source_files(Files) :- bagof(File, source_file(File), Files)."
                 );
                 assert_eq!(query, "consult('cosmwasm:cw-storage:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
+            }
+            _ => panic!("Expected Ok(LogicCustomQuery)."),
+        }
+    }
+
+    #[test]
+    fn build_ask_query() {
+        let result = query::build_ask_query(
+            Object {
+                object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
+                    .to_string(),
+                storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                    .to_string(),
+            },
+            "test(X).".to_string(),
+        );
+
+        match result {
+            Ok(LogicCustomQuery::Ask { program, query }) => {
+                assert_eq!(program, "");
+                assert_eq!(query, "consult('cosmwasm:cw-storage:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), test(X).")
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
         }

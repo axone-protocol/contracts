@@ -1,9 +1,9 @@
+use crate::ContractError::Std;
 use cosmwasm_std::StdError;
 use cw_utils::ParseReplyError;
 use serde_json_wasm::de::Error;
 use thiserror::Error;
 use url::ParseError;
-use crate::ContractError::Std;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {

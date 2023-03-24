@@ -1,3 +1,4 @@
+use crate::state::Object;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
 #[allow(unused_imports)]
@@ -49,4 +50,13 @@ pub struct ProgramResponse {
 
     /// The `cw-storage` contract address on which the law program is stored.
     pub storage_address: String,
+}
+
+impl From<Object> for ProgramResponse {
+    fn from(o: Object) -> Self {
+        ProgramResponse {
+            object_id: o.object_id,
+            storage_address: o.storage_address,
+        }
+    }
 }

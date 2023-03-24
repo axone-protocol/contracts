@@ -58,8 +58,22 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps<'_>, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    Err(StdError::generic_err("Not implemented"))
+pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Ask { .. } => Err(StdError::generic_err("not implemented")),
+        QueryMsg::Program => to_binary(&query::program(deps)?),
+    }
+}
+
+pub mod query {
+    use super::*;
+    use crate::msg::ProgramResponse;
+    use crate::state::PROGRAM;
+
+    pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
+        let program = PROGRAM.load(deps.storage)?;
+        Ok(ProgramResponse::from(program))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -154,13 +168,16 @@ pub mod reply {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::msg::ProgramResponse;
     use crate::state::{Object, DEPENDENCIES, PROGRAM};
     use cosmwasm_std::testing::{mock_env, mock_info, MockQuerierCustomHandlerResult};
     use cosmwasm_std::{
         from_binary, to_binary, CosmosMsg, Event, Order, SubMsgResponse, SubMsgResult, SystemError,
         SystemResult,
     };
-    use logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
+    use logic_bindings::testing::mock::{
+        mock_dependencies_with_logic_and_balance, mock_dependencies_with_logic_handler,
+    };
     use logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution, Term,
     };
@@ -252,6 +269,30 @@ mod tests {
             "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
             INSTANTIATE_CONTEXT.load(&deps.storage).unwrap()
         );
+    }
+    #[test]
+    fn program() {
+        let mut deps = mock_dependencies_with_logic_and_balance(&[]);
+
+        let object_id =
+            "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string();
+        let storage_addr =
+            "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string();
+        PROGRAM
+            .save(
+                deps.as_mut().storage,
+                &Object {
+                    object_id: object_id.clone(),
+                    storage_address: storage_addr.clone(),
+                },
+            )
+            .unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Program {}).unwrap();
+        let result: ProgramResponse = from_binary(&res).unwrap();
+
+        assert_eq!(object_id, result.object_id);
+        assert_eq!(storage_addr, result.storage_address);
     }
 
     #[derive(Clone)]

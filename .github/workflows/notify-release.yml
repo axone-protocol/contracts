@@ -37,6 +37,7 @@ jobs:
                 "version": "${{ github.event.release.tag_name }}",
                 "repository": "${{github.repository}}",
                 "section": "contracts",
-                "docs_directory": "docs/*"
+                "docs_directory": "docs/*",
+                "draft": "false"
               }
             }

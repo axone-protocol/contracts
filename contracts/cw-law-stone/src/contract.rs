@@ -152,9 +152,12 @@ pub mod query {
     }
 
     pub fn ask(deps: Deps<'_, LogicCustomQuery>, query: String) -> StdResult<AskResponse> {
-        let program = PROGRAM.load(deps.storage)?;
-        let req: QueryRequest<LogicCustomQuery> = build_ask_query(program, query)?.into();
+        let stone = PROGRAM.load(deps.storage)?;
+        if stone.broken {
+            return Err(StdError::generic_err("Law is broken"));
+        }
 
+        let req: QueryRequest<LogicCustomQuery> = build_ask_query(stone.law, query)?.into();
         deps.querier.query(&req)
     }
 

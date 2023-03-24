@@ -11,3 +11,5 @@ The `cw-law-stone` responsibility is to guarantee the availability of its rules 
 To ensure reliability over time, the associated Prolog program is stored and pinned in a `cw-storage` contract. Moreover, all the eventual loaded files must be stored in a `cw-storage` contract as well, allowing the contract to pin them.
 
 To be able to free the underlying resources (i.e. objects in `cw-storage`) if not used anymore, the contract admin can break the stone.
+
+➡️ Checkout the [examples](https://github.com/okp4/contracts/tree/main/contracts/cw-law-stone/exemples/) for usage information.

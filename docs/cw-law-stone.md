@@ -18,6 +18,8 @@ To ensure reliability over time, the associated Prolog program is stored and pin
 
 To be able to free the underlying resources (i.e. objects in `cw-storage`) if not used anymore, the contract admin can break the stone.
 
+➡️ Checkout the [examples](https://github.com/okp4/contracts/tree/main/contracts/cw-law-stone/exemples/) for usage information.
+
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                           |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [cw-law-stone.json](schema/cw-law-stone.json "open original schema") |

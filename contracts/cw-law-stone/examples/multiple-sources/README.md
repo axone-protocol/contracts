@@ -42,7 +42,7 @@ okp4d tx wasm instantiate $CODE_ID \
     --admin $ADMIN_ADDR \
     --gas 1000000 \
     --broadcast-mode block \
-    "{\"program\":\"$(cat gov.pl | base64)\", \"storage_address\": \"${STORAGE_ADDR}\"}"
+    "{\"program\":\"$(cat gov.pl | base64)\", \"storage_address\": \"$STORAGE_ADDR\"}"
 ```
 
 You can retrieve the new `cw-law-stone` smart contract address in the `_contract_address` instantiate attribute of the transaction.

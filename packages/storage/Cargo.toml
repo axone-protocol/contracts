@@ -1,0 +1,12 @@
+[package]
+authors = ["OKP4"]
+edition = "2021"
+name = "storage"
+version = "1.0.0"
+
+[dependencies]
+cw-storage = { path = "../../contracts/cw-storage" }
+logic-bindings.workspace = true
+cosmwasm-std.workspace = true
+schemars.workspace = true
+serde.workspace = true

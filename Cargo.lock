@@ -208,7 +208,7 @@ dependencies = [
 
 [[package]]
 name = "cw-law-stone"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -223,6 +223,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde-json-wasm",
+ "storage",
  "thiserror",
  "url",
 ]
@@ -248,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "cw-storage"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "base16ct",
  "base64 0.21.0",
@@ -532,11 +533,15 @@ checksum = "c0f80d65747a3e43d1596c7c5492d95d5edddaabd45a7fcdb02b95f644164966"
 
 [[package]]
 name = "logic-bindings"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-std",
+ "form_urlencoded",
  "schemars",
  "serde",
+ "serde-json-wasm",
+ "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -781,6 +786,17 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "storage"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage",
+ "logic-bindings",
+ "schemars",
+ "serde",
+]
 
 [[package]]
 name = "subtle"

@@ -3,8 +3,8 @@ use serde::{de, ser};
 use std::collections::HashMap;
 use url::Url;
 
-const COSMWASM_SCHEME: &'static str = "cosmwasm";
-const COSMWASM_QUERY_PARAM: &'static str = "query";
+const COSMWASM_SCHEME: &str = "cosmwasm";
+const COSMWASM_QUERY_PARAM: &str = "query";
 
 /// Represents a file system URI used to load files from the logic module dedicated to the resolution
 /// of data coming from a CosmWasm smart contract query. The URI having the form:
@@ -60,7 +60,7 @@ impl TryFrom<String> for CosmwasmUri {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Url::parse(value.as_str())
-            .map_err(|e| CosmwasmUriError::ParseURI(e))
+            .map_err(CosmwasmUriError::ParseURI)
             .and_then(|uri: Url| {
                 if uri.scheme() != COSMWASM_SCHEME {
                     return Err(CosmwasmUriError::Malformed("wrong scheme".to_string()));
@@ -129,7 +129,7 @@ mod tests {
     use url::ParseError;
 
     #[test]
-    fn serde_success() {
+    fn proper_string_mappings() {
         let cases = vec![
             (
                 CosmwasmUri{

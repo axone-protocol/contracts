@@ -5,7 +5,7 @@ use logic_bindings::error::CosmwasmUriError;
 use logic_bindings::uri::CosmwasmUri;
 use serde::{Deserialize, Serialize};
 
-const CONTRACT_NAME: &'static str = "cw-storage";
+const CONTRACT_NAME: &str = "cw-storage";
 
 /// Represents a reference to an Object stored in the `cw-storage` contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -150,21 +150,22 @@ mod tests {
                 .to_string(),
         };
 
-        let cases: Vec<(Box<dyn FnOnce(Vec<Coin>) -> StdResult<WasmMsg>>, ExecuteMsg)> = vec![
+        type ToExecuteMsgFn = Box<dyn FnOnce(ObjectRef, Vec<Coin>) -> StdResult<WasmMsg>>;
+        let cases: Vec<(ToExecuteMsgFn, ExecuteMsg)> = vec![
             (
-                Box::from(|f| object.to_exec_forget_msg(f)),
+                Box::from(|obj: ObjectRef, f| obj.to_exec_forget_msg(f)),
                 ExecuteMsg::ForgetObject {
                     id: object.object_id.clone(),
                 },
             ),
             (
-                Box::from(|f| object.to_exec_pin_msg(f)),
+                Box::from(|obj: ObjectRef, f| obj.to_exec_pin_msg(f)),
                 ExecuteMsg::PinObject {
                     id: object.object_id.clone(),
                 },
             ),
             (
-                Box::from(|f| object.to_exec_unpin_msg(f)),
+                Box::from(|obj: ObjectRef, f| obj.to_exec_unpin_msg(f)),
                 ExecuteMsg::UnpinObject {
                     id: object.object_id.clone(),
                 },
@@ -172,7 +173,7 @@ mod tests {
         ];
 
         for case in cases {
-            let res = case.0(funds.clone());
+            let res = case.0(object.clone(), funds.clone());
             assert!(res.is_ok());
 
             match res.unwrap() {

@@ -1,8 +1,16 @@
 use crate::ContractError;
-use cosmwasm_std::Event;
+use cosmwasm_std::{Event, StdError, StdResult};
+use logic_bindings::error::CosmwasmUriError;
 use logic_bindings::uri::CosmwasmUri;
 use logic_bindings::{AskResponse, Substitution};
+use std::any::type_name;
 use storage::ObjectRef;
+
+pub fn object_ref_to_uri(object: ObjectRef) -> StdResult<CosmwasmUri> {
+    CosmwasmUri::try_from(object).map_err(|e: CosmwasmUriError| {
+        StdError::parse_err(type_name::<CosmwasmUri>(), e.to_string())
+    })
+}
 
 pub fn get_reply_event_attribute(events: Vec<Event>, key: String) -> Option<String> {
     return events
@@ -43,7 +51,7 @@ pub fn ask_response_to_objects(
     for str_uri in uris {
         objects.push(
             CosmwasmUri::try_from(str_uri.clone())
-                .and_then(|uri| ObjectRef::try_from(uri))
+                .and_then(ObjectRef::try_from)
                 .map_err(|e| ContractError::ParseCosmwasmUri {
                     error: e,
                     uri: str_uri,

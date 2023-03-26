@@ -125,11 +125,10 @@ pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdR
 
 pub mod query {
     use super::*;
+    use crate::helper::object_ref_to_uri;
     use crate::msg::ProgramResponse;
     use crate::state::PROGRAM;
     use cosmwasm_std::QueryRequest;
-    use logic_bindings::error::CosmwasmUriError;
-    use logic_bindings::uri::CosmwasmUri;
     use logic_bindings::AskResponse;
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
@@ -148,9 +147,7 @@ pub mod query {
     }
 
     pub fn build_ask_query(program: ObjectRef, query: String) -> StdResult<LogicCustomQuery> {
-        let program_uri = CosmwasmUri::try_from(program)
-            .map_err(|e: CosmwasmUriError| StdError::generic_err(e.to_string()))?
-            .to_string();
+        let program_uri = object_ref_to_uri(program)?.to_string();
 
         Ok(LogicCustomQuery::Ask {
             program: "".to_string(),
@@ -173,10 +170,8 @@ pub fn reply(
 
 pub mod reply {
     use super::*;
-    use crate::helper::{ask_response_to_objects, get_reply_event_attribute};
+    use crate::helper::{ask_response_to_objects, get_reply_event_attribute, object_ref_to_uri};
     use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
-    use logic_bindings::error::CosmwasmUriError;
-    use logic_bindings::uri::CosmwasmUri;
 
     pub fn store_program_reply(
         deps: DepsMut<'_, LogicCustomQuery>,
@@ -232,9 +227,7 @@ pub mod reply {
     }
 
     pub fn build_source_files_query(program: ObjectRef) -> StdResult<LogicCustomQuery> {
-        let program_uri = CosmwasmUri::try_from(program)
-            .map_err(|e: CosmwasmUriError| StdError::generic_err(e.to_string()))?
-            .to_string();
+        let program_uri = object_ref_to_uri(program)?.to_string();
 
         Ok(LogicCustomQuery::Ask {
             program: "source_files(Files) :- bagof(File, source_file(File), Files).".to_string(),
@@ -421,7 +414,7 @@ mod tests {
                 .into(),
             ),
             _ => SystemResult::Err(SystemError::InvalidRequest {
-                error: format!("Ask `{0}` predicate not called", query),
+                error: format!("Ask `{query}` predicate not called"),
                 request: Default::default(),
             }),
         }

@@ -11,6 +11,7 @@ use logic_bindings::LogicCustomQuery;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::INSTANTIATE_CONTEXT;
+use storage::ObjectRef;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:law-stone";
@@ -60,7 +61,7 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::state::{Object, DEPENDENCIES, PROGRAM};
+    use crate::state::{DEPENDENCIES, PROGRAM};
     use cosmwasm_std::Order;
 
     pub fn break_stone(
@@ -99,34 +100,18 @@ pub mod execute {
             .page_info
             .has_next_page
         {
-            true => StorageMsg::UnpinObject {
-                id: stone.law.object_id,
-            },
-            _ => StorageMsg::ForgetObject {
-                id: stone.law.object_id,
-            },
-        };
+            true => stone.law.to_exec_unpin_msg(vec![]),
+            _ => stone.law.to_exec_forget_msg(vec![]),
+        }?;
 
-        Ok(resp
-            .add_message(WasmMsg::Execute {
-                contract_addr: stone.law.storage_address,
-                msg: to_binary(&law_release_msg)?,
-                funds: vec![],
-            })
-            .add_messages(
-                DEPENDENCIES
-                    .range(deps.storage, None, None, Order::Ascending)
-                    .map(|res: StdResult<(String, Object)>| {
-                        res.and_then(|(_, obj)| {
-                            Ok(WasmMsg::Execute {
-                                contract_addr: obj.storage_address,
-                                msg: to_binary(&StorageMsg::UnpinObject { id: obj.object_id })?,
-                                funds: vec![],
-                            })
-                        })
-                    })
-                    .collect::<StdResult<Vec<WasmMsg>>>()?,
-            ))
+        Ok(resp.add_message(law_release_msg).add_messages(
+            DEPENDENCIES
+                .range(deps.storage, None, None, Order::Ascending)
+                .map(|res: StdResult<(String, ObjectRef)>| {
+                    res.and_then(|(_, obj)| obj.to_exec_unpin_msg(vec![]))
+                })
+                .collect::<StdResult<Vec<WasmMsg>>>()?,
+        ))
     }
 }
 
@@ -141,10 +126,11 @@ pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdR
 pub mod query {
     use super::*;
     use crate::msg::ProgramResponse;
-    use crate::state::{Object, PROGRAM};
+    use crate::state::PROGRAM;
     use cosmwasm_std::QueryRequest;
+    use logic_bindings::error::CosmwasmUriError;
+    use logic_bindings::uri::CosmwasmUri;
     use logic_bindings::AskResponse;
-    use url::Url;
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
         let program = PROGRAM.load(deps.storage)?.into();
@@ -161,10 +147,10 @@ pub mod query {
         deps.querier.query(&req)
     }
 
-    pub fn build_ask_query(program: Object, query: String) -> StdResult<LogicCustomQuery> {
-        let program_uri: Url = program
-            .try_into()
-            .map_err(|e: ContractError| -> StdError { e.into() })?;
+    pub fn build_ask_query(program: ObjectRef, query: String) -> StdResult<LogicCustomQuery> {
+        let program_uri = CosmwasmUri::try_from(program)
+            .map_err(|e: CosmwasmUriError| StdError::generic_err(e.to_string()))?
+            .to_string();
 
         Ok(LogicCustomQuery::Ask {
             program: "".to_string(),
@@ -188,8 +174,9 @@ pub fn reply(
 pub mod reply {
     use super::*;
     use crate::helper::{ask_response_to_objects, get_reply_event_attribute};
-    use crate::state::{LawStone, Object, DEPENDENCIES, PROGRAM};
-    use url::Url;
+    use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
+    use logic_bindings::error::CosmwasmUriError;
+    use logic_bindings::uri::CosmwasmUri;
 
     pub fn store_program_reply(
         deps: DepsMut<'_, LogicCustomQuery>,
@@ -212,7 +199,7 @@ pub mod reply {
             })
             .map(|obj_id| LawStone {
                 broken: false,
-                law: Object {
+                law: ObjectRef {
                     object_id: obj_id,
                     storage_address: context.clone(),
                 },
@@ -236,13 +223,7 @@ pub mod reply {
                     }
                     DEPENDENCIES.save(deps.storage, obj.object_id.as_str(), &obj)?;
 
-                    msgs.push(SubMsg::new(WasmMsg::Execute {
-                        msg: to_binary(&StorageMsg::PinObject {
-                            id: obj.clone().object_id,
-                        })?,
-                        contract_addr: obj.clone().storage_address,
-                        funds: vec![],
-                    }));
+                    msgs.push(SubMsg::new(obj.to_exec_pin_msg(vec![])?));
                 }
 
                 Ok(msgs)
@@ -250,8 +231,10 @@ pub mod reply {
             .map(|msg| Response::new().add_submessages(msg))
     }
 
-    pub fn build_source_files_query(program: Object) -> Result<LogicCustomQuery, ContractError> {
-        let program_uri: Url = program.try_into()?;
+    pub fn build_source_files_query(program: ObjectRef) -> StdResult<LogicCustomQuery> {
+        let program_uri = CosmwasmUri::try_from(program)
+            .map_err(|e: CosmwasmUriError| StdError::generic_err(e.to_string()))?
+            .to_string();
 
         Ok(LogicCustomQuery::Ask {
             program: "source_files(Files) :- bagof(File, source_file(File), Files).".to_string(),
@@ -269,7 +252,7 @@ pub mod reply {
 mod tests {
     use super::*;
     use crate::msg::ProgramResponse;
-    use crate::state::{LawStone, Object, DEPENDENCIES, PROGRAM};
+    use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
     use cosmwasm_std::testing::{
         mock_dependencies, mock_env, mock_info, MockQuerierCustomHandlerResult,
     };
@@ -281,20 +264,19 @@ mod tests {
     use logic_bindings::testing::mock::{
         mock_dependencies_with_logic_and_balance, mock_dependencies_with_logic_handler,
     };
+    use logic_bindings::uri::CosmwasmUri;
     use logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution, Term,
     };
     use std::collections::VecDeque;
-    use url::Url;
 
     fn custom_logic_handler_with_dependencies(
         dependencies: Vec<String>,
-        program: Object,
+        program: ObjectRef,
         request: &LogicCustomQuery,
     ) -> MockQuerierCustomHandlerResult {
-        let program_uri: Url = program.clone().try_into().unwrap();
         let mut updated_deps = dependencies;
-        updated_deps.push(program_uri.to_string());
+        updated_deps.push(CosmwasmUri::try_from(program.clone()).unwrap().to_string());
         let deps_name = format!("[{}]", &updated_deps.join(","));
         let LogicCustomQuery::Ask {
             program: exp_program,
@@ -388,7 +370,7 @@ mod tests {
                 deps.as_mut().storage,
                 &LawStone {
                     broken: false,
-                    law: Object {
+                    law: ObjectRef {
                         object_id: object_id.clone(),
                         storage_address: storage_addr.clone(),
                     },
@@ -405,7 +387,7 @@ mod tests {
 
     fn custom_logic_handler_with_query(
         query: String,
-        program: Object,
+        program: ObjectRef,
         request: &LogicCustomQuery,
     ) -> MockQuerierCustomHandlerResult {
         let LogicCustomQuery::Ask {
@@ -451,7 +433,7 @@ mod tests {
             (
                 false,                    // broken
                 "test(Foo).".to_string(), // query
-                Object {
+                ObjectRef {
                     object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
                         .to_string(),
                     storage_address:
@@ -464,7 +446,7 @@ mod tests {
             (
                 true,                     // broken
                 "test(Foo).".to_string(), // query
-                Object {
+                ObjectRef {
                     object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
                         .to_string(),
                     storage_address:
@@ -486,7 +468,7 @@ mod tests {
                 let (query, o, s) = p.as_ref();
                 custom_logic_handler_with_query(
                     query.to_string(),
-                    Object {
+                    ObjectRef {
                         object_id: o.to_string(),
                         storage_address: s.to_string(),
                     },
@@ -583,7 +565,7 @@ mod tests {
             let mut deps = mock_dependencies_with_logic_handler(move |request| {
                 custom_logic_handler_with_dependencies(
                     uris.to_vec(),
-                    Object {
+                    ObjectRef {
                         object_id: program_object_id.clone(),
                         storage_address:
                             "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s"
@@ -686,7 +668,7 @@ mod tests {
 
     #[test]
     fn build_source_files_query() {
-        let result = reply::build_source_files_query(Object {
+        let result = reply::build_source_files_query(ObjectRef {
             object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
                 .to_string(),
             storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
@@ -708,7 +690,7 @@ mod tests {
     #[test]
     fn build_ask_query() {
         let result = query::build_ask_query(
-            Object {
+            ObjectRef {
                 object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
                     .to_string(),
                 storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
@@ -733,7 +715,7 @@ mod tests {
             (1, vec![]),
             (
                 1,
-                vec![Object {
+                vec![ObjectRef {
                     storage_address: "addr1".to_string(),
                     object_id: "object1".to_string(),
                 }],
@@ -741,11 +723,11 @@ mod tests {
             (
                 3,
                 vec![
-                    Object {
+                    ObjectRef {
                         storage_address: "addr1".to_string(),
                         object_id: "object1".to_string(),
                     },
-                    Object {
+                    ObjectRef {
                         storage_address: "addr2".to_string(),
                         object_id: "object2".to_string(),
                     },
@@ -788,7 +770,7 @@ mod tests {
                     &mut deps.storage,
                     &LawStone {
                         broken: false,
-                        law: Object {
+                        law: ObjectRef {
                             object_id: "program-id".to_string(),
                             storage_address: "cw-storage1".to_string(),
                         },
@@ -916,7 +898,7 @@ mod tests {
                     &mut deps.storage,
                     &LawStone {
                         broken: case.2,
-                        law: Object {
+                        law: ObjectRef {
                             object_id: "id".to_string(),
                             storage_address: "addr".to_string(),
                         },
@@ -958,7 +940,7 @@ mod tests {
                 &mut deps.storage,
                 &LawStone {
                     broken: true,
-                    law: Object {
+                    law: ObjectRef {
                         object_id: "id".to_string(),
                         storage_address: "addr".to_string(),
                     },
@@ -969,7 +951,7 @@ mod tests {
             .save(
                 &mut deps.storage,
                 "id",
-                &Object {
+                &ObjectRef {
                     object_id: "id2".to_string(),
                     storage_address: "addr2".to_string(),
                 },

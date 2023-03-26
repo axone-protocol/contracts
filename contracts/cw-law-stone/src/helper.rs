@@ -1,8 +1,8 @@
-use crate::state::Object;
 use crate::ContractError;
 use cosmwasm_std::Event;
+use logic_bindings::uri::CosmwasmUri;
 use logic_bindings::{AskResponse, Substitution};
-use url::Url;
+use storage::ObjectRef;
 
 pub fn get_reply_event_attribute(events: Vec<Event>, key: String) -> Option<String> {
     return events
@@ -28,7 +28,7 @@ fn filter_source_files(substitution: Substitution) -> Vec<String> {
 pub fn ask_response_to_objects(
     res: AskResponse,
     variable: String,
-) -> Result<Vec<Object>, ContractError> {
+) -> Result<Vec<ObjectRef>, ContractError> {
     let uris = res
         .answer
         .map(|a| a.results)
@@ -40,12 +40,15 @@ pub fn ask_response_to_objects(
         .collect::<Vec<String>>();
 
     let mut objects = vec![];
-    for uri in uris {
-        let url = Url::parse(uri.as_str())
-            .map_err(|e| ContractError::dependency_uri(e.into(), uri.clone()))?;
-        let object = Object::try_from(url).map_err(|e| ContractError::dependency_uri(e, uri))?;
-
-        objects.push(object)
+    for str_uri in uris {
+        objects.push(
+            CosmwasmUri::try_from(str_uri.clone())
+                .and_then(|uri| ObjectRef::try_from(uri))
+                .map_err(|e| ContractError::ParseCosmwasmUri {
+                    error: e,
+                    uri: str_uri,
+                })?,
+        );
     }
     Ok(objects)
 }

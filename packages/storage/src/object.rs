@@ -1,5 +1,6 @@
-use cw_storage::msg::QueryMsg;
+use cosmwasm_std::{to_binary, Coin, StdResult, WasmMsg};
 use cw_storage::msg::QueryMsg::ObjectData;
+use cw_storage::msg::{ExecuteMsg, QueryMsg};
 use logic_bindings::error::CosmwasmUriError;
 use logic_bindings::uri::CosmwasmUri;
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,46 @@ pub struct ObjectRef {
 
     /// The `cw-storage` contract address on which the object is stored.
     pub storage_address: String,
+}
+
+impl ObjectRef {
+    fn to_wasm_exec_msg<T>(&self, msg: &T, funds: Vec<Coin>) -> StdResult<WasmMsg>
+    where
+        T: Serialize + ?Sized,
+    {
+        Ok(WasmMsg::Execute {
+            contract_addr: self.storage_address.clone(),
+            msg: to_binary(msg)?,
+            funds,
+        })
+    }
+
+    pub fn to_exec_forget_msg(&self, funds: Vec<Coin>) -> StdResult<WasmMsg> {
+        self.to_wasm_exec_msg(
+            &ExecuteMsg::ForgetObject {
+                id: self.object_id.clone(),
+            },
+            funds,
+        )
+    }
+
+    pub fn to_exec_pin_msg(&self, funds: Vec<Coin>) -> StdResult<WasmMsg> {
+        self.to_wasm_exec_msg(
+            &ExecuteMsg::PinObject {
+                id: self.object_id.clone(),
+            },
+            funds,
+        )
+    }
+
+    pub fn to_exec_unpin_msg(&self, funds: Vec<Coin>) -> StdResult<WasmMsg> {
+        self.to_wasm_exec_msg(
+            &ExecuteMsg::UnpinObject {
+                id: self.object_id.clone(),
+            },
+            funds,
+        )
+    }
 }
 
 impl TryFrom<CosmwasmUri> for ObjectRef {
@@ -52,6 +93,7 @@ impl TryFrom<ObjectRef> for CosmwasmUri {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cosmwasm_std::from_binary;
 
     #[test]
     fn uri_to_object() {
@@ -86,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn object_ro_uri() {
+    fn object_to_uri() {
         let res = CosmwasmUri::try_from(ObjectRef {
             object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
                 .to_string(),
@@ -96,5 +138,57 @@ mod tests {
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap().to_string(), "cosmwasm:cw-storage:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D");
+    }
+
+    #[test]
+    fn object_to_wasm_msg() {
+        let funds = vec![Coin::new(100u128, "uknow")];
+        let object = ObjectRef {
+            object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
+                .to_string(),
+            storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                .to_string(),
+        };
+
+        let cases: Vec<(Box<dyn FnOnce(Vec<Coin>) -> StdResult<WasmMsg>>, ExecuteMsg)> = vec![
+            (
+                Box::from(|f| object.to_exec_forget_msg(f)),
+                ExecuteMsg::ForgetObject {
+                    id: object.object_id.clone(),
+                },
+            ),
+            (
+                Box::from(|f| object.to_exec_pin_msg(f)),
+                ExecuteMsg::PinObject {
+                    id: object.object_id.clone(),
+                },
+            ),
+            (
+                Box::from(|f| object.to_exec_unpin_msg(f)),
+                ExecuteMsg::UnpinObject {
+                    id: object.object_id.clone(),
+                },
+            ),
+        ];
+
+        for case in cases {
+            let res = case.0(funds.clone());
+            assert!(res.is_ok());
+
+            match res.unwrap() {
+                WasmMsg::Execute {
+                    contract_addr: addr,
+                    msg,
+                    funds: f,
+                } => {
+                    assert_eq!(addr, object.storage_address.clone());
+                    assert_eq!(f, funds);
+                    let exec_res = from_binary::<ExecuteMsg>(&msg);
+                    assert!(exec_res.is_ok());
+                    assert_eq!(exec_res.unwrap(), case.1)
+                }
+                _ => panic!("Expected 'WasmMsg::Execute'"),
+            }
+        }
     }
 }

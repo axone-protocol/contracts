@@ -29,29 +29,30 @@ impl<'a> Parser<'a> {
     fn parse_seq(&mut self, end_seq: u8) -> Result<Vec<TermValue>, TermParseError> {
         let mut values: Vec<TermValue> = Vec::new();
         loop {
-            match self.peek() {
-                None => Err(TermParseError::Eof)?,
-                Some(b'[') => {
-                    self.eat_char();
-                    values.push(self.parse_array()?);
-                }
-                Some(b'(') => {
-                    self.eat_char();
-                    values.push(self.parse_tuple()?);
-                }
-                Some(b'\'') => {
-                    self.eat_char();
-                    values.push(self.parse_escaped_value()?);
-                }
+            values.push(match self.peek() {
+                None => Err(TermParseError::Eof),
                 Some(t) if t == end_seq => {
                     if !values.is_empty() {
-                        Err(TermParseError::UnexpectedEndOfSeq)?
+                        return Err(TermParseError::UnexpectedEndOfSeq);
                     }
                     self.eat_char();
                     break;
                 }
-                Some(_) => values.push(self.parse_value()?),
-            }
+                Some(b'[') => {
+                    self.eat_char();
+                    self.parse_array()
+                }
+                Some(b'(') => {
+                    self.eat_char();
+                    self.parse_tuple()
+                }
+                Some(b'\'') => {
+                    self.eat_char();
+                    self.parse_escaped_value()
+                }
+                Some(_) => self.parse_value(),
+            }?);
+
             match self.peek() {
                 Some(t) if t == end_seq => {
                     self.eat_char();
@@ -196,4 +197,209 @@ pub fn from_slice(v: &[u8]) -> Result<TermValue, TermParseError> {
 /// Parses a Prolog response term from a string
 pub fn from_str(s: &str) -> Result<TermValue, TermParseError> {
     from_slice(s.as_bytes())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_value() {
+        let cases = vec![
+            ("hello", Ok(TermValue::Value("hello".to_string()))),
+            ("47", Ok(TermValue::Value("47".to_string()))),
+            ("25.18", Ok(TermValue::Value("25.18".to_string()))),
+            ("78/foo", Ok(TermValue::Value("78/foo".to_string()))),
+            ("", Err(TermParseError::EmptyValue)),
+            ("]", Err(TermParseError::EmptyValue)),
+            (")", Err(TermParseError::EmptyValue)),
+            (",", Err(TermParseError::EmptyValue)),
+            ("foo[", Err(TermParseError::UnexpectedValueToken('['))),
+            ("foo(", Err(TermParseError::UnexpectedValueToken('('))),
+            ("foo'", Err(TermParseError::UnexpectedValueToken('\''))),
+            ("foo\"", Err(TermParseError::UnexpectedValueToken('"'))),
+            ("foo ", Err(TermParseError::UnexpectedValueToken(' '))),
+        ];
+
+        for case in cases {
+            let res = Parser {
+                slice: case.0.as_bytes(),
+                index: 0,
+            }
+            .parse_value();
+            assert_eq!(res, case.1);
+        }
+
+        let res = Parser {
+            slice: &[255u8],
+            index: 0,
+        }
+        .parse_value();
+        assert!(res.is_err());
+        assert!(match res.err().unwrap() {
+            TermParseError::NotUtf8Value(_) => true,
+            _ => false,
+        });
+    }
+
+    #[test]
+    fn parse_escaped_value() {
+        let cases = vec![
+            ("hello'", Ok(TermValue::Value("hello".to_string()))),
+            (
+                "47.18/\\foo&é#@'",
+                Ok(TermValue::Value("47.18/\\foo&é#@".to_string())),
+            ),
+            (
+                "can \\' quote'",
+                Ok(TermValue::Value("can ' quote".to_string())),
+            ),
+            (
+                "    a     '",
+                Ok(TermValue::Value("    a     ".to_string())),
+            ),
+            (
+                "and an emoji 👌'",
+                Ok(TermValue::Value("and an emoji 👌".to_string())),
+            ),
+            ("eof", Err(TermParseError::Eof)),
+        ];
+
+        for case in cases {
+            let res = Parser {
+                slice: case.0.as_bytes(),
+                index: 0,
+            }
+            .parse_escaped_value();
+            assert_eq!(res, case.1);
+        }
+
+        let res = Parser {
+            slice: &[255u8, b'\''],
+            index: 0,
+        }
+        .parse_escaped_value();
+        assert!(res.is_err());
+        assert!(match res.err().unwrap() {
+            TermParseError::NotUtf8Value(_) => true,
+            _ => false,
+        });
+    }
+
+    #[test]
+    fn parse_array() {
+        let cases = vec![
+            ("[]", Ok(TermValue::Array(vec![]))),
+            ("[,]", Err(TermParseError::EmptyValue)),
+            ("[[]", Err(TermParseError::Eof)),
+            ("[", Err(TermParseError::Eof)),
+            (
+                "[hello]",
+                Ok(TermValue::Array(vec![TermValue::Value(
+                    "hello".to_string(),
+                )])),
+            ),
+            ("['hello'oups]", Err(TermParseError::ExpectedSeqToken('o'))),
+            (
+                "[hello,'cosmonaut']",
+                Ok(TermValue::Array(vec![
+                    TermValue::Value("hello".to_string()),
+                    TermValue::Value("cosmonaut".to_string()),
+                ])),
+            ),
+            (
+                "[hello,'cosmonaut',]",
+                Err(TermParseError::UnexpectedEndOfSeq),
+            ),
+            (
+                "[hello, 'cosmonaut']",
+                Err(TermParseError::UnexpectedValueToken(' ')),
+            ),
+            (
+                "[[],[[]],['that\\'s a lot!']]",
+                Ok(TermValue::Array(vec![
+                    TermValue::Array(vec![]),
+                    TermValue::Array(vec![TermValue::Array(vec![])]),
+                    TermValue::Array(vec![TermValue::Value("that's a lot!".to_string())]),
+                ])),
+            ),
+        ];
+
+        for case in cases {
+            let res = from_str(case.0);
+            assert_eq!(res, case.1);
+        }
+    }
+
+    #[test]
+    fn parse_tuple() {
+        let cases = vec![
+            (
+                "(1,2)",
+                Ok(TermValue::Tuple(vec![
+                    TermValue::Value("1".to_string()),
+                    TermValue::Value("2".to_string()),
+                ])),
+            ),
+            ("()", Err(TermParseError::EmptyTuple)),
+            ("(,)", Err(TermParseError::EmptyValue)),
+            ("((1,2)", Err(TermParseError::Eof)),
+            ("(", Err(TermParseError::Eof)),
+            (
+                "(((1,2),(1,2,3)),('that\\'s',' a lot!'))",
+                Ok(TermValue::Tuple(vec![
+                    TermValue::Tuple(vec![
+                        TermValue::Tuple(vec![
+                            TermValue::Value("1".to_string()),
+                            TermValue::Value("2".to_string()),
+                        ]),
+                        TermValue::Tuple(vec![
+                            TermValue::Value("1".to_string()),
+                            TermValue::Value("2".to_string()),
+                            TermValue::Value("3".to_string()),
+                        ]),
+                    ]),
+                    TermValue::Tuple(vec![
+                        TermValue::Value("that's".to_string()),
+                        TermValue::Value(" a lot!".to_string()),
+                    ]),
+                ])),
+            ),
+        ];
+
+        for case in cases {
+            let res = from_str(case.0);
+            assert_eq!(res, case.1);
+        }
+    }
+
+    #[test]
+    fn parse() {
+        let cases = vec![
+            ("", Ok(TermValue::Value("".to_string()))),
+            ("hello", Ok(TermValue::Value("hello".to_string()))),
+            ("'hello'", Ok(TermValue::Value("hello".to_string()))),
+            ("(1,2))", Err(TermParseError::UnexpectedRootToken(')'))),
+            ("[]]", Err(TermParseError::UnexpectedRootToken(']'))),
+            (
+                "[hello],([[],'an \\' escape'],'an emoji 👌'),[cosmos]",
+                Ok(TermValue::Tuple(vec![
+                    TermValue::Array(vec![TermValue::Value("hello".to_string())]),
+                    TermValue::Tuple(vec![
+                        TermValue::Array(vec![
+                            TermValue::Array(vec![]),
+                            TermValue::Value("an \' escape".to_string()),
+                        ]),
+                        TermValue::Value("an emoji 👌".to_string()),
+                    ]),
+                    TermValue::Array(vec![TermValue::Value("cosmos".to_string())]),
+                ])),
+            ),
+        ];
+
+        for case in cases {
+            let res = from_str(case.0);
+            assert_eq!(res, case.1);
+        }
+    }
 }

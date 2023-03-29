@@ -54,3 +54,20 @@ impl Term {
         from_str(self.name.as_str())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn term_parse() {
+        assert_eq!(
+            Term {
+                name: "'hello'".to_string(),
+                arguments: vec![],
+            }
+            .parse(),
+            Ok(TermValue::Value("hello".to_string()))
+        );
+    }
+}

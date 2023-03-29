@@ -52,23 +52,15 @@ command = "cargo"
 args = ["build", "--release", "--locked"]
 command = "cargo"
 
-[tasks.build-coverage]
-args = ["build"]
-command = "cargo"
-description = "Compile the source code and create testable artifacts."
-env = { RUSTFLAGS = "-Cinstrument-coverage" }
-
 [tasks.test]
 args = ["test", "--lib", "--tests", "--workspace", "--locked"]
 command = "cargo"
-dependencies = ["install-llvm-tools-preview", "build-coverage"]
 description = "Run all unit tests."
-env = { LLVM_PROFILE_FILE = "default.profraw", RUST_BACKTRACE = 1 }
 
 [tasks.test-coverage]
-args = ["tarpaulin", "-o", "lcov"]
+dependencies = ["install-llvm-tools-preview", "install-llvm-cov"]
 command = "cargo"
-dependencies = ["install-tarpaulin"]
+args = ["llvm-cov", "--workspace", "--lcov", "--output-path", "lcov.info"]
 
 [tasks.install_wasm]
 script = '''
@@ -495,8 +487,8 @@ install_crate = { rustup_component_name = "rustfmt" }
 [tasks.install-taplo-cli]
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
 
-[tasks.install-tarpaulin]
-install_crate = { crate_name = "cargo-tarpaulin" }
+[tasks.install-llvm-cov]
+install_crate = { crate_name = "cargo-llvm-cov" }
 
 [tasks.install-cosmwasm-check]
 install_crate = { crate_name = "cosmwasm-check" }

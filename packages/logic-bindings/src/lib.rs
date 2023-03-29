@@ -10,9 +10,11 @@
 
 pub mod error;
 mod query;
+mod term_parser;
 pub mod uri;
 
 pub use query::{Answer, AskResponse, LogicCustomQuery, Result, Substitution, Term};
+pub use term_parser::TermValue;
 
 // Exposed for testing only
 // Both unit tests and integration tests are compiled to native code, so everything in here does not need to compile to Wasm.

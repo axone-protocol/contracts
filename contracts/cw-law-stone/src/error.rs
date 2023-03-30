@@ -24,7 +24,7 @@ pub enum ContractError {
     Unauthorized {},
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum LogicAskResponseError {
     #[error("Could not parse term: {0}")]
     Parse(TermParseError),

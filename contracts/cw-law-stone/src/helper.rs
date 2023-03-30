@@ -61,8 +61,8 @@ pub fn ask_response_to_objects(
         .flatten_ok()
         .map(|res: Result<String, ContractError>| match res {
             Ok(raw) => CosmwasmUri::try_from(raw)
-                .and_then(|uri| ObjectRef::try_from(uri))
-                .map_err(|e| ContractError::ParseCosmwasmUri(e)),
+                .and_then(ObjectRef::try_from)
+                .map_err(ContractError::ParseCosmwasmUri),
             Err(e) => Err(e),
         })
         .collect()

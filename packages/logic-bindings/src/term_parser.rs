@@ -69,7 +69,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_array(&mut self) -> Result<TermValue, TermParseError> {
-        self.parse_seq(b']').map(|elems| TermValue::Array(elems))
+        self.parse_seq(b']').map(TermValue::Array)
     }
 
     fn parse_tuple(&mut self) -> Result<TermValue, TermParseError> {
@@ -80,7 +80,7 @@ impl<'a> Parser<'a> {
                 }
                 Ok(elem)
             })
-            .map(|elems| TermValue::Tuple(elems))
+            .map(TermValue::Tuple)
     }
 
     fn parse_value(&mut self) -> Result<TermValue, TermParseError> {
@@ -103,8 +103,8 @@ impl<'a> Parser<'a> {
         }
 
         String::from_utf8(bytes)
-            .map_err(|e| TermParseError::NotUtf8Value(e))
-            .map(|str| TermValue::Value(str))
+            .map_err(TermParseError::NotUtf8Value)
+            .map(TermValue::Value)
     }
 
     fn parse_escaped_value(&mut self) -> Result<TermValue, TermParseError> {
@@ -136,8 +136,8 @@ impl<'a> Parser<'a> {
         }
 
         String::from_utf8(bytes)
-            .map_err(|e| TermParseError::NotUtf8Value(e))
-            .map(|str| TermValue::Value(str))
+            .map_err(TermParseError::NotUtf8Value)
+            .map(TermValue::Value)
     }
 
     fn parse(&mut self) -> Result<TermValue, TermParseError> {
@@ -236,10 +236,7 @@ mod tests {
         }
         .parse_value();
         assert!(res.is_err());
-        assert!(match res.err().unwrap() {
-            TermParseError::NotUtf8Value(_) => true,
-            _ => false,
-        });
+        matches!(res.err().unwrap(), TermParseError::NotUtf8Value(_));
     }
 
     #[test]
@@ -280,10 +277,7 @@ mod tests {
         }
         .parse_escaped_value();
         assert!(res.is_err());
-        assert!(match res.err().unwrap() {
-            TermParseError::NotUtf8Value(_) => true,
-            _ => false,
-        });
+        matches!(res.err().unwrap(), TermParseError::NotUtf8Value(_));
     }
 
     #[test]

@@ -218,11 +218,13 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "cw2",
+ "itertools",
  "logic-bindings",
  "schemars",
  "serde",
  "storage",
  "thiserror",
+ "url",
 ]
 
 [[package]]

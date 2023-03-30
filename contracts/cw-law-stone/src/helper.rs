@@ -1,8 +1,10 @@
+use crate::error::LogicAskResponseError;
 use crate::ContractError;
 use cosmwasm_std::{Event, StdError, StdResult};
+use itertools::Itertools;
 use logic_bindings::error::CosmwasmUriError;
 use logic_bindings::uri::CosmwasmUri;
-use logic_bindings::{AskResponse, Substitution};
+use logic_bindings::{AskResponse, Substitution, TermValue};
 use std::any::type_name;
 use storage::ObjectRef;
 
@@ -21,42 +23,47 @@ pub fn get_reply_event_attribute(events: Vec<Event>, key: String) -> Option<Stri
         .next();
 }
 
-/// Files terms is List atom, List is represented as String in prolog, filter to remove
-/// all paterm to represent the list and return the result as Vec<String>.
-fn filter_source_files(substitution: Substitution) -> Vec<String> {
-    substitution
-        .term
-        .name
-        .split(',')
-        .into_iter()
-        .map(|s| s.replace(['\'', '[', ']'], ""))
-        .collect::<Vec<String>>()
+fn term_as_vec(term: TermValue) -> Result<Vec<String>, ContractError> {
+    match term {
+        TermValue::Array(values) => values
+            .iter()
+            .map(|v| -> Result<String, ContractError> {
+                match v {
+                    TermValue::Value(str) => Ok(str.clone()),
+                    _ => Err(ContractError::LogicAskResponse(
+                        LogicAskResponseError::UnexpectedTerm,
+                    )),
+                }
+            })
+            .collect(),
+        _ => Err(ContractError::LogicAskResponse(
+            LogicAskResponseError::UnexpectedTerm,
+        )),
+    }
 }
 
 pub fn ask_response_to_objects(
     res: AskResponse,
     variable: String,
 ) -> Result<Vec<ObjectRef>, ContractError> {
-    let uris = res
-        .answer
+    res.answer
         .map(|a| a.results)
         .unwrap_or_default()
         .iter()
-        .flat_map(|result| result.substitutions.clone())
+        .flat_map(|r: &logic_bindings::Result| r.substitutions.clone())
         .filter(|s| s.variable == variable)
-        .flat_map(filter_source_files)
-        .collect::<Vec<String>>();
-
-    let mut objects = vec![];
-    for str_uri in uris {
-        objects.push(
-            CosmwasmUri::try_from(str_uri.clone())
-                .and_then(ObjectRef::try_from)
-                .map_err(|e| ContractError::ParseCosmwasmUri {
-                    error: e,
-                    uri: str_uri,
-                })?,
-        );
-    }
-    Ok(objects)
+        .map(|s: Substitution| {
+            s.term
+                .parse()
+                .map_err(|e| ContractError::LogicAskResponse(LogicAskResponseError::Parse(e)))
+                .and_then(term_as_vec)
+        })
+        .flatten_ok()
+        .map(|res: Result<String, ContractError>| match res {
+            Ok(raw) => CosmwasmUri::try_from(raw)
+                .and_then(|uri| ObjectRef::try_from(uri))
+                .map_err(|e| ContractError::ParseCosmwasmUri(e)),
+            Err(e) => Err(e),
+        })
+        .collect()
 }

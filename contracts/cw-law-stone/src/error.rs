@@ -1,7 +1,6 @@
-use crate::ContractError::Std;
 use cosmwasm_std::StdError;
 use cw_utils::ParseReplyError;
-use logic_bindings::error::CosmwasmUriError;
+use logic_bindings::error::{CosmwasmUriError, TermParseError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -15,21 +14,21 @@ pub enum ContractError {
     #[error("Invalid reply message: {0}")]
     InvalidReplyMsg(StdError),
 
-    #[error("Cannot parse cosmwasm uri {uri:?}: {error:?}")]
-    ParseCosmwasmUri {
-        error: CosmwasmUriError,
-        uri: String,
-    },
+    #[error("Cannot parse cosmwasm uri: {0}")]
+    ParseCosmwasmUri(CosmwasmUriError),
+
+    #[error("Cannot extract data from logic ask response: {0}")]
+    LogicAskResponse(LogicAskResponseError),
 
     #[error("Only the contract admin can perform this operation.")]
     Unauthorized {},
 }
 
-impl From<ContractError> for StdError {
-    fn from(value: ContractError) -> Self {
-        match value {
-            Std(e) => e,
-            _ => StdError::generic_err(value.to_string()),
-        }
-    }
+#[derive(Error, Debug, PartialEq)]
+pub enum LogicAskResponseError {
+    #[error("Could not parse term: {0}")]
+    Parse(TermParseError),
+
+    #[error("Invalid parsed term format.")]
+    UnexpectedTerm,
 }

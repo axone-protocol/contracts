@@ -16,8 +16,8 @@ This repository contains the Smart Contracts deployed on the [OKP4 network](http
 
 The list of currently implemented contracts is as follows:
 
-- [cw-storage](./contracts/cw-storage/README.md): enables the storage of arbitrary `objects`.
-- [cw-law-stone](./contracts/cw-law-stone/README.md): guarantee availability and immutability of logic Prolog rules.
+- [okp4-objectarium](contracts/okp4-objectarium/README.md): enables the storage of arbitrary `objects`.
+- [okp4-law-stone](contracts/okp4-law-stone/README.md): guarantee availability and immutability of logic Prolog rules.
 
 ## 🗂 Directory Structure
 

@@ -1,0 +1,14 @@
+[package]
+authors = ["OKP4"]
+edition = "2021"
+name = "okp4-logic-bindings"
+version = "1.0.0"
+
+[dependencies]
+cosmwasm-std.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde-json-wasm.workspace = true
+thiserror.workspace = true
+url = "2.3.1"
+form_urlencoded = "1.1.0"

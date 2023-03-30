@@ -21,11 +21,11 @@ plugins:
         cargo make schema && cargo make generate_docs && cargo make release_assets
   - - "@semantic-release/github"
     - assets:
-        - path: "./target/wasm32-unknown-unknown/release/cw_storage.wasm"
-        - path: "./target/wasm32-unknown-unknown/release/cw_law_stone.wasm"
+        - path: "./target/wasm32-unknown-unknown/release/okp4_objectarium.wasm"
+        - path: "./target/wasm32-unknown-unknown/release/okp4_law_stone.wasm"
         - path: "./target/wasm32-unknown-unknown/release/sha256sum.txt"
-        - path: "./docs/schema/cw-storage.json"
-        - path: "./docs/schema/cw-law-stone.json"
+        - path: "./docs/schema/okp4-objectarium.json"
+        - path: "./docs/schema/okp4-law-stone.json"
   - - "@semantic-release/git"
     - assets:
         - CHANGELOG.md

@@ -2,8 +2,9 @@
 members = ["contracts/*", "packages/*"]
 
 [workspace.dependencies]
-logic-bindings = { path = "packages/logic-bindings" }
-storage = { path = "packages/storage" }
+okp4-objectarium = { path = "contracts/okp4-objectarium" }
+okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
+okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
 cosmwasm-schema = "1.2.3"
 cosmwasm-std = "1.2.3"
 cosmwasm-storage = "1.2.3"

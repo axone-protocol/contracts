@@ -254,9 +254,7 @@ mod tests {
         SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use cw_storage::msg::PageInfo;
-    use logic_bindings::testing::mock::{
-        mock_dependencies_with_logic_and_balance, mock_dependencies_with_logic_handler,
-    };
+    use logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
     use logic_bindings::uri::CosmwasmUri;
     use logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution, Term,
@@ -352,7 +350,8 @@ mod tests {
 
     #[test]
     fn program() {
-        let mut deps = mock_dependencies_with_logic_and_balance(&[]);
+        let mut deps =
+            mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
 
         let object_id =
             "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string();

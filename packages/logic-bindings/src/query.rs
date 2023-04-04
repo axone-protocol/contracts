@@ -1,3 +1,5 @@
+use crate::error::TermParseError;
+use crate::term_parser::{from_str, TermValue};
 use cosmwasm_std::CustomQuery;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -45,4 +47,27 @@ pub struct Substitution {
 pub struct Term {
     pub name: String,
     pub arguments: Vec<Term>,
+}
+
+impl Term {
+    pub fn parse(self) -> std::result::Result<TermValue, TermParseError> {
+        from_str(self.name.as_str())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn term_parse() {
+        assert_eq!(
+            Term {
+                name: "'hello'".to_string(),
+                arguments: vec![],
+            }
+            .parse(),
+            Ok(TermValue::Value("hello".to_string()))
+        );
+    }
 }

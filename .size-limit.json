@@ -1,12 +1,12 @@
 [
   {
-    "path": "target/wasm32-unknown-unknown/release/cw_storage.wasm",
+    "path": "target/wasm32-unknown-unknown/release/okp4_objectarium.wasm",
     "running": false,
     "brotli": false,
     "gzip": false
   },
   {
-    "path": "target/wasm32-unknown-unknown/release/cw_law_stone.wasm",
+    "path": "target/wasm32-unknown-unknown/release/okp4_law_stone.wasm",
     "running": false,
     "brotli": false,
     "gzip": false

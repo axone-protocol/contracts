@@ -51,7 +51,7 @@ jobs:
 
       - name: Find changed rust files
         id: changed-rust-cargo
-        uses: tj-actions/changed-files@v35.7.11
+        uses: tj-actions/changed-files@v35.7.12
         with:
           files: |
             Cargo.toml
@@ -83,7 +83,7 @@ jobs:
 
       - name: Find changed rust files
         id: changed-rust-files
-        uses: tj-actions/changed-files@v35.7.11
+        uses: tj-actions/changed-files@v35.7.12
         with:
           files: |
             **/*.rs

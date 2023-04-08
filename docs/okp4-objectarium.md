@@ -73,35 +73,35 @@ okp4d tx wasm execute $CONTRACT_ADDR \
 Query an object by its id:
 
 ```bash
-okp4d query wasm contract smart $CONTRACT_ADDR \
+okp4d query wasm contract-state smart $CONTRACT_ADDR \
     "{\"object\": {\"id\": \"$OBJECT_ID\"}}"
 ```
 
 Or its data:
 
 ```bash
-okp4d query wasm contract smart $CONTRACT_ADDR \
+okp4d query wasm contract-state smart $CONTRACT_ADDR \
     "{\"object_data\": {\"id\": \"$OBJECT_ID\"}}"
 ```
 
 We can also list the objects, eventually filtering on the object owner:
 
 ```bash
-okp4d query wasm contract smart $CONTRACT_ADDR \
+okp4d query wasm contract-state smart $CONTRACT_ADDR \
     "{\"objects\": {\"address\": \"okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6\"}}"
 ```
 
 And navigate in a cursor based pagination:
 
 ```bash
-okp4d query wasm contract smart $CONTRACT_ADDR \
+okp4d query wasm contract-state smart $CONTRACT_ADDR \
     "{\"objects\": {\"first\": 5, \"after\": \"23Y5t5DBe7DkPwfJo3Sd26Y8Z9epmtpA1FTpdG7DiG6MD8vPRTzzbQ9TccmyoBcePkPK6atUiqcAzJVo3TfYNBGY\"}}"
 ```
 
 We can also query object pins with the same cursor based pagination:
 
 ```bash
-okp4d query wasm contract smart $CONTRACT_ADDR \
+okp4d query wasm contract-state smart $CONTRACT_ADDR \
     "{\"object_pins\": {\"id\": \"$OBJECT_ID\", \"first\": 5, \"after\": \"23Y5t5DBe7DkPwfJo3Sd26Y8Z9epmtpA1FTpdG7DiG6MD8vPRTzzbQ9TccmyoBcePkPK6atUiqcAzJVo3TfYNBGY\"}}"
 ```
 

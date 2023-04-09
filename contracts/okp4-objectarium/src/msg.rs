@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
+use derive_builder::Builder;
 
 /// ObjectId is the type of identifier of an object in the bucket.
 pub type ObjectId = String;
@@ -127,6 +128,8 @@ pub struct BucketResponse {
 ///
 /// The limits are optional and if not set, there is no limit.
 #[cw_serde]
+#[derive(Default, Builder)]
+#[builder(default, setter(into, strip_option))]
 pub struct BucketLimits {
     /// The maximum total size of the objects in the bucket.
     pub max_total_size: Option<Uint128>,
@@ -138,44 +141,12 @@ pub struct BucketLimits {
     pub max_object_pins: Option<Uint128>,
 }
 
-impl BucketLimits {
-    pub const fn new() -> Self {
-        BucketLimits {
-            max_total_size: None,
-            max_objects: None,
-            max_object_size: None,
-            max_object_pins: None,
-        }
-    }
-
-    pub fn set_max_total_size(mut self, max_total_size: Uint128) -> Self {
-        self.max_total_size = Some(max_total_size);
-        self
-    }
-
-    pub fn set_max_objects(mut self, max_objects: Uint128) -> Self {
-        self.max_objects = Some(max_objects);
-        self
-    }
-
-    pub fn set_max_object_size(mut self, max_object_size: Uint128) -> Self {
-        self.max_object_size = Some(max_object_size);
-        self
-    }
-
-    pub fn set_max_object_pins(mut self, max_object_pins: Uint128) -> Self {
-        self.max_object_pins = Some(max_object_pins);
-        self
-    }
-}
-
-const DEFAULT_PAGE_MAX_SIZE: u32 = 30;
-const DEFAULT_PAGE_DEFAULT_SIZE: u32 = 10;
-
 /// PaginationConfig is the type carrying configuration for paginated queries.
 ///
 /// The fields are optional and if not set, there is a default configuration.
 #[cw_serde]
+#[derive(Default, Builder)]
+#[builder(default, setter(strip_option))]
 pub struct PaginationConfig {
     /// The maximum elements a page can contains.
     ///
@@ -190,29 +161,16 @@ pub struct PaginationConfig {
 }
 
 impl PaginationConfig {
-    pub const fn new() -> Self {
-        PaginationConfig {
-            max_page_size: None,
-            default_page_size: None,
-        }
+    const DEFAULT_PAGE_MAX_SIZE: u32 = 30;
+    const DEFAULT_PAGE_DEFAULT_SIZE: u32 = 10;
+
+    pub fn max_page_size_or_default(&self) -> u32 {
+        self.max_page_size.unwrap_or(Self::DEFAULT_PAGE_MAX_SIZE)
     }
 
-    pub fn max_page_size(&self) -> u32 {
-        self.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE)
-    }
-
-    pub fn default_page_size(&self) -> u32 {
-        self.default_page_size.unwrap_or(DEFAULT_PAGE_DEFAULT_SIZE)
-    }
-
-    pub fn set_max_page_size(mut self, max_page_size: u32) -> Self {
-        self.max_page_size = Some(max_page_size);
-        self
-    }
-
-    pub fn set_default_page_size(mut self, default_page_size: u32) -> Self {
-        self.default_page_size = Some(default_page_size);
-        self
+    pub fn default_page_size_or_default(&self) -> u32 {
+        self.default_page_size
+            .unwrap_or(Self::DEFAULT_PAGE_DEFAULT_SIZE)
     }
 }
 

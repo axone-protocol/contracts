@@ -137,7 +137,10 @@ impl TryFrom<PaginationConfig> for Pagination {
     type Error = StdError;
 
     fn try_from(value: PaginationConfig) -> StdResult<Pagination> {
-        Pagination::try_new(value.max_page_size(), value.default_page_size())
+        Pagination::try_new(
+            value.max_page_size_or_default(),
+            value.default_page_size_or_default(),
+        )
     }
 }
 

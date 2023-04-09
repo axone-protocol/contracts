@@ -356,10 +356,9 @@ pub mod query {
 mod tests {
     use super::*;
     use crate::error::BucketError;
-    use crate::error::BucketError::MaxObjectPinsLimitExceeded;
     use crate::msg::{
-        BucketLimits, BucketResponse, ObjectPinsResponse, ObjectResponse, ObjectsResponse,
-        PageInfo, PaginationConfig,
+        BucketLimits, BucketLimitsBuilder, BucketResponse, ObjectPinsResponse, ObjectResponse,
+        ObjectsResponse, PageInfo, PaginationConfig, PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -373,8 +372,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo".to_string(),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -386,7 +385,7 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
-        assert_eq!(value.limits, BucketLimits::new());
+        assert_eq!(value.limits, BucketLimits::default());
         assert_eq!(value.pagination.max_page_size, Some(30));
         assert_eq!(value.pagination.default_page_size, Some(10));
 
@@ -409,9 +408,11 @@ mod tests {
                 max_object_size: Some(Uint128::new(2000)),
                 max_object_pins: Some(Uint128::new(1)),
             },
-            pagination: PaginationConfig::new()
-                .set_max_page_size(50)
-                .set_default_page_size(30),
+            pagination: PaginationConfigBuilder::default()
+                .max_page_size(50)
+                .default_page_size(30)
+                .build()
+                .unwrap(),
         };
         let info = mock_info("creator", &[]);
 
@@ -434,10 +435,12 @@ mod tests {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new()
-                .set_max_page_size(50)
-                .set_default_page_size(30),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfigBuilder::default()
+                .max_page_size(50)
+                .default_page_size(30)
+                .build()
+                .unwrap(),
         };
         instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
 
@@ -451,11 +454,17 @@ mod tests {
     fn invalid_pagination_initialization() {
         let cases = vec![
             (
-                PaginationConfig::new().set_max_page_size(u32::MAX),
+                PaginationConfigBuilder::default()
+                    .max_page_size(u32::MAX)
+                    .build()
+                    .unwrap(),
                 StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'"),
             ),
             (
-                PaginationConfig::new().set_default_page_size(31),
+                PaginationConfigBuilder::default()
+                    .default_page_size(31)
+                    .build()
+                    .unwrap(),
                 StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'"),
             ),
         ];
@@ -463,7 +472,7 @@ mod tests {
             let mut deps = mock_dependencies();
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
-                limits: BucketLimits::new(),
+                limits: BucketLimits::default(),
                 pagination: case.0,
             };
             match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
@@ -479,8 +488,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "".to_string(),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -495,8 +504,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo bar".to_string(),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -518,8 +527,8 @@ mod tests {
             info.clone(),
             InstantiateMsg {
                 bucket: "test".to_string(),
-                limits: BucketLimits::new(),
-                pagination: PaginationConfig::new(),
+                limits: BucketLimits::default(),
+                pagination: PaginationConfig::default(),
             },
         )
         .unwrap();
@@ -598,8 +607,8 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -618,31 +627,67 @@ mod tests {
     #[test]
     fn store_object_limits() {
         let cases = vec![
-            (BucketLimits::new().set_max_objects(2u128.into()), None),
-            (BucketLimits::new().set_max_object_size(5u128.into()), None),
-            (BucketLimits::new().set_max_total_size(9u128.into()), None),
-            (BucketLimits::new().set_max_object_pins(1u128.into()), None),
             (
-                BucketLimits::new().set_max_objects(1u128.into()),
+                BucketLimitsBuilder::default()
+                    .max_objects(2u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_object_size(5u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_total_size(9u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_object_pins(1u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_objects(1u128)
+                    .build()
+                    .unwrap(),
                 Some(ContractError::Bucket(BucketError::MaxObjectsLimitExceeded(
                     2u128.into(),
                     1u128.into(),
                 ))),
             ),
             (
-                BucketLimits::new().set_max_object_size(4u128.into()),
+                BucketLimitsBuilder::default()
+                    .max_object_size(4u128)
+                    .build()
+                    .unwrap(),
                 Some(ContractError::Bucket(
                     BucketError::MaxObjectSizeLimitExceeded(5u128.into(), 4u128.into()),
                 )),
             ),
             (
-                BucketLimits::new().set_max_total_size(8u128.into()),
+                BucketLimitsBuilder::default()
+                    .max_total_size(8u128)
+                    .build()
+                    .unwrap(),
                 Some(ContractError::Bucket(
                     BucketError::MaxTotalSizeLimitExceeded(9u128.into(), 8u128.into()),
                 )),
             ),
             (
-                BucketLimits::new().set_max_object_pins(0u128.into()),
+                BucketLimitsBuilder::default()
+                    .max_object_pins(0u128)
+                    .build()
+                    .unwrap(),
                 Some(ContractError::Bucket(
                     BucketError::MaxObjectPinsLimitExceeded(1u128.into(), 0u128.into()),
                 )),
@@ -655,11 +700,10 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
             let info = mock_info("creator", &[]);
-
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
-                limits: case.0,
-                pagination: PaginationConfig::new(),
+                limits: case.0, // case.0(&mut BucketLimitsBuilder::default()).unwrap(),
+                pagination: PaginationConfig::default(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -685,8 +729,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -752,8 +796,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -965,10 +1009,9 @@ mod tests {
                     mock_info("pierre", &[]),
                 ],
                 expected_count: 3,
-                expected_error: Some(ContractError::Bucket(MaxObjectPinsLimitExceeded(
-                    Uint128::new(3),
-                    Uint128::new(2),
-                ))),
+                expected_error: Some(ContractError::Bucket(
+                    BucketError::MaxObjectPinsLimitExceeded(Uint128::new(3), Uint128::new(2)),
+                )),
                 expected_object_pin_count: vec![
                     (
                         ObjectId::from(
@@ -1011,8 +1054,11 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    limits: BucketLimits::new().set_max_object_pins(Uint128::new(2)),
-                    pagination: PaginationConfig::new(),
+                    limits: BucketLimitsBuilder::default()
+                        .max_object_pins(Uint128::new(2))
+                        .build()
+                        .unwrap(),
+                    pagination: PaginationConfig::default(),
                 },
             )
             .unwrap();
@@ -1250,8 +1296,8 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    limits: BucketLimits::new(),
-                    pagination: PaginationConfig::new(),
+                    limits: BucketLimits::default(),
+                    pagination: PaginationConfig::default(),
                 },
             )
             .unwrap();
@@ -1333,8 +1379,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
 
@@ -1415,8 +1461,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
 
@@ -1508,8 +1554,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), mock_info("creator1", &[]), msg).unwrap();
 
@@ -1626,8 +1672,8 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    limits: BucketLimits::new(),
-                    pagination: PaginationConfig::new(),
+                    limits: BucketLimits::default(),
+                    pagination: PaginationConfig::default(),
                 },
             )
             .unwrap();

@@ -139,12 +139,6 @@ pub enum HashAlgorithm {
     Sha512,
 }
 
-impl Default for HashAlgorithm {
-    fn default() -> Self {
-        HashAlgorithm::Sha256
-    }
-}
-
 /// BucketConfig is the type of the configuration of a bucket.
 ///
 /// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
@@ -158,12 +152,6 @@ pub struct BucketConfig {
     ///
     /// The default algorithm is Sha256 .
     pub hash_algorithm: Option<HashAlgorithm>,
-}
-
-impl BucketConfig {
-    pub fn hash_algorithm_or_default(&self) -> HashAlgorithm {
-        self.hash_algorithm.as_ref().copied().unwrap_or_default()
-    }
 }
 
 /// BucketLimits is the type of the limits of a bucket.

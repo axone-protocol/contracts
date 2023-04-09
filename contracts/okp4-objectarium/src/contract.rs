@@ -4,9 +4,10 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
-use crate::crypto::sha256_hash;
+use crate::crypto;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, ObjectId, QueryMsg};
+use crate::state;
 use crate::state::{objects, pins, Bucket, Object, Pin, BUCKET, DATA};
 
 // version info for migration info
@@ -63,38 +64,44 @@ pub mod execute {
         pin: bool,
     ) -> Result<Response, ContractError> {
         let size = (data.len() as u128).into();
-        BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
-            bucket.stat.size += size;
-            bucket.stat.object_count += Uint128::one();
-            match bucket.limits {
-                BucketLimits {
-                    max_object_size: Some(max),
-                    ..
-                } if size > max => Err(BucketError::MaxObjectSizeLimitExceeded(size, max).into()),
-                BucketLimits {
-                    max_objects: Some(max),
-                    ..
-                } if bucket.stat.object_count > max => {
-                    Err(BucketError::MaxObjectsLimitExceeded(bucket.stat.object_count, max).into())
+        let bucket_info =
+            BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
+                bucket.stat.size += size;
+                bucket.stat.object_count += Uint128::one();
+                match bucket.limits {
+                    BucketLimits {
+                        max_object_size: Some(max),
+                        ..
+                    } if size > max => {
+                        Err(BucketError::MaxObjectSizeLimitExceeded(size, max).into())
+                    }
+                    BucketLimits {
+                        max_objects: Some(max),
+                        ..
+                    } if bucket.stat.object_count > max => Err(
+                        BucketError::MaxObjectsLimitExceeded(bucket.stat.object_count, max).into(),
+                    ),
+                    BucketLimits {
+                        max_object_pins: Some(max),
+                        ..
+                    } if pin && max < Uint128::one() => {
+                        Err(BucketError::MaxObjectPinsLimitExceeded(Uint128::one(), max).into())
+                    }
+                    BucketLimits {
+                        max_total_size: Some(max),
+                        ..
+                    } if bucket.stat.size > max => {
+                        Err(BucketError::MaxTotalSizeLimitExceeded(bucket.stat.size, max).into())
+                    }
+                    _ => Ok(bucket),
                 }
-                BucketLimits {
-                    max_object_pins: Some(max),
-                    ..
-                } if pin && max < Uint128::one() => {
-                    Err(BucketError::MaxObjectPinsLimitExceeded(Uint128::one(), max).into())
-                }
-                BucketLimits {
-                    max_total_size: Some(max),
-                    ..
-                } if bucket.stat.size > max => {
-                    Err(BucketError::MaxTotalSizeLimitExceeded(bucket.stat.size, max).into())
-                }
-                _ => Ok(bucket),
-            }
-        })?;
+            })?;
 
         let object = &Object {
-            id: sha256_hash(&data.0),
+            id: crypto::hash(
+                &crypto::HashAlgorithm::from(bucket_info.config.hash_algorithm_or_default()),
+                &data.0,
+            ),
             owner: info.sender.clone(),
             size,
             pin_count: if pin { Uint128::one() } else { Uint128::zero() },
@@ -354,11 +361,24 @@ pub mod query {
     }
 }
 
+impl From<state::HashAlgorithm> for crypto::HashAlgorithm {
+    fn from(algorithm: state::HashAlgorithm) -> Self {
+        match algorithm {
+            state::HashAlgorithm::Sha256 => crypto::HashAlgorithm::Sha256,
+            state::HashAlgorithm::Sha512 => crypto::HashAlgorithm::Sha512,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::error::BucketError;
-    use crate::msg::{BucketConfig, BucketConfigBuilder, BucketLimits, BucketLimitsBuilder, BucketResponse, HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfig, PaginationConfigBuilder};
+    use crate::msg::{
+        BucketConfig, BucketConfigBuilder, BucketLimits, BucketLimitsBuilder, BucketResponse,
+        HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
+        PaginationConfig, PaginationConfigBuilder,
+    };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
@@ -404,12 +424,15 @@ mod tests {
             bucket: "bar".to_string(),
             config: BucketConfigBuilder::default()
                 .hash_algorithm(HashAlgorithm::Sha256)
-                .build().unwrap(),
+                .build()
+                .unwrap(),
             limits: BucketLimitsBuilder::default()
                 .max_total_size(Uint128::new(20000))
                 .max_objects(Uint128::new(10))
                 .max_object_size(Uint128::new(2000))
-                .max_object_pins(Uint128::new(1)).build().unwrap(),
+                .max_object_pins(Uint128::new(1))
+                .build()
+                .unwrap(),
             pagination: PaginationConfigBuilder::default()
                 .max_page_size(50)
                 .default_page_size(30)

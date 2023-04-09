@@ -1,7 +1,7 @@
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
-use crate::msg::{ObjectResponse, PaginationConfig};
 use crate::msg;
+use crate::msg::{ObjectResponse, PaginationConfig};
 use cosmwasm_std::{Addr, StdError, StdResult, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
@@ -62,7 +62,7 @@ impl Bucket {
 
 /// HashAlgorithm is an enumeration that defines the different hash algorithms
 /// supported for hashing the content of objects.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Copy, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum HashAlgorithm {
     /// Represents the SHA-256 algorithm.
     Sha256,
@@ -104,6 +104,12 @@ pub struct BucketConfig {
     ///
     /// The default algorithm is Sha256 .
     pub hash_algorithm: Option<HashAlgorithm>,
+}
+
+impl BucketConfig {
+    pub fn hash_algorithm_or_default(&self) -> HashAlgorithm {
+        self.hash_algorithm.as_ref().copied().unwrap_or_default()
+    }
 }
 
 impl From<msg::BucketConfig> for BucketConfig {

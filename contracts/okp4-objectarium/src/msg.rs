@@ -133,6 +133,8 @@ pub struct BucketResponse {
 #[cw_serde]
 #[derive(Copy)]
 pub enum HashAlgorithm {
+    /// Represents the SHA-224 algorithm.
+    Sha224,
     /// Represents the SHA-256 algorithm.
     Sha256,
     /// Represents the SHA-384 algorithm.

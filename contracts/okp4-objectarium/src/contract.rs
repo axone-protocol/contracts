@@ -365,6 +365,7 @@ impl From<state::HashAlgorithm> for crypto::HashAlgorithm {
     fn from(algorithm: state::HashAlgorithm) -> Self {
         match algorithm {
             state::HashAlgorithm::Sha256 => crypto::HashAlgorithm::Sha256,
+            state::HashAlgorithm::Sha384 => crypto::HashAlgorithm::Sha384,
             state::HashAlgorithm::Sha512 => crypto::HashAlgorithm::Sha512,
         }
     }

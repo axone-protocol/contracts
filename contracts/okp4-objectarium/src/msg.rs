@@ -135,6 +135,8 @@ pub struct BucketResponse {
 pub enum HashAlgorithm {
     /// Represents the SHA-256 algorithm.
     Sha256,
+    /// Represents the SHA-384 algorithm.
+    Sha384,
     /// Represents the SHA-512 algorithm.
     Sha512,
 }

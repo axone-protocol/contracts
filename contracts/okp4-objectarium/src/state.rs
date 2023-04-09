@@ -66,6 +66,8 @@ impl Bucket {
 pub enum HashAlgorithm {
     /// Represents the SHA-256 algorithm.
     Sha256,
+    /// Represents the SHA-384 algorithm.
+    Sha384,
     /// Represents the SHA-512 algorithm.
     Sha512,
 }
@@ -80,6 +82,7 @@ impl From<msg::HashAlgorithm> for HashAlgorithm {
     fn from(algorithm: msg::HashAlgorithm) -> Self {
         match algorithm {
             msg::HashAlgorithm::Sha256 => HashAlgorithm::Sha256,
+            msg::HashAlgorithm::Sha384 => HashAlgorithm::Sha384,
             msg::HashAlgorithm::Sha512 => HashAlgorithm::Sha512,
         }
     }
@@ -89,6 +92,7 @@ impl From<HashAlgorithm> for msg::HashAlgorithm {
     fn from(algorithm: HashAlgorithm) -> Self {
         match algorithm {
             HashAlgorithm::Sha256 => msg::HashAlgorithm::Sha256,
+            HashAlgorithm::Sha384 => msg::HashAlgorithm::Sha384,
             HashAlgorithm::Sha512 => msg::HashAlgorithm::Sha512,
         }
     }

@@ -23,6 +23,7 @@ pub fn instantiate(
     let bucket = Bucket::try_new(
         info.sender,
         msg.bucket,
+        msg.config.into(),
         msg.limits.into(),
         msg.pagination.try_into()?,
     )?;
@@ -50,7 +51,7 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::state::Limits;
+    use crate::state::BucketLimits;
     use crate::ContractError::ObjectAlreadyPinned;
     use cosmwasm_std::{Order, StdError, Uint128};
     use std::any::type_name;
@@ -66,23 +67,23 @@ pub mod execute {
             bucket.stat.size += size;
             bucket.stat.object_count += Uint128::one();
             match bucket.limits {
-                Limits {
+                BucketLimits {
                     max_object_size: Some(max),
                     ..
                 } if size > max => Err(BucketError::MaxObjectSizeLimitExceeded(size, max).into()),
-                Limits {
+                BucketLimits {
                     max_objects: Some(max),
                     ..
                 } if bucket.stat.object_count > max => {
                     Err(BucketError::MaxObjectsLimitExceeded(bucket.stat.object_count, max).into())
                 }
-                Limits {
+                BucketLimits {
                     max_object_pins: Some(max),
                     ..
                 } if pin && max < Uint128::one() => {
                     Err(BucketError::MaxObjectPinsLimitExceeded(Uint128::one(), max).into())
                 }
-                Limits {
+                BucketLimits {
                     max_total_size: Some(max),
                     ..
                 } if bucket.stat.size > max => {
@@ -152,7 +153,7 @@ pub mod execute {
         let bucket = BUCKET.load(deps.storage)?;
 
         match bucket.limits {
-            Limits {
+            BucketLimits {
                 max_object_pins: Some(max),
                 ..
             } if max < o.pin_count => {
@@ -260,6 +261,7 @@ pub mod query {
 
         Ok(BucketResponse {
             name: bucket.name,
+            config: bucket.config.into(),
             limits: bucket.limits.into(),
             pagination: bucket.pagination.into(),
         })
@@ -356,10 +358,7 @@ pub mod query {
 mod tests {
     use super::*;
     use crate::error::BucketError;
-    use crate::msg::{
-        BucketLimits, BucketLimitsBuilder, BucketResponse, ObjectPinsResponse, ObjectResponse,
-        ObjectsResponse, PageInfo, PaginationConfig, PaginationConfigBuilder,
-    };
+    use crate::msg::{BucketConfig, BucketConfigBuilder, BucketLimits, BucketLimitsBuilder, BucketResponse, HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfig, PaginationConfigBuilder};
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
@@ -372,6 +371,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo".to_string(),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -402,12 +402,14 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            limits: BucketLimits {
-                max_total_size: Some(Uint128::new(20000)),
-                max_objects: Some(Uint128::new(10)),
-                max_object_size: Some(Uint128::new(2000)),
-                max_object_pins: Some(Uint128::new(1)),
-            },
+            config: BucketConfigBuilder::default()
+                .hash_algorithm(HashAlgorithm::Sha256)
+                .build().unwrap(),
+            limits: BucketLimitsBuilder::default()
+                .max_total_size(Uint128::new(20000))
+                .max_objects(Uint128::new(10))
+                .max_object_size(Uint128::new(2000))
+                .max_object_pins(Uint128::new(1)).build().unwrap(),
             pagination: PaginationConfigBuilder::default()
                 .max_page_size(50)
                 .default_page_size(30)
@@ -435,6 +437,7 @@ mod tests {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfigBuilder::default()
                 .max_page_size(50)
@@ -472,6 +475,7 @@ mod tests {
             let mut deps = mock_dependencies();
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
+                config: BucketConfig::default(),
                 limits: BucketLimits::default(),
                 pagination: case.0,
             };
@@ -488,6 +492,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "".to_string(),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -504,6 +509,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo bar".to_string(),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -527,6 +533,7 @@ mod tests {
             info.clone(),
             InstantiateMsg {
                 bucket: "test".to_string(),
+                config: BucketConfig::default(),
                 limits: BucketLimits::default(),
                 pagination: PaginationConfig::default(),
             },
@@ -607,6 +614,7 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InstantiateMsg {
             bucket: String::from("test"),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -702,6 +710,7 @@ mod tests {
             let info = mock_info("creator", &[]);
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
+                config: BucketConfig::default(),
                 limits: case.0, // case.0(&mut BucketLimitsBuilder::default()).unwrap(),
                 pagination: PaginationConfig::default(),
             };
@@ -729,6 +738,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -796,6 +806,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -1054,6 +1065,7 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
+                    config: BucketConfig::default(),
                     limits: BucketLimitsBuilder::default()
                         .max_object_pins(Uint128::new(2))
                         .build()
@@ -1296,6 +1308,7 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
+                    config: BucketConfig::default(),
                     limits: BucketLimits::default(),
                     pagination: PaginationConfig::default(),
                 },
@@ -1379,6 +1392,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -1461,6 +1475,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -1554,6 +1569,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
+            config: BucketConfig::default(),
             limits: BucketLimits::default(),
             pagination: PaginationConfig::default(),
         };
@@ -1672,6 +1688,7 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
+                    config: BucketConfig::default(),
                     limits: BucketLimits::default(),
                     pagination: PaginationConfig::default(),
                 },

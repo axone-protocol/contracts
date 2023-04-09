@@ -15,6 +15,8 @@ pub struct InstantiateMsg {
     /// The name could not be empty or contains whitespaces.
     /// If name contains whitespace, they will be removed.
     pub bucket: String,
+    /// The configuration of the bucket.
+    pub config: BucketConfig,
     /// The limits of the bucket.
     pub limits: BucketLimits,
     /// The configuration for paginated query.
@@ -118,10 +120,50 @@ pub struct PageInfo {
 pub struct BucketResponse {
     /// The name of the bucket.
     pub name: String,
+    /// The configuration of the bucket.
+    pub config: BucketConfig,
     /// The limits of the bucket.
     pub limits: BucketLimits,
     /// The configuration for paginated query.
     pub pagination: PaginationConfig,
+}
+
+/// HashAlgorithm is an enumeration that defines the different hash algorithms
+/// supported for hashing the content of objects.
+#[cw_serde]
+#[derive(Copy)]
+pub enum HashAlgorithm {
+    /// Represents the SHA-256 algorithm.
+    Sha256,
+    /// Represents the SHA-512 algorithm.
+    Sha512,
+}
+
+impl Default for HashAlgorithm {
+    fn default() -> Self {
+        HashAlgorithm::Sha256
+    }
+}
+
+/// BucketConfig is the type of the configuration of a bucket.
+///
+/// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
+/// The configuration is optional and if not set, the default configuration is used.
+#[cw_serde]
+#[derive(Default, Builder)]
+#[builder(default, setter(into, strip_option))]
+pub struct BucketConfig {
+    /// The algorithm used to hash the content of the objects to generate the id of the objects.
+    /// The algorithm is optional and if not set, the default algorithm is used.
+    ///
+    /// The default algorithm is Sha256 .
+    pub hash_algorithm: Option<HashAlgorithm>,
+}
+
+impl BucketConfig {
+    pub fn hash_algorithm_or_default(&self) -> HashAlgorithm {
+        self.hash_algorithm.as_ref().copied().unwrap_or_default()
+    }
 }
 
 /// BucketLimits is the type of the limits of a bucket.

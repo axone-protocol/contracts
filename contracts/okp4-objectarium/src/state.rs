@@ -1,6 +1,7 @@
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
-use crate::msg::{BucketLimits, ObjectResponse, PaginationConfig};
+use crate::msg::{ObjectResponse, PaginationConfig};
+use crate::msg;
 use cosmwasm_std::{Addr, StdError, StdResult, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
@@ -14,8 +15,10 @@ pub struct Bucket {
     pub owner: Addr,
     /// The name of the bucket.
     pub name: String,
+    /// The configuration for the bucket.
+    pub config: BucketConfig,
     /// The limits of the bucket.
-    pub limits: Limits,
+    pub limits: BucketLimits,
     /// The configuration for paginated query.
     pub pagination: Pagination,
     /// Some information on the current bucket usage.
@@ -34,7 +37,8 @@ impl Bucket {
     pub fn try_new(
         owner: Addr,
         name: String,
-        limits: Limits,
+        config: BucketConfig,
+        limits: BucketLimits,
         pagination: Pagination,
     ) -> Result<Self, BucketError> {
         let n: String = name.split_whitespace().collect();
@@ -45,6 +49,7 @@ impl Bucket {
         Ok(Self {
             owner,
             name: n,
+            config,
             limits,
             pagination,
             stat: BucketStat {
@@ -55,11 +60,73 @@ impl Bucket {
     }
 }
 
-/// Limits is the type of the limits of a bucket.
+/// HashAlgorithm is an enumeration that defines the different hash algorithms
+/// supported for hashing the content of objects.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub enum HashAlgorithm {
+    /// Represents the SHA-256 algorithm.
+    Sha256,
+    /// Represents the SHA-512 algorithm.
+    Sha512,
+}
+
+impl Default for HashAlgorithm {
+    fn default() -> Self {
+        HashAlgorithm::Sha256
+    }
+}
+
+impl From<msg::HashAlgorithm> for HashAlgorithm {
+    fn from(algorithm: msg::HashAlgorithm) -> Self {
+        match algorithm {
+            msg::HashAlgorithm::Sha256 => HashAlgorithm::Sha256,
+            msg::HashAlgorithm::Sha512 => HashAlgorithm::Sha512,
+        }
+    }
+}
+
+impl From<HashAlgorithm> for msg::HashAlgorithm {
+    fn from(algorithm: HashAlgorithm) -> Self {
+        match algorithm {
+            HashAlgorithm::Sha256 => msg::HashAlgorithm::Sha256,
+            HashAlgorithm::Sha512 => msg::HashAlgorithm::Sha512,
+        }
+    }
+}
+
+/// BucketConfig is the type of the configuration of a bucket.
+///
+/// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct BucketConfig {
+    /// The algorithm used to hash the content of the objects to generate the id of the objects.
+    /// The algorithm is optional and if not set, the default algorithm is used.
+    ///
+    /// The default algorithm is Sha256 .
+    pub hash_algorithm: Option<HashAlgorithm>,
+}
+
+impl From<msg::BucketConfig> for BucketConfig {
+    fn from(config: msg::BucketConfig) -> Self {
+        BucketConfig {
+            hash_algorithm: config.hash_algorithm.map(|a| a.into()),
+        }
+    }
+}
+
+impl From<BucketConfig> for msg::BucketConfig {
+    fn from(config: BucketConfig) -> Self {
+        msg::BucketConfig {
+            hash_algorithm: config.hash_algorithm.map(|a| a.into()),
+        }
+    }
+}
+
+/// BucketLimits is the type of the limits of a bucket.
 ///
 /// The limits are optional and if not set, there is no limit.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct Limits {
+pub struct BucketLimits {
     /// The maximum total size of the objects in the bucket.
     pub max_total_size: Option<Uint128>,
     /// The maximum number of objects in the bucket.
@@ -70,9 +137,9 @@ pub struct Limits {
     pub max_object_pins: Option<Uint128>,
 }
 
-impl From<BucketLimits> for Limits {
-    fn from(limits: BucketLimits) -> Self {
-        Limits {
+impl From<msg::BucketLimits> for BucketLimits {
+    fn from(limits: msg::BucketLimits) -> Self {
+        BucketLimits {
             max_total_size: limits.max_total_size,
             max_objects: limits.max_objects,
             max_object_size: limits.max_object_size,
@@ -81,9 +148,9 @@ impl From<BucketLimits> for Limits {
     }
 }
 
-impl From<Limits> for BucketLimits {
-    fn from(limits: Limits) -> Self {
-        BucketLimits {
+impl From<BucketLimits> for msg::BucketLimits {
+    fn from(limits: BucketLimits) -> Self {
+        msg::BucketLimits {
             max_total_size: limits.max_total_size,
             max_objects: limits.max_objects,
             max_object_size: limits.max_object_size,

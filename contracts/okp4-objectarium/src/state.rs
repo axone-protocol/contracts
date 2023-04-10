@@ -64,6 +64,8 @@ impl Bucket {
 /// supported for hashing the content of objects.
 #[derive(Serialize, Copy, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum HashAlgorithm {
+    /// Represents the MD5 algorithm.
+    MD5,
     /// Represents the SHA-224 algorithm.
     Sha224,
     /// Represents the SHA-256 algorithm.
@@ -83,6 +85,7 @@ impl Default for HashAlgorithm {
 impl From<msg::HashAlgorithm> for HashAlgorithm {
     fn from(algorithm: msg::HashAlgorithm) -> Self {
         match algorithm {
+            msg::HashAlgorithm::MD5 => HashAlgorithm::MD5,
             msg::HashAlgorithm::Sha224 => HashAlgorithm::Sha224,
             msg::HashAlgorithm::Sha256 => HashAlgorithm::Sha256,
             msg::HashAlgorithm::Sha384 => HashAlgorithm::Sha384,
@@ -94,6 +97,7 @@ impl From<msg::HashAlgorithm> for HashAlgorithm {
 impl From<HashAlgorithm> for msg::HashAlgorithm {
     fn from(algorithm: HashAlgorithm) -> Self {
         match algorithm {
+            HashAlgorithm::MD5 => msg::HashAlgorithm::MD5,
             HashAlgorithm::Sha224 => msg::HashAlgorithm::Sha224,
             HashAlgorithm::Sha256 => msg::HashAlgorithm::Sha256,
             HashAlgorithm::Sha384 => msg::HashAlgorithm::Sha384,

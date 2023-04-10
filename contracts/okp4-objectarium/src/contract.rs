@@ -364,6 +364,7 @@ pub mod query {
 impl From<state::HashAlgorithm> for crypto::HashAlgorithm {
     fn from(algorithm: state::HashAlgorithm) -> Self {
         match algorithm {
+            state::HashAlgorithm::MD5 => crypto::HashAlgorithm::MD5,
             state::HashAlgorithm::Sha224 => crypto::HashAlgorithm::Sha224,
             state::HashAlgorithm::Sha256 => crypto::HashAlgorithm::Sha256,
             state::HashAlgorithm::Sha384 => crypto::HashAlgorithm::Sha384,

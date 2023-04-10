@@ -378,7 +378,7 @@ mod tests {
     use super::*;
     use crate::error::BucketError;
     use crate::msg::{
-        BucketConfig, BucketConfigBuilder, BucketLimits, BucketLimitsBuilder, BucketResponse,
+        BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse,
         HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
         PaginationConfig, PaginationConfigBuilder,
     };
@@ -400,14 +400,13 @@ mod tests {
         };
         let info = mock_info("creator", &[]);
 
-        // we can just call .unwrap() to assert this was a success
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
-        // it worked, let's query the state
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
+        assert_eq!(value.config, BucketConfig::default());
         assert_eq!(value.limits, BucketLimits::default());
         assert_eq!(value.pagination.max_page_size, Some(30));
         assert_eq!(value.pagination.default_page_size, Some(10));
@@ -420,15 +419,48 @@ mod tests {
     }
 
     #[test]
+    fn proper_config_initialization() {
+        let mut deps = mock_dependencies();
+
+        // Define the test cases
+        let test_cases = vec![
+            (None, None),
+            (Some(HashAlgorithm::MD5), Some(HashAlgorithm::MD5)),
+            (Some(HashAlgorithm::Sha224), Some(HashAlgorithm::Sha224)),
+            (Some(HashAlgorithm::Sha256), Some(HashAlgorithm::Sha256)),
+            (Some(HashAlgorithm::Sha384), Some(HashAlgorithm::Sha384)),
+            (Some(HashAlgorithm::Sha512), Some(HashAlgorithm::Sha512)),
+        ];
+
+        for (hash_algorithm, expected_hash_algorithm) in test_cases {
+            let msg = InstantiateMsg {
+                bucket: "bar".to_string(),
+                config: BucketConfig {
+                    hash_algorithm,
+                    ..BucketConfig::default()
+                },
+                limits: BucketLimits::default(),
+                pagination: PaginationConfig::default(),
+            };
+            let info = mock_info("creator", &[]);
+
+            let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+            let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
+            let value: BucketResponse = from_binary(&res).unwrap();
+
+            assert_eq!("bar", value.name);
+            assert_eq!(value.config.hash_algorithm, expected_hash_algorithm);
+        }
+    }
+
+    #[test]
     fn proper_limits_initialization() {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            config: BucketConfigBuilder::default()
-                .hash_algorithm(HashAlgorithm::Sha256)
-                .build()
-                .unwrap(),
+            config: BucketConfig::default(),
             limits: BucketLimitsBuilder::default()
                 .max_total_size(Uint128::new(20000))
                 .max_objects(Uint128::new(10))
@@ -551,87 +583,211 @@ mod tests {
 
     #[test]
     fn store_object_without_limits() {
-        let mut deps = mock_dependencies();
-        let info = mock_info("creator", &[]);
-        instantiate(
-            deps.as_mut(),
-            mock_env(),
-            info.clone(),
-            InstantiateMsg {
-                bucket: "test".to_string(),
-                config: BucketConfig::default(),
-                limits: BucketLimits::default(),
-                pagination: PaginationConfig::default(),
-            },
-        )
-        .unwrap();
+        let obj1_content = &general_purpose::STANDARD.encode("hello");
+        let obj2_content = &general_purpose::STANDARD.encode("okp4");
 
-        let obj1 = (
-            general_purpose::STANDARD.encode("hello"),
-            true,
-            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-            5,
-        );
-        let obj2 = (
-            general_purpose::STANDARD.encode("okp4"),
-            false,
-            "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
-            4,
-        );
-
-        for obj in vec![obj1.clone(), obj2.clone()] {
-            let msg = ExecuteMsg::StoreObject {
-                data: Binary::from_base64(obj.0.as_str()).unwrap(),
-                pin: obj.1,
-            };
-            let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-            assert_eq!(
-                res.attributes,
+        let test_cases = vec![
+            (
+                None,
                 vec![
-                    Attribute::new("action", "store_object"),
-                    Attribute::new("id", obj.2),
-                ]
-            );
+                    (
+                        obj1_content,
+                        true,
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::MD5),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "5d41402abc4b2a76b9719d911017c592"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "33f41d49353ad1a876e36918f64eac4d"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::Sha224),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "fe798aa30e560c57d69c46982b2bb1320dc86813730bb7c6406ce84b"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::Sha256),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::Sha384),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90125a3c79f90397bdf5f6a13de828684f"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "e700b122a81f64ce34ab67c6a815987536a05b0590bbeb32cf5e88963edd8c6e69c9e43b0f957f242d984f09f91bcaf2"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::Sha512),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "e4f4025e1e28abb473c89bcae03ded972e91b4427e8970be87f645cc34b9b203d633c12760e32c97011439640cba159f60992e10aac8023fa2577cadc1be3b55"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+        ];
 
-            assert_eq!(
-                Binary::from_base64(obj.0.as_str()).unwrap(),
-                Binary::from(DATA.load(&deps.storage, String::from(obj.2)).unwrap()),
-            );
+        for (hash_algorithm, objs) in test_cases {
+            let mut deps = mock_dependencies();
+            let info = mock_info("creator", &[]);
 
-            let created = objects().load(&deps.storage, String::from(obj.2)).unwrap();
-            assert_eq!(created.id, obj.2);
-            assert_eq!(created.owner, info.clone().sender);
-            assert_eq!(created.size.u128(), obj.3);
-            assert_eq!(
-                created.pin_count,
-                if obj.1 {
-                    Uint128::one()
-                } else {
-                    Uint128::zero()
-                }
-            );
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg {
+                    bucket: "test".to_string(),
+                    config: BucketConfig {
+                        hash_algorithm,
+                        ..BucketConfig::default()
+                    },
+                    limits: BucketLimits::default(),
+                    pagination: PaginationConfig::default(),
+                },
+            )
+            .unwrap();
 
+            for (content, pin, expected_hash, expected_size) in &objs {
+                let msg = ExecuteMsg::StoreObject {
+                    data: Binary::from_base64(&content).unwrap(),
+                    pin: *pin,
+                };
+                let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+                assert_eq!(
+                    res.attributes,
+                    vec![
+                        Attribute::new("action", "store_object"),
+                        Attribute::new("id", expected_hash.clone()),
+                    ]
+                );
+
+                assert_eq!(
+                    Binary::from_base64(&content).unwrap(),
+                    Binary::from(DATA.load(&deps.storage, expected_hash.clone()).unwrap()),
+                );
+
+                let created = objects()
+                    .load(&deps.storage, expected_hash.clone())
+                    .unwrap();
+                assert_eq!(created.id, *expected_hash);
+                assert_eq!(created.owner, info.sender.clone());
+                assert_eq!(created.size.u128(), *expected_size);
+                assert_eq!(
+                    created.pin_count,
+                    if *pin {
+                        Uint128::one()
+                    } else {
+                        Uint128::zero()
+                    }
+                );
+
+                assert_eq!(
+                    pins().has(
+                        &deps.storage,
+                        (expected_hash.to_string(), info.clone().sender)
+                    ),
+                    *pin,
+                );
+            }
+
+            let bucket = BUCKET.load(&deps.storage).unwrap();
             assert_eq!(
-                pins().has(&deps.storage, (String::from(obj.2), info.clone().sender)),
-                obj.1,
+                bucket.stat.size.u128(),
+                objs.iter().map(|x| x.3).sum::<u128>()
+            );
+            assert_eq!(
+                bucket.stat.object_count.u128(),
+                u128::try_from(objs.len()).unwrap()
+            );
+            assert_eq!(
+                objects()
+                    .keys_raw(&deps.storage, None, None, Order::Ascending)
+                    .count(),
+                2
+            );
+            assert_eq!(
+                pins()
+                    .keys_raw(&deps.storage, None, None, Order::Ascending)
+                    .count(),
+                1
             );
         }
-
-        let bucket = BUCKET.load(&deps.storage).unwrap();
-        assert_eq!(bucket.stat.size.u128(), obj1.3 + obj2.3);
-        assert_eq!(bucket.stat.object_count.u128(), 2);
-        assert_eq!(
-            objects()
-                .keys_raw(&deps.storage, None, None, Order::Ascending)
-                .count(),
-            2
-        );
-        assert_eq!(
-            pins()
-                .keys_raw(&deps.storage, None, None, Order::Ascending)
-                .count(),
-            1
-        );
     }
 
     #[test]
@@ -1436,7 +1592,7 @@ mod tests {
             response.page_info,
             PageInfo {
                 has_next_page: false,
-                cursor: "".to_string()
+                cursor: "".to_string(),
             }
         );
 
@@ -1460,11 +1616,11 @@ mod tests {
         execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
 
         let cases = vec![
-            (QueryMsg::Objects {address: None,first: None,after: None}, 3, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
-            (QueryMsg::Objects {address: Some("unknown".to_string()), first: None, after: None}, 0, PageInfo {has_next_page: false, cursor: "".to_string()}),
-            (QueryMsg::Objects {address: Some("creator1".to_string()),first: None,after: None}, 2, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
-            (QueryMsg::Objects {address: Some("creator1".to_string()),first: Some(1),after: None}, 1, PageInfo {has_next_page: true,cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()}),
-            (QueryMsg::Objects {address: Some("creator1".to_string()),first: Some(1),after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string())}, 1, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
+            (QueryMsg::Objects { address: None, first: None, after: None }, 3, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
+            (QueryMsg::Objects { address: Some("unknown".to_string()), first: None, after: None }, 0, PageInfo { has_next_page: false, cursor: "".to_string() }),
+            (QueryMsg::Objects { address: Some("creator1".to_string()), first: None, after: None }, 2, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
+            (QueryMsg::Objects { address: Some("creator1".to_string()), first: Some(1), after: None }, 1, PageInfo { has_next_page: true, cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string() }),
+            (QueryMsg::Objects { address: Some("creator1".to_string()), first: Some(1), after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()) }, 1, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
         ];
 
         for case in cases {
@@ -1488,7 +1644,7 @@ mod tests {
                 id: "0a6d95579ba3dd2f79c870906fd894007ce449020d111d358894cfbbcd9a03a4".to_string(),
                 owner: "creator2".to_string(),
                 is_pinned: false,
-                size: 7u128.into()
+                size: 7u128.into(),
             }
         );
     }

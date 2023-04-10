@@ -378,9 +378,9 @@ mod tests {
     use super::*;
     use crate::error::BucketError;
     use crate::msg::{
-        BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse,
-        HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
-        PaginationConfig, PaginationConfigBuilder,
+        BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse, HashAlgorithm,
+        ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfig,
+        PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -435,10 +435,7 @@ mod tests {
         for (hash_algorithm, expected_hash_algorithm) in test_cases {
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
-                config: BucketConfig {
-                    hash_algorithm,
-                    ..BucketConfig::default()
-                },
+                config: BucketConfig { hash_algorithm },
                 limits: BucketLimits::default(),
                 pagination: PaginationConfig::default(),
             };
@@ -713,10 +710,7 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig {
-                        hash_algorithm,
-                        ..BucketConfig::default()
-                    },
+                    config: BucketConfig { hash_algorithm },
                     limits: BucketLimits::default(),
                     pagination: PaginationConfig::default(),
                 },
@@ -725,7 +719,7 @@ mod tests {
 
             for (content, pin, expected_hash, expected_size) in &objs {
                 let msg = ExecuteMsg::StoreObject {
-                    data: Binary::from_base64(&content).unwrap(),
+                    data: Binary::from_base64(content).unwrap(),
                     pin: *pin,
                 };
                 let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
@@ -738,7 +732,7 @@ mod tests {
                 );
 
                 assert_eq!(
-                    Binary::from_base64(&content).unwrap(),
+                    Binary::from_base64(content).unwrap(),
                     Binary::from(DATA.load(&deps.storage, expected_hash.clone()).unwrap()),
                 );
 

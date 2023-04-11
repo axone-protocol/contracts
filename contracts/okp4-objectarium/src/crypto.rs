@@ -38,7 +38,7 @@ pub fn hash(algorithm: &HashAlgorithm, data: &Vec<u8>) -> String {
 }
 
 /// md5_hash returns the MD5 hash of the given data.
-pub fn md5_hash(data: &Vec<u8>) -> String {
+fn md5_hash(data: &Vec<u8>) -> String {
     base16ct::lower::encode_string(&md5::Md5::digest(data))
 }
 

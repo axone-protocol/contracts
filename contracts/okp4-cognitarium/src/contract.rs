@@ -45,3 +45,48 @@ pub fn execute(
 pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     Err(StdError::generic_err("Not implemented"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::msg::StoreLimits;
+    use crate::state;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::Uint128;
+
+    #[test]
+    fn proper_initialization() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg {
+            limits: StoreLimits {
+                max_triple_count: Some(Uint128::from(1u128)),
+                max_byte_size: Some(Uint128::from(2u128)),
+                max_triple_byte_size: Some(Uint128::from(3u128)),
+                max_query_limit: Some(Uint128::from(4u128)),
+                max_query_variable_count: Some(Uint128::from(5u128)),
+                max_insert_data_byte_size: Some(Uint128::from(6u128)),
+                max_insert_data_triple_count: Some(Uint128::from(7u128)),
+            },
+        };
+
+        let info = mock_info("owner", &[]);
+        let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        let store = STORE.load(&deps.storage).unwrap();
+        assert_eq!(store.owner, info.sender);
+        assert_eq!(
+            store.limits,
+            state::StoreLimits {
+                max_triple_count: Some(Uint128::from(1u128)),
+                max_byte_size: Some(Uint128::from(2u128)),
+                max_triple_byte_size: Some(Uint128::from(3u128)),
+                max_query_limit: Some(Uint128::from(4u128)),
+                max_query_variable_count: Some(Uint128::from(5u128)),
+                max_insert_data_byte_size: Some(Uint128::from(6u128)),
+                max_insert_data_triple_count: Some(Uint128::from(7u128)),
+            }
+        );
+    }
+}

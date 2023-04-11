@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
+use derive_builder::Builder;
 
 /// ObjectId is the type of identifier of an object in the bucket.
 pub type ObjectId = String;
@@ -14,6 +15,8 @@ pub struct InstantiateMsg {
     /// The name could not be empty or contains whitespaces.
     /// If name contains whitespace, they will be removed.
     pub bucket: String,
+    /// The configuration of the bucket.
+    pub config: BucketConfig,
     /// The limits of the bucket.
     pub limits: BucketLimits,
     /// The configuration for paginated query.
@@ -117,16 +120,101 @@ pub struct PageInfo {
 pub struct BucketResponse {
     /// The name of the bucket.
     pub name: String,
+    /// The configuration of the bucket.
+    pub config: BucketConfig,
     /// The limits of the bucket.
     pub limits: BucketLimits,
     /// The configuration for paginated query.
     pub pagination: PaginationConfig,
 }
 
+/// HashAlgorithm is an enumeration that defines the different hash algorithms
+/// supported for hashing the content of objects.
+#[cw_serde]
+#[derive(Copy)]
+pub enum HashAlgorithm {
+    /// # MD5
+    /// Represents the MD5 algorithm.
+    /// MD5 is a widely used cryptographic hash function that produces a 128-bit hash value.
+    /// The computational cost of MD5 is relatively low compared to other hash functions, but its short hash length
+    /// makes it easier to find hash collisions. It is now considered insecure for cryptographic purposes, but can still
+    /// used in non-security contexts.
+    ///
+    /// MD5 hashes are stored on-chain as 32 hexadecimal characters.
+    ///
+    /// See [the MD5 Wikipedia page](https://en.wikipedia.org/wiki/MD5) for more information.
+    MD5,
+
+    /// # SHA1
+    /// Represents the SHA-224 algorithm.
+    /// SHA-224 is a variant of the SHA-2 family of hash functions that produces a 224-bit hash value.
+    /// It is similar to SHA-256, but with a shorter output size.
+    /// The computational cost of SHA-224 is moderate, and its relatively short hash length makes it easier to store
+    /// and transmit.
+    ///
+    /// SHA-224 hashes are stored on-chain as 56 hexadecimal characters.
+    ///
+    /// See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
+    Sha224,
+
+    /// # SHA256
+    /// Represents the SHA-256 algorithm.
+    /// SHA-256 is a member of the SHA-2 family of hash functions that produces a 256-bit hash value.
+    /// It is widely used in cryptography and other security-related applications.
+    /// The computational cost of SHA-256 is moderate, and its hash length strikes a good balance between security
+    /// and convenience.
+    ///
+    /// SHA-256 hashes are stored on-chain as 64 hexadecimal characters.
+    ///
+    /// See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
+    Sha256,
+
+    /// # SHA384
+    /// Represents the SHA-384 algorithm.
+    /// SHA-384 is a variant of the SHA-2 family of hash functions that produces a 384-bit hash value.
+    /// It is similar to SHA-512, but with a shorter output size.
+    /// The computational cost of SHA-384 is relatively high, but its longer hash length provides better security
+    /// against hash collisions.
+    ///
+    /// SHA-384 hashes are stored on-chain as 96 hexadecimal characters.
+    ///
+    /// See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
+    Sha384,
+
+    /// # SHA512
+    /// Represents the SHA-512 algorithm.
+    /// SHA-512 is a member of the SHA-2 family of hash functions that produces a 512-bit hash value.
+    /// It is widely used in cryptography and other security-related applications.
+    /// The computational cost of SHA-512 is relatively high, but its longer hash length provides better security
+    /// against hash collisions.
+    ///
+    /// SHA-512 hashes are stored on-chain as 128 hexadecimal characters.
+    ///
+    /// See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
+    Sha512,
+}
+
+/// BucketConfig is the type of the configuration of a bucket.
+///
+/// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
+/// The configuration is optional and if not set, the default configuration is used.
+#[cw_serde]
+#[derive(Default, Builder)]
+#[builder(default, setter(into, strip_option))]
+pub struct BucketConfig {
+    /// The algorithm used to hash the content of the objects to generate the id of the objects.
+    /// The algorithm is optional and if not set, the default algorithm is used.
+    ///
+    /// The default algorithm is Sha256 .
+    pub hash_algorithm: Option<HashAlgorithm>,
+}
+
 /// BucketLimits is the type of the limits of a bucket.
 ///
 /// The limits are optional and if not set, there is no limit.
 #[cw_serde]
+#[derive(Default, Builder)]
+#[builder(default, setter(into, strip_option))]
 pub struct BucketLimits {
     /// The maximum total size of the objects in the bucket.
     pub max_total_size: Option<Uint128>,
@@ -138,44 +226,12 @@ pub struct BucketLimits {
     pub max_object_pins: Option<Uint128>,
 }
 
-impl BucketLimits {
-    pub const fn new() -> Self {
-        BucketLimits {
-            max_total_size: None,
-            max_objects: None,
-            max_object_size: None,
-            max_object_pins: None,
-        }
-    }
-
-    pub fn set_max_total_size(mut self, max_total_size: Uint128) -> Self {
-        self.max_total_size = Some(max_total_size);
-        self
-    }
-
-    pub fn set_max_objects(mut self, max_objects: Uint128) -> Self {
-        self.max_objects = Some(max_objects);
-        self
-    }
-
-    pub fn set_max_object_size(mut self, max_object_size: Uint128) -> Self {
-        self.max_object_size = Some(max_object_size);
-        self
-    }
-
-    pub fn set_max_object_pins(mut self, max_object_pins: Uint128) -> Self {
-        self.max_object_pins = Some(max_object_pins);
-        self
-    }
-}
-
-const DEFAULT_PAGE_MAX_SIZE: u32 = 30;
-const DEFAULT_PAGE_DEFAULT_SIZE: u32 = 10;
-
 /// PaginationConfig is the type carrying configuration for paginated queries.
 ///
 /// The fields are optional and if not set, there is a default configuration.
 #[cw_serde]
+#[derive(Default, Builder)]
+#[builder(default, setter(strip_option))]
 pub struct PaginationConfig {
     /// The maximum elements a page can contains.
     ///
@@ -190,29 +246,16 @@ pub struct PaginationConfig {
 }
 
 impl PaginationConfig {
-    pub const fn new() -> Self {
-        PaginationConfig {
-            max_page_size: None,
-            default_page_size: None,
-        }
+    const DEFAULT_PAGE_MAX_SIZE: u32 = 30;
+    const DEFAULT_PAGE_DEFAULT_SIZE: u32 = 10;
+
+    pub fn max_page_size_or_default(&self) -> u32 {
+        self.max_page_size.unwrap_or(Self::DEFAULT_PAGE_MAX_SIZE)
     }
 
-    pub fn max_page_size(&self) -> u32 {
-        self.max_page_size.unwrap_or(DEFAULT_PAGE_MAX_SIZE)
-    }
-
-    pub fn default_page_size(&self) -> u32 {
-        self.default_page_size.unwrap_or(DEFAULT_PAGE_DEFAULT_SIZE)
-    }
-
-    pub fn set_max_page_size(mut self, max_page_size: u32) -> Self {
-        self.max_page_size = Some(max_page_size);
-        self
-    }
-
-    pub fn set_default_page_size(mut self, default_page_size: u32) -> Self {
-        self.default_page_size = Some(default_page_size);
-        self
+    pub fn default_page_size_or_default(&self) -> u32 {
+        self.default_page_size
+            .unwrap_or(Self::DEFAULT_PAGE_DEFAULT_SIZE)
     }
 }
 

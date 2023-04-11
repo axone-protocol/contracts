@@ -18,9 +18,32 @@ BucketResponse is the response of the Bucket query.
 
 | Property                  | Type     | Required | Nullable       | Defined by                                                                                                                                 |
 | :------------------------ | :------- | :------- | :------------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
+| [config](#config)         | Merged   | Required | cannot be null | [okp4-objectarium](okp4-objectarium-responses-bucketresponse-properties-config.md "undefined#/responses/bucket/properties/config")         |
 | [limits](#limits)         | Merged   | Required | cannot be null | [okp4-objectarium](okp4-objectarium-responses-bucketresponse-properties-limits.md "undefined#/responses/bucket/properties/limits")         |
 | [name](#name)             | `string` | Required | cannot be null | [okp4-objectarium](okp4-objectarium-responses-bucketresponse-properties-name.md "undefined#/responses/bucket/properties/name")             |
 | [pagination](#pagination) | Merged   | Required | cannot be null | [okp4-objectarium](okp4-objectarium-responses-bucketresponse-properties-pagination.md "undefined#/responses/bucket/properties/pagination") |
+
+## config
+
+The configuration of the bucket.
+
+`config`
+
+*   is required
+
+*   Type: merged type ([Details](okp4-objectarium-responses-bucketresponse-properties-config.md))
+
+*   cannot be null
+
+*   defined in: [okp4-objectarium](okp4-objectarium-responses-bucketresponse-properties-config.md "undefined#/responses/bucket/properties/config")
+
+### config Type
+
+merged type ([Details](okp4-objectarium-responses-bucketresponse-properties-config.md))
+
+all of
+
+*   [Untitled undefined type in okp4-objectarium](okp4-objectarium-responses-bucketresponse-properties-config-allof-0.md "check type definition")
 
 ## limits
 
@@ -85,6 +108,44 @@ all of
 *   [Untitled undefined type in okp4-objectarium](okp4-objectarium-responses-bucketresponse-properties-pagination-allof-0.md "check type definition")
 
 # BucketResponse Definitions
+
+## Definitions group BucketConfig
+
+Reference this group by using
+
+```json
+{"$ref":"undefined#/responses/bucket/definitions/BucketConfig"}
+```
+
+| Property                           | Type   | Required | Nullable       | Defined by                                                                                                                                                                                           |
+| :--------------------------------- | :----- | :------- | :------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [hash\_algorithm](#hash_algorithm) | Merged | Optional | cannot be null | [okp4-objectarium](okp4-objectarium-responses-bucketresponse-definitions-bucketconfig-properties-hash_algorithm.md "undefined#/responses/bucket/definitions/BucketConfig/properties/hash_algorithm") |
+
+### hash\_algorithm
+
+The algorithm used to hash the content of the objects to generate the id of the objects. The algorithm is optional and if not set, the default algorithm is used.
+
+The default algorithm is Sha256 .
+
+`hash_algorithm`
+
+*   is optional
+
+*   Type: merged type ([Details](okp4-objectarium-responses-bucketresponse-definitions-bucketconfig-properties-hash_algorithm.md))
+
+*   cannot be null
+
+*   defined in: [okp4-objectarium](okp4-objectarium-responses-bucketresponse-definitions-bucketconfig-properties-hash_algorithm.md "undefined#/responses/bucket/definitions/BucketConfig/properties/hash_algorithm")
+
+#### hash\_algorithm Type
+
+merged type ([Details](okp4-objectarium-responses-bucketresponse-definitions-bucketconfig-properties-hash_algorithm.md))
+
+any of
+
+*   [Untitled undefined type in okp4-objectarium](okp4-objectarium-responses-bucketresponse-definitions-bucketconfig-properties-hash_algorithm-anyof-0.md "check type definition")
+
+*   [Untitled null in okp4-objectarium](okp4-objectarium-responses-bucketresponse-definitions-bucketconfig-properties-hash_algorithm-anyof-1.md "check type definition")
 
 ## Definitions group BucketLimits
 
@@ -196,6 +257,17 @@ any of
 *   [Untitled undefined type in okp4-objectarium](okp4-objectarium-responses-bucketresponse-definitions-bucketlimits-properties-max_total_size-anyof-0.md "check type definition")
 
 *   [Untitled null in okp4-objectarium](okp4-objectarium-responses-bucketresponse-definitions-bucketlimits-properties-max_total_size-anyof-1.md "check type definition")
+
+## Definitions group HashAlgorithm
+
+Reference this group by using
+
+```json
+{"$ref":"undefined#/responses/bucket/definitions/HashAlgorithm"}
+```
+
+| Property | Type | Required | Nullable | Defined by |
+| :------- | :--- | :------- | :------- | :--------- |
 
 ## Definitions group PaginationConfig
 

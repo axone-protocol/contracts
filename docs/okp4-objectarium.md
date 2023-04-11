@@ -16,7 +16,7 @@ This contract allows for storing `objects`, pinning and unpinning `objects` for 
 
 ### Instantiate
 
-The `okp4-objectarium` can be instantiated as follows, refer to the schema for more information on limits and pagination configuration:
+The `okp4-objectarium` can be instantiated as follows, refer to the schema for more information on configuration, limits and pagination configuration:
 
 ```bash
 okp4d tx wasm instantiate $CODE_ID \
@@ -25,7 +25,7 @@ okp4d tx wasm instantiate $CODE_ID \
     --admin $ADMIN_ADDR \
     --gas 1000000 \
     --broadcast-mode block \
-    '{"bucket":"my-bucket","limits":{}, "pagination": {}}'
+    '{"bucket":"my-bucket","limits":{}, "config": {}, "pagination": {}}'
 ```
 
 ### Execute

@@ -16,6 +16,15 @@ pub enum ExecuteMsg {
     /// Insert the Tuples extracted from the provided RDF graph.
     /// It fails if a subject already exists.
     Insert { input: GraphInput },
+
+    /// # Remove
+    /// Remove the resources matching the constraints expressed in [resource_sets].
+    Remove {
+        /// resource_sets represents multiple sets of resources matching the provided constraints
+        /// and identified by a key, the key can be used in other constraints to expressed links
+        /// between resources.
+        resource_sets: HashMap<String, ResourceConstraints>,
+    },
 }
 
 /// Query messages

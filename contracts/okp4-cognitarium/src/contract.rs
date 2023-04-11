@@ -5,6 +5,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::{Store, STORE};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:storage";
@@ -14,11 +15,20 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _msg: InstantiateMsg,
+    info: MessageInfo,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    Err(ContractError::NotImplemented)
+
+    STORE.save(
+        deps.storage,
+        &Store {
+            owner: info.sender,
+            limits: msg.limits.into(),
+        },
+    )?;
+
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -1,5 +1,5 @@
 use crate::msg;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +7,7 @@ pub const STORE: Item<Store> = Item::new("store");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Store {
-    pub owner: String,
+    pub owner: Addr,
     pub limits: StoreLimits,
 }
 

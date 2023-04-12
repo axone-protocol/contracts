@@ -52,7 +52,7 @@ You can retrieve the new `okp4-law-stone` smart contract address in the `_contra
 By using the `Ask` query we can provide Prolog predicates to be evaluated againsts the underlying programs:
 
 ```bash
-okp4d query wasm contract smart $CONTRACT_ADDR \
+okp4d query wasm contract-state smart $CONTRACT_ADDR \
     "{\"ask\": {\"query\": \"can('change_governance', 'did:key:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').\"}}"
 ```
 

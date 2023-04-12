@@ -4,9 +4,10 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
-use crate::crypto::sha256_hash;
+use crate::crypto;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, ObjectId, QueryMsg};
+use crate::state;
 use crate::state::{objects, pins, Bucket, Object, Pin, BUCKET, DATA};
 
 // version info for migration info
@@ -23,6 +24,7 @@ pub fn instantiate(
     let bucket = Bucket::try_new(
         info.sender,
         msg.bucket,
+        msg.config.into(),
         msg.limits.into(),
         msg.pagination.try_into()?,
     )?;
@@ -50,7 +52,7 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::state::Limits;
+    use crate::state::BucketLimits;
     use crate::ContractError::ObjectAlreadyPinned;
     use cosmwasm_std::{Order, StdError, Uint128};
     use std::any::type_name;
@@ -62,38 +64,44 @@ pub mod execute {
         pin: bool,
     ) -> Result<Response, ContractError> {
         let size = (data.len() as u128).into();
-        BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
-            bucket.stat.size += size;
-            bucket.stat.object_count += Uint128::one();
-            match bucket.limits {
-                Limits {
-                    max_object_size: Some(max),
-                    ..
-                } if size > max => Err(BucketError::MaxObjectSizeLimitExceeded(size, max).into()),
-                Limits {
-                    max_objects: Some(max),
-                    ..
-                } if bucket.stat.object_count > max => {
-                    Err(BucketError::MaxObjectsLimitExceeded(bucket.stat.object_count, max).into())
+        let bucket_info =
+            BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
+                bucket.stat.size += size;
+                bucket.stat.object_count += Uint128::one();
+                match bucket.limits {
+                    BucketLimits {
+                        max_object_size: Some(max),
+                        ..
+                    } if size > max => {
+                        Err(BucketError::MaxObjectSizeLimitExceeded(size, max).into())
+                    }
+                    BucketLimits {
+                        max_objects: Some(max),
+                        ..
+                    } if bucket.stat.object_count > max => Err(
+                        BucketError::MaxObjectsLimitExceeded(bucket.stat.object_count, max).into(),
+                    ),
+                    BucketLimits {
+                        max_object_pins: Some(max),
+                        ..
+                    } if pin && max < Uint128::one() => {
+                        Err(BucketError::MaxObjectPinsLimitExceeded(Uint128::one(), max).into())
+                    }
+                    BucketLimits {
+                        max_total_size: Some(max),
+                        ..
+                    } if bucket.stat.size > max => {
+                        Err(BucketError::MaxTotalSizeLimitExceeded(bucket.stat.size, max).into())
+                    }
+                    _ => Ok(bucket),
                 }
-                Limits {
-                    max_object_pins: Some(max),
-                    ..
-                } if pin && max < Uint128::one() => {
-                    Err(BucketError::MaxObjectPinsLimitExceeded(Uint128::one(), max).into())
-                }
-                Limits {
-                    max_total_size: Some(max),
-                    ..
-                } if bucket.stat.size > max => {
-                    Err(BucketError::MaxTotalSizeLimitExceeded(bucket.stat.size, max).into())
-                }
-                _ => Ok(bucket),
-            }
-        })?;
+            })?;
 
         let object = &Object {
-            id: sha256_hash(&data.0),
+            id: crypto::hash(
+                &crypto::HashAlgorithm::from(bucket_info.config.hash_algorithm_or_default()),
+                &data.0,
+            ),
             owner: info.sender.clone(),
             size,
             pin_count: if pin { Uint128::one() } else { Uint128::zero() },
@@ -152,7 +160,7 @@ pub mod execute {
         let bucket = BUCKET.load(deps.storage)?;
 
         match bucket.limits {
-            Limits {
+            BucketLimits {
                 max_object_pins: Some(max),
                 ..
             } if max < o.pin_count => {
@@ -260,6 +268,7 @@ pub mod query {
 
         Ok(BucketResponse {
             name: bucket.name,
+            config: bucket.config.into(),
             limits: bucket.limits.into(),
             pagination: bucket.pagination.into(),
         })
@@ -352,14 +361,26 @@ pub mod query {
     }
 }
 
+impl From<state::HashAlgorithm> for crypto::HashAlgorithm {
+    fn from(algorithm: state::HashAlgorithm) -> Self {
+        match algorithm {
+            state::HashAlgorithm::MD5 => crypto::HashAlgorithm::MD5,
+            state::HashAlgorithm::Sha224 => crypto::HashAlgorithm::Sha224,
+            state::HashAlgorithm::Sha256 => crypto::HashAlgorithm::Sha256,
+            state::HashAlgorithm::Sha384 => crypto::HashAlgorithm::Sha384,
+            state::HashAlgorithm::Sha512 => crypto::HashAlgorithm::Sha512,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::error::BucketError;
-    use crate::error::BucketError::MaxObjectPinsLimitExceeded;
     use crate::msg::{
-        BucketLimits, BucketResponse, ObjectPinsResponse, ObjectResponse, ObjectsResponse,
-        PageInfo, PaginationConfig,
+        BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse, HashAlgorithm,
+        ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfig,
+        PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -373,20 +394,20 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo".to_string(),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         let info = mock_info("creator", &[]);
 
-        // we can just call .unwrap() to assert this was a success
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
-        // it worked, let's query the state
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
-        assert_eq!(value.limits, BucketLimits::new());
+        assert_eq!(value.config, BucketConfig::default());
+        assert_eq!(value.limits, BucketLimits::default());
         assert_eq!(value.pagination.max_page_size, Some(30));
         assert_eq!(value.pagination.default_page_size, Some(10));
 
@@ -398,20 +419,57 @@ mod tests {
     }
 
     #[test]
+    fn proper_config_initialization() {
+        let mut deps = mock_dependencies();
+
+        // Define the test cases
+        let test_cases = vec![
+            (None, None),
+            (Some(HashAlgorithm::MD5), Some(HashAlgorithm::MD5)),
+            (Some(HashAlgorithm::Sha224), Some(HashAlgorithm::Sha224)),
+            (Some(HashAlgorithm::Sha256), Some(HashAlgorithm::Sha256)),
+            (Some(HashAlgorithm::Sha384), Some(HashAlgorithm::Sha384)),
+            (Some(HashAlgorithm::Sha512), Some(HashAlgorithm::Sha512)),
+        ];
+
+        for (hash_algorithm, expected_hash_algorithm) in test_cases {
+            let msg = InstantiateMsg {
+                bucket: "bar".to_string(),
+                config: BucketConfig { hash_algorithm },
+                limits: BucketLimits::default(),
+                pagination: PaginationConfig::default(),
+            };
+            let info = mock_info("creator", &[]);
+
+            let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+            let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
+            let value: BucketResponse = from_binary(&res).unwrap();
+
+            assert_eq!("bar", value.name);
+            assert_eq!(value.config.hash_algorithm, expected_hash_algorithm);
+        }
+    }
+
+    #[test]
     fn proper_limits_initialization() {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            limits: BucketLimits {
-                max_total_size: Some(Uint128::new(20000)),
-                max_objects: Some(Uint128::new(10)),
-                max_object_size: Some(Uint128::new(2000)),
-                max_object_pins: Some(Uint128::new(1)),
-            },
-            pagination: PaginationConfig::new()
-                .set_max_page_size(50)
-                .set_default_page_size(30),
+            config: BucketConfig::default(),
+            limits: BucketLimitsBuilder::default()
+                .max_total_size(Uint128::new(20000))
+                .max_objects(Uint128::new(10))
+                .max_object_size(Uint128::new(2000))
+                .max_object_pins(Uint128::new(1))
+                .build()
+                .unwrap(),
+            pagination: PaginationConfigBuilder::default()
+                .max_page_size(50)
+                .default_page_size(30)
+                .build()
+                .unwrap(),
         };
         let info = mock_info("creator", &[]);
 
@@ -434,10 +492,13 @@ mod tests {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new()
-                .set_max_page_size(50)
-                .set_default_page_size(30),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfigBuilder::default()
+                .max_page_size(50)
+                .default_page_size(30)
+                .build()
+                .unwrap(),
         };
         instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
 
@@ -451,11 +512,17 @@ mod tests {
     fn invalid_pagination_initialization() {
         let cases = vec![
             (
-                PaginationConfig::new().set_max_page_size(u32::MAX),
+                PaginationConfigBuilder::default()
+                    .max_page_size(u32::MAX)
+                    .build()
+                    .unwrap(),
                 StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'"),
             ),
             (
-                PaginationConfig::new().set_default_page_size(31),
+                PaginationConfigBuilder::default()
+                    .default_page_size(31)
+                    .build()
+                    .unwrap(),
                 StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'"),
             ),
         ];
@@ -463,7 +530,8 @@ mod tests {
             let mut deps = mock_dependencies();
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
-                limits: BucketLimits::new(),
+                config: BucketConfig::default(),
+                limits: BucketLimits::default(),
                 pagination: case.0,
             };
             match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
@@ -479,8 +547,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "".to_string(),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -495,8 +564,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo bar".to_string(),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -510,86 +580,208 @@ mod tests {
 
     #[test]
     fn store_object_without_limits() {
-        let mut deps = mock_dependencies();
-        let info = mock_info("creator", &[]);
-        instantiate(
-            deps.as_mut(),
-            mock_env(),
-            info.clone(),
-            InstantiateMsg {
-                bucket: "test".to_string(),
-                limits: BucketLimits::new(),
-                pagination: PaginationConfig::new(),
-            },
-        )
-        .unwrap();
+        let obj1_content = &general_purpose::STANDARD.encode("hello");
+        let obj2_content = &general_purpose::STANDARD.encode("okp4");
 
-        let obj1 = (
-            general_purpose::STANDARD.encode("hello"),
-            true,
-            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-            5,
-        );
-        let obj2 = (
-            general_purpose::STANDARD.encode("okp4"),
-            false,
-            "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
-            4,
-        );
-
-        for obj in vec![obj1.clone(), obj2.clone()] {
-            let msg = ExecuteMsg::StoreObject {
-                data: Binary::from_base64(obj.0.as_str()).unwrap(),
-                pin: obj.1,
-            };
-            let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-            assert_eq!(
-                res.attributes,
+        let test_cases = vec![
+            (
+                None,
                 vec![
-                    Attribute::new("action", "store_object"),
-                    Attribute::new("id", obj.2),
-                ]
-            );
+                    (
+                        obj1_content,
+                        true,
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::MD5),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "5d41402abc4b2a76b9719d911017c592"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "33f41d49353ad1a876e36918f64eac4d"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::Sha224),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "fe798aa30e560c57d69c46982b2bb1320dc86813730bb7c6406ce84b"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::Sha256),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::Sha384),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90125a3c79f90397bdf5f6a13de828684f"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "e700b122a81f64ce34ab67c6a815987536a05b0590bbeb32cf5e88963edd8c6e69c9e43b0f957f242d984f09f91bcaf2"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+            (
+                Some(HashAlgorithm::Sha512),
+                vec![
+                    (
+                        obj1_content,
+                        true,
+                        "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
+                            .to_string(),
+                        5,
+                    ),
+                    (
+                        obj2_content,
+                        false,
+                        "e4f4025e1e28abb473c89bcae03ded972e91b4427e8970be87f645cc34b9b203d633c12760e32c97011439640cba159f60992e10aac8023fa2577cadc1be3b55"
+                            .to_string(),
+                        4,
+                    ),
+                ],
+            ),
+        ];
 
-            assert_eq!(
-                Binary::from_base64(obj.0.as_str()).unwrap(),
-                Binary::from(DATA.load(&deps.storage, String::from(obj.2)).unwrap()),
-            );
+        for (hash_algorithm, objs) in test_cases {
+            let mut deps = mock_dependencies();
+            let info = mock_info("creator", &[]);
 
-            let created = objects().load(&deps.storage, String::from(obj.2)).unwrap();
-            assert_eq!(created.id, obj.2);
-            assert_eq!(created.owner, info.clone().sender);
-            assert_eq!(created.size.u128(), obj.3);
-            assert_eq!(
-                created.pin_count,
-                if obj.1 {
-                    Uint128::one()
-                } else {
-                    Uint128::zero()
-                }
-            );
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg {
+                    bucket: "test".to_string(),
+                    config: BucketConfig { hash_algorithm },
+                    limits: BucketLimits::default(),
+                    pagination: PaginationConfig::default(),
+                },
+            )
+            .unwrap();
 
+            for (content, pin, expected_hash, expected_size) in &objs {
+                let msg = ExecuteMsg::StoreObject {
+                    data: Binary::from_base64(content).unwrap(),
+                    pin: *pin,
+                };
+                let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+                assert_eq!(
+                    res.attributes,
+                    vec![
+                        Attribute::new("action", "store_object"),
+                        Attribute::new("id", expected_hash.clone()),
+                    ]
+                );
+
+                assert_eq!(
+                    Binary::from_base64(content).unwrap(),
+                    Binary::from(DATA.load(&deps.storage, expected_hash.clone()).unwrap()),
+                );
+
+                let created = objects()
+                    .load(&deps.storage, expected_hash.clone())
+                    .unwrap();
+                assert_eq!(created.id, *expected_hash);
+                assert_eq!(created.owner, info.sender.clone());
+                assert_eq!(created.size.u128(), *expected_size);
+                assert_eq!(
+                    created.pin_count,
+                    if *pin {
+                        Uint128::one()
+                    } else {
+                        Uint128::zero()
+                    }
+                );
+
+                assert_eq!(
+                    pins().has(
+                        &deps.storage,
+                        (expected_hash.to_string(), info.clone().sender)
+                    ),
+                    *pin,
+                );
+            }
+
+            let bucket = BUCKET.load(&deps.storage).unwrap();
             assert_eq!(
-                pins().has(&deps.storage, (String::from(obj.2), info.clone().sender)),
-                obj.1,
+                bucket.stat.size.u128(),
+                objs.iter().map(|x| x.3).sum::<u128>()
+            );
+            assert_eq!(
+                bucket.stat.object_count.u128(),
+                u128::try_from(objs.len()).unwrap()
+            );
+            assert_eq!(
+                objects()
+                    .keys_raw(&deps.storage, None, None, Order::Ascending)
+                    .count(),
+                2
+            );
+            assert_eq!(
+                pins()
+                    .keys_raw(&deps.storage, None, None, Order::Ascending)
+                    .count(),
+                1
             );
         }
-
-        let bucket = BUCKET.load(&deps.storage).unwrap();
-        assert_eq!(bucket.stat.size.u128(), obj1.3 + obj2.3);
-        assert_eq!(bucket.stat.object_count.u128(), 2);
-        assert_eq!(
-            objects()
-                .keys_raw(&deps.storage, None, None, Order::Ascending)
-                .count(),
-            2
-        );
-        assert_eq!(
-            pins()
-                .keys_raw(&deps.storage, None, None, Order::Ascending)
-                .count(),
-            1
-        );
     }
 
     #[test]
@@ -598,8 +790,9 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -618,31 +811,67 @@ mod tests {
     #[test]
     fn store_object_limits() {
         let cases = vec![
-            (BucketLimits::new().set_max_objects(2u128.into()), None),
-            (BucketLimits::new().set_max_object_size(5u128.into()), None),
-            (BucketLimits::new().set_max_total_size(9u128.into()), None),
-            (BucketLimits::new().set_max_object_pins(1u128.into()), None),
             (
-                BucketLimits::new().set_max_objects(1u128.into()),
+                BucketLimitsBuilder::default()
+                    .max_objects(2u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_object_size(5u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_total_size(9u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_object_pins(1u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_objects(1u128)
+                    .build()
+                    .unwrap(),
                 Some(ContractError::Bucket(BucketError::MaxObjectsLimitExceeded(
                     2u128.into(),
                     1u128.into(),
                 ))),
             ),
             (
-                BucketLimits::new().set_max_object_size(4u128.into()),
+                BucketLimitsBuilder::default()
+                    .max_object_size(4u128)
+                    .build()
+                    .unwrap(),
                 Some(ContractError::Bucket(
                     BucketError::MaxObjectSizeLimitExceeded(5u128.into(), 4u128.into()),
                 )),
             ),
             (
-                BucketLimits::new().set_max_total_size(8u128.into()),
+                BucketLimitsBuilder::default()
+                    .max_total_size(8u128)
+                    .build()
+                    .unwrap(),
                 Some(ContractError::Bucket(
                     BucketError::MaxTotalSizeLimitExceeded(9u128.into(), 8u128.into()),
                 )),
             ),
             (
-                BucketLimits::new().set_max_object_pins(0u128.into()),
+                BucketLimitsBuilder::default()
+                    .max_object_pins(0u128)
+                    .build()
+                    .unwrap(),
                 Some(ContractError::Bucket(
                     BucketError::MaxObjectPinsLimitExceeded(1u128.into(), 0u128.into()),
                 )),
@@ -655,11 +884,11 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
             let info = mock_info("creator", &[]);
-
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
-                limits: case.0,
-                pagination: PaginationConfig::new(),
+                config: BucketConfig::default(),
+                limits: case.0, // case.0(&mut BucketLimitsBuilder::default()).unwrap(),
+                pagination: PaginationConfig::default(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -685,8 +914,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -752,8 +982,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -965,10 +1196,9 @@ mod tests {
                     mock_info("pierre", &[]),
                 ],
                 expected_count: 3,
-                expected_error: Some(ContractError::Bucket(MaxObjectPinsLimitExceeded(
-                    Uint128::new(3),
-                    Uint128::new(2),
-                ))),
+                expected_error: Some(ContractError::Bucket(
+                    BucketError::MaxObjectPinsLimitExceeded(Uint128::new(3), Uint128::new(2)),
+                )),
                 expected_object_pin_count: vec![
                     (
                         ObjectId::from(
@@ -1011,8 +1241,12 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    limits: BucketLimits::new().set_max_object_pins(Uint128::new(2)),
-                    pagination: PaginationConfig::new(),
+                    config: BucketConfig::default(),
+                    limits: BucketLimitsBuilder::default()
+                        .max_object_pins(Uint128::new(2))
+                        .build()
+                        .unwrap(),
+                    pagination: PaginationConfig::default(),
                 },
             )
             .unwrap();
@@ -1250,8 +1484,9 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    limits: BucketLimits::new(),
-                    pagination: PaginationConfig::new(),
+                    config: BucketConfig::default(),
+                    limits: BucketLimits::default(),
+                    pagination: PaginationConfig::default(),
                 },
             )
             .unwrap();
@@ -1333,8 +1568,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
 
@@ -1350,7 +1586,7 @@ mod tests {
             response.page_info,
             PageInfo {
                 has_next_page: false,
-                cursor: "".to_string()
+                cursor: "".to_string(),
             }
         );
 
@@ -1374,11 +1610,11 @@ mod tests {
         execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
 
         let cases = vec![
-            (QueryMsg::Objects {address: None,first: None,after: None}, 3, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
-            (QueryMsg::Objects {address: Some("unknown".to_string()), first: None, after: None}, 0, PageInfo {has_next_page: false, cursor: "".to_string()}),
-            (QueryMsg::Objects {address: Some("creator1".to_string()),first: None,after: None}, 2, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
-            (QueryMsg::Objects {address: Some("creator1".to_string()),first: Some(1),after: None}, 1, PageInfo {has_next_page: true,cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()}),
-            (QueryMsg::Objects {address: Some("creator1".to_string()),first: Some(1),after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string())}, 1, PageInfo {has_next_page: false,cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string()}),
+            (QueryMsg::Objects { address: None, first: None, after: None }, 3, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
+            (QueryMsg::Objects { address: Some("unknown".to_string()), first: None, after: None }, 0, PageInfo { has_next_page: false, cursor: "".to_string() }),
+            (QueryMsg::Objects { address: Some("creator1".to_string()), first: None, after: None }, 2, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
+            (QueryMsg::Objects { address: Some("creator1".to_string()), first: Some(1), after: None }, 1, PageInfo { has_next_page: true, cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string() }),
+            (QueryMsg::Objects { address: Some("creator1".to_string()), first: Some(1), after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()) }, 1, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
         ];
 
         for case in cases {
@@ -1402,7 +1638,7 @@ mod tests {
                 id: "0a6d95579ba3dd2f79c870906fd894007ce449020d111d358894cfbbcd9a03a4".to_string(),
                 owner: "creator2".to_string(),
                 is_pinned: false,
-                size: 7u128.into()
+                size: 7u128.into(),
             }
         );
     }
@@ -1415,8 +1651,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
 
@@ -1508,8 +1745,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            limits: BucketLimits::new(),
-            pagination: PaginationConfig::new(),
+            config: BucketConfig::default(),
+            limits: BucketLimits::default(),
+            pagination: PaginationConfig::default(),
         };
         instantiate(deps.as_mut(), mock_env(), mock_info("creator1", &[]), msg).unwrap();
 
@@ -1626,8 +1864,9 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    limits: BucketLimits::new(),
-                    pagination: PaginationConfig::new(),
+                    config: BucketConfig::default(),
+                    limits: BucketLimits::default(),
+                    pagination: PaginationConfig::default(),
                 },
             )
             .unwrap();

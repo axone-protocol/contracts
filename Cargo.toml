@@ -11,7 +11,7 @@ cosmwasm-storage = "1.2.3"
 cw-multi-test = "0.15.1"
 cw-storage-plus = "1.0.1"
 cw-utils = "1.0.1"
-cw2 = "0.15.1"
+cw2 = "1.0.1"
 schemars = "0.8.12"
 serde = { version = "1.0.159", default-features = false, features = ["derive"] }
 serde-json-wasm = "0.5.0"

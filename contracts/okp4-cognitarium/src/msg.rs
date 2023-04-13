@@ -55,8 +55,8 @@ pub enum QueryMsg {
 /// Contains limitations regarding store usages.
 #[cw_serde]
 pub struct StoreLimits {
-    /// max_triple_count denotes the maximum number of triples the store can contains.
-    /// If None, there is no limit on the number of triples.
+    /// The maximum number of triples the store can contains.
+    /// If `None`, there is no limit on the number of triples.
     pub max_triple_count: Option<Uint128>,
 }
 
@@ -65,13 +65,13 @@ pub struct StoreLimits {
 #[cw_serde]
 pub enum GraphInput {
     /// Input in [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) format.
-    XML { data: Binary },
+    XML(Binary),
 
-    /// Input in [N-Triples](https://www.w3.org/TR/turtle/) format with support of the [N-Triples star](https://w3c.github.io/rdf-star/cg-spec/2021-12-17.html#turtle-star) syntax.
-    Turtle { data: Binary },
+    /// Input in [Turtle](https://www.w3.org/TR/turtle/) format with support of the [Turtle star](https://w3c.github.io/rdf-star/cg-spec/2021-12-17.html#turtle-star) syntax.
+    Turtle(Binary),
 
     /// Input in [N-Triples](https://www.w3.org/TR/n-triples/) format with support of the [N-Triples star](https://w3c.github.io/rdf-star/cg-spec/2021-12-17.html#n-triples-star) syntax.
-    NTriples { data: Binary },
+    NTriples(Binary),
 }
 
 /// # ResourcesOutputFormat
@@ -92,6 +92,9 @@ pub enum ResourcesResponse {
 
 /// # ResourceQuery
 /// A named query targeting resources.
+///
+/// As the contained [ResourceCriteria] can rely on other [ResourceQuery] it is possible to build
+/// circular queries, which is forbidden and will result in an error.
 #[cw_serde]
 pub struct ResourceQuery {
     /// The query name, can be used to reference another query to allow join.

@@ -6,6 +6,8 @@
 
 *   [okp4-objectarium](./okp4-objectarium.md "ObjectariumOverviewThe okp4-objectarium smart contract enables the storage of arbitrary objects in any Cosmos blockchains using the CosmWasm framework") – `-`
 
+*   [okp4-triplestore](./okp4-triplestore.md "TriplestoreOverviewThe okp4-triplestore smart contract enables the storage of RDF graphs triples (i") – `-`
+
 ## Other Schemas
 
 ### Objects
@@ -20,9 +22,13 @@
 
 *   [ForgetObject](./okp4-objectarium-executemsg-oneof-forgetobject.md "ForgetObject first unpin the object from the bucket for the considered sender, then remove it from the storage if it is not pinned anymore") – `undefined#/execute/oneOf/1`
 
+*   [Insert](./okp4-triplestore-executemsg-oneof-insert.md "Insert the Tuples extracted from the provided RDF graph") – `undefined#/execute/oneOf/0`
+
 *   [InstantiateMsg](./okp4-law-stone-instantiatemsg.md "Instantiate message") – `undefined#/instantiate`
 
 *   [InstantiateMsg](./okp4-objectarium-instantiatemsg.md "Instantiate messages") – `undefined#/instantiate`
+
+*   [InstantiateMsg](./okp4-triplestore-instantiatemsg.md "Instantiate message") – `undefined#/instantiate`
 
 *   [Object](./okp4-objectarium-querymsg-oneof-object.md "Object returns the object information with the given id") – `undefined#/query/oneOf/1`
 
@@ -47,6 +53,16 @@
 *   [PinObject](./okp4-objectarium-executemsg-oneof-pinobject.md "PinObject pins the object in the bucket for the considered sender") – `undefined#/execute/oneOf/2`
 
 *   [ProgramResponse](./okp4-law-stone-responses-programresponse.md "ProgramResponse carry elements to locate the program in a okp4-objectarium contract") – `undefined#/responses/program`
+
+*   [Remove](./okp4-triplestore-executemsg-oneof-remove.md "Remove all the Tuples linked to the resources matching the criteria defined in the provided queries") – `undefined#/execute/oneOf/1`
+
+*   [ResourceQuery](./okp4-triplestore-executemsg-definitions-resourcequery.md "A named query targeting resources") – `undefined#/execute/definitions/ResourceQuery`
+
+*   [ResourceQuery](./okp4-triplestore-querymsg-definitions-resourcequery.md "A named query targeting resources") – `undefined#/query/definitions/ResourceQuery`
+
+*   [Resources](./okp4-triplestore-querymsg-oneof-resources.md "Returns the resources matching the criteria defined in the provided queries formatted according to the provided format") – `undefined#/query/oneOf/0`
+
+*   [StoreLimits](./okp4-triplestore-instantiatemsg-definitions-storelimits.md "Contains limitations regarding store usages") – `undefined#/instantiate/definitions/StoreLimits`
 
 *   [StoreObject](./okp4-objectarium-executemsg-oneof-storeobject.md "StoreObject store an object to the bucket and make the sender the owner of the object") – `undefined#/execute/oneOf/0`
 
@@ -92,6 +108,82 @@
 
 *   [Untitled object in okp4-objectarium](./okp4-objectarium-responses-bucketresponse-definitions-paginationconfig.md "PaginationConfig is the type carrying configuration for paginated queries") – `undefined#/responses/bucket/definitions/PaginationConfig`
 
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-oneof-insert-properties-insert.md) – `undefined#/execute/oneOf/0/properties/insert`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-oneof-remove-properties-remove.md) – `undefined#/execute/oneOf/1/properties/remove`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-graphinput-oneof-0.md "Input in RDF/XML format") – `undefined#/execute/definitions/GraphInput/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-graphinput-oneof-1.md "Input in Turtle format with support of the Turtle star syntax") – `undefined#/execute/definitions/GraphInput/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-graphinput-oneof-2.md "Input in N-Triples format with support of the N-Triples star syntax") – `undefined#/execute/definitions/GraphInput/oneOf/2`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-literal-oneof-0.md "A simple string literal value") – `undefined#/execute/definitions/Literal/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-literal-oneof-1.md "An internationalized string value") – `undefined#/execute/definitions/Literal/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-literal-oneof-1-properties-i18_n_value.md) – `undefined#/execute/definitions/Literal/oneOf/1/properties/i18_n_value`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-literal-oneof-2.md "A typed value") – `undefined#/execute/definitions/Literal/oneOf/2`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-literal-oneof-2-properties-typed.md) – `undefined#/execute/definitions/Literal/oneOf/2/properties/typed`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-objectvalue-oneof-0.md "A literal value") – `undefined#/execute/definitions/ObjectValue/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-objectvalue-oneof-1.md "A node to another resource") – `undefined#/execute/definitions/ObjectValue/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-resourcecriteria-oneof-0.md "Subject match a resource containing the provided node as subject") – `undefined#/execute/definitions/ResourceCriteria/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-resourcecriteria-oneof-1.md "Property match a resource matching the pair of (predicate, object)") – `undefined#/execute/definitions/ResourceCriteria/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-resourcecriteria-oneof-1-properties-property.md) – `undefined#/execute/definitions/ResourceCriteria/oneOf/1/properties/property`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-resourcecriteria-oneof-2.md "Referenced match a resource whose subject is referenced in another resource") – `undefined#/execute/definitions/ResourceCriteria/oneOf/2`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-resourcecriteria-oneof-2-properties-referenced.md) – `undefined#/execute/definitions/ResourceCriteria/oneOf/2/properties/referenced`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-valueorjoin-oneof-0.md "A static value") – `undefined#/execute/definitions/ValueOrJoin_for_ObjectValue/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-valueorjoin-oneof-1.md "A reference to another \[ResourceQuery], identified by its name") – `undefined#/execute/definitions/ValueOrJoin_for_ObjectValue/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-valueorjoin-1-oneof-0.md "A static value") – `undefined#/execute/definitions/ValueOrJoin_for_String/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-executemsg-definitions-valueorjoin-1-oneof-1.md "A reference to another \[ResourceQuery], identified by its name") – `undefined#/execute/definitions/ValueOrJoin_for_String/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-oneof-resources-properties-resources.md) – `undefined#/query/oneOf/0/properties/resources`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-literal-oneof-0.md "A simple string literal value") – `undefined#/query/definitions/Literal/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-literal-oneof-1.md "An internationalized string value") – `undefined#/query/definitions/Literal/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-literal-oneof-1-properties-i18_n_value.md) – `undefined#/query/definitions/Literal/oneOf/1/properties/i18_n_value`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-literal-oneof-2.md "A typed value") – `undefined#/query/definitions/Literal/oneOf/2`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-literal-oneof-2-properties-typed.md) – `undefined#/query/definitions/Literal/oneOf/2/properties/typed`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-objectvalue-oneof-0.md "A literal value") – `undefined#/query/definitions/ObjectValue/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-objectvalue-oneof-1.md "A node to another resource") – `undefined#/query/definitions/ObjectValue/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-resourcecriteria-oneof-0.md "Subject match a resource containing the provided node as subject") – `undefined#/query/definitions/ResourceCriteria/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-resourcecriteria-oneof-1.md "Property match a resource matching the pair of (predicate, object)") – `undefined#/query/definitions/ResourceCriteria/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-resourcecriteria-oneof-1-properties-property.md) – `undefined#/query/definitions/ResourceCriteria/oneOf/1/properties/property`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-resourcecriteria-oneof-2.md "Referenced match a resource whose subject is referenced in another resource") – `undefined#/query/definitions/ResourceCriteria/oneOf/2`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-resourcecriteria-oneof-2-properties-referenced.md) – `undefined#/query/definitions/ResourceCriteria/oneOf/2/properties/referenced`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-valueorjoin-oneof-0.md "A static value") – `undefined#/query/definitions/ValueOrJoin_for_ObjectValue/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-valueorjoin-oneof-1.md "A reference to another \[ResourceQuery], identified by its name") – `undefined#/query/definitions/ValueOrJoin_for_ObjectValue/oneOf/1`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-valueorjoin-1-oneof-0.md "A static value") – `undefined#/query/definitions/ValueOrJoin_for_String/oneOf/0`
+
+*   [Untitled object in okp4-triplestore](./okp4-triplestore-querymsg-definitions-valueorjoin-1-oneof-1.md "A reference to another \[ResourceQuery], identified by its name") – `undefined#/query/definitions/ValueOrJoin_for_String/oneOf/1`
+
 ### Arrays
 
 *   [Untitled array in okp4-law-stone](./okp4-law-stone-responses-askresponse-definitions-answer-properties-results.md) – `undefined#/responses/ask/definitions/Answer/properties/results`
@@ -105,6 +197,14 @@
 *   [Untitled array in okp4-objectarium](./okp4-objectarium-responses-objectpinsresponse-properties-data.md "The list of addresses that pinned the object") – `undefined#/responses/object_pins/properties/data`
 
 *   [Untitled array in okp4-objectarium](./okp4-objectarium-responses-objectsresponse-properties-data.md "The list of objects in the bucket") – `undefined#/responses/objects/properties/data`
+
+*   [Untitled array in okp4-triplestore](./okp4-triplestore-executemsg-oneof-remove-properties-remove-properties-queries.md "The queries act as the logical disjunction of each single query, a resource shall match at least one query") – `undefined#/execute/oneOf/1/properties/remove/properties/queries`
+
+*   [Untitled array in okp4-triplestore](./okp4-triplestore-executemsg-definitions-resourcequery-properties-criteria.md "The set of criteria a resource must meet to validate the query, it act as the logical conjunction of all the criteria") – `undefined#/execute/definitions/ResourceQuery/properties/criteria`
+
+*   [Untitled array in okp4-triplestore](./okp4-triplestore-querymsg-oneof-resources-properties-resources-properties-queries.md "The queries act as the logical disjunction of each single query, a resource shall match at least one query") – `undefined#/query/oneOf/0/properties/resources/properties/queries`
+
+*   [Untitled array in okp4-triplestore](./okp4-triplestore-querymsg-definitions-resourcequery-properties-criteria.md "The set of criteria a resource must meet to validate the query, it act as the logical conjunction of all the criteria") – `undefined#/query/definitions/ResourceQuery/properties/criteria`
 
 ## Version Note
 

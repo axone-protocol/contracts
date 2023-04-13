@@ -1,6 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
-use std::collections::HashMap;
 
 /// Instantiate message
 #[cw_serde]
@@ -21,12 +20,15 @@ pub enum ExecuteMsg {
     Insert { input: GraphInput },
 
     /// # Remove
-    /// Remove the resources matching the constraints expressed in [resource_sets].
+    /// Remove all the Tuples linked to the resources matching the criteria defined in the provided
+    /// queries.
+    ///
+    /// Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform
+    /// this action.
     Remove {
-        /// resource_sets represents multiple sets of resources matching the provided constraints
-        /// and identified by a key, the key can be used in other constraints to expressed links
-        /// between resources.
-        resource_sets: HashMap<String, ResourceConstraints>,
+        /// The queries act as the logical disjunction of each single query, a resource shall match
+        /// at least one query.
+        queries: Vec<ResourceQuery>,
     },
 }
 
@@ -34,25 +36,17 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// # SelectResources
+    /// # Resources
     ///
-    /// Returns the resources matching the constraints expressed in [resource_sets] formatted according
-    /// to the provided [format].
-    ///
-    /// A resource being considered as a set of triples (i.e. subject - predicate - object) having the
-    /// same subject.
-    ///
-    /// The provided [resource_sets] being able to depend on each other, circular dependencies are
-    /// considered as an error.
-    #[returns(SelectResourcesResponse)]
-    SelectResources {
-        /// resource_sets represents multiple sets of resources matching the provided constraints
-        /// and identified by a key, the key can be used in other constraints to expressed links
-        /// between resources.
-        resource_sets: HashMap<String, ResourceConstraints>,
+    /// Returns the resources matching the criteria defined in the provided queries formatted according
+    /// to the provided format.
+    #[returns(ResourcesResponse)]
+    Resources {
+        /// The queries act as the logical disjunction of each single query, a resource shall match
+        /// at least one query.
+        queries: Vec<ResourceQuery>,
 
-        /// format denotes the expected output format. Its value shape the way the response shall be
-        /// interpreted.
+        /// The expected output format. Its value shape the way the response shall be interpreted.
         format: ResourcesOutputFormat,
     },
 }
@@ -80,64 +74,106 @@ pub enum GraphInput {
     NTriples { data: Binary },
 }
 
+/// # ResourcesOutputFormat
+/// Supported output formats for [QueryMsg::Resources] query.
 #[cw_serde]
 pub enum ResourcesOutputFormat {
-    Json {
-        project: HashMap<String, Vec<String>>,
-    },
-    Noop,
+    /// TODO: remove me once there are proper output formats..
+    Dummy,
 }
 
+/// # ResourcesResponse
+/// Response to the [QueryMsg::Resources] query, its content depends on the specified [ResourcesOutputFormat].
 #[cw_serde]
-pub enum SelectResourcesResponse {}
-
-/// # ResourceConstraints
-/// ResourceConstraints contains a set of resource constraints behaving as a logical conjunction, it
-/// means that a resource must match all the constraints.
-pub type ResourceConstraints = Vec<ResourceConstraint>;
-
-/// # ResourceConstraint
-/// ResourceConstraint represents a constraint a resource shall match, it can depends on another
-/// resource set to express links between different resources.
-#[cw_serde]
-pub enum ResourceConstraint {
-    /// Subject match a resource containing the provided value as subject.
-    Subject(String),
-
-    /// Property match a resource containing the provided pair of ([predicate], [object]).
-    Property {
-        /// predicate denotes the predicate to match.
-        predicate: String,
-
-        /// object denotes the object value associated with the predicate.
-        /// It can reference either a literal value or a reference to another resource set.
-        object: ValueOrRef,
-    },
-
-    /// Referenced match a resource if referenced by another resource. For instance, if the resource's
-    /// subject under constraint is referenced as the object in another resource's triple, the triple
-    /// containing the provided pair of ([subject], [predicate]).
-    Referenced {
-        /// subject denotes the resource referencing the resource under constraint.
-        /// It can reference either a literal value or a reference to another resource set.
-        subject: ValueOrRef,
-
-        /// The predicate on the referencing resource that shall express the reference.
-        predicate: String,
-    },
+pub enum ResourcesResponse {
+    /// TODO: remove me once there are proper output formats..
+    Dummy,
 }
 
-/// # ValueOrRef
-/// ValueOrRef represents an expected value in a resource constraint being either literal or a reference
-/// to another resource set.
+/// # ResourceQuery
+/// A named query targeting resources.
+#[cw_serde]
+pub struct ResourceQuery {
+    /// The query name, can be used to reference another query to allow join.
+    /// Must be unique.
+    pub name: String,
+
+    /// The set of criteria a resource must meet to validate the query, it act as the logical
+    /// conjunction of all the criteria.
+    pub criteria: Vec<ResourceCriteria>,
+}
+
+/// # ResourceCriteria
+/// Represents a single query criteria on a resource.
 ///
-/// When referencing a resource set the value will be considered as logical disjunction of every
-/// resource's subject it contains.
+/// It can rely on another query referencing it by its name to express conditions on links between
+/// resources (e.g. the `subject` of a resource shall be referenced in a resource of another query).
+/// It behaves as a right join, the resources of the referenced query aren't filtered.
 #[cw_serde]
-pub enum ValueOrRef {
-    /// The literal value.
+pub enum ResourceCriteria {
+    /// Subject match a resource containing the provided node as subject.
+    Subject(Node),
+
+    /// Property match a resource matching the pair of (`predicate`, `object`).
+    Property {
+        /// The predicate to match.
+        predicate: Node,
+
+        /// The object to match, which may be joined on another query.
+        object: ValueOrJoin<ObjectValue>,
+    },
+
+    /// Referenced match a resource whose `subject` is referenced in another resource.
+    Referenced {
+        /// The `subject` the referencing resource shall have, which may be joined on another query.
+        referer: ValueOrJoin<Node>,
+
+        /// The predicate through which the referencing resource shall express the reference.
+        property: Node,
+    },
+}
+
+/// # Node
+/// Node denotes, among RDF elements, either a named or blank node, for instance:
+///
+/// A named node can be represented given its IRI: `http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral`.
+///
+/// A blank node given its id: `9af906ad-d3b1-4a05-ae4b-9288df593d5b`.
+pub type Node = String;
+
+/// # Literal
+/// Literal represents the possible form an object literal value can have.
+#[cw_serde]
+pub enum Literal {
+    /// A simple string literal value.
     Value(String),
 
-    /// The reference to another resource set, identified by its key.
-    ResourceSet(String),
+    /// An internationalized string value.
+    I18NValue { value: String, language: String },
+
+    /// A typed value.
+    Typed { value: String, datatype: Node },
+}
+
+/// # ObjectValue
+/// Represents the different value an object can take.
+#[cw_serde]
+pub enum ObjectValue {
+    /// A literal value.
+    Literal(Literal),
+
+    /// A node to another resource.
+    Node(Node),
+}
+
+/// # ValueOrJoin
+/// Represents an expected value in a [ResourceCriteria], which can be either provided static value
+/// or a join on another [ResourceQuery].
+#[cw_serde]
+pub enum ValueOrJoin<T> {
+    /// A static value.
+    Value(T),
+
+    /// A reference to another [ResourceQuery], identified by its name.
+    JoinQuery(String),
 }

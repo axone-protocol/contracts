@@ -14,7 +14,10 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     /// # Insert
     /// Insert the Tuples extracted from the provided RDF graph.
-    /// It fails if a subject already exists.
+    /// For already existing triples it act as no-op.
+    ///
+    /// Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform
+    /// this action.
     Insert { input: GraphInput },
 
     /// # Remove

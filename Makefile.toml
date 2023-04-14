@@ -290,6 +290,21 @@ echo "📜 Logs for chain ${CHAIN} under ${CHAIN_HOME}:"
 docker logs -f ${CHAIN}
 '''
 
+[tasks.chain]
+description = "Run the okp4d CLI using the chain's home directory under a Docker container."
+script = '''
+echo "⌨️ Executing ${DOCKER_IMAGE_OKP4D} ${@}..."
+
+docker run \
+  --network host \
+  -v `pwd`:/app \
+  -w /app \
+  -ti \
+  --rm \
+  ${DOCKER_IMAGE_OKP4D} \
+    ${@}
+'''
+
 [tasks.chain-deploy-contract]
 dependencies = ["chain-start"]
 description = "Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...)."

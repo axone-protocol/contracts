@@ -69,16 +69,17 @@ pub struct StoreLimits {
     pub max_insert_data_triple_count: Option<Uint128>,
 }
 
-/// # GraphInput
+/// # DataInput
 /// Represents the input data for the [ExecuteMsg::InsertData] message as RDF triples in a specific format.
 #[cw_serde]
 pub enum DataInput {
+    /// # RDF XML
     /// Input in [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) format.
     RDFXml(Binary),
-
+    /// # Turtle
     /// Input in [Turtle](https://www.w3.org/TR/turtle/) format.
     Turtle(Binary),
-
+    /// # N-Triples
     /// Input in [N-Triples](https://www.w3.org/TR/n-triples/) format.
     NTriples(Binary),
 }
@@ -87,10 +88,12 @@ pub enum DataInput {
 /// Represents an IRI.
 #[cw_serde]
 pub enum IRI {
+    /// # Prefixed
     /// An IRI prefixed with a prefix.
     /// The prefixed IRI is expanded to a full IRI using the prefix definition specified in the query.
     /// For example, the prefixed IRI `rdf:type` is expanded to `http://www.w3.org/1999/02/22-rdf-syntax-ns#type`.
     Prefixed(String),
+    /// # Full
     /// A full IRI.
     Full(String),
 }
@@ -125,12 +128,13 @@ pub struct Results {
 #[cw_serde]
 #[serde(tag = "type")]
 pub enum Value {
+    /// # URI
     /// Represents an IRI.
     URI {
         /// The value of the IRI.
         value: IRI,
     },
-
+    /// # Literal
     /// Represents a literal S with optional language tag L or datatype IRI D.
     Literal {
         /// The value of the literal.
@@ -141,7 +145,7 @@ pub enum Value {
         /// The datatype of the literal.
         datatype: Option<IRI>,
     },
-
+    /// # BlankNode
     /// Represents a blank node.
     BlankNode {
         /// The identifier of the blank node.
@@ -184,6 +188,7 @@ pub struct Prefix {
 /// Represents an item to select in a [SelectQuery].
 #[cw_serde]
 pub enum SelectItem {
+    /// # Variable
     /// Represents a variable.
     Variable(String),
 }
@@ -196,6 +201,7 @@ pub type WhereClause = Vec<WhereCondition>;
 /// Represents a condition in a [WhereClause].
 #[cw_serde]
 pub enum WhereCondition {
+    /// # Simple
     /// Represents a simple condition.
     Simple(SimpleWhereCondition),
 }
@@ -204,6 +210,7 @@ pub enum WhereCondition {
 /// Represents a simple condition in a [WhereCondition].
 #[cw_serde]
 pub enum SimpleWhereCondition {
+    /// # TriplePattern
     /// Represents a triple pattern, i.e. a condition on a triple based on its subject, predicate and
     /// object.
     TriplePattern(TriplePattern),
@@ -226,8 +233,10 @@ pub struct TriplePattern {
 #[cw_serde]
 pub enum SubjectPattern {
     /// # Variable
+    /// A variable.
     Variable(String),
     /// # Node
+    /// A node, i.e. an IRI or a blank node.
     Node(Node),
 }
 
@@ -236,8 +245,10 @@ pub enum SubjectPattern {
 #[cw_serde]
 pub enum PredicatePattern {
     /// # Variable
+    /// A variable.
     Variable(String),
     /// # Node
+    /// A node, i.e. an IRI or a blank node.
     Node(Node),
 }
 
@@ -246,11 +257,14 @@ pub enum PredicatePattern {
 #[cw_serde]
 pub enum ObjectPattern {
     /// # Variable
+    /// A variable.
     Variable(String),
     /// # Node
+    /// A node, i.e. an IRI or a blank node.
     Node(Node),
     /// # Literal
-    /// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal).
+    /// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal), i.e. a simple literal,
+    /// a language-tagged string or a typed value.
     Literal(Literal),
 }
 

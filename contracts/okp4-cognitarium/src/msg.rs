@@ -83,17 +83,26 @@ pub enum DataInput {
     NTriples(Binary),
 }
 
+/// # IRI
 /// Represents an IRI.
-pub type IRI = String;
+#[cw_serde]
+pub enum IRI {
+    /// An IRI prefixed with a prefix.
+    /// The prefixed IRI is expanded to a full IRI using the prefix definition specified in the query.
+    /// For example, the prefixed IRI `rdf:type` is expanded to `http://www.w3.org/1999/02/22-rdf-syntax-ns#type`.
+    Prefixed(String),
+    /// A full IRI.
+    Full(String),
+}
 
 /// # SelectResponse
 /// Represents the response of a [QueryMsg::Select] query.
 #[cw_serde]
 pub struct SelectResponse {
     /// The head of the response, i.e. the set of variables mentioned in the results.
-    head: Head,
+    pub head: Head,
     /// The results of the select query.
-    results: Results,
+    pub results: Results,
 }
 
 /// # Head
@@ -101,7 +110,7 @@ pub struct SelectResponse {
 #[cw_serde]
 pub struct Head {
     /// The variables selected in the query.
-    vars: Vec<String>,
+    pub vars: Vec<String>,
 }
 
 /// # Results
@@ -109,7 +118,7 @@ pub struct Head {
 #[cw_serde]
 pub struct Results {
     /// The bindings of the results.
-    bindings: Vec<HashMap<String, Value>>,
+    pub bindings: Vec<HashMap<String, Value>>,
 }
 
 /// # Value
@@ -145,18 +154,30 @@ pub enum Value {
 /// and to filter the results.
 #[cw_serde]
 pub struct SelectQuery {
+    /// The prefixes used in the query.
+    pub prefixes: Vec<Prefix>,
     /// The items to select.
     /// Note: the number of items to select cannot exceed the maximum query variable count defined
     /// in the store limitations.
-    select: Vec<SelectItem>,
+    pub select: Vec<SelectItem>,
     /// The WHERE clause.
     /// If `None`, there is no WHERE clause, i.e. all triples are returned without filtering.
-    r#where: Option<WhereClause>,
+    pub r#where: Option<WhereClause>,
     /// The maximum number of results to return.
     /// If `None`, there is no limit.
     /// Note: the value of the limit cannot exceed the maximum query limit defined in the store
     /// limitations.
-    limit: Option<u64>,
+    pub limit: Option<u64>,
+}
+
+/// # Prefix
+/// Represents a prefix in a [SelectQuery]. A prefix is a shortcut for a namespace used in the query.
+#[cw_serde]
+pub struct Prefix {
+    /// The prefix.
+    pub prefix: String,
+    /// The namespace associated with the prefix.
+    pub namespace: String,
 }
 
 /// # SelectItem
@@ -193,11 +214,11 @@ pub enum SimpleWhereCondition {
 #[cw_serde]
 pub struct TriplePattern {
     /// The subject of the triple pattern.
-    subject: SubjectPattern,
+    pub subject: SubjectPattern,
     /// The predicate of the triple pattern.
-    predicate: PredicatePattern,
+    pub predicate: PredicatePattern,
     /// The object of the triple pattern.
-    object: ObjectPattern,
+    pub object: ObjectPattern,
 }
 
 /// # SubjectPattern

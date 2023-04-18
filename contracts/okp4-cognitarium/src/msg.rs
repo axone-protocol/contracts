@@ -48,6 +48,12 @@ pub struct StoreLimits {
     /// including the size of data types and language tags if any.
     /// If `None`, there is no limit on the number of bytes.
     pub max_byte_size: Option<Uint128>,
+    /// The maximum number of bytes the store can contains for a single triple.
+    /// The size of a triple is counted as the sum of the size of its subject, predicate and object,
+    /// including the size of data types and language tags if any. The limit is used to prevent
+    /// storing very large triples, especially literals.
+    /// If `None`, there is no limit on the number of bytes.
+    pub max_triple_byte_size: Option<Uint128>,
 }
 
 /// # GraphInput

@@ -60,6 +60,9 @@ pub struct StoreLimits {
     /// The maximum number of variables a query can select.
     /// If `None`, there is no limit on the number of variables.
     pub max_query_variable_count: Option<Uint128>,
+    /// The maximum number of bytes an insert data query can contains.
+    /// If `None`, there is no limit on the number of bytes.
+    pub max_insert_data_byte_size: Option<Uint128>,
 
 }
 

@@ -21,6 +21,7 @@ pub enum ExecuteMsg {
     InsertData { input: DataInput },
 }
 
+/// # SelectQuery
 /// Query messages
 #[cw_serde]
 #[derive(QueryResponses)]
@@ -89,7 +90,9 @@ pub type IRI = String;
 /// Represents the response of a [QueryMsg::Select] query.
 #[cw_serde]
 pub struct SelectResponse {
+    /// The head of the response, i.e. the set of variables mentioned in the results.
     head: Head,
+    /// The results of the select query.
     results: Results,
 }
 
@@ -115,11 +118,13 @@ pub struct Results {
 pub enum Value {
     /// Represents an IRI.
     URI {
+        /// The value of the IRI.
         value: IRI,
     },
 
     /// Represents a literal S with optional language tag L or datatype IRI D.
     Literal {
+        /// The value of the literal.
         value: String,
         /// The language tag of the literal.
         #[serde(rename = "xml:lang")]
@@ -130,6 +135,7 @@ pub enum Value {
 
     /// Represents a blank node.
     BlankNode {
+        /// The identifier of the blank node.
         value: String,
     },
 }
@@ -140,10 +146,16 @@ pub enum Value {
 #[cw_serde]
 pub struct SelectQuery {
     /// The items to select.
+    /// Note: the number of items to select cannot exceed the maximum query variable count defined
+    /// in the store limitations.
     select: Vec<SelectItem>,
     /// The WHERE clause.
+    /// If `None`, there is no WHERE clause, i.e. all triples are returned without filtering.
     r#where: Option<WhereClause>,
     /// The maximum number of results to return.
+    /// If `None`, there is no limit.
+    /// Note: the value of the limit cannot exceed the maximum query limit defined in the store
+    /// limitations.
     limit: Option<u64>,
 }
 
@@ -163,6 +175,7 @@ pub type WhereClause = Vec<WhereCondition>;
 /// Represents a condition in a [WhereClause].
 #[cw_serde]
 pub enum WhereCondition {
+    /// Represents a simple condition.
     Simple(SimpleWhereCondition),
 }
 
@@ -170,6 +183,8 @@ pub enum WhereCondition {
 /// Represents a simple condition in a [WhereCondition].
 #[cw_serde]
 pub enum SimpleWhereCondition {
+    /// Represents a triple pattern, i.e. a condition on a triple based on its subject, predicate and
+    /// object.
     TriplePattern(TriplePattern),
 }
 

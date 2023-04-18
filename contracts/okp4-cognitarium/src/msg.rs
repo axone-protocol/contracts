@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
+use std::collections::HashMap;
 
 /// Instantiate message
 #[cw_serde]
@@ -12,24 +13,12 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// # Insert
-    /// Insert the Tuples extracted from the provided RDF graph.
-    /// For already existing triples it act as no-op.
+    /// Insert the data as RDF triples in the store.
+    /// For already existing triples it acts as no-op.
     ///
     /// Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform
     /// this action.
-    Insert { input: GraphInput },
-
-    /// # Remove
-    /// Remove all the Tuples linked to the resources matching the criteria defined in the provided
-    /// queries.
-    ///
-    /// Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform
-    /// this action.
-    Remove {
-        /// The queries act as the logical disjunction of each single query, a resource shall match
-        /// at least one query.
-        queries: Vec<ResourceQuery>,
-    },
+    InsertData { input: DataInput },
 }
 
 /// Query messages
@@ -38,16 +27,12 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// # Resources
     ///
-    /// Returns the resources matching the criteria defined in the provided queries formatted according
-    /// to the provided format.
-    #[returns(ResourcesResponse)]
-    Resources {
-        /// The queries act as the logical disjunction of each single query, a resource shall match
-        /// at least one query.
-        queries: Vec<ResourceQuery>,
-
-        /// The expected output format. Its value shape the way the response shall be interpreted.
-        format: ResourcesOutputFormat,
+    /// Returns the resources matching the criteria defined by the provided query.
+    ///
+    #[returns(SelectResponse)]
+    Select {
+        /// The query to execute.
+        query: SelectQuery,
     },
 }
 
@@ -61,122 +46,187 @@ pub struct StoreLimits {
 }
 
 /// # GraphInput
-/// Represents an RDF Graph as input supporting multiple formats.
+/// Represents the input data for the [ExecuteMsg::InsertData] message as RDF triples in a specific format.
 #[cw_serde]
-pub enum GraphInput {
+pub enum DataInput {
     /// Input in [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) format.
-    XML(Binary),
+    RDFXml(Binary),
 
-    /// Input in [Turtle](https://www.w3.org/TR/turtle/) format with support of the [Turtle star](https://w3c.github.io/rdf-star/cg-spec/2021-12-17.html#turtle-star) syntax.
+    /// Input in [Turtle](https://www.w3.org/TR/turtle/) format.
     Turtle(Binary),
 
-    /// Input in [N-Triples](https://www.w3.org/TR/n-triples/) format with support of the [N-Triples star](https://w3c.github.io/rdf-star/cg-spec/2021-12-17.html#n-triples-star) syntax.
+    /// Input in [N-Triples](https://www.w3.org/TR/n-triples/) format.
     NTriples(Binary),
 }
 
-/// # ResourcesOutputFormat
-/// Supported output formats for [QueryMsg::Resources] query.
+/// Represents an IRI.
+pub type IRI= String;
+
+/// # SelectResponse
+/// Represents the response of a [QueryMsg::Select] query.
 #[cw_serde]
-pub enum ResourcesOutputFormat {
-    /// TODO: remove me once there are proper output formats..
-    Dummy,
+pub struct SelectResponse {
+    head: Head,
+    results: Results,
 }
 
-/// # ResourcesResponse
-/// Response to the [QueryMsg::Resources] query, its content depends on the specified [ResourcesOutputFormat].
+/// # Head
+/// Represents the head of a [SelectResponse].
 #[cw_serde]
-pub enum ResourcesResponse {
-    /// TODO: remove me once there are proper output formats..
-    Dummy,
+pub struct Head {
+    /// The variables selected in the query.
+    vars: Vec<String>,
 }
 
-/// # ResourceQuery
-/// A named query targeting resources.
-///
-/// As the contained [ResourceCriteria] can rely on other [ResourceQuery] it is possible to build
-/// circular queries, which is forbidden and will result in an error.
+/// # Results
+/// Represents the results of a [SelectResponse].
 #[cw_serde]
-pub struct ResourceQuery {
-    /// The query name, can be used to reference another query to allow join.
-    /// Must be unique.
-    pub name: String,
-
-    /// The set of criteria a resource must meet to validate the query, it act as the logical
-    /// conjunction of all the criteria.
-    pub criteria: Vec<ResourceCriteria>,
+pub struct Results {
+    /// The bindings of the results.
+    bindings: Vec<HashMap<String, Value>>,
 }
 
-/// # ResourceCriteria
-/// Represents a single query criteria on a resource.
-///
-/// It can rely on another query referencing it by its name to express conditions on links between
-/// resources (e.g. the `subject` of a resource shall be referenced in a resource of another query).
-/// It behaves as a right join, the resources of the referenced query aren't filtered.
+/// # Value
 #[cw_serde]
-pub enum ResourceCriteria {
-    /// Subject match a resource containing the provided node as subject.
-    Subject(Node),
-
-    /// Property match a resource matching the pair of (`predicate`, `object`).
-    Property {
-        /// The predicate to match.
-        predicate: Node,
-
-        /// The object to match, which may be joined on another query.
-        object: ValueOrJoin<ObjectValue>,
+#[serde(tag = "type")]
+pub enum Value {
+    /// Represents an IRI.
+    URI {
+       value: IRI,
     },
 
-    /// Referenced match a resource whose `subject` is referenced in another resource.
-    Referenced {
-        /// The `subject` the referencing resource shall have, which may be joined on another query.
-        referer: ValueOrJoin<Node>,
+    /// Represents a literal S with optional language tag L or datatype IRI D.
+    Literal {
+        value: String,
+        /// The language tag of the literal.
+        #[serde(rename = "xml:lang")]
+        lang: Option<String>,
+        /// The datatype of the literal.
+        datatype: Option<IRI>,
+    },
 
-        /// The predicate through which the referencing resource shall express the reference.
-        property: Node,
+    /// Represents a blank node.
+    BlankNode {
+        value: String,
     },
 }
 
-/// # Node
-/// Node denotes, among RDF elements, either a named or blank node, for instance:
-///
-/// A named node can be represented given its IRI: `http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral`.
-///
-/// A blank node given its id: `9af906ad-d3b1-4a05-ae4b-9288df593d5b`.
-pub type Node = String;
-
-/// # Literal
-/// Literal represents the possible form an object literal value can have.
+/// # SelectQuery
+/// Represents a SELECT query over the triple store, allowing to select variables to return
+/// and to filter the results.
 #[cw_serde]
-pub enum Literal {
-    /// A simple string literal value.
-    Value(String),
-
-    /// An internationalized string value.
-    I18NValue { value: String, language: String },
-
-    /// A typed value.
-    Typed { value: String, datatype: Node },
+pub struct SelectQuery {
+    /// The items to select.
+    select: Vec<SelectItem>,
+    /// The WHERE clause.
+    r#where: Option<WhereClause>,
+    /// The maximum number of results to return.
+    limit: Option<u64>,
 }
 
-/// # ObjectValue
-/// Represents the different value an object can take.
+/// # SelectItem
+/// Represents an item to select in a [SelectQuery].
 #[cw_serde]
-pub enum ObjectValue {
-    /// A literal value.
-    Literal(Literal),
+pub enum SelectItem {
+    /// Represents a variable.
+    Variable(String),
+}
 
-    /// A node to another resource.
+/// # WhereClause
+/// Represents a WHERE clause in a [SelectQuery], i.e. a set of conditions to filter the results.
+pub type WhereClause = Vec<WhereCondition>;
+
+/// # WhereCondition
+/// Represents a condition in a [WhereClause].
+#[cw_serde]
+pub enum WhereCondition {
+    Simple(SimpleWhereCondition),
+}
+
+/// # SimpleWhereCondition
+/// Represents a simple condition in a [WhereCondition].
+#[cw_serde]
+pub enum SimpleWhereCondition {
+    TriplePattern(TriplePattern),
+}
+
+/// # TriplePattern
+/// Represents a triple pattern in a [SimpleWhereCondition].
+#[cw_serde]
+pub struct TriplePattern {
+    /// The subject of the triple pattern.
+    subject: SubjectPattern,
+    /// The predicate of the triple pattern.
+    predicate: PredicatePattern,
+    /// The object of the triple pattern.
+    object: ObjectPattern,
+}
+
+/// # SubjectPattern
+/// Represents a subject pattern in a [TriplePattern] that can be either a variable or a node.
+#[cw_serde]
+pub enum SubjectPattern {
+    /// # Variable
+    Variable(String),
+    /// # Node
     Node(Node),
 }
 
-/// # ValueOrJoin
-/// Represents an expected value in a [ResourceCriteria], which can be either provided static value
-/// or a join on another [ResourceQuery].
+/// # PredicatePattern
+/// Represents a predicate pattern in a [TriplePattern] that can be either a variable or a node.
 #[cw_serde]
-pub enum ValueOrJoin<T> {
-    /// A static value.
-    Value(T),
+pub enum PredicatePattern {
+    /// # Variable
+    Variable(String),
+    /// # Node
+    Node(Node),
+}
 
-    /// A reference to another [ResourceQuery], identified by its name.
-    JoinQuery(String),
+/// # ObjectPattern
+/// Represents an object pattern in a [TriplePattern] that can be either a variable, a node or a literal.
+#[cw_serde]
+pub enum ObjectPattern {
+    /// # Variable
+    Variable(String),
+    /// # Node
+    Node(Node),
+    /// # Literal
+    /// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal).
+    Literal(Literal),
+}
+
+/// # Literal
+/// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal).
+#[cw_serde]
+pub enum Literal {
+    /// # Simple
+    /// A [simple literal](https://www.w3.org/TR/rdf11-concepts/#dfn-simple-literal) without datatype or language form.
+    Simple(String),
+    /// # LanguageTaggedString
+    /// A [language-tagged string](https://www.w3.org/TR/rdf11-concepts/#dfn-language-tagged-string)
+    LanguageTaggedString {
+        /// The [lexical form](https://www.w3.org/TR/rdf11-concepts/#dfn-lexical-form).
+        value: String,
+        /// The [language tag](https://www.w3.org/TR/rdf11-concepts/#dfn-language-tag).
+        language: String,
+    },
+    /// # TypedValue
+    /// A value with a datatype.
+    TypedValue {
+        /// The [lexical form](https://www.w3.org/TR/rdf11-concepts/#dfn-lexical-form).
+        value: String,
+        /// The [datatype IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-datatype-iri).
+        datatype: IRI,
+    }
+}
+
+/// # Node
+#[cw_serde]
+pub enum Node {
+    /// # NamedNode
+    /// An RDF [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri).
+    NamedNode(IRI),
+    /// # BlankNode
+    /// An RDF [blank node](https://www.w3.org/TR/rdf11-concepts/#dfn-blank-node).
+    BlankNode(String),
 }

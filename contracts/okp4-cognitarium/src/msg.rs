@@ -54,6 +54,9 @@ pub struct StoreLimits {
     /// storing very large triples, especially literals.
     /// If `None`, there is no limit on the number of bytes.
     pub max_triple_byte_size: Option<Uint128>,
+    /// The maximum limit of a query, i.e. the maximum number of triples returned by a select query.
+    /// If `None`, there is no limit on the number of triples returned.
+    pub max_limit: Option<Uint128>,
 }
 
 /// # GraphInput

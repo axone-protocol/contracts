@@ -63,7 +63,9 @@ pub struct StoreLimits {
     /// The maximum number of bytes an insert data query can contains.
     /// If `None`, there is no limit on the number of bytes.
     pub max_insert_data_byte_size: Option<Uint128>,
-
+    /// The maximum number of triples an insert data query can contains (after parsing).
+    /// If `None`, there is no limit on the number of triples.
+    pub max_insert_data_triple_count: Option<Uint128>,
 }
 
 /// # GraphInput
@@ -81,7 +83,7 @@ pub enum DataInput {
 }
 
 /// Represents an IRI.
-pub type IRI= String;
+pub type IRI = String;
 
 /// # SelectResponse
 /// Represents the response of a [QueryMsg::Select] query.
@@ -113,7 +115,7 @@ pub struct Results {
 pub enum Value {
     /// Represents an IRI.
     URI {
-       value: IRI,
+        value: IRI,
     },
 
     /// Represents a literal S with optional language tag L or datatype IRI D.
@@ -238,7 +240,7 @@ pub enum Literal {
         value: String,
         /// The [datatype IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-datatype-iri).
         datatype: IRI,
-    }
+    },
 }
 
 /// # Node

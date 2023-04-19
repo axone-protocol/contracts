@@ -97,7 +97,7 @@ impl<'a> TryFrom<rio_api::model::Term<'a>> for Object {
             rio_api::model::Term::Literal(literal) => {
                 Literal::try_from(literal).map(|l| Object::Literal(l))
             }
-            _ => Err(StdError::generic_err("Not implemented")),
+            _ => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
 }

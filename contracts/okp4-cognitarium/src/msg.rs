@@ -166,7 +166,7 @@ pub struct SelectQuery {
     pub select: Vec<SelectItem>,
     /// The WHERE clause.
     /// If `None`, there is no WHERE clause, i.e. all triples are returned without filtering.
-    pub r#where: Option<WhereClause>,
+    pub r#where: WhereClause,
     /// The maximum number of results to return.
     /// If `None`, there is no limit.
     /// Note: the value of the limit cannot exceed the maximum query limit defined in the store

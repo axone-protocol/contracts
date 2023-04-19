@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// Instantiate message
 #[cw_serde]
@@ -121,7 +121,7 @@ pub struct Head {
 #[cw_serde]
 pub struct Results {
     /// The bindings of the results.
-    pub bindings: Vec<HashMap<String, Value>>,
+    pub bindings: Vec<BTreeMap<String, Value>>,
 }
 
 /// # Value

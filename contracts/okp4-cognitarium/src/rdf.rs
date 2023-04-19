@@ -26,11 +26,57 @@ where
 }
 
 pub fn explode_iri(iri: &str) -> Result<(&str, &str), StdError> {
-    for delim in ['#', '/'] {
+    let mut marker_index: Option<usize> = None;
+    for delim in ['#', '/', ':'] {
         if let Some(index) = iri.rfind(delim) {
-            return Ok((&iri[..index], &iri[index..]));
+            marker_index = match marker_index {
+                Some(i) => Some(i.max(index)),
+                None => Some(index),
+            }
         }
     }
 
+    if let Some(index) = marker_index {
+        return Ok((&iri[..index + 1], &iri[index + 1..]));
+    }
+
     Err(StdError::generic_err("Couldn't extract IRI namespace"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn proper_explode_iri() {
+        assert_eq!(
+            explode_iri("http://www.w3.org/2001/XMLSchema#dateTime"),
+            Ok(("http://www.w3.org/2001/XMLSchema#", "dateTime"))
+        );
+        assert_eq!(
+            explode_iri("https://ontology.okp4.space/core/Governance"),
+            Ok(("https://ontology.okp4.space/core/", "Governance"))
+        );
+        assert_eq!(
+            explode_iri(
+                "did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
+            ),
+            Ok((
+                "did:key:",
+                "0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
+            ))
+        );
+        assert_eq!(
+            explode_iri("wow:this/is#weird"),
+            Ok(("wow:this/is#", "weird"))
+        );
+        assert_eq!(
+            explode_iri("this#is:weird/too"),
+            Ok(("this#is:weird/", "too"))
+        );
+        assert_eq!(
+            explode_iri("this_doesn't_work"),
+            Err(StdError::generic_err("Couldn't extract IRI namespace"))
+        );
+    }
 }

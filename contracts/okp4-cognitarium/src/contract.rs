@@ -1,11 +1,14 @@
+use crate::contract::execute::insert;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{
+    Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Store, STORE};
+use crate::state::{Store, STORE, TRIPLE_KEY_INCREMENT};
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
@@ -20,25 +23,69 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    STORE.save(
-        deps.storage,
-        &Store {
-            owner: info.sender,
-            limits: msg.limits.into(),
-        },
-    )?;
+    STORE.save(deps.storage, &Store::new(info.sender, msg.limits.into()))?;
+    TRIPLE_KEY_INCREMENT.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: ExecuteMsg,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    Err(ContractError::NotImplemented)
+    match msg {
+        ExecuteMsg::InsertData { input } => insert(deps, input),
+    }
+}
+
+pub mod execute {
+    use super::*;
+    use crate::error::StoreError;
+    use crate::msg::DataInput;
+    use crate::rdf;
+    use crate::state::{triples, Triple};
+
+    pub fn insert(deps: DepsMut, graph: DataInput) -> Result<Response, ContractError> {
+        let mut store = STORE.load(deps.storage)?;
+
+        let mut pk = TRIPLE_KEY_INCREMENT.load(deps.storage)?;
+        let old_count = store.stat.triples_count;
+        rdf::parse_triples(
+            graph,
+            |triple| -> Result<Triple, ContractError> { Ok(triple.try_into()?) },
+            |res| -> Result<(), ContractError> {
+                res.and_then(|triple| {
+                    pk += Uint128::one();
+                    store.stat.triples_count += Uint128::one();
+
+                    store
+                        .limits
+                        .max_triple_count
+                        .filter(|&max| max < store.stat.triples_count)
+                        .map(|max| {
+                            Err(ContractError::from(StoreError::MaxTriplesLimitExceeded(
+                                max,
+                            )))
+                        })
+                        .unwrap_or(Ok(()))?;
+
+                    triples()
+                        .save(deps.storage, pk.u128(), &triple)
+                        .map_err(ContractError::Std)
+                })
+            },
+        )?;
+
+        TRIPLE_KEY_INCREMENT.save(deps.storage, &pk)?;
+        STORE.save(deps.storage, &store)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "insert")
+            .add_attribute("inserted_count", store.stat.triples_count - old_count))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -52,7 +99,6 @@ mod tests {
     use crate::msg::StoreLimitsInput;
     use crate::state;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::Uint128;
 
     #[test]
     fn proper_initialization() {
@@ -87,6 +133,17 @@ mod tests {
                 max_insert_data_byte_size: Uint128::from(6u128),
                 max_insert_data_triple_count: Uint128::from(7u128),
             }
+        );
+        assert_eq!(
+            store.stat,
+            state::StoreStat {
+                triples_count: Uint128::zero(),
+            }
+        );
+
+        assert_eq!(
+            TRIPLE_KEY_INCREMENT.load(&deps.storage),
+            Ok(Uint128::zero())
         );
     }
 }

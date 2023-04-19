@@ -16,9 +16,6 @@ pub enum ContractError {
 
     #[error("Only the owner can perform this operation.")]
     Unauthorized {},
-
-    #[error("Not implemented.")]
-    NotImplemented,
 }
 
 impl From<RdfXmlError> for ContractError {

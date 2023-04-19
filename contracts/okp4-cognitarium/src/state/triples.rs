@@ -1,8 +1,14 @@
 use crate::rdf::explode_iri;
 use cosmwasm_std::{StdError, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 use rio_api::model::NamedNode;
 use serde::{Deserialize, Serialize};
+
+/// Triple primary key as [Uint128] auto-increment.
+///
+/// Note: Considering the maximum value of [Uint128] there is no need to manage any re-usability of
+/// keys in case of triple removal.
+pub const TRIPLE_KEY_INCREMENT: Item<Uint128> = Item::new("triple-key");
 
 pub struct TripleIndexes<'a> {
     subject_and_predicate: MultiIndex<'a, (Subject, Predicate), Triple, Uint128>,

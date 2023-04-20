@@ -12,7 +12,7 @@ pub struct InstantiateMsg {
 /// Execute messages
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// # Insert
+    /// # InsertData
     /// Insert the data as RDF triples in the store.
     /// For already existing triples it acts as no-op.
     ///
@@ -26,7 +26,13 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// # Resources
+    /// # Store
+    ///
+    /// Returns information about the triple store.
+    #[returns(StoreResponse)]
+    Store,
+
+    /// # Select
     ///
     /// Returns the resources matching the criteria defined by the provided query.
     ///
@@ -83,6 +89,36 @@ pub enum DataInput {
     /// # N-Triples
     /// Input in [N-Triples](https://www.w3.org/TR/n-triples/) format.
     NTriples(Binary),
+}
+
+/// # StoreResponse
+///
+/// Contains information related to triple store.
+#[cw_serde]
+pub struct StoreResponse {
+    /// The store owner.
+    pub owner: String,
+
+    /// The store limits.
+    pub limits: StoreLimits,
+
+    /// The store current usage.
+    pub stat: StoreStat,
+}
+
+/// # StoreStat
+///
+/// Contains usage information about the triple store.
+#[cw_serde]
+pub struct StoreStat {
+    /// The total number of triple present in the store.
+    pub triple_count: Uint128,
+
+    /// The total number of IRI namespace present in the store.
+    pub namespace_count: Uint128,
+
+    /// The total triple size in the store, in bytes.
+    pub byte_size: Uint128,
 }
 
 /// # IRI

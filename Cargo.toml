@@ -7,7 +7,7 @@ okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
 okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
 cosmwasm-schema = "1.2.4"
 cosmwasm-std = "1.2.4"
-cosmwasm-storage = "1.2.3"
+cosmwasm-storage = "1.2.4"
 cw-multi-test = "0.15.1"
 cw-storage-plus = "1.0.1"
 cw-utils = "1.0.1"

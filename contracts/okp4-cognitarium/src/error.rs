@@ -15,7 +15,7 @@ pub enum ContractError {
     Store(#[from] StoreError),
 
     #[error("Only the owner can perform this operation.")]
-    Unauthorized {},
+    Unauthorized,
 }
 
 impl From<RdfXmlError> for ContractError {

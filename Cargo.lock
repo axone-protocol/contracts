@@ -617,6 +617,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "okp4-cognitarium"
+version = "1.0.0"
+dependencies = [
+ "base64 0.21.0",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.0.1",
+ "cw2 1.0.1",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "okp4-law-stone"
 version = "1.0.0"
 dependencies = [

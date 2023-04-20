@@ -10,5 +10,11 @@
     "running": false,
     "brotli": false,
     "gzip": false
+  },
+  {
+    "path": "target/wasm32-unknown-unknown/release/okp4_cognitarium.wasm",
+    "running": false,
+    "brotli": false,
+    "gzip": false
   }
 ]

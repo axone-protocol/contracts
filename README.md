@@ -18,6 +18,7 @@ The list of currently implemented contracts is as follows:
 
 - [okp4-objectarium](contracts/okp4-objectarium/README.md): enables the storage of arbitrary `objects`.
 - [okp4-law-stone](contracts/okp4-law-stone/README.md): guarantee availability and immutability of logic Prolog rules.
+- [okp4-cognitarium](contracts/okp4-cognitarium/README.md): enables the storage of RDF graphs triples.
 
 ## 🗂 Directory Structure
 

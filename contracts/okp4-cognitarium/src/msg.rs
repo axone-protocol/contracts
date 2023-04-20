@@ -75,6 +75,7 @@ pub struct StoreLimits {
 pub enum DataInput {
     /// # RDF XML
     /// Input in [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) format.
+    #[serde(rename = "rdf_xml")]
     RDFXml(Binary),
     /// # Turtle
     /// Input in [Turtle](https://www.w3.org/TR/turtle/) format.

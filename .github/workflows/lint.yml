@@ -4,10 +4,10 @@ on:
   workflow_call:
 
   push:
-    branches: [ main ]
+    branches: [main]
 
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -53,7 +53,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
 
-      - name: Find changed rust files
+      - name: Find changed rust Cargo files
         id: changed-rust-cargo
         uses: tj-actions/changed-files@v35.7.12
         with:
@@ -73,10 +73,43 @@ jobs:
         run: |
           cargo install --force cargo-toml-lint
 
-      - name: Lint toml files
+      - name: Lint Cargo.toml file
         if: steps.changed-rust-cargo.outputs.any_changed == 'true'
         run: |
           cargo-toml-lint Cargo.toml
+
+  lint-cargo-makefile:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Find changed Cargo makefile
+        id: changed-cargo-makefile
+        uses: tj-actions/changed-files@v35.7.12
+        with:
+          files: |
+            Makefile.toml
+
+      - name: Install cargo make
+        if: steps.changed-cargo-makefile.outputs.any_changed == 'true'
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Lint Cargo.toml file
+        if: steps.changed-cargo-makefile.outputs.any_changed == 'true'
+        run: |
+          FAILED=0
+          for task in $(cargo make --list-all-steps | awk '{print $1;}' | sort | grep -v -- '---' ); do
+            if echo "$task" | grep '_' > /dev/null; then
+              >&2 echo "❌ $task - use kebab-case style for task names (e.g. 'my-task' instead of 'my_task')"
+              FAILED=1
+            else
+              echo "✅ $task"
+            fi
+          done
+          if [ "${FAILED}" = "1" ]; then
+            exit 1
+          fi
 
   lint-rust:
     runs-on: ubuntu-22.04
@@ -199,7 +232,7 @@ jobs:
         with:
           github_token: ${{ secrets.OKP4_TOKEN }}
 
-  check_contracts:
+  check-contracts:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -228,9 +261,9 @@ jobs:
 
       - name: Check contracts
         shell: bash
-        run: cargo make check_contracts
+        run: cargo make check-contracts
 
-  check_docs_updated:
+  check-docs-updated:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -270,7 +303,7 @@ jobs:
         run: cargo make schema
 
       - name: Generate documentations
-        run: cargo make generate_docs
+        run: cargo make docs-generate
 
       - name: Verify changed docs files
         uses: tj-actions/verify-changed-files@v14
@@ -284,7 +317,7 @@ jobs:
         run: |
           echo "❌ Documentation files has been updated."
           echo "  Changed files : ${{ steps.verify-changed-docs-files.outputs.changed_files }}"
-          echo "Please generate docs using \`cargo make generate_docs\` then commit this new documentation."
+          echo "Please generate docs using \`cargo make docs-generate\` then commit this new documentation."
           exit 1
 
   lint-branch-name:

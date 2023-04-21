@@ -62,7 +62,7 @@ dependencies = ["install-llvm-tools-preview", "install-llvm-cov"]
 command = "cargo"
 args = ["llvm-cov", "--workspace", "--lcov", "--output-path", "lcov.info"]
 
-[tasks.install_wasm]
+[tasks.install-wasm]
 script = '''
 rustup target add wasm32-unknown-unknown
 '''
@@ -70,23 +70,29 @@ rustup target add wasm32-unknown-unknown
 [tasks.wasm]
 args = ["build", "--release", "--lib", "--target", "wasm32-unknown-unknown"]
 command = "cargo"
-dependencies = ["install_wasm"]
+dependencies = ["install-wasm"]
 env = { RUSTFLAGS = "-C link-arg=-s" }
 
 [tasks.schema]
 workspace = true
 
-[tasks.check_contracts]
+[tasks.check-contracts]
 dependencies = ["install-cosmwasm-check", "wasm"]
 script = '''
 cosmwasm-check ./target/wasm32-unknown-unknown/release/*.wasm
 '''
 
-[tasks.generate_docs]
-dependencies = ["schema"]
+[tasks.docs-clean]
+description = "Clean documentation folder"
 script = '''
-DOCS_FOLDER=docs
-SCHEMA_FOLDER=schema
+echo "🧹 Cleaning documentation folder"
+rm -rf ${DOCS_FOLDER}/*
+'''
+
+[tasks.docs-generate]
+description = "Generate documentation"
+dependencies = ["docs-clean", "schema"]
+script = '''
 echo "🔎 Checking jsonschema2md installed..."
 if ! which jsonschema2md >/dev/null;
 then
@@ -96,7 +102,7 @@ then
     exit 1
 fi
 
-echo "📚 Generating documentation..."
+echo "📚 Generating documentation in ${DOCS_FOLDER} folder..."
 
 mkdir -p $SCHEMA_FOLDER
 find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
@@ -111,14 +117,15 @@ done
 rm -rf $DOCS_FOLDER
 
 jsonschema2md -d schema -o $DOCS_FOLDER --schema-extension json --schema-out $DOCS_FOLDER/schema
-sed -i ${SED_FLAG} -E 's/([a-zA-Z]+)<([a-zA-Z0-9]+)>/<code>\1\&lt;\2\&gt;\<\/code>/g' $DOCS_FOLDER/*.md
+sed -E 's/([a-zA-Z]+)<([a-zA-Z0-9]+)>/<code>\1\&lt;\2\&gt;\<\/code>/g' $DOCS_FOLDER/*.md > $DOCS_FOLDER/tmp
+mv -f $DOCS_FOLDER/tmp $DOCS_FOLDER/README.md
 
 rm -rf $SCHEMA_FOLDER
 
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 '''
 
-[tasks.release_assets]
+[tasks.release-assets]
 dependencies = ["wasm"]
 script = '''
 echo "🐾 Generating release binary checksums into ${DIR_WASM}"
@@ -513,6 +520,9 @@ default_to_workspace = false
 min_version = "0.36.3"
 
 [env]
+DOCS_FOLDER="docs"
+SCHEMA_FOLDER="schema"
+
 BALANCE_ALICE = "100000000000uknow"
 BALANCE_BOB = "100000000000uknow"
 BALANCE_CHARLIE = "100000000000uknow"

@@ -62,7 +62,7 @@ dependencies = ["install-llvm-tools-preview", "install-llvm-cov"]
 command = "cargo"
 args = ["llvm-cov", "--workspace", "--lcov", "--output-path", "lcov.info"]
 
-[tasks.install_wasm]
+[tasks.install-wasm]
 script = '''
 rustup target add wasm32-unknown-unknown
 '''
@@ -70,26 +70,28 @@ rustup target add wasm32-unknown-unknown
 [tasks.wasm]
 args = ["build", "--release", "--lib", "--target", "wasm32-unknown-unknown"]
 command = "cargo"
-dependencies = ["install_wasm"]
+dependencies = ["install-wasm"]
 env = { RUSTFLAGS = "-C link-arg=-s" }
 
 [tasks.schema]
 workspace = true
 
-[tasks.check_contracts]
+[tasks.check-contracts]
 dependencies = ["install-cosmwasm-check", "wasm"]
 script = '''
 cosmwasm-check ./target/wasm32-unknown-unknown/release/*.wasm
 '''
 
-[tasks.clean_docs]
+[tasks.docs-clean]
+description = "Clean documentation folder"
 script = '''
 echo "🧹 Cleaning documentation folder"
 rm -rf ${DOCS_FOLDER}/*
 '''
 
-[tasks.generate_docs]
-dependencies = ["clean_docs", "schema"]
+[tasks.docs-generate]
+description = "Generate documentation"
+dependencies = ["docs-clean", "schema"]
 script = '''
 echo "🔎 Checking jsonschema2md installed..."
 if ! which jsonschema2md >/dev/null;
@@ -123,7 +125,7 @@ rm -rf $SCHEMA_FOLDER
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 '''
 
-[tasks.release_assets]
+[tasks.release-assets]
 dependencies = ["wasm"]
 script = '''
 echo "🐾 Generating release binary checksums into ${DIR_WASM}"

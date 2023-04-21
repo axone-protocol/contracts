@@ -199,7 +199,7 @@ jobs:
         with:
           github_token: ${{ secrets.OKP4_TOKEN }}
 
-  check_contracts:
+  check-contracts:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -228,9 +228,9 @@ jobs:
 
       - name: Check contracts
         shell: bash
-        run: cargo make check_contracts
+        run: cargo make check-contracts
 
-  check_docs_updated:
+  check-docs-updated:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -270,7 +270,7 @@ jobs:
         run: cargo make schema
 
       - name: Generate documentations
-        run: cargo make generate_docs
+        run: cargo make docs-generate
 
       - name: Verify changed docs files
         uses: tj-actions/verify-changed-files@v14
@@ -284,7 +284,7 @@ jobs:
         run: |
           echo "❌ Documentation files has been updated."
           echo "  Changed files : ${{ steps.verify-changed-docs-files.outputs.changed_files }}"
-          echo "Please generate docs using \`cargo make generate_docs\` then commit this new documentation."
+          echo "Please generate docs using \`cargo make docs-generate\` then commit this new documentation."
           exit 1
 
   lint-branch-name:

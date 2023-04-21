@@ -16,7 +16,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.actor == 'bot-anik'
     uses: ./.github/workflows/test.yml
 
-  perfom-release:
+  perform-release:
     if: github.ref == 'refs/heads/main' && github.actor == 'bot-anik'
     needs:
       - lint

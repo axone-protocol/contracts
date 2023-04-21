@@ -61,6 +61,7 @@ Be sure you have the following tools installed:
 - [jsonschema2md](https://github.com/adobe/jsonschema2md) v7.1.15 or higher
 
 And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List_of_GNU_Core_Utilities_commands):
+
 - [shasum](https://linuxhint.com/shasum-linux/) v6.02 or higher
 - [sed](https://www.gnu.org/software/sed/) v4.8 or higher
 

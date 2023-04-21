@@ -84,29 +84,26 @@ The project comes with a set of convenient tasks to manage the Smart Contracts a
 To see the list of available tasks, run the following command:
 
 ```sh
-cargo make --list-all-steps | grep chain | sort | sed 's/^/- /'
+cargo make --list-all-steps | grep chain | sort | sed -r 's/chain(-?[a-zA-Z\-]*)/- `chain\1`/'
 ```
 
-The list of available tasks is as follows:
+The list of available tasks for managing the chain is as follows:
 
-- chain - Run the okp4d CLI using the chain's home directory under a Docker container.
-- chain-add-keys - Add a set of predefined keys (recovered from the seed phrases) to the chain.
-- chain-clean - Clean the chain data (⚠️ definitively)
-- chain-deploy-contract - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must
-  be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
-- chain-deploy-contracts - Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...).
-- chain-execute-contract - Execute a command on a specific contract to the chain. The contract must be already deployed
-  and instantiated.
-- chain-init-folder - Initialize deploy folder to make sure scripts have the right permission (needed for linux)
-- chain-initialize - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is
-  cleaned before.
-- chain-inspect-contract - Inspect a specific contract deployed to the chain.
-- chain-instantiate-contract - Instantiate a specific contract to the chain. The contract must be already deployed.
-- chain-list-contracts - List all the contracts deployed to the chain.
-- chain-logs - Show the chain's container logs.
-- chain-query-contract - Query a specific contract to the chain. The contract must be already deployed and instantiated.
-- chain-start - Run the full node okp4d application using the chain's home directory under a Docker container.
-- chain-stop - Stop the chain's container.
+- `chain` - Run the okp4d CLI using the chain's home directory under a Docker container.
+- `chain-add-keys` - Add a set of predefined keys (recovered from the seed phrases) to the chain.
+- `chain-clean` - Clean the chain data (⚠️ definitively)
+- `chain-deploy-contract` - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
+- `chain-deploy-contracts` - Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...).
+- `chain-execute-contract` - Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated.
+- `chain-init-folder` - Initialize deploy folder to make sure scripts have the right permission (needed for linux)
+- `chain-initialize` - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before.
+- `chain-inspect-contract` - Inspect a specific contract deployed to the chain.
+- `chain-instantiate-contract` - Instantiate a specific contract to the chain. The contract must be already deployed.
+- `chain-list-contracts` - List all the contracts deployed to the chain.
+- `chain-logs` - Show the chain's container logs.
+- `chain-query-contract` - Query a specific contract to the chain. The contract must be already deployed and instantiated.
+- `chain-start` - Run the full node okp4d application using the chain's home directory under a Docker container.
+- `chain-stop` - Stop the chain's container.
 
 ### Initialize the chain
 

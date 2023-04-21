@@ -12,13 +12,21 @@
 
 ## ✨ Smart Contracts
 
-This repository contains the Smart Contracts deployed on the [OKP4 network](http://okp4.network) and running on [CosmWasm](https://cosmwasm.com).
+This repository contains the Smart Contracts deployed on the [OKP4 network](http://okp4.network). However, they can be
+used by any [Cosmos blockchains](https://cosmos.network/) using the [CosmWasm](https://cosmwasm.com/) framework.
 
-The list of currently implemented contracts is as follows:
+### 🗄️ Storage oriented Smart Contracts
 
-- [okp4-objectarium](contracts/okp4-objectarium/README.md): enables the storage of arbitrary `objects`.
-- [okp4-law-stone](contracts/okp4-law-stone/README.md): guarantee availability and immutability of logic Prolog rules.
-- [okp4-cognitarium](contracts/okp4-cognitarium/README.md): enables the storage of RDF graphs triples.
+| contract                                            |                          kind                          |    state    | description                          | status |
+|-----------------------------------------------------|:------------------------------------------------------:|:-----------:|--------------------------------------|:------:|
+| [objectarium](contracts/okp4-objectarium/README.md) | [object](https://en.wikipedia.org/wiki/Object_storage) | `immutable` | Persists unstructured data on-chain. |   ✅    |
+| [cognitarium](contracts/okp4-cognitarium/README.md) | [semantic](https://en.wikipedia.org/wiki/Triplestore)  |  `mutable`  | Persists semantic data on-chain.     |   🚧   |
+
+### ⚖️ Sovereignty oriented Smart Contracts
+
+| contract                                        |    state    | description                                                                                                                                                              | status |
+|-------------------------------------------------|:-----------:|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------:|
+| [law-stone](contracts/okp4-law-stone/README.md) | `immutable` | Interprets the law (governance) expressed as [Prolog](https://en.wikipedia.org/wiki/Prolog) program and ensures the availability and immutability of the rules on-chain. |   ✅    |
 
 ## 🗂 Directory Structure
 
@@ -59,7 +67,8 @@ To compile the Smart Contracts to Wasm, just invoke the `wasm` goal of the makef
 cargo make wasm
 ```
 
-This will install the rust Wasm toolchain, if not already done, and start the process for compiling the Smart Contracts to Wasm.
+This will install the rust Wasm toolchain, if not already done, and start the process for compiling the Smart Contracts
+to Wasm.
 
 ### Test Smart Contracts
 
@@ -83,11 +92,14 @@ The list of available tasks is as follows:
 - chain - Run the okp4d CLI using the chain's home directory under a Docker container.
 - chain-add-keys - Add a set of predefined keys (recovered from the seed phrases) to the chain.
 - chain-clean - Clean the chain data (⚠️ definitively)
-- chain-deploy-contract - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
+- chain-deploy-contract - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must
+  be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
 - chain-deploy-contracts - Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...).
-- chain-execute-contract - Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated.
+- chain-execute-contract - Execute a command on a specific contract to the chain. The contract must be already deployed
+  and instantiated.
 - chain-init-folder - Initialize deploy folder to make sure scripts have the right permission (needed for linux)
-- chain-initialize - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before.
+- chain-initialize - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is
+  cleaned before.
 - chain-inspect-contract - Inspect a specific contract deployed to the chain.
 - chain-instantiate-contract - Instantiate a specific contract to the chain. The contract must be already deployed.
 - chain-list-contracts - List all the contracts deployed to the chain.
@@ -138,8 +150,10 @@ Now, you can interact with the deployed smart contracts and test them out.
 
 ### Free execution of the CLI command
 
-You can freely interact with the local chain by executing the following CLI command. This will execute the `okp4d` binary
-inside a Docker container with the `--home` argument pointing to the chain's home directory and using the same network as
+You can freely interact with the local chain by executing the following CLI command. This will execute the `okp4d`
+binary
+inside a Docker container with the `--home` argument pointing to the chain's home directory and using the same network
+as
 the chain's container. The arguments passed to the command will be directly passed to the `okp4d` binary.
 
 ```sh
@@ -215,7 +229,8 @@ git commit -am "docs: update generated documentation"
 
 ## You want to get involved? 😍
 
-So you want to contribute? Great! ❤️ We appreciate any help you're willing to give. Don't hesitate to open issues and/or submit pull requests.
+So you want to contribute? Great! ❤️ We appreciate any help you're willing to give. Don't hesitate to open issues and/or
+submit pull requests.
 
 Please check out OKP4 health files:
 

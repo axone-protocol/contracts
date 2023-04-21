@@ -12,8 +12,8 @@
 
 ## ✨ Smart Contracts
 
-This repository contains the Smart Contracts deployed on the [OKP4 network](http://okp4.network). However, they can be
-used by any [Cosmos blockchains](https://cosmos.network/) using the [CosmWasm](https://cosmwasm.com/) framework.
+This repository hosts Smart Contracts that are deployed on the [OKP4 network](http://okp4.network). But they are compatible with any
+[Cosmos blockchains](https://cosmos.network/) that uses the [CosmWasm](https://cosmwasm.com/) framework.
 
 ### 🗄️ Storage oriented Smart Contracts
 
@@ -58,6 +58,11 @@ Be sure you have the following tools installed:
 - [cargo-make](https://github.com/sagiegurari/cargo-make) v0.36.3 or higher
 - [Docker](https://docs.docker.com/get-docker/)
 - [jq](https://stedolan.github.io/jq/download/) v1.6 or higher
+- [jsonschema2md](https://github.com/adobe/jsonschema2md) v7.1.15 or higher
+
+And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List_of_GNU_Core_Utilities_commands):
+- [shasum](https://linuxhint.com/shasum-linux/) v6.02 or higher
+- [sed](https://www.gnu.org/software/sed/) v4.8 or higher
 
 ### Compiling Smart Contracts to Wasm
 

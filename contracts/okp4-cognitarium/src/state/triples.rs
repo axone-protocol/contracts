@@ -1,33 +1,22 @@
 use crate::rdf::explode_iri;
-use cosmwasm_std::{StdError, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
+use blake3::Hash;
+use cosmwasm_std::StdError;
+use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex};
 use rio_api::model::NamedNode;
 use serde::{Deserialize, Serialize};
 
-/// Triple primary key as [Uint128] auto-increment.
-///
-/// Note: Considering the maximum value of [Uint128] there is no need to manage any re-usability of
-/// keys in case of triple removal.
-pub const TRIPLE_KEY_INCREMENT: Item<Uint128> = Item::new("triple-key");
-
 pub struct TripleIndexes<'a> {
-    subject_and_predicate: MultiIndex<'a, (Subject, Predicate), Triple, Uint128>,
-    predicate_and_object: MultiIndex<'a, (Predicate, Object), Triple, Uint128>,
+    subject_and_predicate:
+        MultiIndex<'a, (Subject, Predicate), Triple, (&'a [u8], Predicate, Subject)>,
 }
 
 impl IndexList<Triple> for TripleIndexes<'_> {
     fn get_indexes(&self) -> Box<dyn Iterator<Item = &'_ dyn Index<Triple>> + '_> {
-        Box::new(
-            vec![
-                &self.subject_and_predicate as &dyn Index<Triple>,
-                &self.predicate_and_object,
-            ]
-            .into_iter(),
-        )
+        Box::new(vec![&self.subject_and_predicate as &dyn Index<Triple>].into_iter())
     }
 }
 
-pub fn triples<'a>() -> IndexedMap<'a, u128, Triple, TripleIndexes<'a>> {
+pub fn triples<'a>() -> IndexedMap<'a, (&'a [u8], Predicate, Subject), Triple, TripleIndexes<'a>> {
     IndexedMap::new(
         "TRIPLE",
         TripleIndexes {
@@ -36,20 +25,15 @@ pub fn triples<'a>() -> IndexedMap<'a, u128, Triple, TripleIndexes<'a>> {
                 "TRIPLE",
                 "TRIPLE__SUBJECT_PREDICATE",
             ),
-            predicate_and_object: MultiIndex::new(
-                |_pk, triple| (triple.predicate.clone(), triple.object.clone()),
-                "TRIPLE",
-                "TRIPLE__PREDICATE_OBJECT",
-            ),
         },
     )
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Triple {
-    subject: Subject,
-    predicate: Predicate,
-    object: Object,
+    pub subject: Subject,
+    pub predicate: Predicate,
+    pub object: Object,
 }
 
 impl<'a> TryFrom<rio_api::model::Triple<'a>> for Triple {
@@ -105,6 +89,40 @@ impl<'a> TryFrom<rio_api::model::Term<'a>> for Object {
             }
             _ => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
+    }
+}
+
+impl Object {
+    pub fn as_hash(&self) -> Hash {
+        let mut hasher = blake3::Hasher::new();
+        match self {
+            Object::Named(n) => {
+                hasher
+                    .update(&[b'n'])
+                    .update(n.namespace.as_bytes())
+                    .update(n.namespace.as_bytes());
+            }
+            Object::Blank(n) => {
+                hasher.update(&[b'b']).update(n.as_bytes());
+            }
+            Object::Literal(l) => {
+                hasher.update(&[b'l']);
+                match l {
+                    Literal::Simple { value } => hasher.update(&[b's']).update(value.as_bytes()),
+                    Literal::I18NString { value, language } => hasher
+                        .update(&[b'i'])
+                        .update(value.as_bytes())
+                        .update(language.as_bytes()),
+                    Literal::Typed { value, datatype } => hasher
+                        .update(&[b't'])
+                        .update(value.as_bytes())
+                        .update(datatype.namespace.as_bytes())
+                        .update(datatype.value.as_bytes()),
+                };
+            }
+        }
+
+        hasher.finalize()
     }
 }
 

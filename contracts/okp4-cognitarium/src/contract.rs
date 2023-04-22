@@ -8,7 +8,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Store, STORE, TRIPLE_KEY_INCREMENT};
+use crate::state::{Store, STORE};
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
@@ -24,7 +24,6 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     STORE.save(deps.storage, &Store::new(info.sender, msg.limits.into()))?;
-    TRIPLE_KEY_INCREMENT.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::default())
 }
@@ -47,18 +46,17 @@ pub mod execute {
     use crate::msg::DataInput;
     use crate::rdf;
     use crate::state::{triples, Triple};
+    use blake3::Hash;
 
     pub fn insert(deps: DepsMut, graph: DataInput) -> Result<Response, ContractError> {
         let mut store = STORE.load(deps.storage)?;
 
-        let mut pk = TRIPLE_KEY_INCREMENT.load(deps.storage)?;
         let old_count = store.stat.triples_count;
         rdf::parse_triples(
             graph,
             |triple| -> Result<Triple, ContractError> { Ok(triple.try_into()?) },
             |res| -> Result<(), ContractError> {
                 res.and_then(|triple| {
-                    pk += Uint128::one();
                     store.stat.triples_count += Uint128::one();
 
                     store
@@ -72,14 +70,22 @@ pub mod execute {
                         })
                         .unwrap_or(Ok(()))?;
 
+                    let object_hash: Hash = triple.object.as_hash();
                     triples()
-                        .save(deps.storage, pk.u128(), &triple)
+                        .save(
+                            deps.storage,
+                            (
+                                object_hash.as_bytes(),
+                                triple.predicate.clone(),
+                                triple.subject.clone(),
+                            ),
+                            &triple,
+                        )
                         .map_err(ContractError::Std)
                 })
             },
         )?;
 
-        TRIPLE_KEY_INCREMENT.save(deps.storage, &pk)?;
         STORE.save(deps.storage, &store)?;
 
         Ok(Response::new()
@@ -147,11 +153,6 @@ mod tests {
                 triples_count: Uint128::zero(),
             }
         );
-
-        assert_eq!(
-            TRIPLE_KEY_INCREMENT.load(&deps.storage),
-            Ok(Uint128::zero())
-        );
     }
 
     #[test]
@@ -199,10 +200,6 @@ mod tests {
             );
             assert_eq!(
                 STORE.load(&deps.storage).unwrap().stat.triples_count,
-                Uint128::from(40u128),
-            );
-            assert_eq!(
-                TRIPLE_KEY_INCREMENT.load(&deps.storage).unwrap(),
                 Uint128::from(40u128),
             );
         }

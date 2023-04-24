@@ -1,21 +1,23 @@
-# Node Schema
+# N-Quads Schema
 
 ```txt
-undefined#/query/definitions/Node
+undefined#/execute/definitions/DataFormat/oneOf/3
 ```
 
-Represents either an IRI (named node) or a blank node.
+Output in [N-Quads](https://www.w3.org/TR/n-quads/) format.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## Node Type
+## 3 Type
 
-merged type ([Node](okp4-cognitarium-querymsg-definitions-node.md))
+`string` ([N-Quads](okp4-cognitarium-executemsg-definitions-dataformat-oneof-n-quads.md))
 
-one (and only one) of
+## 3 Constraints
 
-*   [NamedNode](okp4-cognitarium-querymsg-definitions-node-oneof-namednode.md "check type definition")
+**enum**: the value of this property must be equal to one of the following values:
 
-*   [BlankNode](okp4-cognitarium-querymsg-definitions-node-oneof-blanknode.md "check type definition")
+| Value       | Explanation |
+| :---------- | :---------- |
+| `"n_quads"` |             |

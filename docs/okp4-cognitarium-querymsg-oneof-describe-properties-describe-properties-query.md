@@ -1,21 +1,19 @@
-# Node Schema
+# Untitled undefined type in okp4-cognitarium Schema
 
 ```txt
-undefined#/query/definitions/Node
+undefined#/query/oneOf/2/properties/describe/properties/query
 ```
 
-Represents either an IRI (named node) or a blank node.
+The query to execute.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## Node Type
+## query Type
 
-merged type ([Node](okp4-cognitarium-querymsg-definitions-node.md))
+merged type ([Details](okp4-cognitarium-querymsg-oneof-describe-properties-describe-properties-query.md))
 
-one (and only one) of
+all of
 
-*   [NamedNode](okp4-cognitarium-querymsg-definitions-node-oneof-namednode.md "check type definition")
-
-*   [BlankNode](okp4-cognitarium-querymsg-definitions-node-oneof-blanknode.md "check type definition")
+*   [Untitled undefined type in okp4-cognitarium](okp4-cognitarium-querymsg-oneof-describe-properties-describe-properties-query-allof-0.md "check type definition")

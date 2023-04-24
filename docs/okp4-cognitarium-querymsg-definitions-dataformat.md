@@ -1,21 +1,25 @@
-# Node Schema
+# DataFormat Schema
 
 ```txt
-undefined#/query/definitions/Node
+undefined#/query/definitions/DataFormat
 ```
 
-Represents either an IRI (named node) or a blank node.
+Represents the format in which the data are serialized, for example when returned by a query or when inserted in the store.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## Node Type
+## DataFormat Type
 
-merged type ([Node](okp4-cognitarium-querymsg-definitions-node.md))
+merged type ([DataFormat](okp4-cognitarium-querymsg-definitions-dataformat.md))
 
 one (and only one) of
 
-*   [NamedNode](okp4-cognitarium-querymsg-definitions-node-oneof-namednode.md "check type definition")
+*   [RDF XML](okp4-cognitarium-querymsg-definitions-dataformat-oneof-rdf-xml.md "check type definition")
 
-*   [BlankNode](okp4-cognitarium-querymsg-definitions-node-oneof-blanknode.md "check type definition")
+*   [Turtle](okp4-cognitarium-querymsg-definitions-dataformat-oneof-turtle.md "check type definition")
+
+*   [N-Triples](okp4-cognitarium-querymsg-definitions-dataformat-oneof-n-triples.md "check type definition")
+
+*   [N-Quads](okp4-cognitarium-querymsg-definitions-dataformat-oneof-n-quads.md "check type definition")

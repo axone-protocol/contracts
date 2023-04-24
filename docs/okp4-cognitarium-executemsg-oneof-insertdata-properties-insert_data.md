@@ -16,24 +16,53 @@ undefined#/execute/oneOf/0/properties/insert_data
 
 # insert\_data Properties
 
-| Property        | Type          | Required | Nullable       | Defined by                                                                                                                                                                       |
-| :-------------- | :------------ | :------- | :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [input](#input) | Not specified | Required | cannot be null | [okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-input.md "undefined#/execute/oneOf/0/properties/insert_data/properties/input") |
+| Property          | Type   | Required | Nullable       | Defined by                                                                                                                                                                         |
+| :---------------- | :----- | :------- | :------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [data](#data)     | Merged | Required | cannot be null | [okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-data.md "undefined#/execute/oneOf/0/properties/insert_data/properties/data")     |
+| [format](#format) | Merged | Optional | cannot be null | [okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-format.md "undefined#/execute/oneOf/0/properties/insert_data/properties/format") |
 
-## input
+## data
 
+The data to insert. The data must be serialized in the format specified by the `format` field. And the data are subject to the limitations defined by the `limits` specified at contract instantiation.
 
-
-`input`
+`data`
 
 *   is required
 
-*   Type: unknown
+*   Type: merged type ([Details](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-data.md))
 
 *   cannot be null
 
-*   defined in: [okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-input.md "undefined#/execute/oneOf/0/properties/insert_data/properties/input")
+*   defined in: [okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-data.md "undefined#/execute/oneOf/0/properties/insert_data/properties/data")
 
-### input Type
+### data Type
 
-unknown
+merged type ([Details](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-data.md))
+
+all of
+
+*   [Untitled undefined type in okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-data-allof-0.md "check type definition")
+
+## format
+
+The data format in which the triples are serialized. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
+
+`format`
+
+*   is optional
+
+*   Type: merged type ([Details](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-format.md))
+
+*   cannot be null
+
+*   defined in: [okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-format.md "undefined#/execute/oneOf/0/properties/insert_data/properties/format")
+
+### format Type
+
+merged type ([Details](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-format.md))
+
+any of
+
+*   [Untitled undefined type in okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-format-anyof-0.md "check type definition")
+
+*   [Untitled null in okp4-cognitarium](okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data-properties-format-anyof-1.md "check type definition")

@@ -1,21 +1,21 @@
-# Node Schema
+# VarOrNode Schema
 
 ```txt
-undefined#/query/definitions/Node
+undefined#/query/definitions/VarOrNode
 ```
 
-Represents either an IRI (named node) or a blank node.
+Represents either a variable or a node.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## Node Type
+## VarOrNode Type
 
-merged type ([Node](okp4-cognitarium-querymsg-definitions-node.md))
+merged type ([VarOrNode](okp4-cognitarium-querymsg-definitions-varornode.md))
 
 one (and only one) of
 
-*   [NamedNode](okp4-cognitarium-querymsg-definitions-node-oneof-namednode.md "check type definition")
+*   [Variable](okp4-cognitarium-querymsg-definitions-varornode-oneof-variable.md "check type definition")
 
-*   [BlankNode](okp4-cognitarium-querymsg-definitions-node-oneof-blanknode.md "check type definition")
+*   [Node](okp4-cognitarium-querymsg-definitions-varornode-oneof-node.md "check type definition")

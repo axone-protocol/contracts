@@ -1,7 +1,7 @@
 # Untitled undefined type in okp4-cognitarium Schema
 
 ```txt
-undefined#/instantiate/definitions/StoreLimits/properties/max_insert_data_byte_size/anyOf/0
+undefined#/instantiate/definitions/StoreLimitsInput/properties/max_byte_size/anyOf/0
 ```
 
 

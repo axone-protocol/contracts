@@ -1,15 +1,21 @@
-# Untitled null in okp4-cognitarium Schema
+# Untitled undefined type in okp4-cognitarium Schema
 
 ```txt
-undefined#/instantiate/definitions/StoreLimits/properties/max_triple_byte_size/anyOf/1
+undefined#/instantiate/definitions/StoreLimitsInput/properties/max_query_variable_count
 ```
 
-
+The maximum number of variables a query can select. If `None`, the default value of 30 is used.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## 1 Type
+## max\_query\_variable\_count Type
 
-`null`, the value must be null
+`integer`
+
+## max\_query\_variable\_count Constraints
+
+**minimum**: the value of this number must greater than or equal to: `0`
+
+**unknown format**: the value of this string must follow the format: `uint32`

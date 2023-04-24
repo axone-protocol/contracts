@@ -1,7 +1,7 @@
 # Untitled null in okp4-cognitarium Schema
 
 ```txt
-undefined#/responses/store/definitions/StoreLimits/properties/max_query_variable_count/anyOf/1
+undefined#/instantiate/definitions/StoreLimitsInput/properties/max_triple_count/anyOf/1
 ```
 
 

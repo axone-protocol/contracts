@@ -1,10 +1,10 @@
-# Untitled undefined type in okp4-cognitarium Schema
+# Untitled integer in okp4-cognitarium Schema
 
 ```txt
 undefined#/responses/store/definitions/StoreLimits/properties/max_query_limit
 ```
 
-The maximum limit of a query, i.e. the maximum number of triples returned by a select query. If `None`, there is no limit on the number of triples returned.
+The maximum limit of a query, i.e. the maximum number of triples returned by a select query.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
@@ -12,10 +12,10 @@ The maximum limit of a query, i.e. the maximum number of triples returned by a s
 
 ## max\_query\_limit Type
 
-merged type ([Details](okp4-cognitarium-responses-storeresponse-definitions-storelimits-properties-max_query_limit.md))
+`integer`
 
-any of
+## max\_query\_limit Constraints
 
-*   [Untitled undefined type in okp4-cognitarium](okp4-cognitarium-responses-storeresponse-definitions-storelimits-properties-max_query_limit-anyof-0.md "check type definition")
+**minimum**: the value of this number must greater than or equal to: `0`
 
-*   [Untitled null in okp4-cognitarium](okp4-cognitarium-responses-storeresponse-definitions-storelimits-properties-max_query_limit-anyof-1.md "check type definition")
+**unknown format**: the value of this string must follow the format: `uint32`

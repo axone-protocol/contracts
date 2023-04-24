@@ -100,9 +100,9 @@
 
 *   [Simple](./okp4-cognitarium-querymsg-definitions-wherecondition-oneof-simple.md "Represents a simple condition") – `undefined#/query/definitions/WhereCondition/oneOf/0`
 
-*   [StoreLimits](./okp4-cognitarium-instantiatemsg-definitions-storelimits.md "Contains limitations regarding store usages") – `undefined#/instantiate/definitions/StoreLimits`
-
 *   [StoreLimits](./okp4-cognitarium-responses-storeresponse-definitions-storelimits.md "Contains limitations regarding store usages") – `undefined#/responses/store/definitions/StoreLimits`
+
+*   [StoreLimitsInput](./okp4-cognitarium-instantiatemsg-definitions-storelimitsinput.md "Contains requested limitations regarding store usages") – `undefined#/instantiate/definitions/StoreLimitsInput`
 
 *   [StoreObject](./okp4-objectarium-executemsg-oneof-storeobject.md "StoreObject store an object to the bucket and make the sender the owner of the object") – `undefined#/execute/oneOf/0`
 

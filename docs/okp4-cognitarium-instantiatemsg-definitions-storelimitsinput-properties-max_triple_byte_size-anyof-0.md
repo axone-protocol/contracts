@@ -1,7 +1,7 @@
 # Untitled undefined type in okp4-cognitarium Schema
 
 ```txt
-undefined#/responses/store/definitions/StoreLimits/properties/max_insert_data_triple_count/anyOf/0
+undefined#/instantiate/definitions/StoreLimitsInput/properties/max_triple_byte_size/anyOf/0
 ```
 
 

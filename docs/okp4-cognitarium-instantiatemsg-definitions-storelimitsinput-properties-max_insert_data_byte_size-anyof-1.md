@@ -1,7 +1,7 @@
-# Untitled undefined type in okp4-cognitarium Schema
+# Untitled null in okp4-cognitarium Schema
 
 ```txt
-undefined#/instantiate/definitions/StoreLimits/properties/max_insert_data_triple_count/anyOf/0
+undefined#/instantiate/definitions/StoreLimitsInput/properties/max_insert_data_byte_size/anyOf/1
 ```
 
 
@@ -10,6 +10,6 @@ undefined#/instantiate/definitions/StoreLimits/properties/max_insert_data_triple
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## 0 Type
+## 1 Type
 
-unknown
+`null`, the value must be null

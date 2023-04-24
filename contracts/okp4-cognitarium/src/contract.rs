@@ -49,7 +49,7 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::StoreLimits;
+    use crate::msg::StoreLimitsInput;
     use crate::state;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::Uint128;
@@ -59,12 +59,12 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
-            limits: StoreLimits {
+            limits: StoreLimitsInput {
                 max_triple_count: Some(Uint128::from(1u128)),
                 max_byte_size: Some(Uint128::from(2u128)),
                 max_triple_byte_size: Some(Uint128::from(3u128)),
-                max_query_limit: Some(Uint128::from(4u128)),
-                max_query_variable_count: Some(Uint128::from(5u128)),
+                max_query_limit: Some(4),
+                max_query_variable_count: Some(5),
                 max_insert_data_byte_size: Some(Uint128::from(6u128)),
                 max_insert_data_triple_count: Some(Uint128::from(7u128)),
             },
@@ -79,13 +79,13 @@ mod tests {
         assert_eq!(
             store.limits,
             state::StoreLimits {
-                max_triple_count: Some(Uint128::from(1u128)),
-                max_byte_size: Some(Uint128::from(2u128)),
-                max_triple_byte_size: Some(Uint128::from(3u128)),
-                max_query_limit: Some(Uint128::from(4u128)),
-                max_query_variable_count: Some(Uint128::from(5u128)),
-                max_insert_data_byte_size: Some(Uint128::from(6u128)),
-                max_insert_data_triple_count: Some(Uint128::from(7u128)),
+                max_triple_count: Uint128::from(1u128),
+                max_byte_size: Uint128::from(2u128),
+                max_triple_byte_size: Uint128::from(3u128),
+                max_query_limit: 4,
+                max_query_variable_count: 5,
+                max_insert_data_byte_size: Uint128::from(6u128),
+                max_insert_data_triple_count: Uint128::from(7u128),
             }
         );
     }

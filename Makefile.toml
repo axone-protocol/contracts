@@ -117,8 +117,8 @@ done
 rm -rf $DOCS_FOLDER
 
 jsonschema2md -d schema -o $DOCS_FOLDER --schema-extension json --schema-out $DOCS_FOLDER/schema
-sed -E 's/([a-zA-Z]+)<([a-zA-Z0-9]+)>/<code>\1\&lt;\2\&gt;\<\/code>/g' $DOCS_FOLDER/*.md > $DOCS_FOLDER/tmp
-mv -f $DOCS_FOLDER/tmp $DOCS_FOLDER/README.md
+sed -i.tmp -E 's/([a-zA-Z]+)<([a-zA-Z0-9]+)>/<code>\1\&lt;\2\&gt;\<\/code>/g' $DOCS_FOLDER/*.md
+rm $DOCS_FOLDER/*.tmp
 
 rm -rf $SCHEMA_FOLDER
 

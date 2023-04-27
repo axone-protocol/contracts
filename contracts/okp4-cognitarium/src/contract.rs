@@ -43,103 +43,18 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::error::StoreError;
     use crate::msg::DataInput;
     use crate::rdf;
-    use crate::rdf::NSResolveFn;
-    use crate::state::{namespaces, triples, Namespace, NAMESPACE_KEY_INCREMENT};
-    use blake3::Hash;
-    use cosmwasm_std::Storage;
-    use std::collections::BTreeMap;
+    use crate::state::TripleStorer;
 
     pub fn insert(deps: DepsMut, graph: DataInput) -> Result<Response, ContractError> {
-        let mut store = STORE.load(deps.storage)?;
-
-        let old_count = store.stat.triples_count;
-        let mut ns_key_inc = NAMESPACE_KEY_INCREMENT.load(deps.storage)?;
-        let mut ns_cache: BTreeMap<String, Namespace> = BTreeMap::new();
-
-        let mut triple_reader = rdf::read_triples(&graph);
-
-        loop {
-            let next = triple_reader.next(&mut ns_resolver(
-                deps.storage,
-                &mut ns_key_inc,
-                &mut ns_cache,
-            ));
-
-            match next {
-                None => {
-                    break;
-                }
-                Some(res) => {
-                    let triple = res.map_err(ContractError::from)?;
-                    store.stat.triples_count += Uint128::one();
-
-                    if store.stat.triples_count > store.limits.max_triple_count {
-                        Err(ContractError::from(StoreError::MaxTriplesLimitExceeded(
-                            store.limits.max_triple_count,
-                        )))?
-                    }
-
-                    let object_hash: Hash = triple.object.as_hash();
-                    triples()
-                        .save(
-                            deps.storage,
-                            (
-                                object_hash.as_bytes(),
-                                triple.predicate.clone(),
-                                triple.subject.clone(),
-                            ),
-                            &triple,
-                        )
-                        .map_err(ContractError::Std)?;
-                }
-            }
-        }
-
-        STORE.save(deps.storage, &store)?;
-        NAMESPACE_KEY_INCREMENT.save(deps.storage, &ns_key_inc)?;
-        for entry in ns_cache {
-            namespaces().save(deps.storage, entry.0, &entry.1)?;
-        }
+        let mut reader = rdf::read_triples(&graph);
+        let mut storer = TripleStorer::new(deps.storage)?;
+        let count = storer.store_all(&mut reader)?;
 
         Ok(Response::new()
             .add_attribute("action", "insert")
-            .add_attribute("triple_count", store.stat.triples_count - old_count))
-    }
-
-    fn ns_resolver<'a>(
-        store: &'a dyn Storage,
-        ns_key_inc: &'a mut u128,
-        ns_cache: &'a mut BTreeMap<String, Namespace>,
-    ) -> NSResolveFn<'a> {
-        Box::new(|ns_str| -> Result<u128, StdError> {
-            match ns_cache.get_mut(ns_str.as_str()) {
-                Some(namespace) => {
-                    namespace.counter += 1;
-                    Ok(namespace.key)
-                }
-                None => {
-                    let mut namespace = match namespaces().load(store, ns_str.clone()) {
-                        Err(StdError::NotFound { .. }) => {
-                            let n = Namespace {
-                                key: *ns_key_inc,
-                                counter: 0u128,
-                            };
-                            *ns_key_inc += 1;
-                            Ok(n)
-                        }
-                        Ok(n) => Ok(n),
-                        Err(e) => Err(e),
-                    }?;
-
-                    namespace.counter += 1;
-                    ns_cache.insert(ns_str.clone(), namespace.clone());
-                    Ok(namespace.key)
-                }
-            }
-        })
+            .add_attribute("triple_count", count))
     }
 }
 

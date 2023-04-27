@@ -1,16 +1,13 @@
-use crate::error::RDFParseError;
 use crate::msg::DataInput;
-use crate::state;
-use cosmwasm_std::StdError;
-use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
+use cosmwasm_std::{StdError, StdResult};
+use rio_api::model::Triple;
 use rio_api::parser::TriplesParser;
-use rio_turtle::{NTriplesParser, TurtleParser};
-use rio_xml::RdfXmlParser;
+use rio_turtle::{NTriplesParser, TurtleError, TurtleParser};
+use rio_xml::{RdfXmlError, RdfXmlParser};
 use std::io::{BufRead, BufReader};
 
 pub struct TripleReader<R: BufRead> {
     parser: TriplesParserKind<R>,
-    buffer: Vec<state::Triple>,
 }
 
 pub enum TriplesParserKind<R: BufRead> {
@@ -33,142 +30,25 @@ pub fn read_triples(graph: &DataInput) -> TripleReader<BufReader<&[u8]>> {
     })
 }
 
-pub type NSResolveFn<'a> = Box<dyn FnMut(String) -> Result<u128, StdError> + 'a>;
-
 impl<R: BufRead> TripleReader<R> {
     pub fn new(parser: TriplesParserKind<R>) -> Self {
-        TripleReader {
-            parser,
-            buffer: Vec::new(),
-        }
+        TripleReader { parser }
     }
 
-    pub fn next(
-        &mut self,
-        ns_resolve_fn: &mut NSResolveFn,
-    ) -> Option<Result<state::Triple, RDFParseError>> {
-        loop {
-            if let Some(t) = self.buffer.pop() {
-                return Some(Ok(t));
-            }
-
-            if let Err(e) = match &mut self.parser {
-                TriplesParserKind::NTriples(parser) => {
-                    Self::read(parser, &mut self.buffer, ns_resolve_fn)
-                }
-                TriplesParserKind::Turtle(parser) => {
-                    Self::read(parser, &mut self.buffer, ns_resolve_fn)
-                }
-                TriplesParserKind::RdfXml(parser) => {
-                    Self::read(parser, &mut self.buffer, ns_resolve_fn)
-                }
-            }? {
-                return Some(Err(e));
-            }
-        }
-    }
-
-    fn read<P, E>(
-        parser: &mut P,
-        buffer: &mut Vec<state::Triple>,
-        ns_resolve_fn: &mut NSResolveFn,
-    ) -> Option<Result<(), E>>
+    pub fn read_all<E, UF>(&mut self, mut use_fn: UF) -> Result<(), E>
     where
-        P: TriplesParser,
-        E: From<P::Error> + From<RDFParseError>,
+        UF: FnMut(Triple) -> Result<(), E>,
+        E: From<TurtleError> + From<RdfXmlError>,
     {
-        if parser.is_end() {
-            None?
-        }
-
-        if let Err(e) = parser.parse_step(&mut |t| {
-            buffer.push(Self::triple(&t, ns_resolve_fn)?);
-            Ok(())
-        }) {
-            Some(Err(e))
-        } else {
-            Some(Ok(()))
-        }
-    }
-
-    fn triple(
-        triple: &Triple,
-        ns_resolve_fn: &mut NSResolveFn,
-    ) -> Result<state::Triple, RDFParseError> {
-        Ok(state::Triple {
-            subject: Self::subject(triple.subject, ns_resolve_fn)?,
-            predicate: Self::node(triple.predicate, ns_resolve_fn)?,
-            object: Self::object(triple.object, ns_resolve_fn)?,
-        })
-    }
-
-    fn subject(
-        subject: Subject,
-        ns_resolve_fn: &mut NSResolveFn,
-    ) -> Result<state::Subject, RDFParseError> {
-        match subject {
-            Subject::NamedNode(node) => {
-                Self::node(node, ns_resolve_fn).map(|n| state::Subject::Named(n))
-            }
-            Subject::BlankNode(node) => Ok(state::Subject::Blank(node.id.to_string())),
-            _ => Err(RDFParseError::Unexpected(
-                "RDF star syntax unsupported".to_string(),
-            )),
-        }
-    }
-
-    fn node(
-        node: NamedNode,
-        ns_resolve_fn: &mut NSResolveFn,
-    ) -> Result<state::Node, RDFParseError> {
-        let (ns, v) = explode_iri(node.iri)?;
-        Ok(state::Node {
-            namespace: ns_resolve_fn(ns)?,
-            value: v,
-        })
-    }
-
-    fn object(
-        object: Term,
-        ns_resolve_fn: &mut NSResolveFn,
-    ) -> Result<state::Object, RDFParseError> {
-        match object {
-            Term::BlankNode(node) => Ok(state::Object::Blank(node.id.to_string())),
-            Term::NamedNode(node) => {
-                Self::node(node, ns_resolve_fn).map(|n| state::Object::Named(n))
-            }
-            Term::Literal(literal) => {
-                Self::literal(literal, ns_resolve_fn).map(|l| state::Object::Literal(l))
-            }
-            _ => Err(RDFParseError::Unexpected(
-                "RDF star syntax unsupported".to_string(),
-            )),
-        }
-    }
-
-    fn literal(
-        literal: Literal,
-        ns_resolve_fn: &mut NSResolveFn,
-    ) -> Result<state::Literal, RDFParseError> {
-        match literal {
-            Literal::Simple { value } => Ok(state::Literal::Simple {
-                value: value.to_string(),
-            }),
-            Literal::LanguageTaggedString { value, language } => Ok(state::Literal::I18NString {
-                value: value.to_string(),
-                language: language.to_string(),
-            }),
-            Literal::Typed { value, datatype } => {
-                Self::node(datatype, ns_resolve_fn).map(|node| state::Literal::Typed {
-                    value: value.to_string(),
-                    datatype: node,
-                })
-            }
+        match &mut self.parser {
+            TriplesParserKind::NTriples(parser) => parser.parse_all(&mut use_fn),
+            TriplesParserKind::Turtle(parser) => parser.parse_all(&mut use_fn),
+            TriplesParserKind::RdfXml(parser) => parser.parse_all(&mut use_fn),
         }
     }
 }
 
-pub fn explode_iri(iri: &str) -> Result<(String, String), RDFParseError> {
+pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     let mut marker_index: Option<usize> = None;
     for delim in ['#', '/', ':'] {
         if let Some(index) = iri.rfind(delim) {
@@ -183,9 +63,7 @@ pub fn explode_iri(iri: &str) -> Result<(String, String), RDFParseError> {
         return Ok((iri[..index + 1].to_string(), iri[index + 1..].to_string()));
     }
 
-    Err(RDFParseError::Unexpected(
-        "Couldn't extract IRI namespace".to_string(),
-    ))
+    Err(StdError::generic_err("Couldn't extract IRI namespace"))
 }
 
 #[cfg(test)]
@@ -227,9 +105,7 @@ mod tests {
         );
         assert_eq!(
             explode_iri("this_doesn't_work"),
-            Err(RDFParseError::Unexpected(
-                "Couldn't extract IRI namespace".to_string()
-            ))
+            Err(StdError::generic_err("Couldn't extract IRI namespace"))
         );
     }
 }

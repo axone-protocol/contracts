@@ -8,7 +8,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Store, STORE};
+use crate::state::{Store, NAMESPACE_KEY_INCREMENT, STORE};
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
@@ -24,6 +24,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     STORE.save(deps.storage, &Store::new(info.sender, msg.limits.into()))?;
+    NAMESPACE_KEY_INCREMENT.save(deps.storage, &0u128)?;
 
     Ok(Response::default())
 }
@@ -45,30 +46,41 @@ pub mod execute {
     use crate::error::StoreError;
     use crate::msg::DataInput;
     use crate::rdf;
-    use crate::state::{triples, Triple};
+    use crate::rdf::NSResolveFn;
+    use crate::state::{namespaces, triples, Namespace, NAMESPACE_KEY_INCREMENT};
     use blake3::Hash;
+    use cosmwasm_std::Storage;
+    use std::collections::BTreeMap;
 
     pub fn insert(deps: DepsMut, graph: DataInput) -> Result<Response, ContractError> {
         let mut store = STORE.load(deps.storage)?;
 
         let old_count = store.stat.triples_count;
-        rdf::parse_triples(
-            graph,
-            |triple| -> Result<Triple, ContractError> { Ok(triple.try_into()?) },
-            |res| -> Result<(), ContractError> {
-                res.and_then(|triple| {
+        let mut ns_key_inc = NAMESPACE_KEY_INCREMENT.load(deps.storage)?;
+        let mut ns_cache: BTreeMap<String, Namespace> = BTreeMap::new();
+
+        let mut triple_reader = rdf::read_triples(&graph);
+
+        loop {
+            let next = triple_reader.next(&mut ns_resolver(
+                deps.storage,
+                &mut ns_key_inc,
+                &mut ns_cache,
+            ));
+
+            match next {
+                None => {
+                    break;
+                }
+                Some(res) => {
+                    let triple = res.map_err(ContractError::from)?;
                     store.stat.triples_count += Uint128::one();
 
-                    store
-                        .limits
-                        .max_triple_count
-                        .filter(|&max| max < store.stat.triples_count)
-                        .map(|max| {
-                            Err(ContractError::from(StoreError::MaxTriplesLimitExceeded(
-                                max,
-                            )))
-                        })
-                        .unwrap_or(Ok(()))?;
+                    if store.stat.triples_count > store.limits.max_triple_count {
+                        Err(ContractError::from(StoreError::MaxTriplesLimitExceeded(
+                            store.limits.max_triple_count,
+                        )))?
+                    }
 
                     let object_hash: Hash = triple.object.as_hash();
                     triples()
@@ -81,16 +93,53 @@ pub mod execute {
                             ),
                             &triple,
                         )
-                        .map_err(ContractError::Std)
-                })
-            },
-        )?;
+                        .map_err(ContractError::Std)?;
+                }
+            }
+        }
 
         STORE.save(deps.storage, &store)?;
+        NAMESPACE_KEY_INCREMENT.save(deps.storage, &ns_key_inc)?;
+        for entry in ns_cache {
+            namespaces().save(deps.storage, entry.0, &entry.1)?;
+        }
 
         Ok(Response::new()
             .add_attribute("action", "insert")
-            .add_attribute("inserted_count", store.stat.triples_count - old_count))
+            .add_attribute("triple_count", store.stat.triples_count - old_count))
+    }
+
+    fn ns_resolver<'a>(
+        store: &'a dyn Storage,
+        ns_key_inc: &'a mut u128,
+        ns_cache: &'a mut BTreeMap<String, Namespace>,
+    ) -> NSResolveFn<'a> {
+        Box::new(|ns_str| -> Result<u128, StdError> {
+            match ns_cache.get_mut(ns_str.as_str()) {
+                Some(namespace) => {
+                    namespace.counter += 1;
+                    Ok(namespace.key)
+                }
+                None => {
+                    let mut namespace = match namespaces().load(store, ns_str.clone()) {
+                        Err(StdError::NotFound { .. }) => {
+                            let n = Namespace {
+                                key: *ns_key_inc,
+                                counter: 0u128,
+                            };
+                            *ns_key_inc += 1;
+                            Ok(n)
+                        }
+                        Ok(n) => Ok(n),
+                        Err(e) => Err(e),
+                    }?;
+
+                    namespace.counter += 1;
+                    ns_cache.insert(ns_str.clone(), namespace.clone());
+                    Ok(namespace.key)
+                }
+            }
+        })
     }
 }
 
@@ -105,7 +154,7 @@ mod tests {
     use crate::error::StoreError;
     use crate::msg::{DataInput, StoreLimitsInput, StoreLimitsInputBuilder};
     use crate::state;
-    use crate::state::triples;
+    use crate::state::{namespaces, triples, Namespace};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{Attribute, Order};
     use std::env;
@@ -153,6 +202,8 @@ mod tests {
                 triples_count: Uint128::zero(),
             }
         );
+
+        assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 0u128);
     }
 
     #[test]
@@ -183,12 +234,13 @@ mod tests {
                 info.clone(),
                 ExecuteMsg::InsertData { input: case },
             );
+
             assert!(res.is_ok());
             assert_eq!(
                 res.unwrap().attributes,
                 vec![
                     Attribute::new("action", "insert"),
-                    Attribute::new("inserted_count", "40")
+                    Attribute::new("triple_count", "40")
                 ]
             );
 
@@ -202,6 +254,19 @@ mod tests {
                 STORE.load(&deps.storage).unwrap().stat.triples_count,
                 Uint128::from(40u128),
             );
+            assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 17u128);
+            assert_eq!(
+                namespaces()
+                    .load(
+                        &deps.storage,
+                        "https://ontology.okp4.space/dataverse/dataspace/".to_string()
+                    )
+                    .unwrap(),
+                Namespace {
+                    key: 0u128,
+                    counter: 5u128,
+                }
+            )
         }
     }
 

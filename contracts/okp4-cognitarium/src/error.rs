@@ -18,18 +18,6 @@ pub enum ContractError {
     Unauthorized,
 }
 
-impl From<RdfXmlError> for ContractError {
-    fn from(value: RdfXmlError) -> Self {
-        ContractError::ParseRDF(RDFParseError::from(value))
-    }
-}
-
-impl From<TurtleError> for ContractError {
-    fn from(value: TurtleError) -> Self {
-        ContractError::ParseRDF(RDFParseError::from(value))
-    }
-}
-
 #[derive(Error, Debug, PartialEq)]
 pub enum StoreError {
     #[error("Maximum triples number exceeded: {0}")]
@@ -56,10 +44,17 @@ pub enum StoreError {
 
 #[derive(Error, Debug, PartialEq)]
 pub enum RDFParseError {
+    #[error("{0}")]
+    Std(#[from] StdError),
+
     #[error("Error parsing XML RDF: {0}")]
     XML(String),
+
     #[error("Error parsing Turtle RDF: {0}")]
     Turtle(String),
+
+    #[error("Unexpected error parsing RDF: {0}")]
+    Unexpected(String),
 }
 
 impl From<RdfXmlError> for RDFParseError {

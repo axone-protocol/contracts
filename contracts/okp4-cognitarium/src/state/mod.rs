@@ -1,5 +1,5 @@
-mod de;
 mod namespaces;
+mod serde;
 mod store;
 mod triples;
 

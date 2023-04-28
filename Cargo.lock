@@ -707,6 +707,7 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw2 1.0.1",
  "derive_builder",
+ "enum-iterator",
  "lz4_flex",
  "md-5",
  "schemars",

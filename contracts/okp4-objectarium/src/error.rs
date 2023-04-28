@@ -1,3 +1,4 @@
+use crate::compress::{CompressionAlgorithm, CompressionError};
 use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
@@ -11,6 +12,9 @@ pub enum ContractError {
 
     #[error("Object is already pinned")]
     ObjectAlreadyPinned {},
+
+    #[error("Compression error: {0}")]
+    CompressionError(String),
 }
 
 #[derive(Error, Debug, Eq, PartialEq)]
@@ -32,4 +36,15 @@ pub enum BucketError {
 
     #[error("Object is already stored")]
     ObjectAlreadyStored,
+
+    #[error("Compression algorithm is not accepted: {0:?} (accepted: \"{1:?}\")")]
+    CompressionAlgorithmNotAccepted(CompressionAlgorithm, Vec<CompressionAlgorithm>),
+}
+
+impl From<CompressionError> for ContractError {
+    fn from(err: CompressionError) -> Self {
+        match err {
+            CompressionError::Error(err) => ContractError::CompressionError(err),
+        }
+    }
 }

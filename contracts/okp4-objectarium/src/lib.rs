@@ -1,3 +1,4 @@
+pub mod compress;
 pub mod contract;
 pub mod crypto;
 mod cursor;

@@ -1,21 +1,21 @@
-# Node Schema
+# Untitled undefined type in okp4-cognitarium Schema
 
 ```txt
-undefined#/query/definitions/Node
+undefined#/query/oneOf/2/properties/describe/properties/format
 ```
 
-Represents either an IRI (named node) or a blank node.
+The format in which the triples are serialized. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## Node Type
+## format Type
 
-merged type ([Node](okp4-cognitarium-querymsg-definitions-node.md))
+merged type ([Details](okp4-cognitarium-querymsg-oneof-describe-properties-describe-properties-format.md))
 
-one (and only one) of
+any of
 
-*   [NamedNode](okp4-cognitarium-querymsg-definitions-node-oneof-namednode.md "check type definition")
+*   [Untitled undefined type in okp4-cognitarium](okp4-cognitarium-querymsg-oneof-describe-properties-describe-properties-format-anyof-0.md "check type definition")
 
-*   [BlankNode](okp4-cognitarium-querymsg-definitions-node-oneof-blanknode.md "check type definition")
+*   [Untitled null in okp4-cognitarium](okp4-cognitarium-querymsg-oneof-describe-properties-describe-properties-format-anyof-1.md "check type definition")

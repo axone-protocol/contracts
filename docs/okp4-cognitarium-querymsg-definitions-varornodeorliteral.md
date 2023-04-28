@@ -1,21 +1,23 @@
-# Node Schema
+# VarOrNodeOrLiteral Schema
 
 ```txt
-undefined#/query/definitions/Node
+undefined#/query/definitions/VarOrNodeOrLiteral
 ```
 
-Represents either an IRI (named node) or a blank node.
+Represents either a variable, a node or a literal.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## Node Type
+## VarOrNodeOrLiteral Type
 
-merged type ([Node](okp4-cognitarium-querymsg-definitions-node.md))
+merged type ([VarOrNodeOrLiteral](okp4-cognitarium-querymsg-definitions-varornodeorliteral.md))
 
 one (and only one) of
 
-*   [NamedNode](okp4-cognitarium-querymsg-definitions-node-oneof-namednode.md "check type definition")
+*   [Variable](okp4-cognitarium-querymsg-definitions-varornodeorliteral-oneof-variable.md "check type definition")
 
-*   [BlankNode](okp4-cognitarium-querymsg-definitions-node-oneof-blanknode.md "check type definition")
+*   [Node](okp4-cognitarium-querymsg-definitions-varornodeorliteral-oneof-node.md "check type definition")
+
+*   [Literal](okp4-cognitarium-querymsg-definitions-varornodeorliteral-oneof-literal.md "check type definition")

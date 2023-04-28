@@ -19,7 +19,15 @@ pub enum ExecuteMsg {
     ///
     /// Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform
     /// this action.
-    InsertData { input: DataInput },
+    InsertData {
+        /// The data format in which the triples are serialized.
+        /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
+        format: Option<DataFormat>,
+        /// The data to insert.
+        /// The data must be serialized in the format specified by the `format` field. And the data
+        /// are subject to the limitations defined by the `limits` specified at contract instantiation.
+        data: Binary,
+    },
 }
 
 /// # SelectQuery
@@ -42,6 +50,42 @@ pub enum QueryMsg {
         /// The query to execute.
         query: SelectQuery,
     },
+
+    /// # Describe
+    ///
+    /// Returns a description of the resource identified by the provided IRI as a set of RDF triples
+    /// serialized in the provided format.
+    #[returns(DescribeResponse)]
+    Describe {
+        /// The query to execute.
+        query: DescribeQuery,
+        /// The format in which the triples are serialized.
+        /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
+        format: Option<DataFormat>,
+    },
+}
+
+/// # DataFormat
+/// Represents the format in which the data are serialized, for example when returned by a query or
+/// when inserted in the store.
+#[cw_serde]
+pub enum DataFormat {
+    /// # RDF XML
+    /// Output in [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) format.
+    #[serde(rename = "rdf_xml")]
+    RDFXml,
+    /// # Turtle
+    /// Output in [Turtle](https://www.w3.org/TR/turtle/) format.
+    #[serde(rename = "turtle")]
+    Turtle,
+    /// # N-Triples
+    /// Output in [N-Triples](https://www.w3.org/TR/n-triples/) format.
+    #[serde(rename = "n_triples")]
+    NTriples,
+    /// # N-Quads
+    /// Output in [N-Quads](https://www.w3.org/TR/n-quads/) format.
+    #[serde(rename = "n_quads")]
+    NQuads,
 }
 
 /// # StoreLimitsInput
@@ -114,22 +158,6 @@ impl StoreLimitsInput {
         self.max_insert_data_triple_count
             .unwrap_or(Self::DEFAULT_MAX_INSERT_DATA_TRIPLE_COUNT)
     }
-}
-
-/// # DataInput
-/// Represents the input data for the [ExecuteMsg::InsertData] message as RDF triples in a specific format.
-#[cw_serde]
-pub enum DataInput {
-    /// # RDF XML
-    /// Input in [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) format.
-    #[serde(rename = "rdf_xml")]
-    RDFXml(Binary),
-    /// # Turtle
-    /// Input in [Turtle](https://www.w3.org/TR/turtle/) format.
-    Turtle(Binary),
-    /// # N-Triples
-    /// Input in [N-Triples](https://www.w3.org/TR/n-triples/) format.
-    NTriples(Binary),
 }
 
 /// # StoreResponse
@@ -219,6 +247,16 @@ pub struct SelectResponse {
     pub results: Results,
 }
 
+/// # DescribeResponse
+/// Represents the response of a [QueryMsg::Describe] query.
+#[cw_serde]
+pub struct DescribeResponse {
+    /// The format of the data.
+    pub format: DataFormat,
+    /// The data serialized in the specified format.
+    pub data: Binary,
+}
+
 /// # Head
 /// Represents the head of a [SelectResponse].
 #[cw_serde]
@@ -285,6 +323,20 @@ pub struct SelectQuery {
     pub limit: Option<u64>,
 }
 
+/// # DescribeQuery
+/// Represents a DESCRIBE query over the triple store, allowing to retrieve a description of a resource
+/// as a set of triples serialized in a specific format.
+#[cw_serde]
+pub struct DescribeQuery {
+    /// The prefixes used in the query.
+    pub prefixes: Vec<Prefix>,
+    /// The resource to describe given as a variable or a node.
+    pub resource: VarOrNode,
+    /// The WHERE clause.
+    /// This clause is used to specify the resource identifier to describe using variable bindings.
+    pub r#where: WhereClause,
+}
+
 /// # Prefix
 /// Represents a prefix in a [SelectQuery]. A prefix is a shortcut for a namespace used in the query.
 #[cw_serde]
@@ -332,17 +384,17 @@ pub enum SimpleWhereCondition {
 #[cw_serde]
 pub struct TriplePattern {
     /// The subject of the triple pattern.
-    pub subject: SubjectPattern,
+    pub subject: VarOrNode,
     /// The predicate of the triple pattern.
-    pub predicate: PredicatePattern,
+    pub predicate: VarOrNode,
     /// The object of the triple pattern.
-    pub object: ObjectPattern,
+    pub object: VarOrNodeOrLiteral,
 }
 
-/// # SubjectPattern
-/// Represents a subject pattern in a [TriplePattern] that can be either a variable or a node.
+/// # VarOrNode
+/// Represents either a variable or a node.
 #[cw_serde]
-pub enum SubjectPattern {
+pub enum VarOrNode {
     /// # Variable
     /// A variable.
     Variable(String),
@@ -351,22 +403,10 @@ pub enum SubjectPattern {
     Node(Node),
 }
 
-/// # PredicatePattern
-/// Represents a predicate pattern in a [TriplePattern] that can be either a variable or a node.
+/// # VarOrNodeOrLiteral
+/// Represents either a variable, a node or a literal.
 #[cw_serde]
-pub enum PredicatePattern {
-    /// # Variable
-    /// A variable.
-    Variable(String),
-    /// # Node
-    /// A node, i.e. an IRI or a blank node.
-    Node(Node),
-}
-
-/// # ObjectPattern
-/// Represents an object pattern in a [TriplePattern] that can be either a variable, a node or a literal.
-#[cw_serde]
-pub enum ObjectPattern {
+pub enum VarOrNodeOrLiteral {
     /// # Variable
     /// A variable.
     Variable(String),
@@ -405,6 +445,7 @@ pub enum Literal {
 }
 
 /// # Node
+/// Represents either an IRI (named node) or a blank node.
 #[cw_serde]
 pub enum Node {
     /// # NamedNode

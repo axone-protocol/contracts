@@ -31,12 +31,12 @@ Reference this group by using
 | Property | Type | Required | Nullable | Defined by |
 | :------- | :--- | :------- | :------- | :--------- |
 
-## Definitions group DataInput
+## Definitions group DataFormat
 
 Reference this group by using
 
 ```json
-{"$ref":"undefined#/execute/definitions/DataInput"}
+{"$ref":"undefined#/execute/definitions/DataFormat"}
 ```
 
 | Property | Type | Required | Nullable | Defined by |

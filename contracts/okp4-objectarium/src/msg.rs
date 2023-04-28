@@ -35,17 +35,18 @@ pub enum ExecuteMsg {
     /// the object cannot be removed (forget) from the storage.
     ///
     /// The "compression_algorithm" parameter specifies the algorithm for compressing the object before
-    /// storing it in the storage, which is optional. If no algorithm is specified, the object is stored
-    /// as it is without any compression. The chosen algorithm can save storage space, but it will increase
-    /// CPU usage. Depending on the chosen compression algorithm and the achieved compression ratio, the gas
-    /// cost of the operation will vary, either increasing or decreasing.
+    /// storing it in the storage, which is optional. If no algorithm is specified, the algorithm used
+    /// is the first algorithm of the bucket configuration limits. Note that the chosen algorithm can
+    /// save storage space, but it will increase CPU usage. Depending on the chosen compression algorithm
+    /// and the achieved compression ratio, the gas cost of the operation will vary, either increasing or decreasing.
     StoreObject {
         /// The content of the object to store.
         data: Binary,
         /// Specifies if the object should be pinned for the sender.
         pin: bool,
         /// Specifies the compression algorithm to use when storing the object.
-        /// If None, the first algorithm of the bucket configuration limits is used.
+        /// If None, the first algorithm specified in the list of accepted compression algorithms of the bucket
+        /// is used (see [BucketLimits::accepted_compression_algorithms]).
         compression_algorithm: Option<CompressionAlgorithm>,
     },
 

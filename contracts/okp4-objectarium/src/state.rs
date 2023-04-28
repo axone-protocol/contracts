@@ -195,7 +195,7 @@ impl From<msg::BucketLimits> for BucketLimits {
             max_object_pins: limits.max_object_pins,
             accepted_compression_algorithms: limits
                 .accepted_compression_algorithms
-                .map(|it| it.into_iter().map(|a| a.into()).collect::<Vec<_>>())
+                .map(|it| it.into_iter().map(Into::into).collect())
                 .unwrap_or_else(CompressionAlgorithm::values),
         }
     }

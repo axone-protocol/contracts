@@ -5,8 +5,8 @@ name = "okp4-objectarium-client"
 version = "1.0.0"
 
 [dependencies]
-okp4-objectarium.workspace = true
-okp4-logic-bindings.workspace = true
 cosmwasm-std.workspace = true
+okp4-logic-bindings.workspace = true
+okp4-objectarium.workspace = true
 schemars.workspace = true
 serde.workspace = true

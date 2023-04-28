@@ -27,19 +27,19 @@ panic = 'abort'
 rpath = false
 
 [dependencies]
-okp4-logic-bindings.workspace = true
-okp4-objectarium-client.workspace = true
-okp4-objectarium.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
-cw2.workspace = true
 cw-utils.workspace = true
+cw2.workspace = true
+itertools = "0.10.5"
+okp4-logic-bindings.workspace = true
+okp4-objectarium-client.workspace = true
+okp4-objectarium.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-itertools = "0.10.5"
 
 [dev-dependencies]
 cw-multi-test.workspace = true

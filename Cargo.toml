@@ -2,9 +2,6 @@
 members = ["contracts/*", "packages/*"]
 
 [workspace.dependencies]
-okp4-objectarium = { path = "contracts/okp4-objectarium" }
-okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
-okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
 cosmwasm-schema = "1.2.5"
 cosmwasm-std = "1.2.5"
 cosmwasm-storage = "1.2.4"
@@ -12,6 +9,9 @@ cw-multi-test = "0.15.1"
 cw-storage-plus = "1.0.1"
 cw-utils = "1.0.1"
 cw2 = "1.0.1"
+okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
+okp4-objectarium = { path = "contracts/okp4-objectarium" }
+okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
 schemars = "0.8.12"
 serde = { version = "1.0.160", default-features = false, features = ["derive"] }
 serde-json-wasm = "0.5.1"

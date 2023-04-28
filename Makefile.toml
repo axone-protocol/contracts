@@ -58,9 +58,9 @@ command = "cargo"
 description = "Run all unit tests."
 
 [tasks.test-coverage]
-dependencies = ["install-llvm-tools-preview", "install-llvm-cov"]
-command = "cargo"
 args = ["llvm-cov", "--workspace", "--lcov", "--output-path", "lcov.info"]
+command = "cargo"
+dependencies = ["install-llvm-tools-preview", "install-llvm-cov"]
 
 [tasks.install-wasm]
 script = '''
@@ -90,8 +90,8 @@ rm -rf ${DOCS_FOLDER}/*
 '''
 
 [tasks.docs-generate]
-description = "Generate documentation"
 dependencies = ["docs-clean", "schema"]
+description = "Generate documentation"
 script = '''
 echo "🔎 Checking jsonschema2md installed..."
 if ! which jsonschema2md >/dev/null;
@@ -520,8 +520,8 @@ default_to_workspace = false
 min_version = "0.36.3"
 
 [env]
-DOCS_FOLDER="docs"
-SCHEMA_FOLDER="schema"
+DOCS_FOLDER = "docs"
+SCHEMA_FOLDER = "schema"
 
 BALANCE_ALICE = "100000000000uknow"
 BALANCE_BOB = "100000000000uknow"

@@ -1,9 +1,7 @@
 use crate::contract::execute::insert;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
-};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -33,11 +31,11 @@ pub fn instantiate(
 pub fn execute(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::InsertData { input } => insert(deps, input),
+        ExecuteMsg::InsertData { input } => insert(deps, info, input),
     }
 }
 
@@ -47,8 +45,16 @@ pub mod execute {
     use crate::rdf;
     use crate::state::TripleStorer;
 
-    pub fn insert(deps: DepsMut, graph: DataInput) -> Result<Response, ContractError> {
-        let mut reader = rdf::read_triples(&graph);
+    pub fn insert(
+        deps: DepsMut,
+        info: MessageInfo,
+        data: DataInput,
+    ) -> Result<Response, ContractError> {
+        if STORE.load(deps.storage)?.owner != info.sender {
+            Err(ContractError::Unauthorized)?
+        }
+
+        let mut reader = rdf::read_triples(&data);
         let mut storer = TripleStorer::new(deps.storage)?;
         let count = storer.store_all(&mut reader)?;
 
@@ -71,7 +77,7 @@ mod tests {
     use crate::state;
     use crate::state::{namespaces, triples, Namespace};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{Attribute, Order};
+    use cosmwasm_std::{Attribute, Order, Uint128};
     use std::env;
     use std::fs::File;
     use std::io::Read;

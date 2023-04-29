@@ -958,51 +958,72 @@ mod tests {
 
     #[test]
     fn store_object_compressed() {
-        let cases = vec![
-            (
-                None,
-                None,
-                None,
-                Some((CompressionAlgorithm::Passthrough, 466)),
-            ),
-            (
-                None,
-                Some(CompressionAlgorithm::Passthrough),
-                None,
-                Some((CompressionAlgorithm::Passthrough, 466)),
-            ),
-            (
-                None,
-                Some(CompressionAlgorithm::Lz4),
-                None,
-                Some((CompressionAlgorithm::Lz4, 415)),
-            ),
-            (
-                Some(vec![CompressionAlgorithm::Passthrough]),
-                Some(CompressionAlgorithm::Passthrough),
-                None,
-                Some((CompressionAlgorithm::Passthrough, 466)),
-            ),
-            (
-                Some(vec![
+        use either::Either;
+
+        struct ExpectedCompressionResult {
+            compression_algorithm: CompressionAlgorithm,
+            compressed_size: u128,
+        }
+        struct TestConfig {
+            accepted_compression_algorithms: Option<Vec<CompressionAlgorithm>>,
+            compression_algorithm: Option<CompressionAlgorithm>,
+            expected_result: Either<ContractError, ExpectedCompressionResult>,
+        }
+
+        let cases: Vec<TestConfig> = vec![
+            TestConfig {
+                accepted_compression_algorithms: None,
+                compression_algorithm: None,
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Passthrough,
+                    compressed_size: 466,
+                }),
+            },
+            TestConfig {
+                accepted_compression_algorithms: None,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Passthrough,
+                    compressed_size: 466,
+                }),
+            },
+            TestConfig {
+                accepted_compression_algorithms: None,
+                compression_algorithm: Some(CompressionAlgorithm::Lz4),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Lz4,
+                    compressed_size: 415,
+                }),
+            },
+            TestConfig {
+                accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Passthrough]),
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Passthrough,
+                    compressed_size: 466,
+                }),
+            },
+            TestConfig {
+                accepted_compression_algorithms: Some(vec![
                     CompressionAlgorithm::Passthrough,
                     CompressionAlgorithm::Lz4,
                 ]),
-                Some(CompressionAlgorithm::Lz4),
-                None,
-                Some((CompressionAlgorithm::Lz4, 415)),
-            ),
-            (
-                Some(vec![CompressionAlgorithm::Lz4]),
-                Some(CompressionAlgorithm::Passthrough),
-                Some(ContractError::Bucket(
+                compression_algorithm: Some(CompressionAlgorithm::Lz4),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Lz4,
+                    compressed_size: 415,
+                }),
+            },
+            TestConfig {
+                accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Lz4]),
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+                expected_result: Either::Left(ContractError::Bucket(
                     BucketError::CompressionAlgorithmNotAccepted(
                         CompressionAlgorithm::Passthrough,
                         vec![CompressionAlgorithm::Lz4],
                     ),
                 )),
-                None,
-            ),
+            },
         ];
         let data ="In a magical land,  there were many realms, one of which was known as OKP4. Within \
             this realm, druid programmers possessed the power to create smart contracts. As the kingdom \
@@ -1021,7 +1042,7 @@ mod tests {
                 bucket: String::from("test"),
                 config: BucketConfig::default(),
                 limits: BucketLimits {
-                    accepted_compression_algorithms: case.0,
+                    accepted_compression_algorithms: case.accepted_compression_algorithms,
                     ..BucketLimits::default()
                 },
                 pagination: PaginationConfig::default(),
@@ -1036,16 +1057,17 @@ mod tests {
                 ExecuteMsg::StoreObject {
                     data: Binary::from_base64(obj.as_str()).unwrap(),
                     pin: false,
-                    compression_algorithm: case.1,
+                    compression_algorithm: case.compression_algorithm,
                 },
             );
 
             // Assert
-            _ = res
-                .map(|_| ())
-                .map_err(|e| assert_eq!(e, case.2.unwrap()))
-                .map(|_| {
+            match case.expected_result {
+                Either::Left(err) => assert_eq!(res.err(), Some(err)),
+                Either::Right(expected) => {
+                    let _to_assert_if_we_want = res.unwrap();
                     let object_info = query::object(deps.as_ref(), obj_id.to_string()).unwrap();
+
                     assert_eq!(
                         object_info,
                         ObjectResponse {
@@ -1053,11 +1075,12 @@ mod tests {
                             owner: "creator".to_string(),
                             is_pinned: false,
                             size: Uint128::from(data.len() as u128),
-                            compressed_size: (case.3.unwrap().1 as u32).into(),
-                            compression_algorithm: case.3.unwrap().0,
+                            compressed_size: expected.compressed_size.into(),
+                            compression_algorithm: expected.compression_algorithm,
                         }
                     );
-                });
+                }
+            }
         }
     }
 

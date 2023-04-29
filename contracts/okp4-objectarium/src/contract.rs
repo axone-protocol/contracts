@@ -964,14 +964,14 @@ mod tests {
             compression_algorithm: CompressionAlgorithm,
             compressed_size: u128,
         }
-        struct TestConfig {
+        struct TC {
             accepted_compression_algorithms: Option<Vec<CompressionAlgorithm>>,
             compression_algorithm: Option<CompressionAlgorithm>,
             expected_result: Either<ContractError, ExpectedCompressionResult>,
         }
 
-        let cases: Vec<TestConfig> = vec![
-            TestConfig {
+        let cases: Vec<TC> = vec![
+            TC {
                 accepted_compression_algorithms: None,
                 compression_algorithm: None,
                 expected_result: Either::Right(ExpectedCompressionResult {
@@ -979,7 +979,7 @@ mod tests {
                     compressed_size: 466,
                 }),
             },
-            TestConfig {
+            TC {
                 accepted_compression_algorithms: None,
                 compression_algorithm: Some(CompressionAlgorithm::Passthrough),
                 expected_result: Either::Right(ExpectedCompressionResult {
@@ -987,7 +987,7 @@ mod tests {
                     compressed_size: 466,
                 }),
             },
-            TestConfig {
+            TC {
                 accepted_compression_algorithms: None,
                 compression_algorithm: Some(CompressionAlgorithm::Lz4),
                 expected_result: Either::Right(ExpectedCompressionResult {
@@ -995,7 +995,7 @@ mod tests {
                     compressed_size: 415,
                 }),
             },
-            TestConfig {
+            TC {
                 accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Passthrough]),
                 compression_algorithm: Some(CompressionAlgorithm::Passthrough),
                 expected_result: Either::Right(ExpectedCompressionResult {
@@ -1003,7 +1003,7 @@ mod tests {
                     compressed_size: 466,
                 }),
             },
-            TestConfig {
+            TC {
                 accepted_compression_algorithms: Some(vec![
                     CompressionAlgorithm::Passthrough,
                     CompressionAlgorithm::Lz4,
@@ -1014,7 +1014,7 @@ mod tests {
                     compressed_size: 415,
                 }),
             },
-            TestConfig {
+            TC {
                 accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Lz4]),
                 compression_algorithm: Some(CompressionAlgorithm::Passthrough),
                 expected_result: Either::Left(ContractError::Bucket(
@@ -1196,18 +1196,18 @@ mod tests {
         assert_eq!(result, to_binary(&data).unwrap());
     }
 
-    struct TestPinCase {
-        objects: Vec<ObjectId>,
-        senders: Vec<MessageInfo>,
-        expected_count: usize,
-        expected_error: Option<ContractError>,
-        expected_object_pin_count: Vec<(ObjectId, Uint128)>,
-    }
-
     #[test]
     fn pin_object() {
+        struct TC {
+            objects: Vec<ObjectId>,
+            senders: Vec<MessageInfo>,
+            expected_count: usize,
+            expected_error: Option<ContractError>,
+            expected_object_pin_count: Vec<(ObjectId, Uint128)>,
+        }
+
         let cases = vec![
-            TestPinCase {
+            TC {
                 // One object, 1 one pinner => 1 pin
                 objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1222,7 +1222,7 @@ mod tests {
                     Uint128::one(),
                 )],
             },
-            TestPinCase {
+            TC {
                 // Same object, two pinners => 2 pin
                 objects: vec![
                     ObjectId::from(
@@ -1242,7 +1242,7 @@ mod tests {
                     Uint128::new(2),
                 )],
             },
-            TestPinCase {
+            TC {
                 // Same object, one pinner twice => 1 pin
                 objects: vec![
                     ObjectId::from(
@@ -1262,7 +1262,7 @@ mod tests {
                     Uint128::one(),
                 )],
             },
-            TestPinCase {
+            TC {
                 // two objects, same pinner => 2 pin
                 objects: vec![
                     ObjectId::from(
@@ -1290,7 +1290,7 @@ mod tests {
                     ),
                 ],
             },
-            TestPinCase {
+            TC {
                 // two objects, two pinner => 2 pin
                 objects: vec![
                     ObjectId::from(
@@ -1318,7 +1318,7 @@ mod tests {
                     ),
                 ],
             },
-            TestPinCase {
+            TC {
                 // two objects, two pinner, twice 1 pinner => 2 pin
                 objects: vec![
                     ObjectId::from(
@@ -1353,7 +1353,7 @@ mod tests {
                     ),
                 ],
             },
-            TestPinCase {
+            TC {
                 // exceed limits
                 objects: vec![
                     ObjectId::from(
@@ -1394,7 +1394,7 @@ mod tests {
                     ),
                 ],
             },
-            TestPinCase {
+            TC {
                 // Object not exists
                 objects: vec![ObjectId::from("NOTFOUND")],
                 senders: vec![mock_info("bob", &[])],
@@ -1490,20 +1490,20 @@ mod tests {
         }
     }
 
-    struct TestUnpinCase {
-        pin: Vec<ObjectId>,
-        pin_senders: Vec<MessageInfo>,
-        unpin: Vec<ObjectId>,
-        unpin_senders: Vec<MessageInfo>,
-        expected_count: usize,
-        expected_error: Option<ContractError>,
-        expected_object_pin_count: Vec<(ObjectId, Uint128)>,
-    }
-
     #[test]
     fn unpin_object() {
+        struct TC {
+            pin: Vec<ObjectId>,
+            pin_senders: Vec<MessageInfo>,
+            unpin: Vec<ObjectId>,
+            unpin_senders: Vec<MessageInfo>,
+            expected_count: usize,
+            expected_error: Option<ContractError>,
+            expected_object_pin_count: Vec<(ObjectId, Uint128)>,
+        }
+
         let cases = vec![
-            TestUnpinCase {
+            TC {
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
@@ -1521,7 +1521,7 @@ mod tests {
                     Uint128::zero(),
                 )],
             },
-            TestUnpinCase {
+            TC {
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
@@ -1547,7 +1547,7 @@ mod tests {
                     ),
                 ],
             },
-            TestUnpinCase {
+            TC {
                 pin: vec![
                     ObjectId::from(
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1578,7 +1578,7 @@ mod tests {
                     ),
                 ],
             },
-            TestUnpinCase {
+            TC {
                 pin: vec![],
                 pin_senders: vec![],
                 unpin: vec![ObjectId::from(
@@ -1594,7 +1594,7 @@ mod tests {
                     Uint128::zero(),
                 )],
             },
-            TestUnpinCase {
+            TC {
                 pin: vec![
                     ObjectId::from(
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1636,7 +1636,7 @@ mod tests {
                     ),
                 ],
             },
-            TestUnpinCase {
+            TC {
                 // Object not exists
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1961,20 +1961,20 @@ mod tests {
         }
     }
 
-    struct TestForgetCase {
-        pins: Vec<ObjectId>,
-        pins_senders: Vec<MessageInfo>,
-        forget_objects: Vec<ObjectId>,
-        forget_senders: Vec<MessageInfo>,
-        expected_count: usize,
-        expected_total_size: Uint128,
-        expected_error: Option<ContractError>,
-    }
-
     #[test]
     fn forget_object() {
+        struct TC {
+            pins: Vec<ObjectId>,
+            pins_senders: Vec<MessageInfo>,
+            forget_objects: Vec<ObjectId>,
+            forget_senders: Vec<MessageInfo>,
+            expected_count: usize,
+            expected_total_size: Uint128,
+            expected_error: Option<ContractError>,
+        }
+
         let cases = vec![
-            TestForgetCase {
+            TC {
                 pins: vec![],
                 pins_senders: vec![],
                 forget_objects: vec![ObjectId::from(
@@ -1985,7 +1985,7 @@ mod tests {
                 expected_total_size: Uint128::new(9),
                 expected_error: None,
             },
-            TestForgetCase {
+            TC {
                 pins: vec![],
                 pins_senders: vec![],
                 forget_objects: vec![
@@ -2001,7 +2001,7 @@ mod tests {
                 expected_total_size: Uint128::new(4),
                 expected_error: None,
             },
-            TestForgetCase {
+            TC {
                 pins: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
@@ -2014,7 +2014,7 @@ mod tests {
                 expected_total_size: Uint128::new(13),
                 expected_error: Some(ContractError::ObjectAlreadyPinned {}),
             },
-            TestForgetCase {
+            TC {
                 pins: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
@@ -2027,7 +2027,7 @@ mod tests {
                 expected_total_size: Uint128::new(9),
                 expected_error: None,
             },
-            TestForgetCase {
+            TC {
                 pins: vec![
                     ObjectId::from(
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",

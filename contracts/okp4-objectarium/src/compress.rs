@@ -2,6 +2,7 @@ use enum_iterator::Sequence;
 use lz4_flex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 /// CompressionAlgorithm is an enumeration that defines the different compression algorithms
 /// supported for compressing the content of objects.
@@ -34,8 +35,9 @@ impl CompressionAlgorithm {
     }
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum CompressionError {
+    #[error("{0}")]
     Error(String),
 }
 
@@ -61,4 +63,30 @@ fn lz4_compress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
 #[inline]
 fn lz4_decompress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
     Ok(lz4_flex::decompress_size_prepended(data)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_lz4_flex_decompress_error() {
+        // Define test cases as tuples of input DecompressError and expected CompressionError
+        let test_cases = vec![(
+            lz4_flex::block::DecompressError::UncompressedSizeDiffers {
+                expected: 1000,
+                actual: 998,
+            },
+            CompressionError::Error(
+                "the expected decompressed size differs, actual 998, expected 1000".to_string(),
+            ),
+        )];
+
+        // Iterate over test cases using a for loop
+        for (error, expected_error) in test_cases {
+            let compression_err = CompressionError::from(error);
+
+            assert_eq!(compression_err, expected_error);
+        }
+    }
 }

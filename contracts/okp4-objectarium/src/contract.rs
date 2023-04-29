@@ -317,7 +317,7 @@ pub mod query {
         let compression = objects().load(deps.storage, id.clone())?.compression;
         let data = DATA.load(deps.storage, id)?;
         let decompressed_data = compression.decompress(&data)?;
-        Ok(Binary::from(decompressed_data.into_vec()))
+        Ok(Binary::from(decompressed_data))
     }
 
     pub fn fetch_objects(

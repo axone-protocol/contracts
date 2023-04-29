@@ -72,15 +72,10 @@ pub mod execute {
     ) -> Result<Response, ContractError> {
         let size = (data.len() as u128).into();
         let bucket = BUCKET.load(deps.storage)?;
+        let compressions = &bucket.limits.accepted_compression_algorithms;
         let compression: CompressionAlgorithm = compression_algorithm
             .map(|a| a.into())
-            .or_else(|| {
-                bucket
-                    .limits
-                    .accepted_compression_algorithms
-                    .first()
-                    .cloned()
-            })
+            .or_else(|| compressions.first().cloned())
             .unwrap_or(CompressionAlgorithm::Passthrough);
 
         // pre-conditions
@@ -106,10 +101,15 @@ pub mod execute {
                 return Err(BucketError::MaxTotalSizeLimitExceeded(value, limit).into());
             }
         }
-        if !CompressionAlgorithm::values().contains(&compression) {
+        if !compressions.contains(&compression) {
             return Err(BucketError::CompressionAlgorithmNotAccepted(
-                compression,
-                bucket.limits.accepted_compression_algorithms,
+                compression.into(),
+                bucket
+                    .limits
+                    .accepted_compression_algorithms
+                    .into_iter()
+                    .map(|a| a.into())
+                    .collect(),
             )
             .into());
         }
@@ -934,7 +934,7 @@ mod tests {
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
                 config: BucketConfig::default(),
-                limits: case.0, // case.0(&mut BucketLimitsBuilder::default()).unwrap(),
+                limits: case.0,
                 pagination: PaginationConfig::default(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
@@ -953,6 +953,111 @@ mod tests {
             let res = execute(deps.as_mut(), mock_env(), info.clone(), msg);
 
             assert_eq!(res.err(), case.1);
+        }
+    }
+
+    #[test]
+    fn store_object_compressed() {
+        let cases = vec![
+            (
+                None,
+                None,
+                None,
+                Some((CompressionAlgorithm::Passthrough, 466)),
+            ),
+            (
+                None,
+                Some(CompressionAlgorithm::Passthrough),
+                None,
+                Some((CompressionAlgorithm::Passthrough, 466)),
+            ),
+            (
+                None,
+                Some(CompressionAlgorithm::Lz4),
+                None,
+                Some((CompressionAlgorithm::Lz4, 415)),
+            ),
+            (
+                Some(vec![CompressionAlgorithm::Passthrough]),
+                Some(CompressionAlgorithm::Passthrough),
+                None,
+                Some((CompressionAlgorithm::Passthrough, 466)),
+            ),
+            (
+                Some(vec![
+                    CompressionAlgorithm::Passthrough,
+                    CompressionAlgorithm::Lz4,
+                ]),
+                Some(CompressionAlgorithm::Lz4),
+                None,
+                Some((CompressionAlgorithm::Lz4, 415)),
+            ),
+            (
+                Some(vec![CompressionAlgorithm::Lz4]),
+                Some(CompressionAlgorithm::Passthrough),
+                Some(ContractError::Bucket(
+                    BucketError::CompressionAlgorithmNotAccepted(
+                        CompressionAlgorithm::Passthrough,
+                        vec![CompressionAlgorithm::Lz4],
+                    ),
+                )),
+                None,
+            ),
+        ];
+        let data ="In a magical land,  there were many realms, one of which was known as OKP4. Within \
+            this realm, druid programmers possessed the power to create smart contracts. As the kingdom \
+            grew, the druids used their skills to power decentralized systems, bringing prosperity and \
+            wonder to all who sought their expertise. And so, the legend of the druid programmers and \
+            their magical smart contracts lived on, inspiring future generations to unlock the power of \
+            the digital realm.";
+        let obj = general_purpose::STANDARD.encode(data);
+        let obj_id = "25056da0c504e6beb9d8666f9e5919a4a02689f4bceeb4698a21c651f07d8e04";
+
+        for case in cases {
+            // Arrange
+            let mut deps = mock_dependencies();
+            let info = mock_info("creator", &[]);
+            let msg = InstantiateMsg {
+                bucket: String::from("test"),
+                config: BucketConfig::default(),
+                limits: BucketLimits {
+                    accepted_compression_algorithms: case.0,
+                    ..BucketLimits::default()
+                },
+                pagination: PaginationConfig::default(),
+            };
+            instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            // Act
+            let res = execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                ExecuteMsg::StoreObject {
+                    data: Binary::from_base64(obj.as_str()).unwrap(),
+                    pin: false,
+                    compression_algorithm: case.1,
+                },
+            );
+
+            // Assert
+            _ = res
+                .map(|_| ())
+                .map_err(|e| assert_eq!(e, case.2.unwrap()))
+                .map(|_| {
+                    let object_info = query::object(deps.as_ref(), obj_id.to_string()).unwrap();
+                    assert_eq!(
+                        object_info,
+                        ObjectResponse {
+                            id: obj_id.to_string(),
+                            owner: "creator".to_string(),
+                            is_pinned: false,
+                            size: Uint128::from(data.len() as u128),
+                            compressed_size: (case.3.unwrap().1 as u32).into(),
+                            compression_algorithm: case.3.unwrap().0,
+                        }
+                    );
+                });
         }
     }
 

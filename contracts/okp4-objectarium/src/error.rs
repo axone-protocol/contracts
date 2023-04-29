@@ -1,4 +1,5 @@
-use crate::compress::{CompressionAlgorithm, CompressionError};
+use crate::compress::CompressionError;
+use crate::msg::CompressionAlgorithm;
 use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 

@@ -1066,10 +1066,11 @@ mod tests {
                 Either::Left(err) => assert_eq!(res.err(), Some(err)),
                 Either::Right(expected) => {
                     let _to_assert_if_we_want = res.unwrap();
-                    let object_info = query::object(deps.as_ref(), obj_id.to_string()).unwrap();
+                    let res_object_info = query::object(deps.as_ref(), obj_id.to_string()).unwrap();
+                    let res_object_data = query::data(deps.as_ref(), obj_id.to_string()).unwrap();
 
                     assert_eq!(
-                        object_info,
+                        res_object_info,
                         ObjectResponse {
                             id: obj_id.to_string(),
                             owner: "creator".to_string(),
@@ -1079,6 +1080,7 @@ mod tests {
                             compression_algorithm: expected.compression_algorithm,
                         }
                     );
+                    assert_eq!(res_object_data, data.as_bytes().to_vec());
                 }
             }
         }

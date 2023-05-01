@@ -4,7 +4,11 @@
 undefined#/execute/oneOf/0
 ```
 
-StoreObject store an object to the bucket and make the sender the owner of the object. The object is referenced by the hash of its content and this value is returned. If the object is already stored, an error is returned. If pin is true, the object is pinned for the sender.
+StoreObject store an object to the bucket and make the sender the owner of the object. The object is referenced by the hash of its content and this value is returned. If the object is already stored, an error is returned.
+
+The "pin" parameter specifies if the object should be pinned for the sender. In such case, the object cannot be removed (forget) from the storage.
+
+The "compression\_algorithm" parameter specifies the algorithm for compressing the object before storing it in the storage, which is optional. If no algorithm is specified, the algorithm used is the first algorithm of the bucket configuration limits. Note that the chosen algorithm can save storage space, but it will increase CPU usage. Depending on the chosen compression algorithm and the achieved compression ratio, the gas cost of the operation will vary, either increasing or decreasing.
 
 | Abstract            | Extensible | Status         | Identifiable | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :----------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |

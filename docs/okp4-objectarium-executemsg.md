@@ -36,3 +36,14 @@ Reference this group by using
 
 | Property | Type | Required | Nullable | Defined by |
 | :------- | :--- | :------- | :------- | :--------- |
+
+## Definitions group CompressionAlgorithm
+
+Reference this group by using
+
+```json
+{"$ref":"undefined#/execute/definitions/CompressionAlgorithm"}
+```
+
+| Property | Type | Required | Nullable | Defined by |
+| :------- | :--- | :------- | :------- | :--------- |

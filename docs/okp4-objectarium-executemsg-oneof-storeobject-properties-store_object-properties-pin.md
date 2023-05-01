@@ -4,7 +4,7 @@
 undefined#/execute/oneOf/0/properties/store_object/properties/pin
 ```
 
-
+Specifies if the object should be pinned for the sender.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |

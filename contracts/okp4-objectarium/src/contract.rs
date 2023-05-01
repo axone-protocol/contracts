@@ -416,7 +416,7 @@ mod tests {
     use crate::msg::{
         BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm,
         HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
-        PaginationConfig, PaginationConfigBuilder,
+        PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -430,9 +430,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo".to_string(),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -442,7 +442,7 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
-        assert_eq!(value.config, BucketConfig::default());
+        assert_eq!(value.config, Default::default());
         assert_eq!(
             value.limits,
             BucketLimits {
@@ -450,7 +450,7 @@ mod tests {
                     CompressionAlgorithm::Passthrough,
                     CompressionAlgorithm::Lz4,
                 ]),
-                ..BucketLimits::default()
+                ..Default::default()
             }
         );
         assert_eq!(value.pagination.max_page_size, Some(30));
@@ -481,8 +481,8 @@ mod tests {
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
                 config: BucketConfig { hash_algorithm },
-                limits: BucketLimits::default(),
-                pagination: PaginationConfig::default(),
+                limits: Default::default(),
+                pagination: Default::default(),
             };
             let info = mock_info("creator", &[]);
 
@@ -502,7 +502,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            config: BucketConfig::default(),
+            config: Default::default(),
             limits: BucketLimitsBuilder::default()
                 .max_total_size(Uint128::new(20000))
                 .max_objects(Uint128::new(10))
@@ -537,8 +537,8 @@ mod tests {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
+            config: Default::default(),
+            limits: Default::default(),
             pagination: PaginationConfigBuilder::default()
                 .max_page_size(50)
                 .default_page_size(30)
@@ -575,8 +575,8 @@ mod tests {
             let mut deps = mock_dependencies();
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
-                config: BucketConfig::default(),
-                limits: BucketLimits::default(),
+                config: Default::default(),
+                limits: Default::default(),
                 pagination: case.0,
             };
             match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
@@ -592,9 +592,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "".to_string(),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -609,9 +609,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo bar".to_string(),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -756,8 +756,8 @@ mod tests {
                 InstantiateMsg {
                     bucket: "test".to_string(),
                     config: BucketConfig { hash_algorithm },
-                    limits: BucketLimits::default(),
-                    pagination: PaginationConfig::default(),
+                    limits: Default::default(),
+                    pagination: Default::default(),
                 },
             )
             .unwrap();
@@ -836,9 +836,9 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -933,9 +933,9 @@ mod tests {
             let info = mock_info("creator", &[]);
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
-                config: BucketConfig::default(),
+                config: Default::default(),
                 limits: case.0,
-                pagination: PaginationConfig::default(),
+                pagination: Default::default(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1040,12 +1040,12 @@ mod tests {
             let info = mock_info("creator", &[]);
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
-                config: BucketConfig::default(),
+                config: Default::default(),
                 limits: BucketLimits {
                     accepted_compression_algorithms: case.accepted_compression_algorithms,
-                    ..BucketLimits::default()
+                    ..Default::default()
                 },
-                pagination: PaginationConfig::default(),
+                pagination: Default::default(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1093,9 +1093,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1163,9 +1163,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1423,12 +1423,12 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig::default(),
+                    config: Default::default(),
                     limits: BucketLimitsBuilder::default()
                         .max_object_pins(Uint128::new(2))
                         .build()
                         .unwrap(),
-                    pagination: PaginationConfig::default(),
+                    pagination: Default::default(),
                 },
             )
             .unwrap();
@@ -1669,9 +1669,9 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig::default(),
-                    limits: BucketLimits::default(),
-                    pagination: PaginationConfig::default(),
+                    config: Default::default(),
+                    limits: Default::default(),
+                    pagination: Default::default(),
                 },
             )
             .unwrap();
@@ -1756,9 +1756,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
 
@@ -1844,9 +1844,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
 
@@ -1940,9 +1940,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), mock_info("creator1", &[]), msg).unwrap();
 
@@ -2059,9 +2059,9 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig::default(),
-                    limits: BucketLimits::default(),
-                    pagination: PaginationConfig::default(),
+                    config: Default::default(),
+                    limits: Default::default(),
+                    pagination: Default::default(),
                 },
             )
             .unwrap();

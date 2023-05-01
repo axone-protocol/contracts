@@ -37,7 +37,7 @@ impl CompressionAlgorithm {
     }
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum CompressionError {
     #[error("{0}")]
     Error(String),

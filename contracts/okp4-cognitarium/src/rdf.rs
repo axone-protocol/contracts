@@ -1,10 +1,10 @@
-use crate::msg::DataInput;
+use crate::msg::DataFormat;
 use cosmwasm_std::{StdError, StdResult};
 use rio_api::model::Triple;
 use rio_api::parser::TriplesParser;
 use rio_turtle::{NTriplesParser, TurtleError, TurtleParser};
 use rio_xml::{RdfXmlError, RdfXmlParser};
-use std::io::{BufRead, BufReader};
+use std::io::BufRead;
 
 pub struct TripleReader<R: BufRead> {
     parser: TriplesParserKind<R>,
@@ -14,19 +14,15 @@ pub enum TriplesParserKind<R: BufRead> {
     NTriples(NTriplesParser<R>),
     Turtle(TurtleParser<R>),
     RdfXml(RdfXmlParser<R>),
+    NQuads,
 }
 
-pub fn read_triples(graph: &DataInput) -> TripleReader<BufReader<&[u8]>> {
-    TripleReader::new(match graph {
-        DataInput::RDFXml(data) => {
-            TriplesParserKind::RdfXml(RdfXmlParser::new(BufReader::new(data.as_slice()), None))
-        }
-        DataInput::Turtle(data) => {
-            TriplesParserKind::Turtle(TurtleParser::new(BufReader::new(data.as_slice()), None))
-        }
-        DataInput::NTriples(data) => {
-            TriplesParserKind::NTriples(NTriplesParser::new(BufReader::new(data.as_slice())))
-        }
+pub fn read_triples<R: BufRead>(format: DataFormat, src: R) -> TripleReader<R> {
+    TripleReader::new(match format {
+        DataFormat::RDFXml => TriplesParserKind::RdfXml(RdfXmlParser::new(src, None)),
+        DataFormat::Turtle => TriplesParserKind::Turtle(TurtleParser::new(src, None)),
+        DataFormat::NTriples => TriplesParserKind::NTriples(NTriplesParser::new(src)),
+        DataFormat::NQuads => TriplesParserKind::NQuads,
     })
 }
 
@@ -44,6 +40,7 @@ impl<R: BufRead> TripleReader<R> {
             TriplesParserKind::NTriples(parser) => parser.parse_all(&mut use_fn),
             TriplesParserKind::Turtle(parser) => parser.parse_all(&mut use_fn),
             TriplesParserKind::RdfXml(parser) => parser.parse_all(&mut use_fn),
+            TriplesParserKind::NQuads => Ok(()),
         }
     }
 }

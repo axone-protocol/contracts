@@ -5,7 +5,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, 
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{DataFormat, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{Store, NAMESPACE_KEY_INCREMENT, STORE};
 
 // version info for migration info
@@ -35,26 +35,31 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::InsertData { input } => insert(deps, info, input),
+        ExecuteMsg::InsertData { format, data } => {
+            insert(deps, info, format.unwrap_or(DataFormat::Turtle), data)
+        }
     }
 }
 
 pub mod execute {
     use super::*;
-    use crate::msg::DataInput;
+    use crate::msg::DataFormat;
     use crate::rdf;
     use crate::state::TripleStorer;
+    use std::io::BufReader;
 
     pub fn insert(
         deps: DepsMut,
         info: MessageInfo,
-        data: DataInput,
+        format: DataFormat,
+        data: Binary,
     ) -> Result<Response, ContractError> {
         if STORE.load(deps.storage)?.owner != info.sender {
             Err(ContractError::Unauthorized)?
         }
 
-        let mut reader = rdf::read_triples(&data);
+        let buf = BufReader::new(data.as_slice());
+        let mut reader = rdf::read_triples(format, buf);
         let mut storer = TripleStorer::new(deps.storage)?;
         let count = storer.store_all(&mut reader)?;
 

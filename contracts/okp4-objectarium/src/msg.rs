@@ -160,15 +160,13 @@ pub enum CompressionAlgorithm {
     /// Represents no compression algorithm.
     /// The object is stored as is without any compression.
     Passthrough,
-    /// # LZ4
-    /// Represents the LZ4 algorithm.
-    /// LZ4 is a lossless compression algorithm that is used to compress objects.
-    /// It is extremely fast to compress and decompress, and is suitable for real-time compression.
-    /// The compression ratio is relatively low, but the computational cost is also low, so it is a good choice
-    /// for compressing data that is already highly compressible.
+    /// # Snappy
+    /// Represents the Snappy algorithm.
+    /// Snappy is a compression/decompression algorithm that does not aim for maximum compression. Instead, it aims for very high speeds and reasonable
+    /// compression.
     ///
-    /// See [the LZ4 Wikipedia page](https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)) for more information.
-    Lz4,
+    /// See [the snappy web page](https://google.github.io/snappy/) for more information.
+    Snappy,
 }
 
 /// HashAlgorithm is an enumeration that defines the different hash algorithms

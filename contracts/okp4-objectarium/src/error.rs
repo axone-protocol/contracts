@@ -88,10 +88,10 @@ fn test_bucket_error_messages() {
         ),
         (
             ContractError::Bucket(BucketError::CompressionAlgorithmNotAccepted(
-                CompressionAlgorithm::Lz4,
+                CompressionAlgorithm::Snappy,
                 vec![CompressionAlgorithm::Passthrough],
             )),
-            "Compression algorithm is not accepted: Lz4 (accepted: \"[Passthrough]\")",
+            "Compression algorithm is not accepted: Snappy (accepted: \"[Passthrough]\")",
         ),
         (ContractError::ObjectAlreadyPinned {}, "Object is already pinned"),
         (

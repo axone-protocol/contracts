@@ -448,7 +448,7 @@ mod tests {
             BucketLimits {
                 accepted_compression_algorithms: Some(vec![
                     CompressionAlgorithm::Passthrough,
-                    CompressionAlgorithm::Lz4,
+                    CompressionAlgorithm::Snappy,
                 ]),
                 ..Default::default()
             }
@@ -989,10 +989,10 @@ mod tests {
             },
             TC {
                 accepted_compression_algorithms: None,
-                compression_algorithm: Some(CompressionAlgorithm::Lz4),
+                compression_algorithm: Some(CompressionAlgorithm::Snappy),
                 expected_result: Either::Right(ExpectedCompressionResult {
-                    compression_algorithm: CompressionAlgorithm::Lz4,
-                    compressed_size: 415,
+                    compression_algorithm: CompressionAlgorithm::Snappy,
+                    compressed_size: 414,
                 }),
             },
             TC {
@@ -1006,21 +1006,21 @@ mod tests {
             TC {
                 accepted_compression_algorithms: Some(vec![
                     CompressionAlgorithm::Passthrough,
-                    CompressionAlgorithm::Lz4,
+                    CompressionAlgorithm::Snappy,
                 ]),
-                compression_algorithm: Some(CompressionAlgorithm::Lz4),
+                compression_algorithm: Some(CompressionAlgorithm::Snappy),
                 expected_result: Either::Right(ExpectedCompressionResult {
-                    compression_algorithm: CompressionAlgorithm::Lz4,
-                    compressed_size: 415,
+                    compression_algorithm: CompressionAlgorithm::Snappy,
+                    compressed_size: 414,
                 }),
             },
             TC {
-                accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Lz4]),
+                accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Snappy]),
                 compression_algorithm: Some(CompressionAlgorithm::Passthrough),
                 expected_result: Either::Left(ContractError::Bucket(
                     BucketError::CompressionAlgorithmNotAccepted(
                         CompressionAlgorithm::Passthrough,
-                        vec![CompressionAlgorithm::Lz4],
+                        vec![CompressionAlgorithm::Snappy],
                     ),
                 )),
             },

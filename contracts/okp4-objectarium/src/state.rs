@@ -115,7 +115,7 @@ impl From<msg::CompressionAlgorithm> for CompressionAlgorithm {
     fn from(algorithm: msg::CompressionAlgorithm) -> Self {
         match algorithm {
             msg::CompressionAlgorithm::Passthrough => CompressionAlgorithm::Passthrough,
-            msg::CompressionAlgorithm::Lz4 => CompressionAlgorithm::Lz4,
+            msg::CompressionAlgorithm::Snappy => CompressionAlgorithm::Snappy,
         }
     }
 }
@@ -124,7 +124,7 @@ impl From<CompressionAlgorithm> for msg::CompressionAlgorithm {
     fn from(algorithm: CompressionAlgorithm) -> Self {
         match algorithm {
             CompressionAlgorithm::Passthrough => msg::CompressionAlgorithm::Passthrough,
-            CompressionAlgorithm::Lz4 => msg::CompressionAlgorithm::Lz4,
+            CompressionAlgorithm::Snappy => msg::CompressionAlgorithm::Snappy,
         }
     }
 }

@@ -1,7 +1,9 @@
+use std::io;
+
 use enum_iterator::Sequence;
-use lz4_flex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use snap;
 use thiserror::Error;
 
 /// CompressionAlgorithm is an enumeration that defines the different compression algorithms
@@ -10,8 +12,8 @@ use thiserror::Error;
 pub enum CompressionAlgorithm {
     /// Represents the "No compression" algorithm.
     Passthrough,
-    /// Represents the LZ4 algorithm.
-    Lz4,
+    /// Represents the Snappy algorithm.
+    Snappy,
 }
 
 impl CompressionAlgorithm {
@@ -19,7 +21,7 @@ impl CompressionAlgorithm {
     pub fn compress(&self, data: &[u8]) -> Result<Vec<u8>, CompressionError> {
         let compressor = match self {
             CompressionAlgorithm::Passthrough => passthrough,
-            CompressionAlgorithm::Lz4 => lz4_compress,
+            CompressionAlgorithm::Snappy => snappy_compress,
         };
         compressor(data)
     }
@@ -29,7 +31,7 @@ impl CompressionAlgorithm {
     pub fn decompress(&self, data: &[u8]) -> Result<Vec<u8>, CompressionError> {
         let decompressor = match self {
             CompressionAlgorithm::Passthrough => passthrough,
-            CompressionAlgorithm::Lz4 => lz4_decompress,
+            CompressionAlgorithm::Snappy => snappy_decompress,
         };
         decompressor(data)
     }
@@ -41,8 +43,8 @@ pub enum CompressionError {
     Error(String),
 }
 
-impl From<lz4_flex::block::DecompressError> for CompressionError {
-    fn from(err: lz4_flex::block::DecompressError) -> Self {
+impl From<std::io::Error> for CompressionError {
+    fn from(err: std::io::Error) -> Self {
         CompressionError::Error(err.to_string())
     }
 }
@@ -53,16 +55,26 @@ fn passthrough(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
     Ok(data.to_vec())
 }
 
-// lz4_compress returns the LZ4 compressed data.
+// snappy_compress returns the Snappy compressed data.
 #[inline]
-fn lz4_compress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
-    Ok(lz4_flex::compress_prepend_size(data))
+fn snappy_compress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
+    let mut reader = io::Cursor::new(data);
+    let mut writer = Vec::new();
+    {
+        let mut snappy_writer = snap::write::FrameEncoder::new(&mut writer);
+        io::copy(&mut reader, &mut snappy_writer)?;
+    }
+    Ok(writer)
 }
 
-// lz4_decompress returns the LZ4 decompressed data.
+// snappy_decompress returns the Snappy decompressed data.
 #[inline]
-fn lz4_decompress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
-    Ok(lz4_flex::decompress_size_prepended(data)?)
+fn snappy_decompress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
+    let reader = io::Cursor::new(data);
+    let mut snappy_reader = snap::read::FrameDecoder::new(reader);
+    let mut writer = Vec::new();
+    io::copy(&mut snappy_reader, &mut writer)?;
+    Ok(writer)
 }
 
 #[cfg(test)]
@@ -70,20 +82,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_from_lz4_flex_decompress_error() {
-        // Define test cases as tuples of input DecompressError and expected CompressionError
-        let test_cases = vec![(
-            lz4_flex::block::DecompressError::UncompressedSizeDiffers {
-                expected: 1000,
-                actual: 998,
-            },
+    fn test_from_io_decompress_error() {
+        let cases = vec![(
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "the expected decompressed size differs, actual 998, expected 1000",
+            ),
             CompressionError::Error(
                 "the expected decompressed size differs, actual 998, expected 1000".to_string(),
             ),
         )];
 
-        // Iterate over test cases using a for loop
-        for (error, expected_error) in test_cases {
+        for (error, expected_error) in cases {
             let compression_err = CompressionError::from(error);
 
             assert_eq!(compression_err, expected_error);

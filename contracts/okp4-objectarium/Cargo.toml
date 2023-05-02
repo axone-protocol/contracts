@@ -37,13 +37,11 @@ cw2.workspace = true
 derive_builder = "0.12.0"
 either = "1.8.1"
 enum-iterator = "1.4.0"
-lz4_flex = { version = "0.10", default-features = false, features = [
-  "checked-decode",
-] }
 md-5 = "0.10.5"
 schemars.workspace = true
 serde.workspace = true
 sha2 = "0.10.6"
+snap = "1"
 thiserror.workspace = true
 
 [dev-dependencies]

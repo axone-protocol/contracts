@@ -628,12 +628,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0f80d65747a3e43d1596c7c5492d95d5edddaabd45a7fcdb02b95f644164966"
 
 [[package]]
-name = "lz4_flex"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b8c72594ac26bfd34f2d99dfced2edfaddfe8a476e3ff2ca0eb293d925c4f83"
-
-[[package]]
 name = "md-5"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -709,11 +703,11 @@ dependencies = [
  "derive_builder",
  "either",
  "enum-iterator",
- "lz4_flex",
  "md-5",
  "schemars",
  "serde",
  "sha2 0.10.6",
+ "snap",
  "thiserror",
 ]
 
@@ -954,6 +948,12 @@ dependencies = [
  "digest 0.10.5",
  "rand_core 0.6.4",
 ]
+
+[[package]]
+name = "snap"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e9f0ab6ef7eb7353d9119c170a436d1bf248eea575ac42d19d12f4e34130831"
 
 [[package]]
 name = "spki"

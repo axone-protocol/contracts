@@ -79,7 +79,7 @@ mod tests {
     use super::*;
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::InsertData;
-    use crate::msg::{DataInput, StoreLimitsInput, StoreLimitsInputBuilder};
+    use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder};
     use crate::state;
     use crate::state::{namespaces, triples, Namespace};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -240,9 +240,7 @@ mod tests {
                     .max_triple_count(30u128)
                     .build()
                     .unwrap(),
-                Some(ContractError::from(StoreError::MaxTriplesLimitExceeded(
-                    30u128.into(),
-                ))),
+                Some(ContractError::from(StoreError::TripleCount(30u128.into()))),
             ),
             (
                 StoreLimitsInputBuilder::default()
@@ -256,7 +254,7 @@ mod tests {
                     .max_byte_size(50u128)
                     .build()
                     .unwrap(),
-                Some(ContractError::from(StoreError::MaxByteSize(50u128.into()))),
+                Some(ContractError::from(StoreError::ByteSize(50u128.into()))),
             ),
             (
                 StoreLimitsInputBuilder::default()
@@ -270,7 +268,7 @@ mod tests {
                     .max_insert_data_byte_size(500u128)
                     .build()
                     .unwrap(),
-                Some(ContractError::from(StoreError::MaxInsertDataByteSize(
+                Some(ContractError::from(StoreError::InsertDataByteSize(
                     500u128.into(),
                 ))),
             ),
@@ -286,7 +284,7 @@ mod tests {
                     .max_triple_byte_size(150u128)
                     .build()
                     .unwrap(),
-                Some(ContractError::from(StoreError::MaxTripleByteSize(
+                Some(ContractError::from(StoreError::TripleByteSize(
                     176u128.into(),
                     150u128.into(),
                 ))),
@@ -303,7 +301,7 @@ mod tests {
                     .max_insert_data_triple_count(30u128)
                     .build()
                     .unwrap(),
-                Some(ContractError::from(StoreError::MaxInsertDataTripleCount(
+                Some(ContractError::from(StoreError::InsertDataTripleCount(
                     30u128.into(),
                 ))),
             ),

@@ -45,8 +45,8 @@ impl KeyDeserialize for Subject {
     fn from_vec(mut value: Vec<u8>) -> StdResult<Self::Output> {
         let val = value.split_off(3);
         match val[2] {
-            b'n' => Node::from_vec(value).map(|n| Subject::Named(n)),
-            b'b' => String::from_vec(value).map(|n| Subject::Blank(n)),
+            b'n' => Node::from_vec(value).map(Subject::Named),
+            b'b' => String::from_vec(value).map(Subject::Blank),
             _ => Err(StdError::generic_err("Could not deserialize subject key")),
         }
     }

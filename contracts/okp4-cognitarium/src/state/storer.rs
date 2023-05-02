@@ -46,21 +46,19 @@ impl<'a> TripleStorer<'a> {
     pub fn store_triple(&mut self, t: model::Triple) -> Result<(), ContractError> {
         self.store.stat.triple_count += Uint128::one();
         if self.store.stat.triple_count > self.store.limits.max_triple_count {
-            Err(StoreError::MaxTriplesLimitExceeded(
-                self.store.limits.max_triple_count,
-            ))?
+            Err(StoreError::TripleCount(self.store.limits.max_triple_count))?
         }
         if self.store.stat.triple_count - self.initial_triple_count
             > self.store.limits.max_insert_data_triple_count
         {
-            Err(StoreError::MaxInsertDataTripleCount(
+            Err(StoreError::InsertDataTripleCount(
                 self.store.limits.max_insert_data_triple_count,
             ))?
         }
 
         let t_size = Uint128::from(Self::triple_size(t) as u128);
         if t_size > self.store.limits.max_triple_byte_size {
-            Err(StoreError::MaxTripleByteSize(
+            Err(StoreError::TripleByteSize(
                 t_size,
                 self.store.limits.max_triple_byte_size,
             ))?
@@ -68,12 +66,12 @@ impl<'a> TripleStorer<'a> {
 
         self.store.stat.byte_size += t_size;
         if self.store.stat.byte_size > self.store.limits.max_byte_size {
-            Err(StoreError::MaxByteSize(self.store.limits.max_byte_size))?
+            Err(StoreError::ByteSize(self.store.limits.max_byte_size))?
         }
         if self.store.stat.byte_size - self.initial_byte_size
             > self.store.limits.max_insert_data_byte_size
         {
-            Err(StoreError::MaxInsertDataByteSize(
+            Err(StoreError::InsertDataByteSize(
                 self.store.limits.max_insert_data_byte_size,
             ))?
         }
@@ -140,7 +138,7 @@ impl<'a> TripleStorer<'a> {
 
     fn subject(&mut self, subject: model::Subject) -> StdResult<Subject> {
         match subject {
-            model::Subject::NamedNode(node) => self.node(node).map(|n| Subject::Named(n)),
+            model::Subject::NamedNode(node) => self.node(node).map(Subject::Named),
             model::Subject::BlankNode(node) => Ok(Subject::Blank(node.id.to_string())),
             _ => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
@@ -157,8 +155,8 @@ impl<'a> TripleStorer<'a> {
     fn object(&mut self, object: model::Term) -> StdResult<Object> {
         match object {
             Term::BlankNode(node) => Ok(Object::Blank(node.id.to_string())),
-            Term::NamedNode(node) => self.node(node).map(|n| Object::Named(n)),
-            Term::Literal(literal) => self.literal(literal).map(|l| Object::Literal(l)),
+            Term::NamedNode(node) => self.node(node).map(Object::Named),
+            Term::Literal(literal) => self.literal(literal).map(Object::Literal),
             _ => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }

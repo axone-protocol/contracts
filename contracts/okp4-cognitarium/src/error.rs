@@ -33,31 +33,25 @@ impl From<TurtleError> for ContractError {
 #[derive(Error, Debug, PartialEq)]
 pub enum StoreError {
     #[error("Maximum triples number exceeded: {0}")]
-    MaxTriplesLimitExceeded(Uint128),
+    TripleCount(Uint128),
 
     #[error("Maximum byte size exceeded: {0}")]
-    MaxByteSize(Uint128),
+    ByteSize(Uint128),
 
     #[error("Maximum triple byte size exceeded: {0} / {1}")]
-    MaxTripleByteSize(Uint128, Uint128),
-
-    #[error("Maximum query limit exceeded: {0} / {1}")]
-    MaxQueryLimit(Uint128, Uint128),
-
-    #[error("Maximum query variable count exceeded: {0} / {1}")]
-    MaxQueryVariableCount(Uint128, Uint128),
+    TripleByteSize(Uint128, Uint128),
 
     #[error("Maximum insert byte size exceeded: {0}")]
-    MaxInsertDataByteSize(Uint128),
+    InsertDataByteSize(Uint128),
 
     #[error("Maximum insert triple count exceeded: {0}")]
-    MaxInsertDataTripleCount(Uint128),
+    InsertDataTripleCount(Uint128),
 }
 
 #[derive(Error, Debug, PartialEq)]
 pub enum RDFParseError {
     #[error("Error parsing XML RDF: {0}")]
-    XML(String),
+    Xml(String),
 
     #[error("Error parsing Turtle RDF: {0}")]
     Turtle(String),
@@ -65,12 +59,12 @@ pub enum RDFParseError {
 
 impl From<RdfXmlError> for RDFParseError {
     fn from(value: RdfXmlError) -> Self {
-        RDFParseError::XML(value.to_string())
+        RDFParseError::Xml(value.to_string())
     }
 }
 
 impl From<TurtleError> for RDFParseError {
     fn from(value: TurtleError) -> Self {
-        RDFParseError::XML(value.to_string())
+        RDFParseError::Xml(value.to_string())
     }
 }

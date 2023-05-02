@@ -274,8 +274,8 @@ pub struct BucketLimits {
     /// Typically, the most efficient compression algorithm, such as the NoCompression algorithm, should
     /// be placed first in the array.
     ///
-    /// Any attempt to store an object using a different compression algorithm or without any compression
-    /// specified will result in a failure.
+    /// Any attempt to store an object using a different compression algorithm than the ones specified
+    /// here will fail.
     pub accepted_compression_algorithms: Option<Vec<CompressionAlgorithm>>,
 }
 

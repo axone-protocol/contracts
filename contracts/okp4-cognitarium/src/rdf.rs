@@ -1,8 +1,8 @@
 use crate::msg::DataFormat;
 use cosmwasm_std::{StdError, StdResult};
-use rio_api::model::Triple;
-use rio_api::parser::TriplesParser;
-use rio_turtle::{NTriplesParser, TurtleError, TurtleParser};
+use rio_api::model::{Quad, Triple};
+use rio_api::parser::{QuadsParser, TriplesParser};
+use rio_turtle::{NQuadsParser, NTriplesParser, TurtleError, TurtleParser};
 use rio_xml::{RdfXmlError, RdfXmlParser};
 use std::io::BufRead;
 
@@ -10,11 +10,12 @@ pub struct TripleReader<R: BufRead> {
     parser: TriplesParserKind<R>,
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum TriplesParserKind<R: BufRead> {
     NTriples(NTriplesParser<R>),
     Turtle(TurtleParser<R>),
     RdfXml(RdfXmlParser<R>),
-    NQuads,
+    NQuads(NQuadsParser<R>),
 }
 
 pub fn read_triples<R: BufRead>(format: DataFormat, src: R) -> TripleReader<R> {
@@ -22,7 +23,7 @@ pub fn read_triples<R: BufRead>(format: DataFormat, src: R) -> TripleReader<R> {
         DataFormat::RDFXml => TriplesParserKind::RdfXml(RdfXmlParser::new(src, None)),
         DataFormat::Turtle => TriplesParserKind::Turtle(TurtleParser::new(src, None)),
         DataFormat::NTriples => TriplesParserKind::NTriples(NTriplesParser::new(src)),
-        DataFormat::NQuads => TriplesParserKind::NQuads,
+        DataFormat::NQuads => TriplesParserKind::NQuads(NQuadsParser::new(src)),
     })
 }
 
@@ -40,7 +41,15 @@ impl<R: BufRead> TripleReader<R> {
             TriplesParserKind::NTriples(parser) => parser.parse_all(&mut use_fn),
             TriplesParserKind::Turtle(parser) => parser.parse_all(&mut use_fn),
             TriplesParserKind::RdfXml(parser) => parser.parse_all(&mut use_fn),
-            TriplesParserKind::NQuads => Ok(()),
+            TriplesParserKind::NQuads(parser) => {
+                parser.parse_all(&mut |quad: Quad| -> Result<(), E> {
+                    use_fn(Triple {
+                        subject: quad.subject,
+                        predicate: quad.predicate,
+                        object: quad.object,
+                    })
+                })
+            }
         }
     }
 }

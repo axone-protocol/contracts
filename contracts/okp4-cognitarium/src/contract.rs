@@ -78,6 +78,7 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 mod tests {
     use super::*;
     use crate::error::StoreError;
+    use crate::msg::ExecuteMsg::InsertData;
     use crate::msg::{DataInput, StoreLimitsInput, StoreLimitsInputBuilder};
     use crate::state;
     use crate::state::{namespaces, triples, Namespace};
@@ -125,7 +126,8 @@ mod tests {
         assert_eq!(
             store.stat,
             state::StoreStat {
-                triples_count: Uint128::zero(),
+                triple_count: Uint128::zero(),
+                byte_size: Uint128::zero(),
             }
         );
 
@@ -135,9 +137,22 @@ mod tests {
     #[test]
     fn proper_insert() {
         let cases = vec![
-            DataInput::RDFXml(read_test_data("sample.rdf.xml")),
-            DataInput::Turtle(read_test_data("sample.ttl")),
-            DataInput::NTriples(read_test_data("sample.nt")),
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+            InsertData {
+                format: Some(DataFormat::Turtle),
+                data: read_test_data("sample.ttl"),
+            },
+            InsertData {
+                format: Some(DataFormat::NTriples),
+                data: read_test_data("sample.nt"),
+            },
+            InsertData {
+                format: None,
+                data: read_test_data("sample.ttl"),
+            },
         ];
 
         for case in cases {
@@ -154,12 +169,7 @@ mod tests {
             )
             .unwrap();
 
-            let res = execute(
-                deps.as_mut(),
-                mock_env(),
-                info.clone(),
-                ExecuteMsg::InsertData { input: case },
-            );
+            let res = execute(deps.as_mut(), mock_env(), info.clone(), case);
 
             assert!(res.is_ok());
             assert_eq!(
@@ -177,7 +187,7 @@ mod tests {
                 40
             );
             assert_eq!(
-                STORE.load(&deps.storage).unwrap().stat.triples_count,
+                STORE.load(&deps.storage).unwrap().stat.triple_count,
                 Uint128::from(40u128),
             );
             assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 17u128);
@@ -213,8 +223,9 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             mock_info("not-owner", &[]),
-            ExecuteMsg::InsertData {
-                input: DataInput::RDFXml(Binary::from(&[])),
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
             },
         );
         assert!(res.is_err());
@@ -256,16 +267,33 @@ mod tests {
             ),
             (
                 StoreLimitsInputBuilder::default()
-                    .max_insert_data_byte_size(50u128)
+                    .max_insert_data_byte_size(500u128)
                     .build()
                     .unwrap(),
                 Some(ContractError::from(StoreError::MaxInsertDataByteSize(
-                    50u128.into(),
+                    500u128.into(),
                 ))),
             ),
             (
                 StoreLimitsInputBuilder::default()
                     .max_insert_data_byte_size(50000u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_triple_byte_size(150u128)
+                    .build()
+                    .unwrap(),
+                Some(ContractError::from(StoreError::MaxTripleByteSize(
+                    176u128.into(),
+                    150u128.into(),
+                ))),
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_triple_byte_size(400u128)
                     .build()
                     .unwrap(),
                 None,
@@ -288,8 +316,9 @@ mod tests {
             ),
         ];
 
-        let exec_msg = ExecuteMsg::InsertData {
-            input: DataInput::RDFXml(read_test_data("sample.rdf.xml")),
+        let exec_msg = InsertData {
+            format: Some(DataFormat::RDFXml),
+            data: read_test_data("sample.rdf.xml"),
         };
         for case in cases {
             let mut deps = mock_dependencies();

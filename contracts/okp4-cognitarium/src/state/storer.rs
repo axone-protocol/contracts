@@ -8,6 +8,7 @@ use crate::{rdf, ContractError};
 use blake3::Hash;
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use rio_api::model;
+use rio_api::model::Term;
 use std::collections::BTreeMap;
 use std::io::BufRead;
 
@@ -17,6 +18,7 @@ pub struct TripleStorer<'a> {
     ns_key_inc_offset: u128,
     ns_cache: BTreeMap<String, Namespace>,
     initial_triple_count: Uint128,
+    initial_byte_size: Uint128,
 }
 
 impl<'a> TripleStorer<'a> {
@@ -28,7 +30,8 @@ impl<'a> TripleStorer<'a> {
             store: store.clone(),
             ns_key_inc_offset,
             ns_cache: BTreeMap::new(),
-            initial_triple_count: store.stat.triples_count,
+            initial_triple_count: store.stat.triple_count,
+            initial_byte_size: store.stat.byte_size,
         })
     }
 
@@ -41,15 +44,41 @@ impl<'a> TripleStorer<'a> {
     }
 
     pub fn store_triple(&mut self, t: model::Triple) -> Result<(), ContractError> {
-        let triple = self.triple(t)?;
-        self.store.stat.triples_count += Uint128::one();
-
-        if self.store.stat.triples_count > self.store.limits.max_triple_count {
+        self.store.stat.triple_count += Uint128::one();
+        if self.store.stat.triple_count > self.store.limits.max_triple_count {
             Err(StoreError::MaxTriplesLimitExceeded(
                 self.store.limits.max_triple_count,
             ))?
         }
+        if self.store.stat.triple_count - self.initial_triple_count
+            > self.store.limits.max_insert_data_triple_count
+        {
+            Err(StoreError::MaxInsertDataTripleCount(
+                self.store.limits.max_insert_data_triple_count,
+            ))?
+        }
 
+        let t_size = Uint128::from(Self::triple_size(t) as u128);
+        if t_size > self.store.limits.max_triple_byte_size {
+            Err(StoreError::MaxTripleByteSize(
+                t_size,
+                self.store.limits.max_triple_byte_size,
+            ))?
+        }
+
+        self.store.stat.byte_size += t_size;
+        if self.store.stat.byte_size > self.store.limits.max_byte_size {
+            Err(StoreError::MaxByteSize(self.store.limits.max_byte_size))?
+        }
+        if self.store.stat.byte_size - self.initial_byte_size
+            > self.store.limits.max_insert_data_byte_size
+        {
+            Err(StoreError::MaxInsertDataByteSize(
+                self.store.limits.max_insert_data_byte_size,
+            ))?
+        }
+
+        let triple = self.triple(t)?;
         let object_hash: Hash = triple.object.as_hash();
         triples()
             .save(
@@ -71,7 +100,7 @@ impl<'a> TripleStorer<'a> {
             namespaces().save(self.storage, entry.0.to_string(), entry.1)?;
         }
 
-        Ok(self.store.stat.triples_count - self.initial_triple_count)
+        Ok(self.store.stat.triple_count - self.initial_triple_count)
     }
 
     fn resolve_namespace_key(&mut self, ns_str: String) -> StdResult<u128> {
@@ -127,9 +156,9 @@ impl<'a> TripleStorer<'a> {
 
     fn object(&mut self, object: model::Term) -> StdResult<Object> {
         match object {
-            model::Term::BlankNode(node) => Ok(Object::Blank(node.id.to_string())),
-            model::Term::NamedNode(node) => self.node(node).map(|n| Object::Named(n)),
-            model::Term::Literal(literal) => self.literal(literal).map(|l| Object::Literal(l)),
+            Term::BlankNode(node) => Ok(Object::Blank(node.id.to_string())),
+            Term::NamedNode(node) => self.node(node).map(|n| Object::Named(n)),
+            Term::Literal(literal) => self.literal(literal).map(|l| Object::Literal(l)),
             _ => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
@@ -149,6 +178,41 @@ impl<'a> TripleStorer<'a> {
                     datatype: node,
                 })
             }
+        }
+    }
+
+    fn triple_size(triple: model::Triple) -> usize {
+        Self::subject_size(triple.subject)
+            + Self::node_size(triple.predicate)
+            + Self::object_size(triple.object)
+    }
+
+    fn subject_size(subject: model::Subject) -> usize {
+        match subject {
+            model::Subject::NamedNode(n) => Self::node_size(n),
+            model::Subject::BlankNode(n) => n.id.len(),
+            model::Subject::Triple(_) => 0,
+        }
+    }
+
+    fn node_size(node: model::NamedNode) -> usize {
+        node.iri.len()
+    }
+
+    fn object_size(term: Term) -> usize {
+        match term {
+            Term::NamedNode(n) => Self::node_size(n),
+            Term::BlankNode(n) => n.id.len(),
+            Term::Literal(l) => match l {
+                model::Literal::Simple { value } => value.len(),
+                model::Literal::LanguageTaggedString { value, language } => {
+                    value.len() + language.len()
+                }
+                model::Literal::Typed { value, datatype } => {
+                    value.len() + Self::node_size(datatype)
+                }
+            },
+            Term::Triple(_) => 0,
         }
     }
 }

@@ -76,7 +76,7 @@ impl<'a> TripleStorer<'a> {
             ))?
         }
 
-        let triple = self.triple(t)?;
+        let triple = self.rio_to_triple(t)?;
         let object_hash: Hash = triple.object.as_hash();
         triples()
             .save(
@@ -128,23 +128,23 @@ impl<'a> TripleStorer<'a> {
         }
     }
 
-    fn triple(&mut self, triple: model::Triple) -> StdResult<Triple> {
+    fn rio_to_triple(&mut self, triple: model::Triple) -> StdResult<Triple> {
         Ok(Triple {
-            subject: self.subject(triple.subject)?,
-            predicate: self.node(triple.predicate)?,
-            object: self.object(triple.object)?,
+            subject: self.rio_to_subject(triple.subject)?,
+            predicate: self.rio_to_node(triple.predicate)?,
+            object: self.rio_to_object(triple.object)?,
         })
     }
 
-    fn subject(&mut self, subject: model::Subject) -> StdResult<Subject> {
+    fn rio_to_subject(&mut self, subject: model::Subject) -> StdResult<Subject> {
         match subject {
-            model::Subject::NamedNode(node) => self.node(node).map(Subject::Named),
+            model::Subject::NamedNode(node) => self.rio_to_node(node).map(Subject::Named),
             model::Subject::BlankNode(node) => Ok(Subject::Blank(node.id.to_string())),
             _ => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
 
-    fn node(&mut self, node: model::NamedNode) -> StdResult<Node> {
+    fn rio_to_node(&mut self, node: model::NamedNode) -> StdResult<Node> {
         let (ns, v) = rdf::explode_iri(node.iri)?;
         Ok(Node {
             namespace: self.resolve_namespace_key(ns)?,
@@ -152,16 +152,16 @@ impl<'a> TripleStorer<'a> {
         })
     }
 
-    fn object(&mut self, object: model::Term) -> StdResult<Object> {
+    fn rio_to_object(&mut self, object: model::Term) -> StdResult<Object> {
         match object {
             Term::BlankNode(node) => Ok(Object::Blank(node.id.to_string())),
-            Term::NamedNode(node) => self.node(node).map(Object::Named),
-            Term::Literal(literal) => self.literal(literal).map(Object::Literal),
+            Term::NamedNode(node) => self.rio_to_node(node).map(Object::Named),
+            Term::Literal(literal) => self.rio_to_literal(literal).map(Object::Literal),
             _ => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
 
-    fn literal(&mut self, literal: model::Literal) -> StdResult<Literal> {
+    fn rio_to_literal(&mut self, literal: model::Literal) -> StdResult<Literal> {
         match literal {
             model::Literal::Simple { value } => Ok(Literal::Simple {
                 value: value.to_string(),
@@ -171,7 +171,7 @@ impl<'a> TripleStorer<'a> {
                 language: language.to_string(),
             }),
             model::Literal::Typed { value, datatype } => {
-                self.node(datatype).map(|node| Literal::Typed {
+                self.rio_to_node(datatype).map(|node| Literal::Typed {
                     value: value.to_string(),
                     datatype: node,
                 })

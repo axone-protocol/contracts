@@ -18,18 +18,16 @@ pub enum TriplesParserKind<R: BufRead> {
     NQuads(NQuadsParser<R>),
 }
 
-pub fn read_triples<R: BufRead>(format: DataFormat, src: R) -> TripleReader<R> {
-    TripleReader::new(match format {
-        DataFormat::RDFXml => TriplesParserKind::RdfXml(RdfXmlParser::new(src, None)),
-        DataFormat::Turtle => TriplesParserKind::Turtle(TurtleParser::new(src, None)),
-        DataFormat::NTriples => TriplesParserKind::NTriples(NTriplesParser::new(src)),
-        DataFormat::NQuads => TriplesParserKind::NQuads(NQuadsParser::new(src)),
-    })
-}
-
 impl<R: BufRead> TripleReader<R> {
-    pub fn new(parser: TriplesParserKind<R>) -> Self {
-        TripleReader { parser }
+    pub fn new(format: DataFormat, src: R) -> Self {
+        TripleReader {
+            parser: match format {
+                DataFormat::RDFXml => TriplesParserKind::RdfXml(RdfXmlParser::new(src, None)),
+                DataFormat::Turtle => TriplesParserKind::Turtle(TurtleParser::new(src, None)),
+                DataFormat::NTriples => TriplesParserKind::NTriples(NTriplesParser::new(src)),
+                DataFormat::NQuads => TriplesParserKind::NQuads(NQuadsParser::new(src)),
+            },
+        }
     }
 
     pub fn read_all<E, UF>(&mut self, mut use_fn: UF) -> Result<(), E>

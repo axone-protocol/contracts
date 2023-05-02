@@ -702,7 +702,6 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw2 1.0.1",
  "derive_builder",
- "oxiri",
  "rio_api",
  "rio_turtle",
  "rio_xml",

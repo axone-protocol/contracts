@@ -39,7 +39,6 @@ thiserror.workspace = true
 rio_api = "0.8.3"
 rio_xml = "0.8.3"
 rio_turtle = "0.8.3"
-oxiri = "0.2.2"
 blake3 = "1.3.3"
 
 [dev-dependencies]

@@ -44,7 +44,7 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::msg::DataFormat;
-    use crate::rdf;
+    use crate::rdf::TripleReader;
     use crate::state::TripleStorer;
     use std::io::BufReader;
 
@@ -59,7 +59,7 @@ pub mod execute {
         }
 
         let buf = BufReader::new(data.as_slice());
-        let mut reader = rdf::read_triples(format, buf);
+        let mut reader = TripleReader::new(format, buf);
         let mut storer = TripleStorer::new(deps.storage)?;
         let count = storer.store_all(&mut reader)?;
 

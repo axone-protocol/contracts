@@ -43,7 +43,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::StoreObject { data, pin } => execute::store_object(deps, info, data, pin),
+        ExecuteMsg::StoreObject {
+            data,
+            pin,
+            compression_algorithm,
+        } => execute::store_object(deps, info, data, pin, compression_algorithm),
         ExecuteMsg::PinObject { id } => execute::pin_object(deps, info, id),
         ExecuteMsg::UnpinObject { id } => execute::unpin_object(deps, info, id),
         ExecuteMsg::ForgetObject { id } => execute::forget_object(deps, info, id),
@@ -52,6 +56,8 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
+    use crate::compress::CompressionAlgorithm;
+    use crate::msg;
     use crate::state::BucketLimits;
     use crate::ContractError::ObjectAlreadyPinned;
     use cosmwasm_std::{Order, StdError, Uint128};
@@ -62,62 +68,88 @@ pub mod execute {
         info: MessageInfo,
         data: Binary,
         pin: bool,
+        compression_algorithm: Option<msg::CompressionAlgorithm>,
     ) -> Result<Response, ContractError> {
         let size = (data.len() as u128).into();
-        let bucket_info =
-            BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
-                bucket.stat.size += size;
-                bucket.stat.object_count += Uint128::one();
-                match bucket.limits {
-                    BucketLimits {
-                        max_object_size: Some(max),
-                        ..
-                    } if size > max => {
-                        Err(BucketError::MaxObjectSizeLimitExceeded(size, max).into())
-                    }
-                    BucketLimits {
-                        max_objects: Some(max),
-                        ..
-                    } if bucket.stat.object_count > max => Err(
-                        BucketError::MaxObjectsLimitExceeded(bucket.stat.object_count, max).into(),
-                    ),
-                    BucketLimits {
-                        max_object_pins: Some(max),
-                        ..
-                    } if pin && max < Uint128::one() => {
-                        Err(BucketError::MaxObjectPinsLimitExceeded(Uint128::one(), max).into())
-                    }
-                    BucketLimits {
-                        max_total_size: Some(max),
-                        ..
-                    } if bucket.stat.size > max => {
-                        Err(BucketError::MaxTotalSizeLimitExceeded(bucket.stat.size, max).into())
-                    }
-                    _ => Ok(bucket),
-                }
-            })?;
+        let bucket = BUCKET.load(deps.storage)?;
+        let compressions = &bucket.limits.accepted_compression_algorithms;
+        let compression: CompressionAlgorithm = compression_algorithm
+            .map(|a| a.into())
+            .or_else(|| compressions.first().cloned())
+            .unwrap_or(CompressionAlgorithm::Passthrough);
 
-        let object = &Object {
-            id: crypto::hash(
-                &crypto::HashAlgorithm::from(bucket_info.config.hash_algorithm_or_default()),
-                &data.0,
-            ),
-            owner: info.sender.clone(),
-            size,
-            pin_count: if pin { Uint128::one() } else { Uint128::zero() },
-        };
-        let res = Response::new()
-            .add_attribute("action", "store_object")
-            .add_attribute("id", object.id.clone());
+        // pre-conditions
+        if let Some(limit) = bucket.limits.max_object_size {
+            if size > limit {
+                return Err(BucketError::MaxObjectSizeLimitExceeded(size, limit).into());
+            }
+        }
+        if let Some(limit) = bucket.limits.max_objects {
+            let value = bucket.stat.object_count + Uint128::one();
+            if value > limit {
+                return Err(BucketError::MaxObjectsLimitExceeded(value, limit).into());
+            }
+        }
+        if let Some(limit) = bucket.limits.max_object_pins {
+            if pin && limit.is_zero() {
+                return Err(BucketError::MaxObjectPinsLimitExceeded(Uint128::one(), limit).into());
+            }
+        }
+        if let Some(limit) = bucket.limits.max_total_size {
+            let value = bucket.stat.size + size;
+            if value > limit {
+                return Err(BucketError::MaxTotalSizeLimitExceeded(value, limit).into());
+            }
+        }
+        if !compressions.contains(&compression) {
+            return Err(BucketError::CompressionAlgorithmNotAccepted(
+                compression.into(),
+                bucket
+                    .limits
+                    .accepted_compression_algorithms
+                    .into_iter()
+                    .map(|a| a.into())
+                    .collect(),
+            )
+            .into());
+        }
 
-        let data_path = DATA.key(object.id.clone());
+        // store object data
+        let id = crypto::hash(
+            &crypto::HashAlgorithm::from(bucket.config.hash_algorithm_or_default()),
+            &data.0,
+        );
+        let data_path = DATA.key(id.clone());
         if data_path.has(deps.storage) {
             return Err(ContractError::Bucket(BucketError::ObjectAlreadyStored));
         }
+        let compressed_data = compression.compress(&data.0)?;
 
-        data_path.save(deps.storage, &data.0)?;
-        objects().save(deps.storage, object.id.clone(), object)?;
+        data_path.save(deps.storage, &compressed_data.to_vec())?;
 
+        // store object
+        let compressed_size = (compressed_data.len() as u128).into();
+        let object = &Object {
+            id: id.clone(),
+            owner: info.sender.clone(),
+            size,
+            pin_count: if pin { Uint128::one() } else { Uint128::zero() },
+            compression,
+            compressed_size,
+        };
+
+        objects().save(deps.storage, id, object)?;
+
+        // save bucket stats
+        BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
+            let stat = &mut bucket.stat;
+            stat.size += size;
+            stat.object_count += Uint128::one();
+            stat.compressed_size += compressed_size;
+            Ok(bucket)
+        })?;
+
+        // save pin
         if pin {
             pins().save(
                 deps.storage,
@@ -129,7 +161,9 @@ pub mod execute {
             )?;
         }
 
-        Ok(res)
+        Ok(Response::new()
+            .add_attribute("action", "store_object")
+            .add_attribute("id", object.id.clone()))
     }
 
     pub fn pin_object(
@@ -238,8 +272,8 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    Ok(match msg {
         QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
         QueryMsg::Object { id } => to_binary(&query::object(deps, id)?),
         QueryMsg::ObjectData { id } => to_binary(&query::data(deps, id)?),
@@ -251,7 +285,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::ObjectPins { id, after, first } => {
             to_binary(&query::object_pins(deps, id, after, first)?)
         }
-    }
+    }?)
 }
 
 pub mod query {
@@ -263,7 +297,7 @@ pub mod query {
     use crate::pagination::PaginationHandler;
     use cosmwasm_std::{Addr, Order};
 
-    pub fn bucket(deps: Deps) -> StdResult<BucketResponse> {
+    pub fn bucket(deps: Deps) -> Result<BucketResponse, ContractError> {
         let bucket = BUCKET.load(deps.storage)?;
 
         Ok(BucketResponse {
@@ -274,14 +308,16 @@ pub mod query {
         })
     }
 
-    pub fn object(deps: Deps, id: ObjectId) -> StdResult<ObjectResponse> {
-        objects()
-            .load(deps.storage, id)
-            .map(|object| (&object).into())
+    pub fn object(deps: Deps, id: ObjectId) -> Result<ObjectResponse, ContractError> {
+        let object = objects().load(deps.storage, id)?;
+        Ok((&object).into())
     }
 
-    pub fn data(deps: Deps, id: ObjectId) -> StdResult<Binary> {
-        DATA.load(deps.storage, id).map(Binary::from)
+    pub fn data(deps: Deps, id: ObjectId) -> Result<Binary, ContractError> {
+        let compression = objects().load(deps.storage, id.clone())?.compression;
+        let data = DATA.load(deps.storage, id)?;
+        let decompressed_data = compression.decompress(&data)?;
+        Ok(Binary::from(decompressed_data))
     }
 
     pub fn fetch_objects(
@@ -378,8 +414,8 @@ mod tests {
     use super::*;
     use crate::error::BucketError;
     use crate::msg::{
-        BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse, HashAlgorithm,
-        ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfig,
+        BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm,
+        HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
         PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
@@ -394,9 +430,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo".to_string(),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -406,8 +442,17 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
-        assert_eq!(value.config, BucketConfig::default());
-        assert_eq!(value.limits, BucketLimits::default());
+        assert_eq!(value.config, Default::default());
+        assert_eq!(
+            value.limits,
+            BucketLimits {
+                accepted_compression_algorithms: Some(vec![
+                    CompressionAlgorithm::Passthrough,
+                    CompressionAlgorithm::Snappy,
+                ]),
+                ..Default::default()
+            }
+        );
         assert_eq!(value.pagination.max_page_size, Some(30));
         assert_eq!(value.pagination.default_page_size, Some(10));
 
@@ -436,8 +481,8 @@ mod tests {
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
                 config: BucketConfig { hash_algorithm },
-                limits: BucketLimits::default(),
-                pagination: PaginationConfig::default(),
+                limits: Default::default(),
+                pagination: Default::default(),
             };
             let info = mock_info("creator", &[]);
 
@@ -457,7 +502,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            config: BucketConfig::default(),
+            config: Default::default(),
             limits: BucketLimitsBuilder::default()
                 .max_total_size(Uint128::new(20000))
                 .max_objects(Uint128::new(10))
@@ -492,8 +537,8 @@ mod tests {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             bucket: "bar".to_string(),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
+            config: Default::default(),
+            limits: Default::default(),
             pagination: PaginationConfigBuilder::default()
                 .max_page_size(50)
                 .default_page_size(30)
@@ -530,8 +575,8 @@ mod tests {
             let mut deps = mock_dependencies();
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
-                config: BucketConfig::default(),
-                limits: BucketLimits::default(),
+                config: Default::default(),
+                limits: Default::default(),
                 pagination: case.0,
             };
             match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
@@ -547,9 +592,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "".to_string(),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -564,9 +609,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: "foo bar".to_string(),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         let info = mock_info("creator", &[]);
 
@@ -711,8 +756,8 @@ mod tests {
                 InstantiateMsg {
                     bucket: "test".to_string(),
                     config: BucketConfig { hash_algorithm },
-                    limits: BucketLimits::default(),
-                    pagination: PaginationConfig::default(),
+                    limits: Default::default(),
+                    pagination: Default::default(),
                 },
             )
             .unwrap();
@@ -721,6 +766,7 @@ mod tests {
                 let msg = ExecuteMsg::StoreObject {
                     data: Binary::from_base64(content).unwrap(),
                     pin: *pin,
+                    compression_algorithm: Some(CompressionAlgorithm::Passthrough),
                 };
                 let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
                 assert_eq!(
@@ -754,7 +800,7 @@ mod tests {
                 assert_eq!(
                     pins().has(
                         &deps.storage,
-                        (expected_hash.to_string(), info.clone().sender)
+                        (expected_hash.to_string(), info.clone().sender),
                     ),
                     *pin,
                 );
@@ -790,9 +836,9 @@ mod tests {
         let info = mock_info("creator", &[]);
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -800,6 +846,7 @@ mod tests {
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(object.as_str()).unwrap(),
             pin: true,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
         assert_eq!(
@@ -886,24 +933,156 @@ mod tests {
             let info = mock_info("creator", &[]);
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
-                config: BucketConfig::default(),
-                limits: case.0, // case.0(&mut BucketLimitsBuilder::default()).unwrap(),
-                pagination: PaginationConfig::default(),
+                config: Default::default(),
+                limits: case.0,
+                pagination: Default::default(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(obj1.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(obj2.as_str()).unwrap(),
                 pin: true,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let res = execute(deps.as_mut(), mock_env(), info.clone(), msg);
 
             assert_eq!(res.err(), case.1);
+        }
+    }
+
+    #[test]
+    fn store_object_compressed() {
+        use either::Either;
+
+        struct ExpectedCompressionResult {
+            compression_algorithm: CompressionAlgorithm,
+            compressed_size: u128,
+        }
+        struct TC {
+            accepted_compression_algorithms: Option<Vec<CompressionAlgorithm>>,
+            compression_algorithm: Option<CompressionAlgorithm>,
+            expected_result: Either<ContractError, ExpectedCompressionResult>,
+        }
+
+        let cases: Vec<TC> = vec![
+            TC {
+                accepted_compression_algorithms: None,
+                compression_algorithm: None,
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Passthrough,
+                    compressed_size: 466,
+                }),
+            },
+            TC {
+                accepted_compression_algorithms: None,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Passthrough,
+                    compressed_size: 466,
+                }),
+            },
+            TC {
+                accepted_compression_algorithms: None,
+                compression_algorithm: Some(CompressionAlgorithm::Snappy),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Snappy,
+                    compressed_size: 414,
+                }),
+            },
+            TC {
+                accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Passthrough]),
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Passthrough,
+                    compressed_size: 466,
+                }),
+            },
+            TC {
+                accepted_compression_algorithms: Some(vec![
+                    CompressionAlgorithm::Passthrough,
+                    CompressionAlgorithm::Snappy,
+                ]),
+                compression_algorithm: Some(CompressionAlgorithm::Snappy),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Snappy,
+                    compressed_size: 414,
+                }),
+            },
+            TC {
+                accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Snappy]),
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+                expected_result: Either::Left(ContractError::Bucket(
+                    BucketError::CompressionAlgorithmNotAccepted(
+                        CompressionAlgorithm::Passthrough,
+                        vec![CompressionAlgorithm::Snappy],
+                    ),
+                )),
+            },
+        ];
+        let data ="In a magical land,  there were many realms, one of which was known as OKP4. Within \
+            this realm, druid programmers possessed the power to create smart contracts. As the kingdom \
+            grew, the druids used their skills to power decentralized systems, bringing prosperity and \
+            wonder to all who sought their expertise. And so, the legend of the druid programmers and \
+            their magical smart contracts lived on, inspiring future generations to unlock the power of \
+            the digital realm.";
+        let obj = general_purpose::STANDARD.encode(data);
+        let obj_id = "25056da0c504e6beb9d8666f9e5919a4a02689f4bceeb4698a21c651f07d8e04";
+
+        for case in cases {
+            // Arrange
+            let mut deps = mock_dependencies();
+            let info = mock_info("creator", &[]);
+            let msg = InstantiateMsg {
+                bucket: String::from("test"),
+                config: Default::default(),
+                limits: BucketLimits {
+                    accepted_compression_algorithms: case.accepted_compression_algorithms,
+                    ..Default::default()
+                },
+                pagination: Default::default(),
+            };
+            instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            // Act
+            let res = execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                ExecuteMsg::StoreObject {
+                    data: Binary::from_base64(obj.as_str()).unwrap(),
+                    pin: false,
+                    compression_algorithm: case.compression_algorithm,
+                },
+            );
+
+            // Assert
+            match case.expected_result {
+                Either::Left(err) => assert_eq!(res.err(), Some(err)),
+                Either::Right(expected) => {
+                    let _to_assert_if_we_want = res.unwrap();
+                    let res_object_info = query::object(deps.as_ref(), obj_id.to_string()).unwrap();
+                    let res_object_data = query::data(deps.as_ref(), obj_id.to_string()).unwrap();
+
+                    assert_eq!(
+                        res_object_info,
+                        ObjectResponse {
+                            id: obj_id.to_string(),
+                            owner: "creator".to_string(),
+                            is_pinned: false,
+                            size: Uint128::from(data.len() as u128),
+                            compressed_size: expected.compressed_size.into(),
+                            compression_algorithm: expected.compression_algorithm,
+                        }
+                    );
+                    assert_eq!(res_object_data, data.as_bytes().to_vec());
+                }
+            }
         }
     }
 
@@ -914,9 +1093,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -930,7 +1109,7 @@ mod tests {
         .err()
         .unwrap()
         {
-            NotFound { .. } => (),
+            ContractError::Std(NotFound { .. }) => (),
             _ => panic!("assertion failed"),
         }
 
@@ -938,6 +1117,7 @@ mod tests {
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: true,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -958,6 +1138,7 @@ mod tests {
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -982,9 +1163,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -998,7 +1179,7 @@ mod tests {
         .err()
         .unwrap()
         {
-            NotFound { .. } => (),
+            ContractError::Std(NotFound { .. }) => (),
             _ => panic!("assertion failed"),
         }
 
@@ -1006,6 +1187,7 @@ mod tests {
         let msg = ExecuteMsg::StoreObject {
             data: data.clone(),
             pin: false,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -1016,18 +1198,18 @@ mod tests {
         assert_eq!(result, to_binary(&data).unwrap());
     }
 
-    struct TestPinCase {
-        objects: Vec<ObjectId>,
-        senders: Vec<MessageInfo>,
-        expected_count: usize,
-        expected_error: Option<ContractError>,
-        expected_object_pin_count: Vec<(ObjectId, Uint128)>,
-    }
-
     #[test]
     fn pin_object() {
+        struct TC {
+            objects: Vec<ObjectId>,
+            senders: Vec<MessageInfo>,
+            expected_count: usize,
+            expected_error: Option<ContractError>,
+            expected_object_pin_count: Vec<(ObjectId, Uint128)>,
+        }
+
         let cases = vec![
-            TestPinCase {
+            TC {
                 // One object, 1 one pinner => 1 pin
                 objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1042,7 +1224,7 @@ mod tests {
                     Uint128::one(),
                 )],
             },
-            TestPinCase {
+            TC {
                 // Same object, two pinners => 2 pin
                 objects: vec![
                     ObjectId::from(
@@ -1062,7 +1244,7 @@ mod tests {
                     Uint128::new(2),
                 )],
             },
-            TestPinCase {
+            TC {
                 // Same object, one pinner twice => 1 pin
                 objects: vec![
                     ObjectId::from(
@@ -1082,7 +1264,7 @@ mod tests {
                     Uint128::one(),
                 )],
             },
-            TestPinCase {
+            TC {
                 // two objects, same pinner => 2 pin
                 objects: vec![
                     ObjectId::from(
@@ -1110,7 +1292,7 @@ mod tests {
                     ),
                 ],
             },
-            TestPinCase {
+            TC {
                 // two objects, two pinner => 2 pin
                 objects: vec![
                     ObjectId::from(
@@ -1138,7 +1320,7 @@ mod tests {
                     ),
                 ],
             },
-            TestPinCase {
+            TC {
                 // two objects, two pinner, twice 1 pinner => 2 pin
                 objects: vec![
                     ObjectId::from(
@@ -1173,7 +1355,7 @@ mod tests {
                     ),
                 ],
             },
-            TestPinCase {
+            TC {
                 // exceed limits
                 objects: vec![
                     ObjectId::from(
@@ -1214,7 +1396,7 @@ mod tests {
                     ),
                 ],
             },
-            TestPinCase {
+            TC {
                 // Object not exists
                 objects: vec![ObjectId::from("NOTFOUND")],
                 senders: vec![mock_info("bob", &[])],
@@ -1241,12 +1423,12 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig::default(),
+                    config: Default::default(),
                     limits: BucketLimitsBuilder::default()
                         .max_object_pins(Uint128::new(2))
                         .build()
                         .unwrap(),
-                    pagination: PaginationConfig::default(),
+                    pagination: Default::default(),
                 },
             )
             .unwrap();
@@ -1255,6 +1437,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1262,6 +1445,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1269,6 +1453,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1307,20 +1492,20 @@ mod tests {
         }
     }
 
-    struct TestUnpinCase {
-        pin: Vec<ObjectId>,
-        pin_senders: Vec<MessageInfo>,
-        unpin: Vec<ObjectId>,
-        unpin_senders: Vec<MessageInfo>,
-        expected_count: usize,
-        expected_error: Option<ContractError>,
-        expected_object_pin_count: Vec<(ObjectId, Uint128)>,
-    }
-
     #[test]
     fn unpin_object() {
+        struct TC {
+            pin: Vec<ObjectId>,
+            pin_senders: Vec<MessageInfo>,
+            unpin: Vec<ObjectId>,
+            unpin_senders: Vec<MessageInfo>,
+            expected_count: usize,
+            expected_error: Option<ContractError>,
+            expected_object_pin_count: Vec<(ObjectId, Uint128)>,
+        }
+
         let cases = vec![
-            TestUnpinCase {
+            TC {
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
@@ -1338,7 +1523,7 @@ mod tests {
                     Uint128::zero(),
                 )],
             },
-            TestUnpinCase {
+            TC {
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
@@ -1364,7 +1549,7 @@ mod tests {
                     ),
                 ],
             },
-            TestUnpinCase {
+            TC {
                 pin: vec![
                     ObjectId::from(
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1395,7 +1580,7 @@ mod tests {
                     ),
                 ],
             },
-            TestUnpinCase {
+            TC {
                 pin: vec![],
                 pin_senders: vec![],
                 unpin: vec![ObjectId::from(
@@ -1411,7 +1596,7 @@ mod tests {
                     Uint128::zero(),
                 )],
             },
-            TestUnpinCase {
+            TC {
                 pin: vec![
                     ObjectId::from(
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1453,7 +1638,7 @@ mod tests {
                     ),
                 ],
             },
-            TestUnpinCase {
+            TC {
                 // Object not exists
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1484,9 +1669,9 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig::default(),
-                    limits: BucketLimits::default(),
-                    pagination: PaginationConfig::default(),
+                    config: Default::default(),
+                    limits: Default::default(),
+                    pagination: Default::default(),
                 },
             )
             .unwrap();
@@ -1495,6 +1680,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1502,6 +1688,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1509,6 +1696,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1568,9 +1756,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
 
@@ -1594,18 +1782,21 @@ mod tests {
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
         let data = general_purpose::STANDARD.encode("object2");
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
         let data = general_purpose::STANDARD.encode("object3");
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
 
@@ -1639,6 +1830,8 @@ mod tests {
                 owner: "creator2".to_string(),
                 is_pinned: false,
                 size: 7u128.into(),
+                compressed_size: 7u128.into(),
+                compression_algorithm: CompressionAlgorithm::Passthrough,
             }
         );
     }
@@ -1651,9 +1844,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
 
@@ -1661,6 +1854,7 @@ mod tests {
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
         // 1: 445008b7f2932922bdb184771d9978516a4f89d77000c2d6eab18b0894aac3a7
@@ -1668,6 +1862,7 @@ mod tests {
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: true,
+            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
         execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
         // 2: abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56
@@ -1745,9 +1940,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
-            config: BucketConfig::default(),
-            limits: BucketLimits::default(),
-            pagination: PaginationConfig::default(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
         };
         instantiate(deps.as_mut(), mock_env(), mock_info("creator1", &[]), msg).unwrap();
 
@@ -1763,25 +1958,25 @@ mod tests {
         .err()
         .unwrap()
         {
-            NotFound { .. } => (),
+            ContractError::Std(NotFound { .. }) => (),
             _ => panic!("assertion failed"),
         }
     }
 
-    struct TestForgetCase {
-        pins: Vec<ObjectId>,
-        pins_senders: Vec<MessageInfo>,
-        forget_objects: Vec<ObjectId>,
-        forget_senders: Vec<MessageInfo>,
-        expected_count: usize,
-        expected_total_size: Uint128,
-        expected_error: Option<ContractError>,
-    }
-
     #[test]
     fn forget_object() {
+        struct TC {
+            pins: Vec<ObjectId>,
+            pins_senders: Vec<MessageInfo>,
+            forget_objects: Vec<ObjectId>,
+            forget_senders: Vec<MessageInfo>,
+            expected_count: usize,
+            expected_total_size: Uint128,
+            expected_error: Option<ContractError>,
+        }
+
         let cases = vec![
-            TestForgetCase {
+            TC {
                 pins: vec![],
                 pins_senders: vec![],
                 forget_objects: vec![ObjectId::from(
@@ -1792,7 +1987,7 @@ mod tests {
                 expected_total_size: Uint128::new(9),
                 expected_error: None,
             },
-            TestForgetCase {
+            TC {
                 pins: vec![],
                 pins_senders: vec![],
                 forget_objects: vec![
@@ -1808,7 +2003,7 @@ mod tests {
                 expected_total_size: Uint128::new(4),
                 expected_error: None,
             },
-            TestForgetCase {
+            TC {
                 pins: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
@@ -1821,7 +2016,7 @@ mod tests {
                 expected_total_size: Uint128::new(13),
                 expected_error: Some(ContractError::ObjectAlreadyPinned {}),
             },
-            TestForgetCase {
+            TC {
                 pins: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
@@ -1834,7 +2029,7 @@ mod tests {
                 expected_total_size: Uint128::new(9),
                 expected_error: None,
             },
-            TestForgetCase {
+            TC {
                 pins: vec![
                     ObjectId::from(
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
@@ -1864,9 +2059,9 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig::default(),
-                    limits: BucketLimits::default(),
-                    pagination: PaginationConfig::default(),
+                    config: Default::default(),
+                    limits: Default::default(),
+                    pagination: Default::default(),
                 },
             )
             .unwrap();
@@ -1875,6 +2070,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1882,6 +2078,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -1889,6 +2086,7 @@ mod tests {
             let msg = ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 

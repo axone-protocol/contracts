@@ -195,6 +195,53 @@ jobs:
         run: |
           cargo make lint-toml
 
+  lint-toml-format:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Find changed toml files
+        id: changed-toml-files
+        uses: tj-actions/changed-files@v35.9.0
+        with:
+          files: |
+            **/*.toml
+
+      - name: Cache cargo registry
+        if: steps.changed-toml-files.outputs.any_changed == 'true'
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        if: steps.changed-toml-files.outputs.any_changed == 'true'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.64
+          default: true
+          override: true
+
+      - name: Install cargo make
+        if: steps.changed-toml-files.outputs.any_changed == 'true'
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Check toml files are formatted
+        if: steps.changed-toml-files.outputs.any_changed == 'true'
+        run: |
+          cargo make format-toml
+          if [[ $(git status -s) ]]; then
+            >&2 echo "❌ There is a diff between formatted files and source code"
+            >&2 git status
+            exit 1
+          fi
+
   report-wasm-size:
     runs-on: ubuntu-22.04
     if: github.event_name == 'pull_request'

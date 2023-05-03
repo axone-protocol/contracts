@@ -30,8 +30,25 @@ pub enum ExecuteMsg {
     /// StoreObject store an object to the bucket and make the sender the owner of the object.
     /// The object is referenced by the hash of its content and this value is returned.
     /// If the object is already stored, an error is returned.
-    /// If pin is true, the object is pinned for the sender.
-    StoreObject { data: Binary, pin: bool },
+    ///
+    /// The "pin" parameter specifies if the object should be pinned for the sender. In such case,
+    /// the object cannot be removed (forget) from the storage.
+    ///
+    /// The "compression_algorithm" parameter specifies the algorithm for compressing the object before
+    /// storing it in the storage, which is optional. If no algorithm is specified, the algorithm used
+    /// is the first algorithm of the bucket configuration limits. Note that the chosen algorithm can
+    /// save storage space, but it will increase CPU usage. Depending on the chosen compression algorithm
+    /// and the achieved compression ratio, the gas cost of the operation will vary, either increasing or decreasing.
+    StoreObject {
+        /// The content of the object to store.
+        data: Binary,
+        /// Specifies if the object should be pinned for the sender.
+        pin: bool,
+        /// Specifies the compression algorithm to use when storing the object.
+        /// If None, the first algorithm specified in the list of accepted compression algorithms of the bucket
+        /// is used (see [BucketLimits::accepted_compression_algorithms]).
+        compression_algorithm: Option<CompressionAlgorithm>,
+    },
 
     /// # ForgetObject
     /// ForgetObject first unpin the object from the bucket for the considered sender, then remove
@@ -126,6 +143,30 @@ pub struct BucketResponse {
     pub limits: BucketLimits,
     /// The configuration for paginated query.
     pub pagination: PaginationConfig,
+}
+
+/// CompressionAlgorithm is an enumeration that defines the different compression algorithms
+/// supported for compressing the content of objects.
+/// The compression algorithm specified here are relevant algorithms for compressing data on-chain,
+/// which means that they are fast to compress and decompress, and have a low computational cost.
+///
+/// The order of the compression algorithms is based on their estimated computational cost (quite opinionated)
+/// during both compression and decompression, ranging from the lowest to the highest. This particular
+/// order is utilized to establish the default compression algorithm for storing an object.
+#[cw_serde]
+#[derive(Copy, Eq, PartialOrd)]
+pub enum CompressionAlgorithm {
+    /// # Passthrough
+    /// Represents no compression algorithm.
+    /// The object is stored as is without any compression.
+    Passthrough,
+    /// # Snappy
+    /// Represents the Snappy algorithm.
+    /// Snappy is a compression/decompression algorithm that does not aim for maximum compression. Instead, it aims for very high speeds and reasonable
+    /// compression.
+    ///
+    /// See [the snappy web page](https://google.github.io/snappy/) for more information.
+    Snappy,
 }
 
 /// HashAlgorithm is an enumeration that defines the different hash algorithms
@@ -224,6 +265,18 @@ pub struct BucketLimits {
     pub max_object_size: Option<Uint128>,
     /// The maximum number of pins in the bucket for an object.
     pub max_object_pins: Option<Uint128>,
+    /// The acceptable compression algorithms for the objects in the bucket.
+    /// If this parameter is not set (none or empty array), then all compression algorithms are accepted.
+    /// If this parameter is set, then only the compression algorithms in the array are accepted.
+    ///
+    /// When an object is stored in the bucket without a specified compression algorithm, the first
+    /// algorithm in the array is used. Therefore, the order of the algorithms in the array is significant.
+    /// Typically, the most efficient compression algorithm, such as the NoCompression algorithm, should
+    /// be placed first in the array.
+    ///
+    /// Any attempt to store an object using a different compression algorithm than the ones specified
+    /// here will fail.
+    pub accepted_compression_algorithms: Option<Vec<CompressionAlgorithm>>,
 }
 
 /// PaginationConfig is the type carrying configuration for paginated queries.
@@ -271,6 +324,11 @@ pub struct ObjectResponse {
     pub is_pinned: bool,
     /// The size of the object.
     pub size: Uint128,
+    /// The size of the object when compressed. If the object is not compressed, the value is the
+    /// same as `size`.
+    pub compressed_size: Uint128,
+    /// The compression algorithm used to compress the content of the object.
+    pub compression_algorithm: CompressionAlgorithm,
 }
 
 /// # ObjectsResponse

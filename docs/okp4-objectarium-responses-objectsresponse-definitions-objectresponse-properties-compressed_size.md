@@ -1,19 +1,19 @@
 # Untitled undefined type in okp4-objectarium Schema
 
 ```txt
-undefined#/execute/oneOf/0/properties/store_object/properties/data
+undefined#/responses/objects/definitions/ObjectResponse/properties/compressed_size
 ```
 
-The content of the object to store.
+The size of the object when compressed. If the object is not compressed, the value is the same as `size`.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-objectarium.json\*](schema/okp4-objectarium.json "open original schema") |
 
-## data Type
+## compressed\_size Type
 
-merged type ([Details](okp4-objectarium-executemsg-oneof-storeobject-properties-store_object-properties-data.md))
+merged type ([Details](okp4-objectarium-responses-objectsresponse-definitions-objectresponse-properties-compressed_size.md))
 
 all of
 
-*   [Untitled undefined type in okp4-objectarium](okp4-objectarium-executemsg-oneof-storeobject-properties-store_object-properties-data-allof-0.md "check type definition")
+*   [Untitled undefined type in okp4-objectarium](okp4-objectarium-responses-objectsresponse-definitions-objectresponse-properties-compressed_size-allof-0.md "check type definition")

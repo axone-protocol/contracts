@@ -1,9 +1,11 @@
+use crate::compress::CompressionAlgorithm;
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
 use crate::msg;
 use crate::msg::{ObjectResponse, PaginationConfig};
 use cosmwasm_std::{Addr, StdError, StdResult, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
+use enum_iterator::all;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +31,8 @@ pub struct Bucket {
 pub struct BucketStat {
     /// The total size of the objects contained in the bucket.
     pub size: Uint128,
+    /// The total size of the objects contained in the bucket after compression.
+    pub compressed_size: Uint128,
     /// The number of objects in the bucket.
     pub object_count: Uint128,
 }
@@ -54,6 +58,7 @@ impl Bucket {
             pagination,
             stat: BucketStat {
                 size: Uint128::zero(),
+                compressed_size: Uint128::zero(),
                 object_count: Uint128::zero(),
             },
         })
@@ -106,6 +111,30 @@ impl From<HashAlgorithm> for msg::HashAlgorithm {
     }
 }
 
+impl From<msg::CompressionAlgorithm> for CompressionAlgorithm {
+    fn from(algorithm: msg::CompressionAlgorithm) -> Self {
+        match algorithm {
+            msg::CompressionAlgorithm::Passthrough => CompressionAlgorithm::Passthrough,
+            msg::CompressionAlgorithm::Snappy => CompressionAlgorithm::Snappy,
+        }
+    }
+}
+
+impl From<CompressionAlgorithm> for msg::CompressionAlgorithm {
+    fn from(algorithm: CompressionAlgorithm) -> Self {
+        match algorithm {
+            CompressionAlgorithm::Passthrough => msg::CompressionAlgorithm::Passthrough,
+            CompressionAlgorithm::Snappy => msg::CompressionAlgorithm::Snappy,
+        }
+    }
+}
+
+impl CompressionAlgorithm {
+    pub fn values() -> Vec<CompressionAlgorithm> {
+        all::<CompressionAlgorithm>().collect::<Vec<_>>()
+    }
+}
+
 /// BucketConfig is the type of the configuration of a bucket.
 ///
 /// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
@@ -153,6 +182,8 @@ pub struct BucketLimits {
     pub max_object_size: Option<Uint128>,
     /// The maximum number of pins in the bucket for an object.
     pub max_object_pins: Option<Uint128>,
+    /// The accepted compression algorithms for the objects in the bucket.
+    pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
 }
 
 impl From<msg::BucketLimits> for BucketLimits {
@@ -162,6 +193,10 @@ impl From<msg::BucketLimits> for BucketLimits {
             max_objects: limits.max_objects,
             max_object_size: limits.max_object_size,
             max_object_pins: limits.max_object_pins,
+            accepted_compression_algorithms: limits
+                .accepted_compression_algorithms
+                .map(|it| it.into_iter().map(Into::into).collect())
+                .unwrap_or_else(CompressionAlgorithm::values),
         }
     }
 }
@@ -173,6 +208,13 @@ impl From<BucketLimits> for msg::BucketLimits {
             max_objects: limits.max_objects,
             max_object_size: limits.max_object_size,
             max_object_pins: limits.max_object_pins,
+            accepted_compression_algorithms: Some(
+                limits
+                    .accepted_compression_algorithms
+                    .into_iter()
+                    .map(|a| a.into())
+                    .collect::<Vec<_>>(),
+            ),
         }
     }
 }
@@ -241,6 +283,10 @@ pub struct Object {
     pub size: Uint128,
     /// The number of pin on this object.
     pub pin_count: Uint128,
+    /// The compression algorithm used to compress the object.
+    pub compression: CompressionAlgorithm,
+    /// The size of the object after compression.
+    pub compressed_size: Uint128,
 }
 
 impl From<&Object> for ObjectResponse {
@@ -250,6 +296,8 @@ impl From<&Object> for ObjectResponse {
             size: object.size,
             owner: object.owner.clone().into(),
             is_pinned: object.pin_count > Uint128::zero(),
+            compressed_size: object.compressed_size,
+            compression_algorithm: object.compression.into(),
         }
     }
 }

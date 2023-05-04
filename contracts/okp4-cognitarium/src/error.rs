@@ -30,7 +30,7 @@ impl From<TurtleError> for ContractError {
     }
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum StoreError {
     #[error("Maximum triples number exceeded: {0}")]
     TripleCount(Uint128),
@@ -48,7 +48,7 @@ pub enum StoreError {
     InsertDataTripleCount(Uint128),
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum RDFParseError {
     #[error("Error parsing XML RDF: {0}")]
     Xml(String),

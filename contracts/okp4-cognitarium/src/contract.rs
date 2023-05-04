@@ -81,7 +81,8 @@ mod tests {
     use crate::msg::ExecuteMsg::InsertData;
     use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder};
     use crate::state;
-    use crate::state::{namespaces, triples, Namespace};
+    use crate::state::{namespaces, triples, Namespace, Node, Object, Subject, Triple};
+    use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{Attribute, Order, Uint128};
     use std::env;
@@ -150,6 +151,10 @@ mod tests {
                 data: read_test_data("sample.nt"),
             },
             InsertData {
+                format: Some(DataFormat::NQuads),
+                data: read_test_data("sample.nq"),
+            },
+            InsertData {
                 format: None,
                 data: read_test_data("sample.ttl"),
             },
@@ -201,6 +206,43 @@ mod tests {
                 Namespace {
                     key: 0u128,
                     counter: 5u128,
+                }
+            );
+            assert_eq!(
+                triples()
+                    .load(
+                        &deps.storage,
+                        (
+                            Hash::from_hex(
+                                "09653b5306fa80dc7bea8313d84ac6ed9ded591d42c7f4838c39d1d7a4f09d03"
+                            )
+                            .unwrap()
+                            .as_bytes(),
+                            Node {
+                                namespace: 3u128,
+                                value: "hasRegistrar".to_string()
+                            },
+                            Subject::Named(Node {
+                                namespace: 0u128,
+                                value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string()
+                            })
+                        )
+                    )
+                    .unwrap(),
+                Triple {
+                    object: Object::Named(Node {
+                        namespace: 4u128,
+                        value: "0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
+                            .to_string()
+                    }),
+                    predicate: Node {
+                        namespace: 3u128,
+                        value: "hasRegistrar".to_string()
+                    },
+                    subject: Subject::Named(Node {
+                        namespace: 0u128,
+                        value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string()
+                    }),
                 }
             )
         }

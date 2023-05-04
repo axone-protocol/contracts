@@ -1,7 +1,9 @@
 use crate::contract::execute::insert;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -71,8 +73,20 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    Err(StdError::generic_err("Not implemented"))
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Store => to_binary(&query::store(deps)?),
+        _ => Err(StdError::generic_err("Not implemented")),
+    }
+}
+
+pub mod query {
+    use super::*;
+    use crate::msg::StoreStat;
+
+    pub fn store(deps: Deps) -> StdResult<StoreStat> {
+        Err(StdError::generic_err("Not implemented"))
+    }
 }
 
 #[cfg(test)]

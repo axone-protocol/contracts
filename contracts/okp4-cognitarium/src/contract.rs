@@ -82,10 +82,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 pub mod query {
     use super::*;
-    use crate::msg::StoreStat;
+    use crate::msg::StoreResponse;
 
-    pub fn store(deps: Deps) -> StdResult<StoreStat> {
-        Err(StdError::generic_err("Not implemented"))
+    pub fn store(deps: Deps) -> StdResult<StoreResponse> {
+        STORE.load(deps.storage).map(|s| s.into())
     }
 }
 

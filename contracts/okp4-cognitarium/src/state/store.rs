@@ -1,4 +1,5 @@
 use crate::msg;
+use crate::msg::StoreResponse;
 use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
@@ -18,6 +19,16 @@ impl Store {
             owner,
             limits,
             stat: StoreStat::default(),
+        }
+    }
+}
+
+impl From<Store> for StoreResponse {
+    fn from(value: Store) -> Self {
+        Self {
+            owner: value.owner.into(),
+            limits: value.limits.into(),
+            stat: value.stat.into(),
         }
     }
 }
@@ -66,4 +77,14 @@ pub struct StoreStat {
     pub triple_count: Uint128,
     pub namespace_count: Uint128,
     pub byte_size: Uint128,
+}
+
+impl From<StoreStat> for msg::StoreStat {
+    fn from(value: StoreStat) -> Self {
+        Self {
+            triple_count: value.triple_count,
+            namespace_count: value.namespace_count,
+            byte_size: value.byte_size,
+        }
+    }
 }

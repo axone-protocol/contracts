@@ -96,7 +96,7 @@ mod tests {
     use crate::msg::ExecuteMsg::InsertData;
     use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder};
     use crate::state;
-    use crate::state::{namespaces, triples, Namespace, Node, Object, Subject, Triple};
+    use crate::state::{namespaces, triples, Namespace, Node, Object, StoreStat, Subject, Triple};
     use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{Attribute, Order, Uint128};
@@ -141,8 +141,9 @@ mod tests {
         );
         assert_eq!(
             store.stat,
-            state::StoreStat {
+            StoreStat {
                 triple_count: Uint128::zero(),
+                namespace_count: Uint128::zero(),
                 byte_size: Uint128::zero(),
             }
         );
@@ -207,8 +208,12 @@ mod tests {
                 40
             );
             assert_eq!(
-                STORE.load(&deps.storage).unwrap().stat.triple_count,
-                Uint128::from(40u128),
+                STORE.load(&deps.storage).unwrap().stat,
+                StoreStat {
+                    triple_count: 40u128.into(),
+                    namespace_count: 17u128.into(),
+                    byte_size: 7103u128.into(),
+                },
             );
             assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 17u128);
             assert_eq!(

@@ -64,5 +64,6 @@ impl From<StoreLimits> for msg::StoreLimits {
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq, Eq)]
 pub struct StoreStat {
     pub triple_count: Uint128,
+    pub namespace_count: Uint128,
     pub byte_size: Uint128,
 }

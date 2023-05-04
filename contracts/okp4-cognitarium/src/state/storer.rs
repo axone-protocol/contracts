@@ -109,14 +109,7 @@ impl<'a> TripleStorer<'a> {
             }
             None => {
                 let mut namespace = match namespaces().load(self.storage, ns_str.clone()) {
-                    Err(StdError::NotFound { .. }) => {
-                        let n = Namespace {
-                            key: self.ns_key_inc_offset,
-                            counter: 0u128,
-                        };
-                        self.ns_key_inc_offset += 1;
-                        Ok(n)
-                    }
+                    Err(StdError::NotFound { .. }) => Ok(self.allocate_namespace()),
                     Ok(n) => Ok(n),
                     Err(e) => Err(e),
                 }?;
@@ -126,6 +119,18 @@ impl<'a> TripleStorer<'a> {
                 Ok(namespace.key)
             }
         }
+    }
+
+    fn allocate_namespace(&mut self) -> Namespace {
+        self.store.stat.namespace_count += Uint128::one();
+
+        let ns = Namespace {
+            key: self.ns_key_inc_offset,
+            counter: 0u128,
+        };
+        self.ns_key_inc_offset += 1;
+
+        ns
     }
 
     fn rio_to_triple(&mut self, triple: model::Triple) -> StdResult<Triple> {

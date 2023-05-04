@@ -94,12 +94,14 @@ mod tests {
     use super::*;
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::InsertData;
-    use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder};
-    use crate::state;
-    use crate::state::{namespaces, triples, Namespace, Node, Object, StoreStat, Subject, Triple};
+    use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder, StoreResponse};
+    use crate::state::{
+        namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
+    };
+    use crate::{msg, state};
     use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{Attribute, Order, Uint128};
+    use cosmwasm_std::{from_binary, Addr, Attribute, Order, Uint128};
     use std::env;
     use std::fs::File;
     use std::io::Read;
@@ -403,6 +405,56 @@ mod tests {
                 assert!(res.is_ok());
             }
         }
+    }
+
+    #[test]
+    fn proper_store() {
+        let mut deps = mock_dependencies();
+        STORE
+            .save(
+                deps.as_mut().storage,
+                &Store {
+                    owner: Addr::unchecked("owner"),
+                    limits: StoreLimits {
+                        max_triple_count: 1u128.into(),
+                        max_byte_size: 2u128.into(),
+                        max_triple_byte_size: 3u128.into(),
+                        max_query_limit: 4u32,
+                        max_query_variable_count: 5u32,
+                        max_insert_data_byte_size: 6u128.into(),
+                        max_insert_data_triple_count: 7u128.into(),
+                    },
+                    stat: StoreStat {
+                        triple_count: 1u128.into(),
+                        namespace_count: 2u128.into(),
+                        byte_size: 3u128.into(),
+                    },
+                },
+            )
+            .unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Store);
+        assert!(res.is_ok());
+        assert_eq!(
+            from_binary::<StoreResponse>(&res.unwrap()).unwrap(),
+            StoreResponse {
+                owner: "owner".to_string(),
+                limits: msg::StoreLimits {
+                    max_triple_count: 1u128.into(),
+                    max_byte_size: 2u128.into(),
+                    max_triple_byte_size: 3u128.into(),
+                    max_query_limit: 4u32,
+                    max_query_variable_count: 5u32,
+                    max_insert_data_byte_size: 6u128.into(),
+                    max_insert_data_triple_count: 7u128.into(),
+                },
+                stat: msg::StoreStat {
+                    triple_count: 1u128.into(),
+                    namespace_count: 2u128.into(),
+                    byte_size: 3u128.into(),
+                }
+            }
+        );
     }
 
     fn read_test_data(file: &str) -> Binary {

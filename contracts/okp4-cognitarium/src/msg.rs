@@ -28,6 +28,47 @@ pub enum ExecuteMsg {
         /// are subject to the limitations defined by the `limits` specified at contract instantiation.
         data: Binary,
     },
+
+    /// # DeleteData
+    /// Delete the data (RDF triples) from the store matching the patterns defined by the provided
+    /// query. For non-existing triples it acts as no-op.
+    ///
+    /// Example:
+    /// ```json
+    /// {
+    ///   "prefixes": [
+    ///     { "prefix": "foaf", "namespace": "http://xmlns.com/foaf/0.1/" }
+    ///   ],
+    ///   "delete": [
+    ///     { "variable": "s" },
+    ///     { "variable": "p" },
+    ///     { "variable": "o" }
+    ///   ],
+    ///   "where": [
+    ///     { "simple": { "triplePattern": {
+    ///         "subject": { "variable": "s" },
+    ///         "predicate": { "node": { "namedNode": {"prefixed": "foaf:givenName"} } },
+    ///         "object": { "literal": { "simple": "Myrddin" } }
+    ///     } } },
+    ///     { "simple": { "triplePattern": {
+    ///         "subject": { "variable": "s" },
+    ///         "predicate": { "variable": "p" },
+    ///         "object": { "variable": "o" },
+    ///     } } }
+    ///  ]
+    /// ```
+    ///
+    /// Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform
+    /// this action.
+    DeleteData {
+        /// The prefixes used in the operation.
+        prefixes: Vec<Prefix>,
+        /// The items to delete.
+        delete: Vec<TriplePattern>,
+        /// The WHERE clause to apply.
+        /// If not provided, all the RDF triples are considered.
+        r#where: Option<WhereClause>,
+    },
 }
 
 /// # SelectQuery

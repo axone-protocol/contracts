@@ -293,7 +293,7 @@ pub struct Object {
 impl From<&Object> for ObjectResponse {
     fn from(object: &Object) -> Self {
         ObjectResponse {
-            id: base16ct::lower::encode_string(object.id.as_slice()),
+            id: object.id.clone().into(),
             size: object.size,
             owner: object.owner.clone().into(),
             is_pinned: object.pin_count > Uint128::zero(),

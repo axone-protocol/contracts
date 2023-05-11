@@ -57,6 +57,7 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::compress::CompressionAlgorithm;
+    use crate::crypto::Hash;
     use crate::msg;
     use crate::state::BucketLimits;
     use crate::ContractError::ObjectPinned;
@@ -175,9 +176,7 @@ pub mod execute {
             .add_attribute("action", "pin_object")
             .add_attribute("id", object_id.clone());
 
-        let id = base16ct::lower::decode_vec(object_id)
-            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
-
+        let id: Hash = object_id.try_into()?;
         if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
             return Ok(res);
         }
@@ -218,8 +217,7 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-        let id = base16ct::lower::decode_vec(object_id.clone())
-            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
+        let id: Hash = object_id.clone().try_into()?;
         let object_path = objects().key(id.clone());
         let mut object = object_path.load(deps.storage)?;
 
@@ -244,8 +242,7 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-        let id = base16ct::lower::decode_vec(object_id.clone())
-            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
+        let id: Hash = object_id.clone().try_into()?;
         if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
             pins().remove(deps.storage, (id.clone(), info.sender))?;
         }
@@ -315,15 +312,13 @@ pub mod query {
     }
 
     pub fn object(deps: Deps, object_id: ObjectId) -> Result<ObjectResponse, ContractError> {
-        let id = base16ct::lower::decode_vec(object_id)
-            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
+        let id: Hash = object_id.try_into()?;
         let object = objects().load(deps.storage, id)?;
         Ok((&object).into())
     }
 
     pub fn data(deps: Deps, object_id: ObjectId) -> Result<Binary, ContractError> {
-        let id = base16ct::lower::decode_vec(object_id)
-            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
+        let id: Hash = object_id.try_into()?;
         let compression = objects().load(deps.storage, id.clone())?.compression;
         let data = DATA.load(deps.storage, id)?;
         let decompressed_data = compression.decompress(&data)?;
@@ -370,18 +365,15 @@ pub mod query {
         after: Option<Cursor>,
         first: Option<u32>,
     ) -> StdResult<ObjectPinsResponse> {
-        let id = Box::new(
-            base16ct::lower::decode_vec(object_id)
-                .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?,
-        );
-        objects().load(deps.storage, id.to_vec())?;
+        let id: Hash = object_id.try_into()?;
+        objects().load(deps.storage, id.clone())?;
 
         let handler: PaginationHandler<Pin, (Hash, Addr)> =
             PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
 
         let page: (Vec<Pin>, PageInfo) = handler.query_page(
             |min_bound| {
-                pins().idx.object.prefix(id.to_vec()).range(
+                pins().idx.object.prefix(id.clone()).range(
                     deps.storage,
                     min_bound,
                     None,
@@ -391,7 +383,7 @@ pub mod query {
             |c| {
                 cursor::decode(c)
                     .and_then(|raw| deps.api.addr_validate(raw.as_str()))
-                    .map(|addr| (id.to_vec(), addr))
+                    .map(|addr| (id.clone(), addr))
             },
             |pin: &Pin| cursor::encode(pin.clone().address.into_string()),
             after,
@@ -637,7 +629,7 @@ mod tests {
     }
 
     fn decode_hash(hash: String) -> Hash {
-        base16ct::lower::decode_vec(hash).unwrap()
+        base16ct::lower::decode_vec(hash).unwrap().into()
     }
 
     #[test]

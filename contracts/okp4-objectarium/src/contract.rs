@@ -175,7 +175,8 @@ pub mod execute {
             .add_attribute("action", "pin_object")
             .add_attribute("id", object_id.clone());
 
-        let id = base16ct::lower::decode_vec(object_id).unwrap();
+        let id = base16ct::lower::decode_vec(object_id)
+            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
 
         if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
             return Ok(res);
@@ -217,7 +218,8 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-        let id = base16ct::lower::decode_vec(object_id.clone()).unwrap();
+        let id = base16ct::lower::decode_vec(object_id.clone())
+            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
         let object_path = objects().key(id.clone());
         let mut object = object_path.load(deps.storage)?;
 
@@ -242,7 +244,8 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-        let id = base16ct::lower::decode_vec(object_id.clone()).unwrap();
+        let id = base16ct::lower::decode_vec(object_id.clone())
+            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
         if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
             pins().remove(deps.storage, (id.clone(), info.sender))?;
         }
@@ -297,7 +300,8 @@ pub mod query {
         BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
     };
     use crate::pagination::PaginationHandler;
-    use cosmwasm_std::{Addr, Order};
+    use cosmwasm_std::{Addr, Order, StdError};
+    use std::any::type_name;
 
     pub fn bucket(deps: Deps) -> Result<BucketResponse, ContractError> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -311,13 +315,15 @@ pub mod query {
     }
 
     pub fn object(deps: Deps, object_id: ObjectId) -> Result<ObjectResponse, ContractError> {
-        let id = base16ct::lower::decode_vec(object_id).unwrap();
+        let id = base16ct::lower::decode_vec(object_id)
+            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
         let object = objects().load(deps.storage, id)?;
         Ok((&object).into())
     }
 
     pub fn data(deps: Deps, object_id: ObjectId) -> Result<Binary, ContractError> {
-        let id = base16ct::lower::decode_vec(object_id).unwrap();
+        let id = base16ct::lower::decode_vec(object_id)
+            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
         let compression = objects().load(deps.storage, id.clone())?.compression;
         let data = DATA.load(deps.storage, id)?;
         let decompressed_data = compression.decompress(&data)?;
@@ -364,7 +370,10 @@ pub mod query {
         after: Option<Cursor>,
         first: Option<u32>,
     ) -> StdResult<ObjectPinsResponse> {
-        let id = Box::new(base16ct::lower::decode_vec(object_id).unwrap());
+        let id = Box::new(
+            base16ct::lower::decode_vec(object_id)
+                .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?,
+        );
         objects().load(deps.storage, id.to_vec())?;
 
         let handler: PaginationHandler<Pin, (Hash, Addr)> =
@@ -1409,11 +1418,29 @@ mod tests {
             },
             TC {
                 // Object not exists
-                objects: vec![ObjectId::from("NOTFOUND")],
+                objects: vec![ObjectId::from(
+                    "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
+                )],
                 senders: vec![mock_info("bob", &[])],
                 expected_count: 0,
                 expected_error: Some(ContractError::Std(StdError::not_found(
                     type_name::<Object>(),
+                ))),
+                expected_object_pin_count: vec![(
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    Uint128::zero(),
+                )],
+            },
+            TC {
+                // Invalid object id
+                objects: vec![ObjectId::from("invalid id")],
+                senders: vec![mock_info("bob", &[])],
+                expected_count: 0,
+                expected_error: Some(ContractError::Std(StdError::parse_err(
+                    type_name::<Vec<&[u8]>>(),
+                    "invalid Base16 encoding".to_string(),
                 ))),
                 expected_object_pin_count: vec![(
                     ObjectId::from(
@@ -1658,11 +1685,33 @@ mod tests {
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
                 pin_senders: vec![mock_info("bob", &[])],
-                unpin: vec![ObjectId::from("NOTFOUND")],
+                unpin: vec![ObjectId::from(
+                    "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
+                )],
                 unpin_senders: vec![mock_info("martin", &[])],
                 expected_count: 1,
                 expected_error: Some(ContractError::Std(StdError::not_found(
                     type_name::<Object>(),
+                ))),
+                expected_object_pin_count: vec![(
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    Uint128::one(),
+                )],
+            },
+            TC {
+                // Invalid object id
+                pin: vec![ObjectId::from(
+                    "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                )],
+                pin_senders: vec![mock_info("bob", &[])],
+                unpin: vec![ObjectId::from("invalid id")],
+                unpin_senders: vec![mock_info("martin", &[])],
+                expected_count: 1,
+                expected_error: Some(ContractError::Std(StdError::parse_err(
+                    type_name::<Vec<&[u8]>>(),
+                    "invalid Base16 encoding".to_string(),
                 ))),
                 expected_object_pin_count: vec![(
                     ObjectId::from(
@@ -2007,7 +2056,7 @@ mod tests {
     }
 
     #[test]
-    fn object_pins_non_existing() {
+    fn object_pins_errors() {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
@@ -2018,20 +2067,32 @@ mod tests {
         };
         instantiate(deps.as_mut(), mock_env(), mock_info("creator1", &[]), msg).unwrap();
 
-        match query(
-            deps.as_ref(),
-            mock_env(),
-            QueryMsg::ObjectPins {
-                id: "unknown".to_string(),
-                after: None,
-                first: None,
-            },
-        )
-        .err()
-        .unwrap()
-        {
-            ContractError::Std(NotFound { .. }) => (),
-            _ => panic!("assertion failed"),
+        let cases = vec![
+            (
+                QueryMsg::ObjectPins {
+                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                        .to_string(),
+                    after: None,
+                    first: None,
+                },
+                ContractError::Std(StdError::not_found(type_name::<Object>())),
+            ),
+            (
+                QueryMsg::ObjectPins {
+                    id: "invalid id".to_string(),
+                    after: None,
+                    first: None,
+                },
+                ContractError::Std(StdError::parse_err(
+                    type_name::<Vec<&[u8]>>(),
+                    "invalid Base16 encoding".to_string(),
+                )),
+            ),
+        ];
+
+        for case in cases {
+            let res = query(deps.as_ref(), mock_env(), case.0).err().unwrap();
+            assert_eq!(res, case.1)
         }
     }
 
@@ -2118,6 +2179,45 @@ mod tests {
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
                 expected_error: Some(ContractError::ObjectPinned {}),
+            },
+            TC {
+                pins: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                ],
+                pins_senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                forget_objects: vec![ObjectId::from(
+                    "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
+                )],
+                forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
+                expected_count: 3,
+                expected_total_size: Uint128::new(13),
+                expected_error: Some(ContractError::Std(StdError::not_found(
+                    type_name::<Object>(),
+                ))),
+            },
+            TC {
+                pins: vec![
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                    ObjectId::from(
+                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
+                    ),
+                ],
+                pins_senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                forget_objects: vec![ObjectId::from("invalid id")],
+                forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
+                expected_count: 3,
+                expected_total_size: Uint128::new(13),
+                expected_error: Some(ContractError::Std(StdError::parse_err(
+                    type_name::<Vec<&[u8]>>(),
+                    "invalid Base16 encoding".to_string(),
+                ))),
             },
         ];
 

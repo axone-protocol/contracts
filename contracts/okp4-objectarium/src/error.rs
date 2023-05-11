@@ -1,5 +1,6 @@
 use crate::compress::CompressionError;
 use crate::msg::CompressionAlgorithm;
+use base16ct::Error;
 use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 

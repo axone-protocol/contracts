@@ -176,7 +176,7 @@ pub mod execute {
             .add_attribute("id", object_id.clone());
 
         let id = base16ct::lower::decode_vec(object_id)
-            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
+            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
 
         if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
             return Ok(res);
@@ -219,7 +219,7 @@ pub mod execute {
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
         let id = base16ct::lower::decode_vec(object_id.clone())
-            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
+            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
         let object_path = objects().key(id.clone());
         let mut object = object_path.load(deps.storage)?;
 
@@ -245,7 +245,7 @@ pub mod execute {
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
         let id = base16ct::lower::decode_vec(object_id.clone())
-            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
+            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
         if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
             pins().remove(deps.storage, (id.clone(), info.sender))?;
         }
@@ -316,14 +316,14 @@ pub mod query {
 
     pub fn object(deps: Deps, object_id: ObjectId) -> Result<ObjectResponse, ContractError> {
         let id = base16ct::lower::decode_vec(object_id)
-            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
+            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
         let object = objects().load(deps.storage, id)?;
         Ok((&object).into())
     }
 
     pub fn data(deps: Deps, object_id: ObjectId) -> Result<Binary, ContractError> {
         let id = base16ct::lower::decode_vec(object_id)
-            .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?;
+            .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?;
         let compression = objects().load(deps.storage, id.clone())?.compression;
         let data = DATA.load(deps.storage, id)?;
         let decompressed_data = compression.decompress(&data)?;
@@ -372,7 +372,7 @@ pub mod query {
     ) -> StdResult<ObjectPinsResponse> {
         let id = Box::new(
             base16ct::lower::decode_vec(object_id)
-                .map_err(|e| StdError::parse_err(type_name::<Vec<&[u8]>>(), e.to_string()))?,
+                .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))?,
         );
         objects().load(deps.storage, id.to_vec())?;
 
@@ -1439,7 +1439,7 @@ mod tests {
                 senders: vec![mock_info("bob", &[])],
                 expected_count: 0,
                 expected_error: Some(ContractError::Std(StdError::parse_err(
-                    type_name::<Vec<&[u8]>>(),
+                    type_name::<Vec<u8>>(),
                     "invalid Base16 encoding".to_string(),
                 ))),
                 expected_object_pin_count: vec![(
@@ -1710,7 +1710,7 @@ mod tests {
                 unpin_senders: vec![mock_info("martin", &[])],
                 expected_count: 1,
                 expected_error: Some(ContractError::Std(StdError::parse_err(
-                    type_name::<Vec<&[u8]>>(),
+                    type_name::<Vec<u8>>(),
                     "invalid Base16 encoding".to_string(),
                 ))),
                 expected_object_pin_count: vec![(
@@ -2084,7 +2084,7 @@ mod tests {
                     first: None,
                 },
                 ContractError::Std(StdError::parse_err(
-                    type_name::<Vec<&[u8]>>(),
+                    type_name::<Vec<u8>>(),
                     "invalid Base16 encoding".to_string(),
                 )),
             ),
@@ -2215,7 +2215,7 @@ mod tests {
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
                 expected_error: Some(ContractError::Std(StdError::parse_err(
-                    type_name::<Vec<&[u8]>>(),
+                    type_name::<Vec<u8>>(),
                     "invalid Base16 encoding".to_string(),
                 ))),
             },

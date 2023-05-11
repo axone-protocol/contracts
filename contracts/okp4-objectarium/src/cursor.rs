@@ -1,16 +1,35 @@
+use crate::crypto::Hash;
 use crate::msg::{Cursor, ObjectId};
-use cosmwasm_std::{StdError, StdResult};
+use crate::state::{Object, Pin};
+use cosmwasm_std::{Addr, StdError, StdResult};
 
-pub fn encode(id: ObjectId) -> Cursor {
+pub fn encode<I: AsRef<[u8]>>(id: I) -> Cursor {
     bs58::encode(id).into_string()
 }
 
-pub fn decode(cursor: String) -> StdResult<Cursor> {
+pub fn decode<I: AsRef<[u8]>>(cursor: I) -> StdResult<Cursor> {
     let raw = bs58::decode(cursor)
         .into_vec()
         .map_err(|err| StdError::parse_err("Cursor", err))?;
 
     String::from_utf8(raw).map_err(|err| StdError::parse_err("Cursor", err))
+}
+
+pub trait AsCursor<PK> {
+    fn encode(&self) -> Cursor;
+    fn decode(_: Cursor) -> StdResult<PK>;
+}
+
+impl AsCursor<Hash> for Object {
+    fn encode(&self) -> Cursor {
+        bs58::encode(&self.id).into_string()
+    }
+
+    fn decode(cursor: Cursor) -> StdResult<Hash> {
+        bs58::decode(cursor)
+            .into_vec()
+            .map_err(|err| StdError::parse_err("Cursor", err))
+    }
 }
 
 #[cfg(test)]

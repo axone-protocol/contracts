@@ -130,7 +130,7 @@ pub mod execute {
         // store object
         let compressed_size = (compressed_data.len() as u128).into();
         let object = &Object {
-            id: id.clone(),
+            id,
             owner: info.sender.clone(),
             size,
             pin_count: if pin { Uint128::one() } else { Uint128::zero() },
@@ -138,7 +138,7 @@ pub mod execute {
             compressed_size,
         };
 
-        objects().save(deps.storage, id, object)?;
+        objects().save(deps.storage, object.id.clone(), object)?;
 
         // save bucket stats
         BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
@@ -163,7 +163,7 @@ pub mod execute {
 
         Ok(Response::new()
             .add_attribute("action", "store_object")
-            .add_attribute("id", object.id.clone()))
+            .add_attribute("id", base16ct::lower::encode_string(object.id.as_ref())))
     }
 
     pub fn pin_object(
@@ -175,21 +175,19 @@ pub mod execute {
             .add_attribute("action", "pin_object")
             .add_attribute("id", object_id.clone());
 
-        if pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
+        let id = base16ct::lower::decode_vec(object_id).unwrap();
+
+        if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
             return Ok(res);
         }
 
-        let o = objects().update(
-            deps.storage,
-            object_id.clone(),
-            |o| -> Result<Object, StdError> {
-                o.map(|mut e: Object| -> Object {
-                    e.pin_count += Uint128::one();
-                    e
-                })
-                .ok_or_else(|| StdError::not_found(type_name::<Object>()))
-            },
-        )?;
+        let o = objects().update(deps.storage, id.clone(), |o| -> Result<Object, StdError> {
+            o.map(|mut e: Object| -> Object {
+                e.pin_count += Uint128::one();
+                e
+            })
+            .ok_or_else(|| StdError::not_found(type_name::<Object>()))
+        })?;
 
         let bucket = BUCKET.load(deps.storage)?;
 
@@ -203,9 +201,9 @@ pub mod execute {
             _ => {
                 pins().save(
                     deps.storage,
-                    (object_id.clone(), info.sender.clone()),
+                    (id.clone(), info.sender.clone()),
                     &Pin {
-                        id: object_id,
+                        id,
                         address: info.sender,
                     },
                 )?;
@@ -219,21 +217,22 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-        let object_path = objects().key(object_id.clone());
+        let id = base16ct::lower::decode_vec(object_id.clone()).unwrap();
+        let object_path = objects().key(id.clone());
         let mut object = object_path.load(deps.storage)?;
 
         let res = Response::new()
             .add_attribute("action", "unpin_object")
-            .add_attribute("id", object_id.clone());
+            .add_attribute("id", object_id);
 
-        if !pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
+        if !pins().has(deps.storage, (id.clone(), info.sender.clone())) {
             return Ok(res);
         }
 
         object.pin_count -= Uint128::one();
         object_path.save(deps.storage, &object)?;
 
-        pins().remove(deps.storage, (object_id, info.sender))?;
+        pins().remove(deps.storage, (id, info.sender))?;
 
         Ok(res)
     }
@@ -243,14 +242,15 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-        if pins().has(deps.storage, (object_id.clone(), info.sender.clone())) {
-            pins().remove(deps.storage, (object_id.clone(), info.sender))?;
+        let id = base16ct::lower::decode_vec(object_id.clone()).unwrap();
+        if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
+            pins().remove(deps.storage, (id.clone(), info.sender))?;
         }
 
         if pins()
             .idx
             .object
-            .prefix(object_id.clone())
+            .prefix(id.clone())
             .keys_raw(deps.storage, None, None, Order::Ascending)
             .next()
             .is_some()
@@ -264,8 +264,8 @@ pub mod execute {
             Ok(b)
         })?;
 
-        objects().remove(deps.storage, object_id.clone())?;
-        DATA.remove(deps.storage, object_id.clone());
+        objects().remove(deps.storage, id.clone())?;
+        DATA.remove(deps.storage, id.clone());
         Ok(Response::new()
             .add_attribute("action", "forget_object")
             .add_attribute("id", object_id))
@@ -291,6 +291,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 
 pub mod query {
     use super::*;
+    use crate::crypto::Hash;
     use crate::cursor;
     use crate::msg::{
         BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
@@ -309,12 +310,14 @@ pub mod query {
         })
     }
 
-    pub fn object(deps: Deps, id: ObjectId) -> Result<ObjectResponse, ContractError> {
+    pub fn object(deps: Deps, object_id: ObjectId) -> Result<ObjectResponse, ContractError> {
+        let id = base16ct::lower::decode_vec(object_id).unwrap();
         let object = objects().load(deps.storage, id)?;
         Ok((&object).into())
     }
 
-    pub fn data(deps: Deps, id: ObjectId) -> Result<Binary, ContractError> {
+    pub fn data(deps: Deps, object_id: ObjectId) -> Result<Binary, ContractError> {
+        let id = base16ct::lower::decode_vec(object_id).unwrap();
         let compression = objects().load(deps.storage, id.clone())?.compression;
         let data = DATA.load(deps.storage, id)?;
         let decompressed_data = compression.decompress(&data)?;
@@ -332,10 +335,10 @@ pub mod query {
             _ => None,
         };
 
-        let handler: PaginationHandler<Object, String> =
+        let handler: PaginationHandler<Object, Hash> =
             PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
 
-        let page: (Vec<Object>, PageInfo) = handler.query_page(
+        let page: (Vec<Object>, PageInfo) = handler.query_page_r(
             |min_bound| match address {
                 Some(addr) => objects().idx.owner.prefix(addr).range(
                     deps.storage,
@@ -345,8 +348,6 @@ pub mod query {
                 ),
                 _ => objects().range(deps.storage, min_bound, None, Order::Ascending),
             },
-            cursor::decode,
-            |o: &Object| cursor::encode(o.id.clone()),
             after,
             first,
         )?;
@@ -359,18 +360,19 @@ pub mod query {
 
     pub fn object_pins(
         deps: Deps,
-        id: ObjectId,
+        object_id: ObjectId,
         after: Option<Cursor>,
         first: Option<u32>,
     ) -> StdResult<ObjectPinsResponse> {
-        objects().load(deps.storage, id.clone())?;
+        let id = Box::new(base16ct::lower::decode_vec(object_id).unwrap());
+        objects().load(deps.storage, id.to_vec())?;
 
-        let handler: PaginationHandler<Pin, (String, Addr)> =
+        let handler: PaginationHandler<Pin, (Hash, Addr)> =
             PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
 
         let page: (Vec<Pin>, PageInfo) = handler.query_page(
             |min_bound| {
-                pins().idx.object.prefix(id.clone()).range(
+                pins().idx.object.prefix(id.to_vec()).range(
                     deps.storage,
                     min_bound,
                     None,
@@ -380,7 +382,7 @@ pub mod query {
             |c| {
                 cursor::decode(c)
                     .and_then(|raw| deps.api.addr_validate(raw.as_str()))
-                    .map(|addr| (id.clone(), addr))
+                    .map(|addr| (id.to_vec(), addr))
             },
             |pin: &Pin| cursor::encode(pin.clone().address.into_string()),
             after,
@@ -413,6 +415,7 @@ impl From<state::HashAlgorithm> for crypto::HashAlgorithm {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::crypto::Hash;
     use crate::error::BucketError;
     use crate::msg::{
         BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm,
@@ -624,6 +627,10 @@ mod tests {
         assert_eq!("foobar", value.name);
     }
 
+    fn decode_hash(hash: String) -> Hash {
+        base16ct::lower::decode_vec(hash).unwrap()
+    }
+
     #[test]
     fn store_object_without_limits() {
         let obj1_content = &general_purpose::STANDARD.encode("hello");
@@ -780,13 +787,16 @@ mod tests {
 
                 assert_eq!(
                     Binary::from_base64(content).unwrap(),
-                    Binary::from(DATA.load(&deps.storage, expected_hash.clone()).unwrap()),
+                    Binary::from(
+                        DATA.load(&deps.storage, decode_hash(expected_hash.clone()))
+                            .unwrap()
+                    ),
                 );
 
                 let created = objects()
-                    .load(&deps.storage, expected_hash.clone())
+                    .load(&deps.storage, decode_hash(expected_hash.clone()))
                     .unwrap();
-                assert_eq!(created.id, *expected_hash);
+                assert_eq!(created.id, decode_hash(expected_hash.to_string()));
                 assert_eq!(created.owner, info.sender.clone());
                 assert_eq!(created.size.u128(), *expected_size);
                 assert_eq!(
@@ -801,7 +811,7 @@ mod tests {
                 assert_eq!(
                     pins().has(
                         &deps.storage,
-                        (expected_hash.to_string(), info.clone().sender),
+                        (decode_hash(expected_hash.to_string()), info.clone().sender),
                     ),
                     *pin,
                 );
@@ -1484,7 +1494,10 @@ mod tests {
                     );
                     for (object_id, count) in case.expected_object_pin_count {
                         assert_eq!(
-                            objects().load(&deps.storage, object_id).unwrap().pin_count,
+                            objects()
+                                .load(&deps.storage, decode_hash(object_id))
+                                .unwrap()
+                                .pin_count,
                             count
                         );
                     }
@@ -1740,7 +1753,10 @@ mod tests {
                     );
                     for (object_id, count) in case.expected_object_pin_count {
                         assert_eq!(
-                            objects().load(&deps.storage, object_id).unwrap().pin_count,
+                            objects()
+                                .load(&deps.storage, decode_hash(object_id))
+                                .unwrap()
+                                .pin_count,
                             count
                         );
                     }
@@ -1785,28 +1801,83 @@ mod tests {
             pin: false,
             compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
-        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        let a = execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
         let data = general_purpose::STANDARD.encode("object2");
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
             compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
-        execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
+        let b = execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
         let data = general_purpose::STANDARD.encode("object3");
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
             compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
-        execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
+        let c = execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
 
         let cases = vec![
-            (QueryMsg::Objects { address: None, first: None, after: None }, 3, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
-            (QueryMsg::Objects { address: Some("unknown".to_string()), first: None, after: None }, 0, PageInfo { has_next_page: false, cursor: "".to_string() }),
-            (QueryMsg::Objects { address: Some("creator1".to_string()), first: None, after: None }, 2, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
-            (QueryMsg::Objects { address: Some("creator1".to_string()), first: Some(1), after: None }, 1, PageInfo { has_next_page: true, cursor: "23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string() }),
-            (QueryMsg::Objects { address: Some("creator1".to_string()), first: Some(1), after: Some("23Y64LH99dTheD49F6F7PvqH4J8wBm1dtd5mXsrYJfSvR8x4L214YUQ2xv1PY7uxqGKVSs4QxDsWF3qCo6QGzWWS".to_string()) }, 1, PageInfo { has_next_page: false, cursor: "2wvnkrvqBwQPX2Zougwd2BQufN4tbUGQfzajMyhNXnnPheaiP6HmCQw9JH4MvtxLzJuqpm6h2rJYPXHE1kCnDXS5".to_string() }),
+            (
+                QueryMsg::Objects {
+                    address: None,
+                    first: None,
+                    after: None,
+                },
+                3,
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "CZC4Avd5xNeJaBkK6MYrA1ZSQPNr76GU1k2JJSjmaDyF".to_string(),
+                },
+            ),
+            (
+                QueryMsg::Objects {
+                    address: Some("unknown".to_string()),
+                    first: None,
+                    after: None,
+                },
+                0,
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "".to_string(),
+                },
+            ),
+            (
+                QueryMsg::Objects {
+                    address: Some("creator1".to_string()),
+                    first: None,
+                    after: None,
+                },
+                2,
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "CZC4Avd5xNeJaBkK6MYrA1ZSQPNr76GU1k2JJSjmaDyF".to_string(),
+                },
+            ),
+            (
+                QueryMsg::Objects {
+                    address: Some("creator1".to_string()),
+                    first: Some(1),
+                    after: None,
+                },
+                1,
+                PageInfo {
+                    has_next_page: true,
+                    cursor: "5bfWM6UF5MowkQVp16q5pnXvwc9SVkS4xZkFeVLdswjU".to_string(),
+                },
+            ),
+            (
+                QueryMsg::Objects {
+                    address: Some("creator1".to_string()),
+                    first: Some(1),
+                    after: Some("5bfWM6UF5MowkQVp16q5pnXvwc9SVkS4xZkFeVLdswjU".to_string()),
+                },
+                1,
+                PageInfo {
+                    has_next_page: false,
+                    cursor: "CZC4Avd5xNeJaBkK6MYrA1ZSQPNr76GU1k2JJSjmaDyF".to_string(),
+                },
+            ),
         ];
 
         for case in cases {
@@ -2126,7 +2197,9 @@ mod tests {
                 _ => {
                     for object_id in case.forget_objects {
                         assert_eq!(
-                            objects().load(&deps.storage, object_id).unwrap_err(),
+                            objects()
+                                .load(&deps.storage, decode_hash(object_id))
+                                .unwrap_err(),
                             StdError::not_found(type_name::<Object>())
                         );
                     }

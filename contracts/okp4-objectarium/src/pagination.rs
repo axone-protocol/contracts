@@ -1,3 +1,4 @@
+use crate::cursor::AsCursor;
 use crate::msg::{Cursor, PageInfo};
 use crate::state::Pagination;
 use cosmwasm_std::{StdError, StdResult};
@@ -45,7 +46,20 @@ where
         }
     }
 
-    pub fn query_page<I, CE, CD>(
+    pub fn query_page_r<I>(
+        self,
+        iter_fn: I,
+        after: Option<Cursor>,
+        first: Option<u32>,
+    ) -> StdResult<(Vec<T>, PageInfo)>
+    where
+        I: FnOnce(Option<Bound<PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
+        T: AsCursor<PK> + Clone,
+    {
+        self.query_page(iter_fn, |c| T::decode(c), |i| i.encode(), after, first)
+    }
+
+    pub fn query_page<I, CD, CE>(
         self,
         iter_fn: I,
         cursor_dec_fn: CD,

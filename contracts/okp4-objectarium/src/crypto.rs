@@ -1,6 +1,7 @@
 use md5;
 use sha2;
 use sha2::Digest;
+use std::fmt::{Display, Formatter};
 
 /// HashAlgorithm is the type of the hash algorithm.
 pub enum HashAlgorithm {
@@ -29,35 +30,37 @@ impl HashAlgorithm {
     }
 }
 
+pub type Hash = Vec<u8>;
+
 /// HashFn is the type of the function used to hash data.
-pub type HashFn = fn(&Vec<u8>) -> String;
+pub type HashFn = fn(&Vec<u8>) -> Hash;
 
 /// hash returns the hash of the given data using the given algorithm.
-pub fn hash(algorithm: &HashAlgorithm, data: &Vec<u8>) -> String {
+pub fn hash<'a>(algorithm: &'a HashAlgorithm, data: &'a Vec<u8>) -> Hash {
     algorithm.hash_fn()(data)
 }
 
 /// md5_hash returns the MD5 hash of the given data.
-fn md5_hash(data: &Vec<u8>) -> String {
-    base16ct::lower::encode_string(&md5::Md5::digest(data))
+fn md5_hash(data: &Vec<u8>) -> Hash {
+    md5::Md5::digest(data).to_vec()
 }
 
 /// sha224_hash returns the SHA-224 hash of the given data.
-fn sha224_hash(data: &Vec<u8>) -> String {
-    base16ct::lower::encode_string(&sha2::Sha224::digest(data))
+fn sha224_hash(data: &Vec<u8>) -> Hash {
+    sha2::Sha224::digest(data).to_vec()
 }
 
 /// sha256_hash returns the SHA-256 hash of the given data.
-fn sha256_hash(data: &Vec<u8>) -> String {
-    base16ct::lower::encode_string(&sha2::Sha256::digest(data))
+fn sha256_hash(data: &Vec<u8>) -> Hash {
+    sha2::Sha256::digest(data).to_vec()
 }
 
 /// sha384_hash returns the SHA-384 hash of the given data.
-fn sha384_hash(data: &Vec<u8>) -> String {
-    base16ct::lower::encode_string(&sha2::Sha384::digest(data))
+fn sha384_hash(data: &Vec<u8>) -> Hash {
+    sha2::Sha384::digest(data).to_vec()
 }
 
 /// sha512_hash returns the SHA-512 hash of the given data.
-fn sha512_hash(data: &Vec<u8>) -> String {
-    base16ct::lower::encode_string(&sha2::Sha512::digest(data))
+fn sha512_hash(data: &Vec<u8>) -> Hash {
+    sha2::Sha512::digest(data).to_vec()
 }

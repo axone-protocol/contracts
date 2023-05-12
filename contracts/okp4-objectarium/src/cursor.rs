@@ -1,7 +1,7 @@
 use crate::crypto::Hash;
-use crate::msg::{Cursor, ObjectId};
-use crate::state::{Object, Pin};
-use cosmwasm_std::{Addr, StdError, StdResult};
+use crate::msg::Cursor;
+use crate::state::Object;
+use cosmwasm_std::{StdError, StdResult};
 
 pub fn encode<I: AsRef<[u8]>>(id: I) -> Cursor {
     bs58::encode(id).into_string()
@@ -39,27 +39,27 @@ mod tests {
 
     #[test]
     fn proper_encode() {
-        assert_eq!(encode("".to_string()), "".to_string());
-        assert_eq!(encode("an_id".to_string()), "BzZCCcK".to_string());
+        assert_eq!(encode(""), "".to_string());
+        assert_eq!(encode("an_id"), "BzZCCcK".to_string());
     }
 
     #[test]
     fn proper_decode() {
-        assert_eq!(decode("".to_string()), Ok("".to_string()));
-        assert_eq!(decode("BzZCCcK".to_string()), Ok("an_id".to_string()));
+        assert_eq!(decode(""), Ok("".to_string()));
+        assert_eq!(decode("BzZCCcK"), Ok("an_id".to_string()));
     }
 
     #[test]
     fn invalid_decode() {
         assert_eq!(
-            decode("?".to_string()),
+            decode("?"),
             Err(StdError::parse_err(
                 "Cursor",
                 "provided string contained invalid character '?' at byte 0"
             ))
         );
         assert_eq!(
-            decode("VtB5VXc".to_string()),
+            decode("VtB5VXc"),
             Err(StdError::parse_err(
                 "Cursor",
                 "invalid utf-8 sequence of 1 bytes from index 0"

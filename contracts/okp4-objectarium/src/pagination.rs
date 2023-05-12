@@ -31,6 +31,35 @@ where
     }
 }
 
+pub trait QueryPage<'a, T, PK> {
+    fn query_page<I>(
+        self,
+        iter_fn: I,
+        after: Option<Cursor>,
+        first: Option<u32>,
+    ) -> StdResult<(Vec<T>, PageInfo)>
+    where
+        I: FnOnce(Option<Bound<PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>;
+}
+
+impl<'a, T, PK> QueryPage<'a, T, PK> for PaginationHandler<'a, T, PK>
+where
+    T: Serialize + DeserializeOwned + AsCursor<PK> + Clone,
+    PK: PrimaryKey<'a>,
+{
+    fn query_page<I>(
+        self,
+        iter_fn: I,
+        after: Option<Cursor>,
+        first: Option<u32>,
+    ) -> StdResult<(Vec<T>, PageInfo)>
+    where
+        I: FnOnce(Option<Bound<PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
+    {
+        self.query_page_cursor_fn(iter_fn, |c| T::decode(c), |i| i.encode(), after, first)
+    }
+}
+
 impl<'a, T, PK> PaginationHandler<'a, T, PK>
 where
     T: Serialize + DeserializeOwned,
@@ -46,20 +75,7 @@ where
         }
     }
 
-    pub fn query_page_r<I>(
-        self,
-        iter_fn: I,
-        after: Option<Cursor>,
-        first: Option<u32>,
-    ) -> StdResult<(Vec<T>, PageInfo)>
-    where
-        I: FnOnce(Option<Bound<PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
-        T: AsCursor<PK> + Clone,
-    {
-        self.query_page(iter_fn, |c| T::decode(c), |i| i.encode(), after, first)
-    }
-
-    pub fn query_page<I, CD, CE>(
+    pub fn query_page_cursor_fn<I, CD, CE>(
         self,
         iter_fn: I,
         cursor_dec_fn: CD,
@@ -173,7 +189,7 @@ mod tests {
 
         let res = handler
             .clone()
-            .query_page(
+            .query_page_cursor_fn(
                 |_: Option<Bound<i32>>| {
                     Box::new(TestIter {
                         sub_iter: (&[] as &[i32]).iter(),
@@ -255,7 +271,7 @@ mod tests {
         for case in cases {
             let res = handler
                 .clone()
-                .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, case.0, case.1)
+                .query_page_cursor_fn(iter_fn, cursor_dec_fn, cursor_enc_fn, case.0, case.1)
                 .unwrap();
             assert_eq!(res.0, case.2);
             assert_eq!(res.1, case.3);
@@ -281,7 +297,7 @@ mod tests {
             |cursor: Cursor| cursor.parse::<i32>().map_err(|_| StdError::generic_err(""));
         let cursor_enc_fn = |pk: &i32| pk.to_string();
 
-        let res = handler.clone().query_page(
+        let res = handler.clone().query_page_cursor_fn(
             |_: Option<Bound<i32>>| {
                 Box::new(TestIter {
                     sub_iter: data.iter(),
@@ -295,9 +311,13 @@ mod tests {
         );
         assert_eq!(res, Err(StdError::generic_err("iter error".to_string())));
 
-        let res = handler
-            .clone()
-            .query_page(iter_fn, cursor_dec_fn, cursor_enc_fn, None, Some(4));
+        let res = handler.clone().query_page_cursor_fn(
+            iter_fn,
+            cursor_dec_fn,
+            cursor_enc_fn,
+            None,
+            Some(4),
+        );
         assert_eq!(
             res,
             Err(StdError::generic_err(
@@ -305,7 +325,7 @@ mod tests {
             ))
         );
 
-        let res = handler.clone().query_page(
+        let res = handler.clone().query_page_cursor_fn(
             iter_fn,
             |_| Err(StdError::generic_err("cursor decode error")),
             cursor_enc_fn,

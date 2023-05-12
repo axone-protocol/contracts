@@ -164,7 +164,7 @@ pub mod execute {
 
         Ok(Response::new()
             .add_attribute("action", "store_object")
-            .add_attribute("id", base16ct::lower::encode_string(object.id.as_ref())))
+            .add_attribute("id", object.id.clone()))
     }
 
     pub fn pin_object(
@@ -265,7 +265,8 @@ pub mod execute {
         })?;
 
         objects().remove(deps.storage, id.clone())?;
-        DATA.remove(deps.storage, id.clone());
+        DATA.remove(deps.storage, id);
+
         Ok(Response::new()
             .add_attribute("action", "forget_object")
             .add_attribute("id", object_id))
@@ -296,9 +297,8 @@ pub mod query {
     use crate::msg::{
         BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
     };
-    use crate::pagination::PaginationHandler;
-    use cosmwasm_std::{Addr, Order, StdError};
-    use std::any::type_name;
+    use crate::pagination::{PaginationHandler, QueryPage};
+    use cosmwasm_std::{Addr, Order};
 
     pub fn bucket(deps: Deps) -> Result<BucketResponse, ContractError> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -339,7 +339,7 @@ pub mod query {
         let handler: PaginationHandler<Object, Hash> =
             PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
 
-        let page: (Vec<Object>, PageInfo) = handler.query_page_r(
+        let page: (Vec<Object>, PageInfo) = handler.query_page(
             |min_bound| match address {
                 Some(addr) => objects().idx.owner.prefix(addr).range(
                     deps.storage,
@@ -371,7 +371,7 @@ pub mod query {
         let handler: PaginationHandler<Pin, (Hash, Addr)> =
             PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
 
-        let page: (Vec<Pin>, PageInfo) = handler.query_page(
+        let page: (Vec<Pin>, PageInfo) = handler.query_page_cursor_fn(
             |min_bound| {
                 pins().idx.object.prefix(id.clone()).range(
                     deps.storage,
@@ -1842,21 +1842,21 @@ mod tests {
             pin: false,
             compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
-        let a = execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
         let data = general_purpose::STANDARD.encode("object2");
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
             compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
-        let b = execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
+        execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
         let data = general_purpose::STANDARD.encode("object3");
         let msg = ExecuteMsg::StoreObject {
             data: Binary::from_base64(data.as_str()).unwrap(),
             pin: false,
             compression_algorithm: Some(CompressionAlgorithm::Passthrough),
         };
-        let c = execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
+        execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
 
         let cases = vec![
             (

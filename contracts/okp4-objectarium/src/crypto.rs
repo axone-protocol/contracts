@@ -7,8 +7,6 @@ use sha2;
 use sha2::Digest;
 use std::any::type_name;
 use std::borrow::Cow;
-use std::fmt;
-use std::fmt::{Display, Formatter};
 
 /// HashAlgorithm is the type of the hash algorithm.
 pub enum HashAlgorithm {
@@ -82,7 +80,7 @@ impl TryFrom<String> for Hash {
     fn try_from(s: String) -> StdResult<Hash> {
         base16ct::lower::decode_vec(s)
             .map_err(|e| StdError::parse_err(type_name::<Vec<u8>>(), e.to_string()))
-            .map(|hash| Hash(hash))
+            .map(Hash)
     }
 }
 
@@ -94,7 +92,7 @@ impl From<Hash> for String {
 
 impl From<Vec<u8>> for Hash {
     fn from(hash: Vec<u8>) -> Self {
-        return Hash(hash);
+        Hash(hash)
     }
 }
 

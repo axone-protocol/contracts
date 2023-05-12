@@ -16,16 +16,16 @@ pub fn decode<I: AsRef<[u8]>>(cursor: I) -> StdResult<Cursor> {
 }
 
 pub trait AsCursor<PK> {
-    fn encode(&self) -> Cursor;
-    fn decode(_: Cursor) -> StdResult<PK>;
+    fn encode_cursor(&self) -> Cursor;
+    fn decode_cursor(_: Cursor) -> StdResult<PK>;
 }
 
 impl AsCursor<Hash> for Object {
-    fn encode(&self) -> Cursor {
+    fn encode_cursor(&self) -> Cursor {
         bs58::encode(&self.id).into_string()
     }
 
-    fn decode(cursor: Cursor) -> StdResult<Hash> {
+    fn decode_cursor(cursor: Cursor) -> StdResult<Hash> {
         bs58::decode(cursor)
             .into_vec()
             .map(|e| e.into())

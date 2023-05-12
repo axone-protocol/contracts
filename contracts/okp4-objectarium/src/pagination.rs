@@ -56,7 +56,13 @@ where
     where
         I: FnOnce(Option<Bound<PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
     {
-        self.query_page_cursor_fn(iter_fn, |c| T::decode(c), |i| i.encode(), after, first)
+        self.query_page_cursor_fn(
+            iter_fn,
+            |c| T::decode_cursor(c),
+            |i| i.encode_cursor(),
+            after,
+            first,
+        )
     }
 }
 

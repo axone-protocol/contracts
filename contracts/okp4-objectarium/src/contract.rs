@@ -2145,4 +2145,63 @@ mod tests {
             assert_eq!(bucket.stat.size, case.expected_total_size);
         }
     }
+
+    #[test]
+    fn store_forgotten_object() {
+        let mut deps = mock_dependencies();
+        let info = mock_info("creator", &[]);
+
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                bucket: "test".to_string(),
+                config: Default::default(),
+                limits: Default::default(),
+                pagination: Default::default(),
+            },
+        )
+        .unwrap();
+
+        let data = general_purpose::STANDARD.encode("data");
+        let b = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+            },
+        )
+        .unwrap();
+
+        let _ = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::ForgetObject {
+                id: "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7".to_string(),
+            },
+        )
+        .unwrap();
+
+        let result = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+            },
+        );
+
+        assert_eq!(
+            result.err(),
+            None,
+            "Object should successfully restored after a forgot"
+        );
+    }
 }

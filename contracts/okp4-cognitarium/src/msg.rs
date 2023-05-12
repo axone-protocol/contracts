@@ -40,9 +40,11 @@ pub enum ExecuteMsg {
     ///     { "prefix": "foaf", "namespace": "http://xmlns.com/foaf/0.1/" }
     ///   ],
     ///   "delete": [
-    ///     { "variable": "s" },
-    ///     { "variable": "p" },
-    ///     { "variable": "o" }
+    ///     {
+    ///         "subject": { "variable": "s" },
+    ///         "predicate": { "variable": "p" },
+    ///         "object": { "variable": "o" }
+    ///     }
     ///   ],
     ///   "where": [
     ///     { "simple": { "triplePattern": {
@@ -53,7 +55,7 @@ pub enum ExecuteMsg {
     ///     { "simple": { "triplePattern": {
     ///         "subject": { "variable": "s" },
     ///         "predicate": { "variable": "p" },
-    ///         "object": { "variable": "o" },
+    ///         "object": { "variable": "o" }
     ///     } } }
     ///  ]
     /// ```

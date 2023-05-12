@@ -11,8 +11,8 @@ pub enum ContractError {
     #[error("{0}")]
     Bucket(#[from] BucketError),
 
-    #[error("Object is already pinned")]
-    ObjectAlreadyPinned {},
+    #[error("Object is pinned and cannot be forgotten")]
+    ObjectPinned {},
 
     #[error("Compression error: {0}")]
     CompressionError(String),
@@ -93,10 +93,14 @@ fn test_bucket_error_messages() {
             )),
             "Compression algorithm is not accepted: Snappy (accepted: \"[Passthrough]\")",
         ),
-        (ContractError::ObjectAlreadyPinned {}, "Object is already pinned"),
+        (ContractError::ObjectPinned {}, "Object is pinned and cannot be forgotten"),
         (
             ContractError::CompressionError("Insufficient ch'i to compress file".to_string()),
             "Compression error: Insufficient ch'i to compress file",
+        ),
+        (
+            CompressionError::Error("Cannot compress empty data".to_string()).into(),
+            "Compression error: Cannot compress empty data",
         ),
     ];
 

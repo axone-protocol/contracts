@@ -140,7 +140,7 @@ impl<'a> TripleStorer<'a> {
         match subject {
             model::Subject::NamedNode(node) => self.rio_to_node(node).map(Subject::Named),
             model::Subject::BlankNode(node) => Ok(Subject::Blank(node.id.to_string())),
-            _ => Err(StdError::generic_err("RDF star syntax unsupported")),
+            model::Subject::Triple(_) => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
 
@@ -152,12 +152,12 @@ impl<'a> TripleStorer<'a> {
         })
     }
 
-    fn rio_to_object(&mut self, object: model::Term) -> StdResult<Object> {
+    fn rio_to_object(&mut self, object: Term) -> StdResult<Object> {
         match object {
             Term::BlankNode(node) => Ok(Object::Blank(node.id.to_string())),
             Term::NamedNode(node) => self.rio_to_node(node).map(Object::Named),
             Term::Literal(literal) => self.rio_to_literal(literal).map(Object::Literal),
-            _ => Err(StdError::generic_err("RDF star syntax unsupported")),
+            Term::Triple(_) => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
 

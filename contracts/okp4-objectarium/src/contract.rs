@@ -265,6 +265,7 @@ pub mod execute {
         })?;
 
         objects().remove(deps.storage, object_id.clone())?;
+        DATA.remove(deps.storage, object_id.clone());
         Ok(Response::new()
             .add_attribute("action", "forget_object")
             .add_attribute("id", object_id))
@@ -2165,7 +2166,7 @@ mod tests {
         .unwrap();
 
         let data = general_purpose::STANDARD.encode("data");
-        let b = execute(
+        let _ = execute(
             deps.as_mut(),
             mock_env(),
             info.clone(),
@@ -2190,7 +2191,7 @@ mod tests {
         let result = execute(
             deps.as_mut(),
             mock_env(),
-            info.clone(),
+            info,
             ExecuteMsg::StoreObject {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,

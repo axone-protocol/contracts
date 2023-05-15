@@ -16,6 +16,8 @@
 
 *   [AskResponse](./okp4-law-stone-responses-askresponse.md) – `undefined#/responses/ask`
 
+*   [BlankNode](./okp4-cognitarium-executemsg-definitions-node-oneof-blanknode.md "An RDF blank node") – `undefined#/execute/definitions/Node/oneOf/1`
+
 *   [BlankNode](./okp4-cognitarium-querymsg-definitions-node-oneof-blanknode.md "An RDF blank node") – `undefined#/query/definitions/Node/oneOf/1`
 
 *   [BlankNode](./okp4-cognitarium-responses-selectresponse-definitions-value-oneof-blanknode.md "Represents a blank node") – `undefined#/responses/select/definitions/Value/oneOf/2`
@@ -24,6 +26,8 @@
 
 *   [BucketResponse](./okp4-objectarium-responses-bucketresponse.md "BucketResponse is the response of the Bucket query") – `undefined#/responses/bucket`
 
+*   [DeleteData](./okp4-cognitarium-executemsg-oneof-deletedata.md "Delete the data (RDF triples) from the store matching the patterns defined by the provided query") – `undefined#/execute/oneOf/1`
+
 *   [Describe](./okp4-cognitarium-querymsg-oneof-describe.md "Returns a description of the resource identified by the provided IRI as a set of RDF triples serialized in the provided format") – `undefined#/query/oneOf/2`
 
 *   [DescribeQuery](./okp4-cognitarium-querymsg-definitions-describequery.md "Represents a DESCRIBE query over the triple store, allowing to retrieve a description of a resource as a set of triples serialized in a specific format") – `undefined#/query/definitions/DescribeQuery`
@@ -31,6 +35,8 @@
 *   [DescribeResponse](./okp4-cognitarium-responses-describeresponse.md "Represents the response of a \[QueryMsg::Describe] query") – `undefined#/responses/describe`
 
 *   [ForgetObject](./okp4-objectarium-executemsg-oneof-forgetobject.md "ForgetObject first unpin the object from the bucket for the considered sender, then remove it from the storage if it is not pinned anymore") – `undefined#/execute/oneOf/1`
+
+*   [Full](./okp4-cognitarium-executemsg-definitions-iri-oneof-full.md "A full IRI") – `undefined#/execute/definitions/IRI/oneOf/1`
 
 *   [Full](./okp4-cognitarium-querymsg-definitions-iri-oneof-full.md "A full IRI") – `undefined#/query/definitions/IRI/oneOf/1`
 
@@ -46,13 +52,23 @@
 
 *   [InstantiateMsg](./okp4-objectarium-instantiatemsg.md "Instantiate messages") – `undefined#/instantiate`
 
+*   [LanguageTaggedString](./okp4-cognitarium-executemsg-definitions-literal-oneof-languagetaggedstring.md "A language-tagged string") – `undefined#/execute/definitions/Literal/oneOf/1`
+
 *   [LanguageTaggedString](./okp4-cognitarium-querymsg-definitions-literal-oneof-languagetaggedstring.md "A language-tagged string") – `undefined#/query/definitions/Literal/oneOf/1`
+
+*   [Literal](./okp4-cognitarium-executemsg-definitions-varornodeorliteral-oneof-literal.md "An RDF literal, i") – `undefined#/execute/definitions/VarOrNodeOrLiteral/oneOf/2`
 
 *   [Literal](./okp4-cognitarium-querymsg-definitions-varornodeorliteral-oneof-literal.md "An RDF literal, i") – `undefined#/query/definitions/VarOrNodeOrLiteral/oneOf/2`
 
 *   [Literal](./okp4-cognitarium-responses-selectresponse-definitions-value-oneof-literal.md "Represents a literal S with optional language tag L or datatype IRI D") – `undefined#/responses/select/definitions/Value/oneOf/1`
 
+*   [NamedNode](./okp4-cognitarium-executemsg-definitions-node-oneof-namednode.md "An RDF IRI") – `undefined#/execute/definitions/Node/oneOf/0`
+
 *   [NamedNode](./okp4-cognitarium-querymsg-definitions-node-oneof-namednode.md "An RDF IRI") – `undefined#/query/definitions/Node/oneOf/0`
+
+*   [Node](./okp4-cognitarium-executemsg-definitions-varornode-oneof-node.md "A node, i") – `undefined#/execute/definitions/VarOrNode/oneOf/1`
+
+*   [Node](./okp4-cognitarium-executemsg-definitions-varornodeorliteral-oneof-node.md "A node, i") – `undefined#/execute/definitions/VarOrNodeOrLiteral/oneOf/1`
 
 *   [Node](./okp4-cognitarium-querymsg-definitions-varornode-oneof-node.md "A node, i") – `undefined#/query/definitions/VarOrNode/oneOf/1`
 
@@ -80,7 +96,11 @@
 
 *   [PinObject](./okp4-objectarium-executemsg-oneof-pinobject.md "PinObject pins the object in the bucket for the considered sender") – `undefined#/execute/oneOf/2`
 
+*   [Prefix](./okp4-cognitarium-executemsg-definitions-prefix.md "Represents a prefix in a \[SelectQuery]") – `undefined#/execute/definitions/Prefix`
+
 *   [Prefix](./okp4-cognitarium-querymsg-definitions-prefix.md "Represents a prefix in a \[SelectQuery]") – `undefined#/query/definitions/Prefix`
+
+*   [Prefixed](./okp4-cognitarium-executemsg-definitions-iri-oneof-prefixed.md "An IRI prefixed with a prefix") – `undefined#/execute/definitions/IRI/oneOf/0`
 
 *   [Prefixed](./okp4-cognitarium-querymsg-definitions-iri-oneof-prefixed.md "An IRI prefixed with a prefix") – `undefined#/query/definitions/IRI/oneOf/0`
 
@@ -96,6 +116,10 @@
 
 *   [SelectResponse](./okp4-cognitarium-responses-selectresponse.md "Represents the response of a \[QueryMsg::Select] query") – `undefined#/responses/select`
 
+*   [Simple](./okp4-cognitarium-executemsg-definitions-literal-oneof-simple.md "A simple literal without datatype or language form") – `undefined#/execute/definitions/Literal/oneOf/0`
+
+*   [Simple](./okp4-cognitarium-executemsg-definitions-wherecondition-oneof-simple.md "Represents a simple condition") – `undefined#/execute/definitions/WhereCondition/oneOf/0`
+
 *   [Simple](./okp4-cognitarium-querymsg-definitions-literal-oneof-simple.md "A simple literal without datatype or language form") – `undefined#/query/definitions/Literal/oneOf/0`
 
 *   [Simple](./okp4-cognitarium-querymsg-definitions-wherecondition-oneof-simple.md "Represents a simple condition") – `undefined#/query/definitions/WhereCondition/oneOf/0`
@@ -110,9 +134,15 @@
 
 *   [StoreStat](./okp4-cognitarium-responses-storeresponse-definitions-storestat.md "Contains usage information about the triple store") – `undefined#/responses/store/definitions/StoreStat`
 
+*   [TriplePattern](./okp4-cognitarium-executemsg-definitions-simplewherecondition-oneof-triplepattern.md "Represents a triple pattern, i") – `undefined#/execute/definitions/SimpleWhereCondition/oneOf/0`
+
+*   [TriplePattern](./okp4-cognitarium-executemsg-definitions-triplepattern.md "Represents a triple pattern in a \[SimpleWhereCondition]") – `undefined#/execute/definitions/TriplePattern`
+
 *   [TriplePattern](./okp4-cognitarium-querymsg-definitions-simplewherecondition-oneof-triplepattern.md "Represents a triple pattern, i") – `undefined#/query/definitions/SimpleWhereCondition/oneOf/0`
 
 *   [TriplePattern](./okp4-cognitarium-querymsg-definitions-triplepattern.md "Represents a triple pattern in a \[SimpleWhereCondition]") – `undefined#/query/definitions/TriplePattern`
+
+*   [TypedValue](./okp4-cognitarium-executemsg-definitions-literal-oneof-typedvalue.md "A value with a datatype") – `undefined#/execute/definitions/Literal/oneOf/2`
 
 *   [TypedValue](./okp4-cognitarium-querymsg-definitions-literal-oneof-typedvalue.md "A value with a datatype") – `undefined#/query/definitions/Literal/oneOf/2`
 
@@ -121,6 +151,12 @@
 *   [UnpinObject](./okp4-objectarium-executemsg-oneof-unpinobject.md "UnpinObject unpins the object in the bucket for the considered sender") – `undefined#/execute/oneOf/3`
 
 *   [Untitled object in okp4-cognitarium](./okp4-cognitarium-executemsg-oneof-insertdata-properties-insert_data.md) – `undefined#/execute/oneOf/0/properties/insert_data`
+
+*   [Untitled object in okp4-cognitarium](./okp4-cognitarium-executemsg-oneof-deletedata-properties-delete_data.md) – `undefined#/execute/oneOf/1/properties/delete_data`
+
+*   [Untitled object in okp4-cognitarium](./okp4-cognitarium-executemsg-definitions-literal-oneof-languagetaggedstring-properties-language_tagged_string.md) – `undefined#/execute/definitions/Literal/oneOf/1/properties/language_tagged_string`
+
+*   [Untitled object in okp4-cognitarium](./okp4-cognitarium-executemsg-definitions-literal-oneof-typedvalue-properties-typed_value.md) – `undefined#/execute/definitions/Literal/oneOf/2/properties/typed_value`
 
 *   [Untitled object in okp4-cognitarium](./okp4-cognitarium-querymsg-oneof-select-properties-select.md) – `undefined#/query/oneOf/1/properties/select`
 
@@ -172,6 +208,10 @@
 
 *   [Untitled object in okp4-objectarium](./okp4-objectarium-responses-bucketresponse-definitions-paginationconfig.md "PaginationConfig is the type carrying configuration for paginated queries") – `undefined#/responses/bucket/definitions/PaginationConfig`
 
+*   [Variable](./okp4-cognitarium-executemsg-definitions-varornode-oneof-variable.md "A variable") – `undefined#/execute/definitions/VarOrNode/oneOf/0`
+
+*   [Variable](./okp4-cognitarium-executemsg-definitions-varornodeorliteral-oneof-variable.md "A variable") – `undefined#/execute/definitions/VarOrNodeOrLiteral/oneOf/0`
+
 *   [Variable](./okp4-cognitarium-querymsg-definitions-selectitem-oneof-variable.md "Represents a variable") – `undefined#/query/definitions/SelectItem/oneOf/0`
 
 *   [Variable](./okp4-cognitarium-querymsg-definitions-varornode-oneof-variable.md "A variable") – `undefined#/query/definitions/VarOrNode/oneOf/0`
@@ -179,6 +219,10 @@
 *   [Variable](./okp4-cognitarium-querymsg-definitions-varornodeorliteral-oneof-variable.md "A variable") – `undefined#/query/definitions/VarOrNodeOrLiteral/oneOf/0`
 
 ### Arrays
+
+*   [Untitled array in okp4-cognitarium](./okp4-cognitarium-executemsg-oneof-deletedata-properties-delete_data-properties-delete.md "The items to delete") – `undefined#/execute/oneOf/1/properties/delete_data/properties/delete`
+
+*   [Untitled array in okp4-cognitarium](./okp4-cognitarium-executemsg-oneof-deletedata-properties-delete_data-properties-prefixes.md "The prefixes used in the operation") – `undefined#/execute/oneOf/1/properties/delete_data/properties/prefixes`
 
 *   [Untitled array in okp4-cognitarium](./okp4-cognitarium-querymsg-definitions-describequery-properties-prefixes.md "The prefixes used in the query") – `undefined#/query/definitions/DescribeQuery/properties/prefixes`
 

@@ -161,3 +161,19 @@ impl<'a> From<&'a Hash> for Cow<'a, Hash> {
         Cow::Borrowed(hash)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::crypto::Hash;
+
+    #[test]
+    fn vec_from_hash() {
+        let h = Hash(vec![1, 2, 3]);
+        let result: Vec<u8> = h.into();
+        assert_eq!(result, vec![1, 2, 3]);
+
+        let h = &Hash(vec![3, 2, 1]);
+        let result: Vec<u8> = h.into();
+        assert_eq!(result, vec![3, 2, 1])
+    }
+}

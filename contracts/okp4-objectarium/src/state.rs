@@ -255,8 +255,8 @@ impl Pagination {
 impl From<Pagination> for PaginationConfig {
     fn from(value: Pagination) -> Self {
         PaginationConfig {
-            max_page_size: Some(value.max_page_size),
-            default_page_size: Some(value.default_page_size),
+            max_page_size: value.max_page_size,
+            default_page_size: value.default_page_size,
         }
     }
 }
@@ -265,10 +265,7 @@ impl TryFrom<PaginationConfig> for Pagination {
     type Error = StdError;
 
     fn try_from(value: PaginationConfig) -> StdResult<Pagination> {
-        Pagination::try_new(
-            value.max_page_size_or_default(),
-            value.default_page_size_or_default(),
-        )
+        Pagination::try_new(value.max_page_size, value.default_page_size)
     }
 }
 

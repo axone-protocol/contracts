@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
 use derive_builder::Builder;
+use serde::{Deserialize, Serialize};
 
 /// ObjectId is the type of identifier of an object in the bucket.
 pub type ObjectId = String;
@@ -20,6 +21,7 @@ pub struct InstantiateMsg {
     /// The limits of the bucket.
     pub limits: BucketLimits,
     /// The configuration for paginated query.
+    #[serde(default)]
     pub pagination: PaginationConfig,
 }
 
@@ -283,32 +285,38 @@ pub struct BucketLimits {
 ///
 /// The fields are optional and if not set, there is a default configuration.
 #[cw_serde]
-#[derive(Default, Builder)]
+#[derive(Builder)]
 #[builder(default, setter(strip_option))]
 pub struct PaginationConfig {
     /// The maximum elements a page can contains.
     ///
     /// Shall be less than `u32::MAX - 1`.
     /// Default to '30' if not set.
-    pub max_page_size: Option<u32>,
+    #[serde(default = "PaginationConfig::default_page_max_size")]
+    pub max_page_size: u32,
     /// The default number of elements in a page.
     ///
     /// Shall be less or equal than `max_page_size`.
     /// Default to '10' if not set.
-    pub default_page_size: Option<u32>,
+    #[serde(default = "PaginationConfig::default_page_default_size")]
+    pub default_page_size: u32,
 }
 
 impl PaginationConfig {
-    const DEFAULT_PAGE_MAX_SIZE: u32 = 30;
-    const DEFAULT_PAGE_DEFAULT_SIZE: u32 = 10;
-
-    pub fn max_page_size_or_default(&self) -> u32 {
-        self.max_page_size.unwrap_or(Self::DEFAULT_PAGE_MAX_SIZE)
+    const fn default_page_max_size() -> u32 {
+        30
     }
+    const fn default_page_default_size() -> u32 {
+        10
+    }
+}
 
-    pub fn default_page_size_or_default(&self) -> u32 {
-        self.default_page_size
-            .unwrap_or(Self::DEFAULT_PAGE_DEFAULT_SIZE)
+impl Default for PaginationConfig {
+    fn default() -> Self {
+        PaginationConfig {
+            max_page_size: Self::default_page_max_size(),
+            default_page_size: Self::default_page_default_size(),
+        }
     }
 }
 
@@ -349,4 +357,35 @@ pub struct ObjectPinsResponse {
     pub data: Vec<String>,
     /// The page information.
     pub page_info: PageInfo,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::msg::{InstantiateMsg, PaginationConfig};
+    use schemars::_serde_json;
+
+    #[test]
+    fn pagination_config_default_serialization() {
+        let json = r#"
+          {}
+    "#;
+
+        let page: PaginationConfig = _serde_json::from_str(json).unwrap();
+        assert_eq!(page.max_page_size, 30);
+        assert_eq!(page.default_page_size, 10);
+    }
+
+    #[test]
+    fn instantiate_default() {
+        let json = r#"
+          {
+            "bucket": "foo",
+            "config": {},
+            "limits": {}
+          }
+    "#;
+        let msg: InstantiateMsg = _serde_json::from_str(json).unwrap();
+        assert_eq!(msg.pagination.max_page_size, 30);
+        assert_eq!(msg.pagination.default_page_size, 10);
+    }
 }

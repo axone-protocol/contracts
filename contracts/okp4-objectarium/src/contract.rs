@@ -458,8 +458,8 @@ mod tests {
                 ..Default::default()
             }
         );
-        assert_eq!(value.pagination.max_page_size, Some(30));
-        assert_eq!(value.pagination.default_page_size, Some(10));
+        assert_eq!(value.pagination.max_page_size, 30);
+        assert_eq!(value.pagination.default_page_size, 10);
 
         // check internal state too
         let bucket = BUCKET.load(&deps.storage).unwrap();
@@ -533,8 +533,8 @@ mod tests {
         assert_eq!(Uint128::new(10), value.limits.max_objects.unwrap());
         assert_eq!(Uint128::new(2000), value.limits.max_object_size.unwrap());
         assert_eq!(Uint128::new(1), value.limits.max_object_pins.unwrap());
-        assert_eq!(value.pagination.max_page_size, Some(50));
-        assert_eq!(value.pagination.default_page_size, Some(30));
+        assert_eq!(value.pagination.max_page_size, 50);
+        assert_eq!(value.pagination.default_page_size, 30);
     }
 
     #[test]
@@ -554,8 +554,8 @@ mod tests {
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
-        assert_eq!(value.pagination.max_page_size, Some(50));
-        assert_eq!(value.pagination.default_page_size, Some(30));
+        assert_eq!(value.pagination.max_page_size, 50);
+        assert_eq!(value.pagination.default_page_size, 30);
     }
 
     #[test]

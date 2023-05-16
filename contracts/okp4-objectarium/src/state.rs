@@ -144,20 +144,14 @@ pub struct BucketConfig {
     /// The algorithm used to hash the content of the objects to generate the id of the objects.
     /// The algorithm is optional and if not set, the default algorithm is used.
     ///
-    /// The default algorithm is Sha256 .
-    pub hash_algorithm: Option<HashAlgorithm>,
-}
-
-impl BucketConfig {
-    pub fn hash_algorithm_or_default(&self) -> HashAlgorithm {
-        self.hash_algorithm.as_ref().copied().unwrap_or_default()
-    }
+    /// The default algorithm is Sha256.
+    pub hash_algorithm: HashAlgorithm,
 }
 
 impl From<msg::BucketConfig> for BucketConfig {
     fn from(config: msg::BucketConfig) -> Self {
         BucketConfig {
-            hash_algorithm: config.hash_algorithm.map(|a| a.into()),
+            hash_algorithm: config.hash_algorithm.into(),
         }
     }
 }
@@ -165,7 +159,7 @@ impl From<msg::BucketConfig> for BucketConfig {
 impl From<BucketConfig> for msg::BucketConfig {
     fn from(config: BucketConfig) -> Self {
         msg::BucketConfig {
-            hash_algorithm: config.hash_algorithm.map(|a| a.into()),
+            hash_algorithm: config.hash_algorithm.into(),
         }
     }
 }

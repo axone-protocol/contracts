@@ -17,6 +17,7 @@ pub struct InstantiateMsg {
     /// If name contains whitespace, they will be removed.
     pub bucket: String,
     /// The configuration of the bucket.
+    #[serde(default)]
     pub config: BucketConfig,
     /// The limits of the bucket.
     pub limits: BucketLimits,
@@ -237,6 +238,12 @@ pub enum HashAlgorithm {
     Sha512,
 }
 
+impl Default for HashAlgorithm {
+    fn default() -> Self {
+        Self::Sha256
+    }
+}
+
 /// BucketConfig is the type of the configuration of a bucket.
 ///
 /// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
@@ -248,8 +255,9 @@ pub struct BucketConfig {
     /// The algorithm used to hash the content of the objects to generate the id of the objects.
     /// The algorithm is optional and if not set, the default algorithm is used.
     ///
-    /// The default algorithm is Sha256 .
-    pub hash_algorithm: Option<HashAlgorithm>,
+    /// The default algorithm is Sha256 if not set.
+    #[serde(default)]
+    pub hash_algorithm: HashAlgorithm,
 }
 
 /// BucketLimits is the type of the limits of a bucket.
@@ -361,11 +369,12 @@ pub struct ObjectPinsResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::{InstantiateMsg, PaginationConfig};
+    use crate::msg::HashAlgorithm::Sha256;
+    use crate::msg::{BucketConfig, InstantiateMsg, PaginationConfig};
     use schemars::_serde_json;
 
     #[test]
-    fn pagination_config_default_serialization() {
+    fn pagination_config_default_deserialization() {
         let json = r#"
           {}
     "#;
@@ -376,16 +385,26 @@ mod tests {
     }
 
     #[test]
-    fn instantiate_default() {
+    fn bucket_config_default_deserialization() {
+        let json = r#"
+          {}
+    "#;
+
+        let config: BucketConfig = _serde_json::from_str(json).unwrap();
+        assert_eq!(config.hash_algorithm, Sha256);
+    }
+
+    #[test]
+    fn instantiate_default_deserialization() {
         let json = r#"
           {
             "bucket": "foo",
-            "config": {},
             "limits": {}
           }
     "#;
         let msg: InstantiateMsg = _serde_json::from_str(json).unwrap();
         assert_eq!(msg.pagination.max_page_size, 30);
         assert_eq!(msg.pagination.default_page_size, 10);
+        assert_eq!(msg.config.hash_algorithm, Sha256);
     }
 }

@@ -116,10 +116,7 @@ pub mod execute {
         }
 
         // store object data
-        let id = crypto::hash(
-            &crypto::HashAlgorithm::from(bucket.config.hash_algorithm_or_default()),
-            &data.0,
-        );
+        let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.0);
         let data_path = DATA.key(id.clone());
         if data_path.has(deps.storage) {
             return Err(ContractError::Bucket(BucketError::ObjectAlreadyStored));
@@ -474,12 +471,11 @@ mod tests {
 
         // Define the test cases
         let test_cases = vec![
-            (None, None),
-            (Some(HashAlgorithm::MD5), Some(HashAlgorithm::MD5)),
-            (Some(HashAlgorithm::Sha224), Some(HashAlgorithm::Sha224)),
-            (Some(HashAlgorithm::Sha256), Some(HashAlgorithm::Sha256)),
-            (Some(HashAlgorithm::Sha384), Some(HashAlgorithm::Sha384)),
-            (Some(HashAlgorithm::Sha512), Some(HashAlgorithm::Sha512)),
+            (HashAlgorithm::MD5, HashAlgorithm::MD5),
+            (HashAlgorithm::Sha224, HashAlgorithm::Sha224),
+            (HashAlgorithm::Sha256, HashAlgorithm::Sha256),
+            (HashAlgorithm::Sha384, HashAlgorithm::Sha384),
+            (HashAlgorithm::Sha512, HashAlgorithm::Sha512),
         ];
 
         for (hash_algorithm, expected_hash_algorithm) in test_cases {
@@ -764,7 +760,9 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig { hash_algorithm },
+                    config: hash_algorithm
+                        .map(|h| BucketConfig { hash_algorithm: h })
+                        .unwrap_or_else(Default::default),
                     limits: Default::default(),
                     pagination: Default::default(),
                 },

@@ -6,7 +6,6 @@ use crate::msg;
 use crate::msg::{ObjectResponse, PaginationConfig};
 use cosmwasm_std::{Addr, StdError, StdResult, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
-use enum_iterator::all;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -130,12 +129,6 @@ impl From<CompressionAlgorithm> for msg::CompressionAlgorithm {
     }
 }
 
-impl CompressionAlgorithm {
-    pub fn values() -> Vec<CompressionAlgorithm> {
-        all::<CompressionAlgorithm>().collect::<Vec<_>>()
-    }
-}
-
 /// BucketConfig is the type of the configuration of a bucket.
 ///
 /// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
@@ -146,12 +139,21 @@ pub struct BucketConfig {
     ///
     /// The default algorithm is Sha256.
     pub hash_algorithm: HashAlgorithm,
+    /// The accepted compression algorithms for the objects in the bucket.
+    ///
+    /// The default is all compression algorithms.
+    pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
 }
 
 impl From<msg::BucketConfig> for BucketConfig {
     fn from(config: msg::BucketConfig) -> Self {
         BucketConfig {
             hash_algorithm: config.hash_algorithm.into(),
+            accepted_compression_algorithms: config
+                .accepted_compression_algorithms
+                .into_iter()
+                .map(Into::into)
+                .collect(),
         }
     }
 }
@@ -160,6 +162,11 @@ impl From<BucketConfig> for msg::BucketConfig {
     fn from(config: BucketConfig) -> Self {
         msg::BucketConfig {
             hash_algorithm: config.hash_algorithm.into(),
+            accepted_compression_algorithms: config
+                .accepted_compression_algorithms
+                .into_iter()
+                .map(Into::into)
+                .collect(),
         }
     }
 }
@@ -177,8 +184,6 @@ pub struct BucketLimits {
     pub max_object_size: Option<Uint128>,
     /// The maximum number of pins in the bucket for an object.
     pub max_object_pins: Option<Uint128>,
-    /// The accepted compression algorithms for the objects in the bucket.
-    pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
 }
 
 impl From<msg::BucketLimits> for BucketLimits {
@@ -188,10 +193,6 @@ impl From<msg::BucketLimits> for BucketLimits {
             max_objects: limits.max_objects,
             max_object_size: limits.max_object_size,
             max_object_pins: limits.max_object_pins,
-            accepted_compression_algorithms: limits
-                .accepted_compression_algorithms
-                .map(|it| it.into_iter().map(Into::into).collect())
-                .unwrap_or_else(CompressionAlgorithm::values),
         }
     }
 }
@@ -203,13 +204,6 @@ impl From<BucketLimits> for msg::BucketLimits {
             max_objects: limits.max_objects,
             max_object_size: limits.max_object_size,
             max_object_pins: limits.max_object_pins,
-            accepted_compression_algorithms: Some(
-                limits
-                    .accepted_compression_algorithms
-                    .into_iter()
-                    .map(|a| a.into())
-                    .collect::<Vec<_>>(),
-            ),
         }
     }
 }

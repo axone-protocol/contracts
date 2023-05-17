@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
 use derive_builder::Builder;
-use serde::{Deserialize, Serialize};
+use enum_iterator::{all, Sequence};
 
 /// ObjectId is the type of identifier of an object in the bucket.
 pub type ObjectId = String;
@@ -157,7 +157,7 @@ pub struct BucketResponse {
 /// during both compression and decompression, ranging from the lowest to the highest. This particular
 /// order is utilized to establish the default compression algorithm for storing an object.
 #[cw_serde]
-#[derive(Copy, Eq, PartialOrd)]
+#[derive(Copy, Eq, PartialOrd, Sequence)]
 pub enum CompressionAlgorithm {
     /// # Passthrough
     /// Represents no compression algorithm.
@@ -249,7 +249,7 @@ impl Default for HashAlgorithm {
 /// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
 /// The configuration is optional and if not set, the default configuration is used.
 #[cw_serde]
-#[derive(Default, Builder)]
+#[derive(Builder)]
 #[builder(default, setter(into, strip_option))]
 pub struct BucketConfig {
     /// The algorithm used to hash the content of the objects to generate the id of the objects.
@@ -258,6 +258,34 @@ pub struct BucketConfig {
     /// The default algorithm is Sha256 if not set.
     #[serde(default)]
     pub hash_algorithm: HashAlgorithm,
+    /// The acceptable compression algorithms for the objects in the bucket.
+    /// If this parameter is not set (none or empty array), then all compression algorithms are accepted.
+    /// If this parameter is set, then only the compression algorithms in the array are accepted.
+    ///
+    /// When an object is stored in the bucket without a specified compression algorithm, the first
+    /// algorithm in the array is used. Therefore, the order of the algorithms in the array is significant.
+    /// Typically, the most efficient compression algorithm, such as the NoCompression algorithm, should
+    /// be placed first in the array.
+    ///
+    /// Any attempt to store an object using a different compression algorithm than the ones specified
+    /// here will fail.
+    #[serde(default = "CompressionAlgorithm::values")]
+    pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
+}
+
+impl Default for BucketConfig {
+    fn default() -> Self {
+        Self {
+            hash_algorithm: Default::default(),
+            accepted_compression_algorithms: CompressionAlgorithm::values(),
+        }
+    }
+}
+
+impl CompressionAlgorithm {
+    pub fn values() -> Vec<CompressionAlgorithm> {
+        all::<CompressionAlgorithm>().collect::<Vec<_>>()
+    }
 }
 
 /// BucketLimits is the type of the limits of a bucket.
@@ -275,18 +303,6 @@ pub struct BucketLimits {
     pub max_object_size: Option<Uint128>,
     /// The maximum number of pins in the bucket for an object.
     pub max_object_pins: Option<Uint128>,
-    /// The acceptable compression algorithms for the objects in the bucket.
-    /// If this parameter is not set (none or empty array), then all compression algorithms are accepted.
-    /// If this parameter is set, then only the compression algorithms in the array are accepted.
-    ///
-    /// When an object is stored in the bucket without a specified compression algorithm, the first
-    /// algorithm in the array is used. Therefore, the order of the algorithms in the array is significant.
-    /// Typically, the most efficient compression algorithm, such as the NoCompression algorithm, should
-    /// be placed first in the array.
-    ///
-    /// Any attempt to store an object using a different compression algorithm than the ones specified
-    /// here will fail.
-    pub accepted_compression_algorithms: Option<Vec<CompressionAlgorithm>>,
 }
 
 /// PaginationConfig is the type carrying configuration for paginated queries.
@@ -369,8 +385,9 @@ pub struct ObjectPinsResponse {
 
 #[cfg(test)]
 mod tests {
+    use crate::msg::CompressionAlgorithm::{Passthrough, Snappy};
     use crate::msg::HashAlgorithm::Sha256;
-    use crate::msg::{BucketConfig, InstantiateMsg, PaginationConfig};
+    use crate::msg::{BucketConfig, CompressionAlgorithm, InstantiateMsg, PaginationConfig};
     use schemars::_serde_json;
 
     #[test]
@@ -403,8 +420,13 @@ mod tests {
           }
     "#;
         let msg: InstantiateMsg = _serde_json::from_str(json).unwrap();
+
         assert_eq!(msg.pagination.max_page_size, 30);
         assert_eq!(msg.pagination.default_page_size, 10);
         assert_eq!(msg.config.hash_algorithm, Sha256);
+        assert_eq!(
+            msg.config.accepted_compression_algorithms,
+            vec![Passthrough, Snappy]
+        )
     }
 }

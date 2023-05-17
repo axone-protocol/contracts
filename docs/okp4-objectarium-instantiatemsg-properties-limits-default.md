@@ -1,7 +1,7 @@
 # Untitled undefined type in okp4-objectarium Schema
 
 ```txt
-undefined#/responses/bucket/definitions/BucketLimits/properties/accepted_compression_algorithms/items
+undefined#/instantiate/properties/limits/default
 ```
 
 
@@ -10,6 +10,6 @@ undefined#/responses/bucket/definitions/BucketLimits/properties/accepted_compres
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-objectarium.json\*](schema/okp4-objectarium.json "open original schema") |
 
-## items Type
+## default Type
 
 unknown

@@ -388,9 +388,7 @@ pub struct ObjectPinsResponse {
 mod tests {
     use crate::msg::CompressionAlgorithm::{Passthrough, Snappy};
     use crate::msg::HashAlgorithm::Sha256;
-    use crate::msg::{
-        BucketConfig, BucketLimits, CompressionAlgorithm, InstantiateMsg, PaginationConfig,
-    };
+    use crate::msg::{BucketConfig, BucketLimits, InstantiateMsg, PaginationConfig};
     use schemars::_serde_json;
 
     #[test]

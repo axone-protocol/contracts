@@ -17,3 +17,17 @@ merged type ([Details](okp4-objectarium-instantiatemsg-properties-config.md))
 all of
 
 *   [Untitled undefined type in okp4-objectarium](okp4-objectarium-instantiatemsg-properties-config-allof-0.md "check type definition")
+
+## config Default Value
+
+The default value is:
+
+```json
+{
+  "accepted_compression_algorithms": [
+    "passthrough",
+    "snappy"
+  ],
+  "hash_algorithm": "sha256"
+}
+```

@@ -246,6 +246,10 @@
 
 *   [Untitled array in okp4-law-stone](./okp4-law-stone-responses-askresponse-definitions-term-properties-arguments.md) – `undefined#/responses/ask/definitions/Term/properties/arguments`
 
+*   [Untitled array in okp4-objectarium](./okp4-objectarium-instantiatemsg-definitions-bucketconfig-properties-accepted_compression_algorithms.md "The acceptable compression algorithms for the objects in the bucket") – `undefined#/instantiate/definitions/BucketConfig/properties/accepted_compression_algorithms`
+
+*   [Untitled array in okp4-objectarium](./okp4-objectarium-responses-bucketresponse-definitions-bucketconfig-properties-accepted_compression_algorithms.md "The acceptable compression algorithms for the objects in the bucket") – `undefined#/responses/bucket/definitions/BucketConfig/properties/accepted_compression_algorithms`
+
 *   [Untitled array in okp4-objectarium](./okp4-objectarium-responses-objectpinsresponse-properties-data.md "The list of addresses that pinned the object") – `undefined#/responses/object_pins/properties/data`
 
 *   [Untitled array in okp4-objectarium](./okp4-objectarium-responses-objectsresponse-properties-data.md "The list of objects in the bucket") – `undefined#/responses/objects/properties/data`

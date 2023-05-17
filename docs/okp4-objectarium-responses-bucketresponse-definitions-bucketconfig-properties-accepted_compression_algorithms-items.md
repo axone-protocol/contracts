@@ -1,30 +1,15 @@
 # Untitled undefined type in okp4-objectarium Schema
 
 ```txt
-undefined#/instantiate/properties/pagination
+undefined#/responses/bucket/definitions/BucketConfig/properties/accepted_compression_algorithms/items
 ```
 
-The configuration for paginated query.
+
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-objectarium.json\*](schema/okp4-objectarium.json "open original schema") |
 
-## pagination Type
+## items Type
 
-merged type ([Details](okp4-objectarium-instantiatemsg-properties-pagination.md))
-
-all of
-
-*   [Untitled undefined type in okp4-objectarium](okp4-objectarium-instantiatemsg-properties-pagination-allof-0.md "check type definition")
-
-## pagination Default Value
-
-The default value is:
-
-```json
-{
-  "default_page_size": 10,
-  "max_page_size": 30
-}
-```
+unknown

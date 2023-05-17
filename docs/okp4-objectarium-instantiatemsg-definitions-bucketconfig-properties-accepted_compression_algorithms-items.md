@@ -1,7 +1,7 @@
 # Untitled undefined type in okp4-objectarium Schema
 
 ```txt
-undefined#/instantiate/definitions/BucketLimits/properties/accepted_compression_algorithms/items
+undefined#/instantiate/definitions/BucketConfig/properties/accepted_compression_algorithms/items
 ```
 
 

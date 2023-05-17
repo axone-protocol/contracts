@@ -416,9 +416,8 @@ mod tests {
     use crate::crypto::Hash;
     use crate::error::BucketError;
     use crate::msg::{
-        BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm,
-        HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
-        PaginationConfigBuilder,
+        BucketConfig, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm, HashAlgorithm,
+        ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -629,26 +628,7 @@ mod tests {
 
         let test_cases = vec![
             (
-                None,
-                vec![
-                    (
-                        obj1_content,
-                        true,
-                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
-                            .to_string(),
-                        5,
-                    ),
-                    (
-                        obj2_content,
-                        false,
-                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
-                            .to_string(),
-                        4,
-                    ),
-                ],
-            ),
-            (
-                Some(HashAlgorithm::MD5),
+                HashAlgorithm::MD5,
                 vec![
                     (
                         obj1_content,
@@ -667,7 +647,7 @@ mod tests {
                 ],
             ),
             (
-                Some(HashAlgorithm::Sha224),
+                HashAlgorithm::Sha224,
                 vec![
                     (
                         obj1_content,
@@ -686,7 +666,7 @@ mod tests {
                 ],
             ),
             (
-                Some(HashAlgorithm::Sha256),
+                HashAlgorithm::Sha256,
                 vec![
                     (
                         obj1_content,
@@ -705,7 +685,7 @@ mod tests {
                 ],
             ),
             (
-                Some(HashAlgorithm::Sha384),
+                HashAlgorithm::Sha384,
                 vec![
                     (
                         obj1_content,
@@ -724,7 +704,7 @@ mod tests {
                 ],
             ),
             (
-                Some(HashAlgorithm::Sha512),
+                HashAlgorithm::Sha512,
                 vec![
                     (
                         obj1_content,
@@ -754,12 +734,10 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: hash_algorithm
-                        .map(|h| BucketConfig {
-                            hash_algorithm: h,
-                            ..Default::default()
-                        })
-                        .unwrap_or_else(Default::default),
+                    config: BucketConfig {
+                        hash_algorithm,
+                        ..Default::default()
+                    },
                     limits: Default::default(),
                     pagination: Default::default(),
                 },

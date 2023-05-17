@@ -18,10 +18,10 @@ The fields are optional and if not set, there is a default configuration.
 
 # PaginationConfig Properties
 
-| Property                                  | Type      | Required | Nullable    | Defined by                                                                                                                                                                                          |
-| :---------------------------------------- | :-------- | :------- | :---------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [default\_page\_size](#default_page_size) | `integer` | Optional | can be null | [okp4-objectarium](okp4-objectarium-instantiatemsg-definitions-paginationconfig-properties-default_page_size.md "undefined#/instantiate/definitions/PaginationConfig/properties/default_page_size") |
-| [max\_page\_size](#max_page_size)         | `integer` | Optional | can be null | [okp4-objectarium](okp4-objectarium-instantiatemsg-definitions-paginationconfig-properties-max_page_size.md "undefined#/instantiate/definitions/PaginationConfig/properties/max_page_size")         |
+| Property                                  | Type      | Required | Nullable       | Defined by                                                                                                                                                                                          |
+| :---------------------------------------- | :-------- | :------- | :------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [default\_page\_size](#default_page_size) | `integer` | Optional | cannot be null | [okp4-objectarium](okp4-objectarium-instantiatemsg-definitions-paginationconfig-properties-default_page_size.md "undefined#/instantiate/definitions/PaginationConfig/properties/default_page_size") |
+| [max\_page\_size](#max_page_size)         | `integer` | Optional | cannot be null | [okp4-objectarium](okp4-objectarium-instantiatemsg-definitions-paginationconfig-properties-max_page_size.md "undefined#/instantiate/definitions/PaginationConfig/properties/max_page_size")         |
 
 ## default\_page\_size
 
@@ -35,7 +35,7 @@ Shall be less or equal than `max_page_size`. Default to '10' if not set.
 
 *   Type: `integer`
 
-*   can be null
+*   cannot be null
 
 *   defined in: [okp4-objectarium](okp4-objectarium-instantiatemsg-definitions-paginationconfig-properties-default_page_size.md "undefined#/instantiate/definitions/PaginationConfig/properties/default_page_size")
 
@@ -49,6 +49,14 @@ Shall be less or equal than `max_page_size`. Default to '10' if not set.
 
 **unknown format**: the value of this string must follow the format: `uint32`
 
+### default\_page\_size Default Value
+
+The default value is:
+
+```json
+10
+```
+
 ## max\_page\_size
 
 The maximum elements a page can contains.
@@ -61,7 +69,7 @@ Shall be less than `u32::MAX - 1`. Default to '30' if not set.
 
 *   Type: `integer`
 
-*   can be null
+*   cannot be null
 
 *   defined in: [okp4-objectarium](okp4-objectarium-instantiatemsg-definitions-paginationconfig-properties-max_page_size.md "undefined#/instantiate/definitions/PaginationConfig/properties/max_page_size")
 
@@ -74,3 +82,11 @@ Shall be less than `u32::MAX - 1`. Default to '30' if not set.
 **minimum**: the value of this number must greater than or equal to: `0`
 
 **unknown format**: the value of this string must follow the format: `uint32`
+
+### max\_page\_size Default Value
+
+The default value is:
+
+```json
+30
+```

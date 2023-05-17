@@ -17,3 +17,16 @@ merged type ([Details](okp4-objectarium-instantiatemsg-properties-limits.md))
 all of
 
 *   [Untitled undefined type in okp4-objectarium](okp4-objectarium-instantiatemsg-properties-limits-allof-0.md "check type definition")
+
+## limits Default Value
+
+The default value is:
+
+```json
+{
+  "max_object_pins": null,
+  "max_object_size": null,
+  "max_objects": null,
+  "max_total_size": null
+}
+```

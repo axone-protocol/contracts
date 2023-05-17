@@ -16,7 +16,7 @@ use crate::state::INSTANTIATE_CONTEXT;
 use okp4_objectarium_client::ObjectRef;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:law-stone";
+const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const STORE_PROGRAM_REPLY_ID: u64 = 1;

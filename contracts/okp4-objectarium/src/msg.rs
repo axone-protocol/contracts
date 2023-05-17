@@ -20,6 +20,7 @@ pub struct InstantiateMsg {
     #[serde(default)]
     pub config: BucketConfig,
     /// The limits of the bucket.
+    #[serde(default)]
     pub limits: BucketLimits,
     /// The configuration for paginated query.
     #[serde(default)]
@@ -387,7 +388,9 @@ pub struct ObjectPinsResponse {
 mod tests {
     use crate::msg::CompressionAlgorithm::{Passthrough, Snappy};
     use crate::msg::HashAlgorithm::Sha256;
-    use crate::msg::{BucketConfig, CompressionAlgorithm, InstantiateMsg, PaginationConfig};
+    use crate::msg::{
+        BucketConfig, BucketLimits, CompressionAlgorithm, InstantiateMsg, PaginationConfig,
+    };
     use schemars::_serde_json;
 
     #[test]
@@ -409,14 +412,30 @@ mod tests {
 
         let config: BucketConfig = _serde_json::from_str(json).unwrap();
         assert_eq!(config.hash_algorithm, Sha256);
+        assert_eq!(
+            config.accepted_compression_algorithms,
+            vec![Passthrough, Snappy]
+        );
+    }
+
+    #[test]
+    fn bucket_limit_default_deserialization() {
+        let json = r#"
+          {}
+    "#;
+
+        let limits: BucketLimits = _serde_json::from_str(json).unwrap();
+        assert_eq!(limits.max_object_pins, None);
+        assert_eq!(limits.max_objects, None);
+        assert_eq!(limits.max_object_size, None);
+        assert_eq!(limits.max_total_size, None);
     }
 
     #[test]
     fn instantiate_default_deserialization() {
         let json = r#"
           {
-            "bucket": "foo",
-            "limits": {}
+            "bucket": "foo"
           }
     "#;
         let msg: InstantiateMsg = _serde_json::from_str(json).unwrap();
@@ -427,6 +446,10 @@ mod tests {
         assert_eq!(
             msg.config.accepted_compression_algorithms,
             vec![Passthrough, Snappy]
-        )
+        );
+        assert_eq!(msg.limits.max_object_pins, None);
+        assert_eq!(msg.limits.max_objects, None);
+        assert_eq!(msg.limits.max_object_size, None);
+        assert_eq!(msg.limits.max_total_size, None);
     }
 }

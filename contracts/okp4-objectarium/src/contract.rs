@@ -59,7 +59,7 @@ pub mod execute {
     use crate::compress::CompressionAlgorithm;
     use crate::msg;
     use crate::state::BucketLimits;
-    use crate::ContractError::ObjectAlreadyPinned;
+    use crate::ContractError::ObjectPinned;
     use cosmwasm_std::{Order, StdError, Uint128};
     use std::any::type_name;
 
@@ -255,7 +255,7 @@ pub mod execute {
             .next()
             .is_some()
         {
-            return Err(ObjectAlreadyPinned {});
+            return Err(ObjectPinned {});
         }
         let object = query::object(deps.as_ref(), object_id.clone())?;
         BUCKET.update(deps.storage, |mut b| -> Result<_, ContractError> {
@@ -265,6 +265,7 @@ pub mod execute {
         })?;
 
         objects().remove(deps.storage, object_id.clone())?;
+        DATA.remove(deps.storage, object_id.clone());
         Ok(Response::new()
             .add_attribute("action", "forget_object")
             .add_attribute("id", object_id))
@@ -2014,7 +2015,7 @@ mod tests {
                 forget_senders: vec![mock_info("alice", &[])], // the sender is different from the pinner, so error
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
-                expected_error: Some(ContractError::ObjectAlreadyPinned {}),
+                expected_error: Some(ContractError::ObjectPinned {}),
             },
             TC {
                 pins: vec![ObjectId::from(
@@ -2045,7 +2046,7 @@ mod tests {
                 forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
-                expected_error: Some(ContractError::ObjectAlreadyPinned {}),
+                expected_error: Some(ContractError::ObjectPinned {}),
             },
         ];
 
@@ -2144,5 +2145,64 @@ mod tests {
             );
             assert_eq!(bucket.stat.size, case.expected_total_size);
         }
+    }
+
+    #[test]
+    fn store_forgotten_object() {
+        let mut deps = mock_dependencies();
+        let info = mock_info("creator", &[]);
+
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                bucket: "test".to_string(),
+                config: Default::default(),
+                limits: Default::default(),
+                pagination: Default::default(),
+            },
+        )
+        .unwrap();
+
+        let data = general_purpose::STANDARD.encode("data");
+        let _ = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+            },
+        )
+        .unwrap();
+
+        let _ = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::ForgetObject {
+                id: "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7".to_string(),
+            },
+        )
+        .unwrap();
+
+        let result = execute(
+            deps.as_mut(),
+            mock_env(),
+            info,
+            ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+            },
+        );
+
+        assert_eq!(
+            result.err(),
+            None,
+            "Object should successfully restored after a forgot"
+        );
     }
 }

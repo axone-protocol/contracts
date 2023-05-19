@@ -50,8 +50,8 @@ impl From<msg::StoreLimitsInput> for StoreLimits {
             max_triple_count: value.max_triple_count_or_default(),
             max_byte_size: value.max_byte_size_or_default(),
             max_triple_byte_size: value.max_triple_byte_size_or_default(),
-            max_query_limit: value.max_query_limit_or_default(),
-            max_query_variable_count: value.max_query_variable_count_or_default(),
+            max_query_limit: value.max_query_limit,
+            max_query_variable_count: value.max_query_variable_count,
             max_insert_data_byte_size: value.max_insert_data_byte_size_or_default(),
             max_insert_data_triple_count: value.max_insert_data_triple_count_or_default(),
         }

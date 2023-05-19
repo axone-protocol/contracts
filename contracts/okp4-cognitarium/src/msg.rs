@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 #[cw_serde]
 pub struct InstantiateMsg {
     /// Limitations regarding store usage.
+    #[serde(default)]
     pub limits: StoreLimitsInput,
 }
 
@@ -134,7 +135,7 @@ pub enum DataFormat {
 /// # StoreLimitsInput
 /// Contains requested limitations regarding store usages.
 #[cw_serde]
-#[derive(Default, Builder)]
+#[derive(Builder)]
 #[builder(default, setter(into, strip_option))]
 pub struct StoreLimitsInput {
     /// The maximum number of triples the store can contains.
@@ -153,10 +154,12 @@ pub struct StoreLimitsInput {
     pub max_triple_byte_size: Option<Uint128>,
     /// The maximum limit of a query, i.e. the maximum number of triples returned by a select query.
     /// If `None`, the default value of 30 is used.
-    pub max_query_limit: Option<u32>,
+    #[serde(default = "StoreLimitsInput::default_max_query_limit")]
+    pub max_query_limit: u32,
     /// The maximum number of variables a query can select.
     /// If `None`, the default value of 30 is used.
-    pub max_query_variable_count: Option<u32>,
+    #[serde(default = "StoreLimitsInput::default_max_query_variable_count")]
+    pub max_query_variable_count: u32,
     /// The maximum number of bytes an insert data query can contains.
     /// If `None`, the default value of [Uint128::MAX] is used, which can be considered as no limit.
     pub max_insert_data_byte_size: Option<Uint128>,
@@ -169,10 +172,15 @@ impl StoreLimitsInput {
     const DEFAULT_MAX_TRIPLE_COUNT: Uint128 = Uint128::MAX;
     const DEFAULT_MAX_BYTE_SIZE: Uint128 = Uint128::MAX;
     const DEFAULT_MAX_TRIPLE_BYTE_SIZE: Uint128 = Uint128::MAX;
-    const DEFAULT_MAX_QUERY_LIMIT: u32 = 30;
-    const DEFAULT_MAX_QUERY_VARIABLE_COUNT: u32 = 30;
     const DEFAULT_MAX_INSERT_DATA_BYTE_SIZE: Uint128 = Uint128::MAX;
     const DEFAULT_MAX_INSERT_DATA_TRIPLE_COUNT: Uint128 = Uint128::MAX;
+
+    const fn default_max_query_limit() -> u32 {
+        30
+    }
+    const fn default_max_query_variable_count() -> u32 {
+        30
+    }
 
     pub fn max_triple_count_or_default(&self) -> Uint128 {
         self.max_triple_count
@@ -185,14 +193,6 @@ impl StoreLimitsInput {
         self.max_triple_byte_size
             .unwrap_or(Self::DEFAULT_MAX_TRIPLE_BYTE_SIZE)
     }
-    pub fn max_query_limit_or_default(&self) -> u32 {
-        self.max_query_limit
-            .unwrap_or(Self::DEFAULT_MAX_QUERY_LIMIT)
-    }
-    pub fn max_query_variable_count_or_default(&self) -> u32 {
-        self.max_query_variable_count
-            .unwrap_or(Self::DEFAULT_MAX_QUERY_VARIABLE_COUNT)
-    }
     pub fn max_insert_data_byte_size_or_default(&self) -> Uint128 {
         self.max_insert_data_byte_size
             .unwrap_or(Self::DEFAULT_MAX_INSERT_DATA_BYTE_SIZE)
@@ -200,6 +200,16 @@ impl StoreLimitsInput {
     pub fn max_insert_data_triple_count_or_default(&self) -> Uint128 {
         self.max_insert_data_triple_count
             .unwrap_or(Self::DEFAULT_MAX_INSERT_DATA_TRIPLE_COUNT)
+    }
+}
+
+impl Default for StoreLimitsInput {
+    fn default() -> Self {
+        Self {
+            max_query_limit: Self::default_max_query_limit(),
+            max_query_variable_count: Self::default_max_query_variable_count(),
+            ..Default::default()
+        }
     }
 }
 

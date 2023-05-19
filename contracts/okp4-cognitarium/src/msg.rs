@@ -206,9 +206,13 @@ impl StoreLimitsInput {
 impl Default for StoreLimitsInput {
     fn default() -> Self {
         Self {
+            max_triple_count: None,
+            max_byte_size: None,
+            max_triple_byte_size: None,
             max_query_limit: Self::default_max_query_limit(),
             max_query_variable_count: Self::default_max_query_variable_count(),
-            ..Default::default()
+            max_insert_data_byte_size: None,
+            max_insert_data_triple_count: None,
         }
     }
 }
@@ -508,4 +512,42 @@ pub enum Node {
     /// # BlankNode
     /// An RDF [blank node](https://www.w3.org/TR/rdf11-concepts/#dfn-blank-node).
     BlankNode(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::msg::{InstantiateMsg, StoreLimitsInput};
+    use schemars::_serde_json;
+
+    #[test]
+    fn store_limit_default_deserialization() {
+        let json = r#"
+          {}
+    "#;
+
+        let input: StoreLimitsInput = _serde_json::from_str(json).unwrap();
+        assert_eq!(input.max_query_limit, 30);
+        assert_eq!(input.max_query_variable_count, 30);
+        assert_eq!(input.max_byte_size, None);
+        assert_eq!(input.max_triple_count, None);
+        assert_eq!(input.max_triple_byte_size, None);
+        assert_eq!(input.max_insert_data_byte_size, None);
+        assert_eq!(input.max_insert_data_triple_count, None);
+    }
+
+    #[test]
+    fn instantiate_default_deserialization() {
+        let json = r#"
+          {}
+    "#;
+        let msg: InstantiateMsg = _serde_json::from_str(json).unwrap();
+
+        assert_eq!(msg.limits.max_query_limit, 30);
+        assert_eq!(msg.limits.max_query_variable_count, 30);
+        assert_eq!(msg.limits.max_byte_size, None);
+        assert_eq!(msg.limits.max_triple_count, None);
+        assert_eq!(msg.limits.max_triple_byte_size, None);
+        assert_eq!(msg.limits.max_insert_data_byte_size, None);
+        assert_eq!(msg.limits.max_insert_data_triple_count, None);
+    }
 }

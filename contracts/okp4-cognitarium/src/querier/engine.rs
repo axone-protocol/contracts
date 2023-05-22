@@ -33,7 +33,13 @@ impl<'a> QueryEngine<'a> {
             QueryNode::CartesianProductJoin { left, right } => {
                 Box::new(move |_| Box::new(iter::empty()))
             }
-            QueryNode::ForLoopJoin { left, right } => Box::new(move |_| Box::new(iter::empty())),
+            QueryNode::ForLoopJoin { left, right } => {
+                let left = self.eval_node(left);
+                let right = self.eval_node(right);
+                Box::new(move |vars| -> ResolvedVariablesIterator {
+                    Box::new(left(vars).flat_map(move |v| right(v)))
+                })
+            }
             QueryNode::Skip { child, first } => {
                 let upstream = self.eval_node(child);
                 Box::new(move |vars| -> ResolvedVariablesIterator {

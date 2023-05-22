@@ -72,6 +72,46 @@ pub enum ResolvedVariable {
     Object(Object),
 }
 
+impl ResolvedVariable {
+    fn as_subject(&self) -> Option<Subject> {
+        Some(match self {
+            ResolvedVariable::Subject(s) => s.clone(),
+            ResolvedVariable::Predicate(p) => Subject::Named(p.clone()),
+            ResolvedVariable::Object(o) => match o {
+                Object::Named(node) => Subject::Named(node.clone()),
+                Object::Blank(node) => Subject::Blank(node.clone()),
+                Object::Literal(_) => None?,
+            },
+        })
+    }
+
+    fn as_predicate(&self) -> Option<Predicate> {
+        Some(match self {
+            ResolvedVariable::Subject(s) => match s {
+                Subject::Named(node) => node.clone(),
+                Subject::Blank(_) => None?,
+            },
+            ResolvedVariable::Predicate(p) => p.clone(),
+            ResolvedVariable::Object(o) => match o {
+                Object::Named(node) => node.clone(),
+                Object::Blank(_) => None,
+                Object::Literal(_) => None?,
+            },
+        })
+    }
+
+    fn as_object(&self) -> Object {
+        match self {
+            ResolvedVariable::Subject(s) => match s {
+                Subject::Named(node) => Object::Named(node.clone()),
+                Subject::Blank(node) => Object::Blank(node.clone()),
+            },
+            ResolvedVariable::Predicate(p) => Object::Named(p.clone()),
+            ResolvedVariable::Object(o) => o.clone(),
+        }
+    }
+}
+
 pub struct ResolvedVariables {
     variables: Vec<Option<ResolvedVariable>>,
 }

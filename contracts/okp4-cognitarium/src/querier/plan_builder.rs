@@ -26,6 +26,27 @@ impl<'a> PlanBuilder<'a> {
     pub fn build_plan(&mut self, where_clause: WhereClause) -> StdResult<QueryPlan> {
         Err(StdError::generic_err("not implemented"))
 
+    fn build_from_bgp(&self, bgp: Vec<QueryNode::TriplePattern>) -> StdResult<QueryPlan> {
+        bgp.iter()
+            .reduce(|left: QueryNode, right: QueryNode| -> QueryNode {
+                if left
+                    .bound_variables()
+                    .union(&right.bound_variables())
+                    .next()
+                    .is_some()
+                {
+                    return QueryNode::ForLoopJoin { left, right };
+                }
+                QueryNode::CartesianProductJoin { left, right }
+            })
+            .map(Ok)
+            .unwrap_or(Err(StdError::generic_err("Empty basic graph pattern")))
+            .map(|query_node: QueryNode| QueryPlan {
+                entrypoint: query_node,
+                variables: self.variables.clone(),
+            })
+    }
+
     fn build_triple_pattern(
         &mut self,
         pattern: &TriplePattern,

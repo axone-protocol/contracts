@@ -29,7 +29,15 @@ impl<'a> QueryEngine<'a> {
                 subject,
                 predicate,
                 object,
-            } => Box::new(move |_| Box::new(iter::empty())),
+            } => Box::new(move |vars| {
+                Box::new(TriplePatternIterator::new(
+                    self.storage,
+                    vars,
+                    subject,
+                    predicate,
+                    object,
+                ))
+            }),
             QueryNode::CartesianProductJoin { left, right } => {
                 let left = self.eval_node(left);
                 let right = self.eval_node(right);
@@ -100,15 +108,15 @@ impl ResolvedVariable {
         })
     }
 
-    fn as_object(&self) -> Object {
-        match self {
+    fn as_object(&self) -> Option<Object> {
+        Some(match self {
             ResolvedVariable::Subject(s) => match s {
                 Subject::Named(node) => Object::Named(node.clone()),
                 Subject::Blank(node) => Object::Blank(node.clone()),
             },
             ResolvedVariable::Predicate(p) => Object::Named(p.clone()),
             ResolvedVariable::Object(o) => o.clone(),
-        }
+        })
     }
 }
 
@@ -146,6 +154,17 @@ impl ResolvedVariables {
 
         Some(Self { variables: merged })
     }
+
+    fn set(&mut self, index: usize, var: ResolvedVariable) {
+        self.variables[index] = Some(var)
+    }
+
+    fn get(&self, index: usize) -> &Option<ResolvedVariable> {
+        self.variables
+            .get(index)
+            .unwrap_or((None as &Option<ResolvedVariable>))
+    }
+}
 
 struct CartesianProductJoinIterator {
     values: Vec<ResolvedVariables>,
@@ -190,5 +209,35 @@ impl Iterator for CartesianProductJoinIterator {
                 }
             }
         }
+    }
+}
+
+struct TriplePatternIterator<'a> {
+    input: ResolvedVariables,
+    output_bindings: (Option<usize>, Option<usize>, Option<usize>),
+    triple_iter: Box<dyn Iterator<Item = StdResult<Triple>>>,
+}
+
+impl<'a> TriplePatternIterator<'a> {
+    fn new(
+        storage: &'a dyn Storage,
+        input: ResolvedVariables,
+        subject: PatternValue<Subject>,
+        predicate: PatternValue<Predicate>,
+        object: PatternValue<Object>,
+    ) -> Self {
+        Self {
+            input,
+            output_bindings: (None, None, None),
+            triple_iter: Box::new(iter::empty()),
+        }
+    }
+}
+
+impl Iterator for TriplePatternIterator {
+    type Item = StdResult<ResolvedVariables>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
     }
 }

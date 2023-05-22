@@ -45,7 +45,49 @@ pub enum QueryNode {
     Limit { child: Self, first: usize },
 }
 
+impl QueryNode {
+    pub fn bound_variables(&self) -> BTreeSet<usize> {
+        let mut vars = BTreeSet::new();
+        self.lookup_bound_variables(&mut |v| {
+            vars.insert(v);
+        });
+        vars
+    }
+
+    pub fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize)) {
+        match self {
+            QueryNode::TriplePattern {
+                subject,
+                predicate,
+                object,
+            } => {
+                subject.lookup_bound_variable(callback);
+                predicate.lookup_bound_variable(callback);
+                object.lookup_bound_variable(callback);
+            }
+            QueryNode::CartesianProductJoin { left, right } => {
+                left.lookup_bound_variables(callback);
+                right.lookup_bound_variables(callback);
+            }
+            QueryNode::ForLoopJoin { left, right } => {
+                left.lookup_bound_variables(callback);
+                right.lookup_bound_variables(callback);
+            }
+            QueryNode::Skip { child, .. } => child.lookup_bound_variables(callback),
+            QueryNode::Limit { child, .. } => child.lookup_bound_variables(callback),
+        }
+    }
+}
+
 pub enum PatternValue<V> {
     Constant(V),
     Variable(usize),
+}
+
+impl<V> PatternValue<V> {
+    pub fn lookup_bound_variable(&self, callback: &mut impl FnMut(usize)) {
+        if let PatternValue::Variable(v) = self {
+            callback(*v);
+        }
+    }
 }

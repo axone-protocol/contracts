@@ -35,7 +35,12 @@ impl<'a> QueryEngine<'a> {
             }
             QueryNode::ForLoopJoin { left, right } => Box::new(move |_| Box::new(iter::empty())),
             QueryNode::Skip { child, first } => Box::new(move |_| Box::new(iter::empty())),
-            QueryNode::Limit { child, first } => Box::new(move |_| Box::new(iter::empty())),
+            QueryNode::Limit { child, first } => {
+                let upstream = self.eval_node(child);
+                Box::new(move |vars| -> ResolvedVariablesIterator {
+                    Box::new(upstream(vars).take(first))
+                })
+            }
         }
     }
 }

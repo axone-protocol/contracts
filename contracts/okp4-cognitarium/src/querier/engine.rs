@@ -226,10 +226,102 @@ impl<'a> TriplePatternIterator<'a> {
         predicate: PatternValue<Predicate>,
         object: PatternValue<Object>,
     ) -> Self {
+        let (filters, output_bindings) = Self::compute_iter_io(&input, subject, predicate, object);
+
         Self {
             input,
-            output_bindings: (None, None, None),
-            triple_iter: Box::new(iter::empty()),
+            output_bindings,
+            triple_iter: Self::make_state_iter(storage, filters),
+        }
+    }
+
+    fn make_state_iter<'a>(
+        storage: &'a dyn Storage,
+        filters: (Option<Subject>, Option<Predicate>, Option<Object>),
+    ) -> Box<dyn Iterator<Item = StdResult<Triple>> + 'a> {
+        Box::new(match filters {
+            (Some(s), Some(p), Some(o)) => {
+                iter::once(triples().load(storage, (o.as_hash().as_bytes(), p, s)))
+            }
+            (Some(s), Some(p), None) => triples()
+                .idx
+                .subject_and_predicate
+                .prefix((s, p))
+                .range(storage, None, None, Order::Ascending)
+                .map(|(_, t)| t),
+            (None, Some(p), Some(o)) => triples()
+                .prefix((o.as_hash().as_bytes(), p))
+                .range(storage, None, None, Order::Ascending)
+                .map(|(_, t)| t),
+            (Some(s), None, Some(o)) => triples()
+                .idx
+                .subject_and_predicate
+                .sub_prefix(s)
+                .range(storage, None, None, Order::Ascending)
+                .filter(|res| match res {
+                    Ok((_, triple)) => triple.object == o,
+                    Err(_) => true,
+                })
+                .map(|(_, t)| t),
+            (Some(s), None, None) => triples()
+                .idx
+                .subject_and_predicate
+                .sub_prefix(s)
+                .range(storage, None, None, Order::Ascending)
+                .map(|(_, t)| t),
+            (None, Some(p), None) => triples()
+                .range(storage, None, None, Order::Ascending)
+                .filter(|res| match res {
+                    Ok((_, triple)) => triple.predicate == p,
+                    Err(_) => true,
+                })
+                .map(|(_, t)| t),
+            (None, None, Some(o)) => triples()
+                .sub_prefix(o.as_hash().as_bytes())
+                .range(storage, None, None, Order::Ascending)
+                .map(|(_, t)| t),
+            (None, None, None) => triples()
+                .range(storage, None, None, Order::Ascending)
+                .map(|(_, t)| t),
+        })
+    }
+
+    fn compute_iter_io(
+        input: &ResolvedVariables,
+        subject: PatternValue<Subject>,
+        predicate: PatternValue<Predicate>,
+        object: PatternValue<Object>,
+    ) -> (
+        (Option<Subject>, Option<Predicate>, Option<Object>),
+        (Option<usize>, Option<usize>, Option<usize>),
+    ) {
+        let (s_filter, s_bind) =
+            Self::resolve_pattern_part(subject, ResolvedVariable::as_subject, input);
+        let (p_filter, p_bind) =
+            Self::resolve_pattern_part(predicate, ResolvedVariable::as_predicate, input);
+        let (o_filter, o_bind) =
+            Self::resolve_pattern_part(object, ResolvedVariable::as_object, input);
+
+        ((s_filter, p_filter, o_filter), (s_bind, p_bind, o_bind))
+    }
+
+    fn resolve_pattern_part<T, M>(
+        pattern_part: PatternValue<T>,
+        map_fn: M,
+        input: &ResolvedVariables,
+    ) -> (Option<T>, Option<usize>)
+    where
+        M: FnOnce(&ResolvedVariable) -> Some(T),
+    {
+        match pattern_part {
+            PatternValue::Constant(s) => (Some(s), None),
+            PatternValue::Variable(v) => match input.get(v) {
+                Some(var) => match map_fn(var) {
+                    None => (None, Some(v)),
+                    Some(val) => (Some(val), None),
+                },
+                None => (None, Some(v)),
+            },
         }
     }
 }
@@ -238,6 +330,21 @@ impl Iterator for TriplePatternIterator {
     type Item = StdResult<ResolvedVariables>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        None
+        self.triple_iter.next().map(|res| {
+            res.map(|triple| -> ResolvedVariables {
+                let mut vars: ResolvedVariables = self.input.clone();
+                for (part, var_idx) in self.output {
+                    let var = match part {
+                        TriplePart::Subject => ResolvedVariable::Subject(triple.subject.clone()),
+                        TriplePart::Predicate => {
+                            ResolvedVariable::Predicate(triple.predicate.clone())
+                        }
+                        TriplePart::Object => ResolvedVariable::Object(triple.object.clone()),
+                    };
+                    vars.set(var_idx, var);
+                }
+                vars
+            })
+        })
     }
 }

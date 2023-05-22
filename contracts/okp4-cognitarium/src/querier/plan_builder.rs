@@ -24,7 +24,16 @@ impl<'a> PlanBuilder<'a> {
     }
 
     pub fn build_plan(&mut self, where_clause: WhereClause) -> StdResult<QueryPlan> {
-        Err(StdError::generic_err("not implemented"))
+        let bgp: Vec<QueryNode::TriplePattern> = where_clause
+            .iter()
+            .map(|cond| {
+                let WhereCondition::Simple(SimpleWhereCondition::TriplePattern(pattern)) = cond;
+                self.build_triple_pattern(pattern)
+            })
+            .collect()?;
+
+        self.build_from_bgp(bgp)
+    }
 
     fn build_from_bgp(&self, bgp: Vec<QueryNode::TriplePattern>) -> StdResult<QueryPlan> {
         bgp.iter()

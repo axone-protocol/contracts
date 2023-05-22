@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub type TriplePK<'a> = (&'a [u8], Vec<u8>, Vec<u8>);
 
 pub struct TripleIndexes<'a> {
-    subject_and_predicate: MultiIndex<'a, (Vec<u8>, Vec<u8>), Triple, TriplePK<'a>>,
+    pub subject_and_predicate: MultiIndex<'a, (Vec<u8>, Vec<u8>), Triple, TriplePK<'a>>,
 }
 
 impl IndexList<Triple> for TripleIndexes<'_> {

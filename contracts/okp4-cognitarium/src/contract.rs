@@ -48,7 +48,7 @@ pub mod execute {
     use super::*;
     use crate::msg::DataFormat;
     use crate::rdf::TripleReader;
-    use crate::state::TripleStorer;
+    use crate::storer::TripleStorer;
     use std::io::BufReader;
 
     pub fn insert(

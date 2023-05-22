@@ -15,7 +15,28 @@ impl<'a> QueryEngine<'a> {
     }
 
     pub fn eval_plan(&self, plan: QueryPlan) -> ResolvedVariablesIterator {
-        Box::new(iter::empty())
+        return self.eval_node(plan.entrypoint)(ResolvedVariables::with_capacity(
+            plan.variables.len(),
+        ));
+    }
+
+    fn eval_node(
+        &self,
+        node: QueryNode,
+    ) -> Box<dyn Fn(ResolvedVariables) -> ResolvedVariablesIterator> {
+        match node {
+            QueryNode::TriplePattern {
+                subject,
+                predicate,
+                object,
+            } => Box::new(move |_| Box::new(iter::empty())),
+            QueryNode::CartesianProductJoin { left, right } => {
+                Box::new(move |_| Box::new(iter::empty()))
+            }
+            QueryNode::ForLoopJoin { left, right } => Box::new(move |_| Box::new(iter::empty())),
+            QueryNode::Skip { child, first } => Box::new(move |_| Box::new(iter::empty())),
+            QueryNode::Limit { child, first } => Box::new(move |_| Box::new(iter::empty())),
+        }
     }
 }
 
@@ -29,4 +50,15 @@ pub enum ResolvedVariable {
 
 pub struct ResolvedVariables {
     pub variables: Vec<Option<ResolvedVariable>>,
+}
+
+impl ResolvedVariables {
+    pub fn with_capacity(cap: usize) -> Self {
+        let mut variables = Vec::with_capacity(cap);
+        for i in 0..usize {
+            variables.insert(i, None);
+        }
+
+        Self { variables }
+    }
 }

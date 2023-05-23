@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use sha2;
 use sha2::Digest;
 use std::any::type_name;
-use std::borrow::Cow;
 
 /// HashAlgorithm is the type of the hash algorithm.
 pub enum HashAlgorithm {
@@ -108,12 +107,6 @@ impl From<&Hash> for Vec<u8> {
     }
 }
 
-impl From<Hash> for Cow<'_, Hash> {
-    fn from(hash: Hash) -> Self {
-        Cow::Owned(hash)
-    }
-}
-
 impl<'a> PrimaryKey<'a> for Hash {
     type Prefix = ();
     type SubPrefix = ();
@@ -153,12 +146,6 @@ impl AsRef<[u8]> for Hash {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
-    }
-}
-
-impl<'a> From<&'a Hash> for Cow<'a, Hash> {
-    fn from(hash: &'a Hash) -> Self {
-        Cow::Borrowed(hash)
     }
 }
 

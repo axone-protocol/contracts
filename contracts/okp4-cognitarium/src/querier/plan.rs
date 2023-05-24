@@ -1,12 +1,11 @@
-use crate::msg::{Prefix, SelectQuery, SimpleWhereCondition, TriplePattern, WhereCondition};
 use crate::state::{Object, Predicate, Subject};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::BTreeSet;
 
 /// Represents a querying plan.
 pub struct QueryPlan {
     /// References the ending node of the plan, when evaluated others nodes will be invoked in
     /// cascade.
-    pub entrypoint: QueryNode,
+    pub entrypoint: Box<QueryNode>,
 
     /// Contains all the query variables, their index in this array are internally used as
     /// identifiers.
@@ -29,20 +28,20 @@ pub enum QueryNode {
     ///
     /// This should be used when the nodes doesn't have variables in common, and can be seen as a
     /// full join of disjoint datasets.  
-    CartesianProductJoin { left: Self, right: Self },
+    CartesianProductJoin { left: Box<Self>, right: Box<Self> },
 
     /// Join two nodes by using the variables values from the left node as replacement in the right
     /// node.
     ///
     /// This results to an inner join, but the underlying processing stream the variables from the
     /// left node to use them as right node values.
-    ForLoopJoin { left: Self, right: Self },
+    ForLoopJoin { left: Box<Self>, right: Box<Self> },
 
     /// Skip the specified first elements from the child node.
-    Skip { child: Self, first: usize },
+    Skip { child: Box<Self>, first: usize },
 
     /// Limit to the specified first elements from the child node.
-    Limit { child: Self, first: usize },
+    Limit { child: Box<Self>, first: usize },
 }
 
 impl QueryNode {
@@ -79,6 +78,7 @@ impl QueryNode {
     }
 }
 
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub enum PatternValue<V> {
     Constant(V),
     Variable(usize),

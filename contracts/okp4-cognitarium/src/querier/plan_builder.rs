@@ -24,19 +24,19 @@ impl<'a> PlanBuilder<'a> {
     }
 
     pub fn build_plan(&mut self, where_clause: WhereClause) -> StdResult<QueryPlan> {
-        let bgp: Vec<QueryNode::TriplePattern> = where_clause
+        let bgp: Vec<QueryNode> = where_clause
             .iter()
             .map(|cond| {
                 let WhereCondition::Simple(SimpleWhereCondition::TriplePattern(pattern)) = cond;
                 self.build_triple_pattern(pattern)
             })
-            .collect()?;
+            .collect::<StdResult<Vec<QueryNode>>>()?;
 
         self.build_from_bgp(bgp)
     }
 
-    fn build_from_bgp(&self, bgp: Vec<QueryNode::TriplePattern>) -> StdResult<QueryPlan> {
-        bgp.iter()
+    fn build_from_bgp(&self, bgp: Vec<QueryNode>) -> StdResult<QueryPlan> {
+        bgp.into_iter()
             .reduce(|left: QueryNode, right: QueryNode| -> QueryNode {
                 if left
                     .bound_variables()
@@ -44,22 +44,25 @@ impl<'a> PlanBuilder<'a> {
                     .next()
                     .is_some()
                 {
-                    return QueryNode::ForLoopJoin { left, right };
+                    return QueryNode::ForLoopJoin {
+                        left: Box::new(left),
+                        right: Box::new(right),
+                    };
                 }
-                QueryNode::CartesianProductJoin { left, right }
+                QueryNode::CartesianProductJoin {
+                    left: Box::new(left),
+                    right: Box::new(right),
+                }
             })
             .map(Ok)
             .unwrap_or(Err(StdError::generic_err("Empty basic graph pattern")))
-            .map(|query_node: QueryNode| QueryPlan {
-                entrypoint: query_node,
+            .map(|query_node| QueryPlan {
+                entrypoint: Box::new(query_node),
                 variables: self.variables.clone(),
             })
     }
 
-    fn build_triple_pattern(
-        &mut self,
-        pattern: &TriplePattern,
-    ) -> StdResult<QueryNode::TriplePattern> {
+    fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {
         Ok(QueryNode::TriplePattern {
             subject: self.build_subject_pattern(pattern.subject.clone())?,
             predicate: self.build_predicate_pattern(pattern.predicate.clone())?,
@@ -84,7 +87,9 @@ impl<'a> PlanBuilder<'a> {
             VarOrNode::Variable(v) => PatternValue::Variable(self.resolve_variable(v)),
             VarOrNode::Node(n) => match n {
                 Node::NamedNode(iri) => PatternValue::Constant(self.build_named_node(iri)?),
-                Node::BlankNode(_) => (),
+                Node::BlankNode(_) => Err(StdError::generic_err(
+                    "Predicate pattern must be a named node",
+                ))?,
             },
         })
     }
@@ -117,7 +122,7 @@ impl<'a> PlanBuilder<'a> {
     fn build_named_node(&mut self, value: IRI) -> StdResult<state::Node> {
         match value {
             IRI::Prefixed(prefixed) => prefixed
-                .rfind(b':')
+                .rfind(':')
                 .map(Ok)
                 .unwrap_or(Err(StdError::generic_err(
                     "Malformed prefixed IRI: no prefix delimiter found",
@@ -135,7 +140,7 @@ impl<'a> PlanBuilder<'a> {
                 }),
             IRI::Full(full) => Ok(full),
         }
-        .and_then(rdf::explode_iri)
+        .and_then(|iri| rdf::explode_iri(iri.as_str()))
         .and_then(|(ns_key, v)| {
             namespaces()
                 .load(self.storage, ns_key)
@@ -147,7 +152,7 @@ impl<'a> PlanBuilder<'a> {
     }
 
     fn resolve_variable(&mut self, v: String) -> usize {
-        if let Some(index) = self.variables.iter().position(|&name| name == v) {
+        if let Some(index) = self.variables.iter().position(|name| name == &v) {
             return index;
         }
 

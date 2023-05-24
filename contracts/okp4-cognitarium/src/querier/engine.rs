@@ -1,4 +1,5 @@
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
+use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
 use crate::state::{triples, Literal, Object, Predicate, Subject, Triple};
 use cosmwasm_std::{Order, StdResult, Storage};
 use std::collections::VecDeque;
@@ -80,98 +81,6 @@ impl<'a> QueryEngine<'a> {
 }
 
 type ResolvedVariablesIterator<'a> = Box<dyn Iterator<Item = StdResult<ResolvedVariables>> + 'a>;
-
-#[derive(Eq, PartialEq, Debug, Clone)]
-pub enum ResolvedVariable {
-    Subject(Subject),
-    Predicate(Predicate),
-    Object(Object),
-}
-
-impl ResolvedVariable {
-    fn as_subject(&self) -> Option<Subject> {
-        Some(match self {
-            ResolvedVariable::Subject(s) => s.clone(),
-            ResolvedVariable::Predicate(p) => Subject::Named(p.clone()),
-            ResolvedVariable::Object(o) => match o {
-                Object::Named(node) => Subject::Named(node.clone()),
-                Object::Blank(node) => Subject::Blank(node.clone()),
-                Object::Literal(_) => None?,
-            },
-        })
-    }
-
-    fn as_predicate(&self) -> Option<Predicate> {
-        Some(match self {
-            ResolvedVariable::Subject(s) => match s {
-                Subject::Named(node) => node.clone(),
-                Subject::Blank(_) => None?,
-            },
-            ResolvedVariable::Predicate(p) => p.clone(),
-            ResolvedVariable::Object(o) => match o {
-                Object::Named(node) => node.clone(),
-                Object::Blank(_) => None?,
-                Object::Literal(_) => None?,
-            },
-        })
-    }
-
-    fn as_object(&self) -> Option<Object> {
-        Some(match self {
-            ResolvedVariable::Subject(s) => match s {
-                Subject::Named(node) => Object::Named(node.clone()),
-                Subject::Blank(node) => Object::Blank(node.clone()),
-            },
-            ResolvedVariable::Predicate(p) => Object::Named(p.clone()),
-            ResolvedVariable::Object(o) => o.clone(),
-        })
-    }
-}
-
-#[derive(Eq, PartialEq, Debug, Clone)]
-pub struct ResolvedVariables {
-    variables: Vec<Option<ResolvedVariable>>,
-}
-
-impl ResolvedVariables {
-    pub fn with_capacity(cap: usize) -> Self {
-        let mut variables = Vec::with_capacity(cap);
-        for i in 0..cap {
-            variables.insert(i, None);
-        }
-
-        Self { variables }
-    }
-
-    /// Merge with another set of resolved variables, returns None if a variable is set on both side
-    /// with different values.
-    pub fn merge_with(&self, other: &Self) -> Option<Self> {
-        let mut merged = other.variables.clone();
-
-        for (key, var) in self.variables.iter().enumerate() {
-            if let Some(val) = var {
-                match &other.variables[key] {
-                    Some(other_val) => {
-                        if val != other_val {
-                            return None;
-                        }
-                    }
-                    None => merged[key] = Some(val.clone()),
-                }
-            }
-        }
-
-        Some(Self { variables: merged })
-    }
-
-    fn set(&mut self, index: usize, var: ResolvedVariable) {
-        self.variables[index] = Some(var)
-    }
-
-    pub fn get(&self, index: usize) -> &Option<ResolvedVariable> {
-        self.variables.get(index).unwrap_or(&None)
-    }
-}
 
 struct ForLoopJoinIterator<'a> {
     left: ResolvedVariablesIterator<'a>,

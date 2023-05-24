@@ -12,6 +12,8 @@ pub struct PlanBuilder<'a> {
     storage: &'a dyn Storage,
     prefixes: HashMap<String, String>,
     variables: Vec<String>,
+    limit: Option<usize>,
+    skip: Option<usize>,
 }
 
 impl<'a> PlanBuilder<'a> {
@@ -20,7 +22,19 @@ impl<'a> PlanBuilder<'a> {
             storage,
             prefixes: Self::make_prefixes(prefixes),
             variables: Vec::new(),
+            skip: None,
+            limit: None,
         }
+    }
+
+    pub fn with_limit(&mut self, limit: usize) -> &Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    pub fn with_skip(&mut self, skip: usize) -> &Self {
+        self.skip = Some(skip);
+        self
     }
 
     pub fn build_plan(&mut self, where_clause: WhereClause) -> StdResult<QueryPlan> {
@@ -33,9 +47,31 @@ impl<'a> PlanBuilder<'a> {
             .collect::<StdResult<Vec<QueryNode>>>()?;
 
         self.build_from_bgp(bgp)
+            .map(|mut node| {
+                if let Some(skip) = self.skip {
+                    node = QueryNode::Skip {
+                        child: Box::new(node),
+                        first: skip,
+                    }
+                }
+                node
+            })
+            .map(|mut node| {
+                if let Some(limit) = self.skip {
+                    node = QueryNode::Limit {
+                        child: Box::new(node),
+                        first: limit,
+                    }
+                }
+                node
+            })
+            .map(|node| QueryPlan {
+                entrypoint: Box::new(node),
+                variables: self.variables.clone(),
+            })
     }
 
-    fn build_from_bgp(&self, bgp: Vec<QueryNode>) -> StdResult<QueryPlan> {
+    fn build_from_bgp(&self, bgp: Vec<QueryNode>) -> StdResult<QueryNode> {
         bgp.into_iter()
             .reduce(|left: QueryNode, right: QueryNode| -> QueryNode {
                 if left
@@ -56,10 +92,6 @@ impl<'a> PlanBuilder<'a> {
             })
             .map(Ok)
             .unwrap_or(Err(StdError::generic_err("Empty basic graph pattern")))
-            .map(|query_node| QueryPlan {
-                entrypoint: Box::new(query_node),
-                variables: self.variables.clone(),
-            })
     }
 
     fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {

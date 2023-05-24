@@ -38,6 +38,7 @@ pub fn execute(
         ExecuteMsg::InsertData { format, data } => {
             insert(deps, info, format.unwrap_or(DataFormat::Turtle), data)
         }
+        _ => Err(StdError::generic_err("Not implemented").into()),
     }
 }
 

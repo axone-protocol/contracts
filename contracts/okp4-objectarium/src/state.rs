@@ -1,4 +1,5 @@
 use crate::compress::CompressionAlgorithm;
+use crate::crypto::Hash;
 use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
 use crate::msg;
@@ -9,7 +10,7 @@ use enum_iterator::all;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub const DATA: Map<String, Vec<u8>> = Map::new("DATA");
+pub const DATA: Map<Hash, Vec<u8>> = Map::new("DATA");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Bucket {
@@ -276,7 +277,7 @@ pub const BUCKET: Item<Bucket> = Item::new("bucket");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Object {
     /// The id of the object.
-    pub id: String,
+    pub id: Hash,
     /// The owner of the object.
     pub owner: Addr,
     /// The size of the object.
@@ -292,7 +293,7 @@ pub struct Object {
 impl From<&Object> for ObjectResponse {
     fn from(object: &Object) -> Self {
         ObjectResponse {
-            id: object.id.clone(),
+            id: object.id.clone().into(),
             size: object.size,
             owner: object.owner.clone().into(),
             is_pinned: object.pin_count > Uint128::zero(),
@@ -303,7 +304,7 @@ impl From<&Object> for ObjectResponse {
 }
 
 pub struct ObjectIndexes<'a> {
-    pub owner: MultiIndex<'a, Addr, Object, String>,
+    pub owner: MultiIndex<'a, Addr, Object, Hash>,
 }
 
 impl IndexList<Object> for ObjectIndexes<'_> {
@@ -312,7 +313,7 @@ impl IndexList<Object> for ObjectIndexes<'_> {
     }
 }
 
-pub fn objects<'a>() -> IndexedMap<'a, String, Object, ObjectIndexes<'a>> {
+pub fn objects<'a>() -> IndexedMap<'a, Hash, Object, ObjectIndexes<'a>> {
     IndexedMap::new(
         "OBJECT",
         ObjectIndexes {
@@ -324,13 +325,13 @@ pub fn objects<'a>() -> IndexedMap<'a, String, Object, ObjectIndexes<'a>> {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Pin {
     /// The id of the object.
-    pub id: String,
+    pub id: Hash,
     /// The address that pinned the object.
     pub address: Addr,
 }
 
 pub struct PinIndexes<'a> {
-    pub object: MultiIndex<'a, String, Pin, (String, Addr)>,
+    pub object: MultiIndex<'a, Hash, Pin, (Hash, Addr)>,
 }
 
 impl IndexList<Pin> for PinIndexes<'_> {
@@ -339,7 +340,7 @@ impl IndexList<Pin> for PinIndexes<'_> {
     }
 }
 
-pub fn pins<'a>() -> IndexedMap<'a, (String, Addr), Pin, PinIndexes<'a>> {
+pub fn pins<'a>() -> IndexedMap<'a, (Hash, Addr), Pin, PinIndexes<'a>> {
     IndexedMap::new(
         "PIN",
         PinIndexes {

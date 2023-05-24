@@ -2,10 +2,14 @@ use blake3::Hash;
 use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex};
 use serde::{Deserialize, Serialize};
 
-pub type TriplePK<'a> = (&'a [u8], Predicate, Subject);
+/// Represents a triple primary key as a tuple of:
+/// - Object hash
+/// - Predicate in a binary format
+/// - Subject in a binary format
+pub type TriplePK<'a> = (&'a [u8], Vec<u8>, Vec<u8>);
 
 pub struct TripleIndexes<'a> {
-    subject_and_predicate: MultiIndex<'a, (Subject, Predicate), Triple, TriplePK<'a>>,
+    subject_and_predicate: MultiIndex<'a, (Vec<u8>, Vec<u8>), Triple, TriplePK<'a>>,
 }
 
 impl IndexList<Triple> for TripleIndexes<'_> {
@@ -19,7 +23,7 @@ pub fn triples<'a>() -> IndexedMap<'a, TriplePK<'a>, Triple, TripleIndexes<'a>> 
         "TRIPLE",
         TripleIndexes {
             subject_and_predicate: MultiIndex::new(
-                |_pk, triple| (triple.subject.clone(), triple.predicate.clone()),
+                |_pk, triple| (triple.subject.key(), triple.predicate.key()),
                 "TRIPLE",
                 "TRIPLE__SUBJECT_PREDICATE",
             ),
@@ -38,6 +42,29 @@ pub struct Triple {
 pub enum Subject {
     Named(Node),
     Blank(BlankNode),
+}
+
+impl Subject {
+    pub fn key(&self) -> Vec<u8> {
+        match self {
+            Subject::Named(n) => {
+                let node = n.key();
+                let mut key: Vec<u8> = Vec::with_capacity(node.len() + 1);
+                key.push(b'n');
+                key.extend(node);
+
+                key
+            }
+            Subject::Blank(n) => {
+                let val = n.as_bytes();
+                let mut key: Vec<u8> = Vec::with_capacity(val.len() + 1);
+                key.push(b'b');
+                key.extend(val);
+
+                key
+            }
+        }
+    }
 }
 
 pub type Predicate = Node;
@@ -89,6 +116,17 @@ pub type BlankNode = String;
 pub struct Node {
     pub namespace: u128,
     pub value: String,
+}
+
+impl Node {
+    pub fn key(&self) -> Vec<u8> {
+        let val = self.value.as_bytes();
+        let mut key: Vec<u8> = Vec::with_capacity(val.len() + 16);
+        key.extend(self.namespace.to_be_bytes());
+        key.extend(val);
+
+        key
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

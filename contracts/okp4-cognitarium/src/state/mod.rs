@@ -1,5 +1,4 @@
 mod namespaces;
-mod serde;
 mod store;
 mod storer;
 mod triples;

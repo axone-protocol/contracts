@@ -221,11 +221,13 @@ mod tests {
                             Node {
                                 namespace: 3u128,
                                 value: "hasRegistrar".to_string()
-                            },
+                            }
+                            .key(),
                             Subject::Named(Node {
                                 namespace: 0u128,
                                 value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string()
                             })
+                            .key()
                         )
                     )
                     .unwrap(),

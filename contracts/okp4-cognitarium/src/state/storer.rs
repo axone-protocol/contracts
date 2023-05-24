@@ -83,8 +83,8 @@ impl<'a> TripleStorer<'a> {
                 self.storage,
                 (
                     object_hash.as_bytes(),
-                    triple.predicate.clone(),
-                    triple.subject.clone(),
+                    triple.predicate.key(),
+                    triple.subject.key(),
                 ),
                 &triple,
             )

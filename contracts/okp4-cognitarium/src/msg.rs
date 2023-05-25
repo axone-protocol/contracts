@@ -322,6 +322,7 @@ pub struct Results {
 pub enum Value {
     /// # URI
     /// Represents an IRI.
+    #[serde(rename = "uri")]
     URI {
         /// The value of the IRI.
         value: IRI,

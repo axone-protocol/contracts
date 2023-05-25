@@ -76,16 +76,38 @@ pub mod execute {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Store => to_binary(&query::store(deps)?),
+        QueryMsg::Select { query } => to_binary(&query::select(deps, query)?),
         _ => Err(StdError::generic_err("Not implemented")),
     }
 }
 
 pub mod query {
     use super::*;
-    use crate::msg::StoreResponse;
+    use crate::msg::{SelectQuery, SelectResponse, StoreResponse};
+    use crate::querier::{PlanBuilder, QueryEngine};
 
     pub fn store(deps: Deps) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(|s| s.into())
+    }
+
+    pub fn select(deps: Deps, query: SelectQuery) -> StdResult<SelectResponse> {
+        let store = STORE.load(deps.storage)?;
+
+        if query.select.len() > store.limits.max_query_variable_count as usize {
+            Err(StdError::generic_err(
+                "Maximum query variable count exceeded",
+            ))?
+        }
+
+        let count = query.limit.unwrap_or(store.limits.max_query_limit);
+        if count > store.limits.max_query_limit {
+            Err(StdError::generic_err("Maximum query limit exceeded"))?
+        }
+
+        let mut plan_builder =
+            PlanBuilder::new(deps.storage, query.prefixes).with_limit(count as usize);
+
+        QueryEngine::new(deps.storage).select(plan_builder.build_plan(query.r#where)?, query.select)
     }
 }
 
@@ -226,6 +248,7 @@ mod tests {
                     )
                     .unwrap(),
                 Namespace {
+                    value: "https://ontology.okp4.space/dataverse/dataspace/".to_string(),
                     key: 0u128,
                     counter: 5u128,
                 }

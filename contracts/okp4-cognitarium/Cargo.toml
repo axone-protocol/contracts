@@ -38,7 +38,7 @@ serde.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-base64 = "0.21.1"
+base64 = "0.21.2"
 cw-multi-test.workspace = true
 
 [features]

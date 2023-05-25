@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 pub struct QueryPlan {
     /// References the ending node of the plan, when evaluated others nodes will be invoked in
     /// cascade.
-    pub entrypoint: Box<QueryNode>,
+    pub entrypoint: QueryNode,
 
     /// Contains all the query variables, their index in this array are internally used as
     /// identifiers.

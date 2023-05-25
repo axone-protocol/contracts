@@ -55,9 +55,9 @@ impl<'a> QueryEngine<'a> {
 
     fn eval_node(
         &'a self,
-        node: Box<QueryNode>,
+        node: QueryNode,
     ) -> Rc<dyn Fn(ResolvedVariables) -> ResolvedVariablesIterator<'a> + 'a> {
-        match *node {
+        match node {
             QueryNode::TriplePattern {
                 subject,
                 predicate,
@@ -72,8 +72,8 @@ impl<'a> QueryEngine<'a> {
                 ))
             }),
             QueryNode::CartesianProductJoin { left, right } => {
-                let left = self.eval_node(left);
-                let right = self.eval_node(right);
+                let left = self.eval_node(*left);
+                let right = self.eval_node(*right);
                 Rc::new(move |vars| {
                     let mut buffered_errors = VecDeque::new();
                     let values = right(vars.clone())
@@ -93,19 +93,19 @@ impl<'a> QueryEngine<'a> {
                 })
             }
             QueryNode::ForLoopJoin { left, right } => {
-                let left = self.eval_node(left);
-                let right = self.eval_node(right);
+                let left = self.eval_node(*left);
+                let right = self.eval_node(*right);
                 Rc::new(move |vars| {
                     let right = Rc::clone(&right);
                     Box::new(ForLoopJoinIterator::new(left(vars), right))
                 })
             }
             QueryNode::Skip { child, first } => {
-                let upstream = self.eval_node(child);
+                let upstream = self.eval_node(*child);
                 Rc::new(move |vars| Box::new(upstream(vars).skip(first)))
             }
             QueryNode::Limit { child, first } => {
-                let upstream = self.eval_node(child);
+                let upstream = self.eval_node(*child);
                 Rc::new(move |vars| Box::new(upstream(vars).take(first)))
             }
         }
@@ -211,6 +211,9 @@ struct TriplePatternIterator<'a> {
     triple_iter: Box<dyn Iterator<Item = StdResult<Triple>> + 'a>,
 }
 
+type TriplePatternFilters = (Option<Subject>, Option<Predicate>, Option<Object>);
+type TriplePatternBindings = (Option<usize>, Option<usize>, Option<usize>);
+
 impl<'a> TriplePatternIterator<'a> {
     fn new(
         storage: &'a dyn Storage,
@@ -230,7 +233,7 @@ impl<'a> TriplePatternIterator<'a> {
 
     fn make_state_iter(
         storage: &'a dyn Storage,
-        filters: (Option<Subject>, Option<Predicate>, Option<Object>),
+        filters: TriplePatternFilters,
     ) -> Box<dyn Iterator<Item = StdResult<Triple>> + 'a> {
         match filters {
             (Some(s), Some(p), Some(o)) => Box::new(iter::once(
@@ -298,10 +301,7 @@ impl<'a> TriplePatternIterator<'a> {
         subject: PatternValue<Subject>,
         predicate: PatternValue<Predicate>,
         object: PatternValue<Object>,
-    ) -> (
-        (Option<Subject>, Option<Predicate>, Option<Object>),
-        (Option<usize>, Option<usize>, Option<usize>),
-    ) {
+    ) -> (TriplePatternFilters, TriplePatternBindings) {
         let (s_filter, s_bind) =
             Self::resolve_pattern_part(subject, ResolvedVariable::as_subject, input);
         let (p_filter, p_bind) =
@@ -342,13 +342,13 @@ impl<'a> Iterator for TriplePatternIterator<'a> {
                 let mut vars: ResolvedVariables = self.input.clone();
 
                 if let Some(v) = self.output_bindings.0 {
-                    vars.set(v, ResolvedVariable::Subject(triple.subject.clone()));
+                    vars.set(v, ResolvedVariable::Subject(triple.subject));
                 }
                 if let Some(v) = self.output_bindings.1 {
-                    vars.set(v, ResolvedVariable::Predicate(triple.predicate.clone()));
+                    vars.set(v, ResolvedVariable::Predicate(triple.predicate));
                 }
                 if let Some(v) = self.output_bindings.2 {
-                    vars.set(v, ResolvedVariable::Object(triple.object.clone()));
+                    vars.set(v, ResolvedVariable::Object(triple.object));
                 }
 
                 vars

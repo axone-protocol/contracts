@@ -27,12 +27,12 @@ impl<'a> PlanBuilder<'a> {
         }
     }
 
-    pub fn with_limit(&mut self, limit: usize) -> &Self {
+    pub fn with_limit(mut self, limit: usize) -> Self {
         self.limit = Some(limit);
         self
     }
 
-    pub fn with_skip(&mut self, skip: usize) -> &Self {
+    pub fn with_skip(mut self, skip: usize) -> Self {
         self.skip = Some(skip);
         self
     }
@@ -66,7 +66,7 @@ impl<'a> PlanBuilder<'a> {
                 node
             })
             .map(|node| QueryPlan {
-                entrypoint: Box::new(node),
+                entrypoint: node,
                 variables: self.variables.clone(),
             })
     }

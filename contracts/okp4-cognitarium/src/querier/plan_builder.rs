@@ -58,7 +58,7 @@ impl<'a> PlanBuilder<'a> {
                 node
             })
             .map(|mut node| {
-                if let Some(limit) = self.skip {
+                if let Some(limit) = self.limit {
                     node = QueryNode::Limit {
                         child: Box::new(node),
                         first: limit,
@@ -162,7 +162,7 @@ impl<'a> PlanBuilder<'a> {
                 )))
                 .and_then(|index| {
                     self.prefixes
-                        .get(&prefixed.as_str()[..index + 1])
+                        .get(&prefixed.as_str()[..index])
                         .map(|resolved_prefix| {
                             [resolved_prefix, &prefixed.as_str()[index + 1..]].join("")
                         })

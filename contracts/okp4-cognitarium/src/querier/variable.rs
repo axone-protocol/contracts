@@ -1,6 +1,6 @@
-use crate::msg::Value;
+use crate::msg::{Value, IRI};
 use crate::state::{Literal, Object, Predicate, Subject};
-use cosmwasm_std::{StdError, StdResult};
+use cosmwasm_std::StdResult;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ResolvedVariable {
@@ -48,11 +48,50 @@ impl ResolvedVariable {
         })
     }
 
-    pub fn as_value<F>(&self, ns_fn: F) -> StdResult<Value>
+    pub fn as_value<F>(&self, ns_fn: &mut F) -> StdResult<Value>
     where
-        F: n(u128) -> StdResult<String>,
+        F: FnMut(u128) -> StdResult<String>,
     {
-        Err(StdError::generic_err("mescouilles"))
+        Ok(match self {
+            ResolvedVariable::Subject(subject) => match subject {
+                Subject::Named(named) => named.as_iri(ns_fn).map(|iri| Value::URI {
+                    value: IRI::Full(iri),
+                })?,
+                Subject::Blank(blank) => Value::BlankNode {
+                    value: blank.to_string(),
+                },
+            },
+            ResolvedVariable::Predicate(predicate) => {
+                predicate.as_iri(ns_fn).map(|iri| Value::URI {
+                    value: IRI::Full(iri),
+                })?
+            }
+            ResolvedVariable::Object(object) => match object {
+                Object::Named(named) => Value::URI {
+                    value: IRI::Full(named.as_iri(ns_fn)?),
+                },
+                Object::Blank(blank) => Value::BlankNode {
+                    value: blank.to_string(),
+                },
+                Object::Literal(literal) => match literal {
+                    Literal::Simple { value } => Value::Literal {
+                        value: value.clone(),
+                        lang: None,
+                        datatype: None,
+                    },
+                    Literal::I18NString { value, language } => Value::Literal {
+                        value: value.clone(),
+                        lang: Some(language.clone()),
+                        datatype: None,
+                    },
+                    Literal::Typed { value, datatype } => Value::Literal {
+                        value: value.clone(),
+                        lang: None,
+                        datatype: Some(datatype.as_iri(ns_fn).map(IRI::Full)?),
+                    },
+                },
+            },
+        })
     }
 }
 

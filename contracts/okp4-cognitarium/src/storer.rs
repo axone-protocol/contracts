@@ -109,7 +109,7 @@ impl<'a> TripleStorer<'a> {
             }
             None => {
                 let mut namespace = match namespaces().load(self.storage, ns_str.clone()) {
-                    Err(StdError::NotFound { .. }) => Ok(self.allocate_namespace()),
+                    Err(StdError::NotFound { .. }) => Ok(self.allocate_namespace(ns_str.clone())),
                     Ok(n) => Ok(n),
                     Err(e) => Err(e),
                 }?;
@@ -121,10 +121,11 @@ impl<'a> TripleStorer<'a> {
         }
     }
 
-    fn allocate_namespace(&mut self) -> Namespace {
+    fn allocate_namespace(&mut self, value: String) -> Namespace {
         self.store.stat.namespace_count += Uint128::one();
 
         let ns = Namespace {
+            value,
             key: self.ns_key_inc_offset,
             counter: 0u128,
         };

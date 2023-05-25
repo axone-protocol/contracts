@@ -7,6 +7,9 @@ pub const NAMESPACE_KEY_INCREMENT: Item<u128> = Item::new("namespace_key");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Namespace {
+    /// The namespace value.
+    pub value: String,
+
     /// The unique, incremented key issues to reference this namespace from a triple IRI.
     pub key: u128,
 
@@ -15,7 +18,7 @@ pub struct Namespace {
 }
 
 pub struct NamespaceIndexes<'a> {
-    key: UniqueIndex<'a, u128, Namespace, String>,
+    pub key: UniqueIndex<'a, u128, Namespace, String>,
 }
 
 impl IndexList<Namespace> for NamespaceIndexes<'_> {

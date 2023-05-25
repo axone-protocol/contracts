@@ -1,4 +1,5 @@
 use blake3::Hash;
+use cosmwasm_std::StdResult;
 use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex};
 use serde::{Deserialize, Serialize};
 
@@ -126,6 +127,13 @@ impl Node {
         key.extend(val);
 
         key
+    }
+
+    pub fn as_iri<F>(&self, ns_fn: &mut F) -> StdResult<String>
+    where
+        F: FnMut(u128) -> StdResult<String>,
+    {
+        ns_fn(self.namespace).map(|ns| vec![ns.as_str(), self.value.as_str()].join(""))
     }
 }
 

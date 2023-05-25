@@ -32,6 +32,7 @@ impl<'a> PlanBuilder<'a> {
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_skip(mut self, skip: usize) -> Self {
         self.skip = Some(skip);
         self

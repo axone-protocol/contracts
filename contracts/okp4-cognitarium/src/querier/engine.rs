@@ -1,8 +1,9 @@
+use crate::msg::{Head, Results, SelectItem, SelectResponse, Value};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
-use crate::state::{triples, Literal, Object, Predicate, Subject, Triple};
-use cosmwasm_std::{Order, StdResult, Storage};
-use std::collections::VecDeque;
+use crate::state::{namespaces, triples, Object, Predicate, Subject, Triple};
+use cosmwasm_std::{Order, StdError, StdResult, Storage};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
 
@@ -322,5 +323,75 @@ impl<'a> Iterator for TriplePatternIterator<'a> {
                 vars
             })
         })
+    }
+}
+
+struct SolutionsIterator<'a> {
+    storage: &'a dyn Storage,
+    iter: ResolvedVariablesIterator<'a>,
+    bindings: BTreeMap<String, usize>,
+    ns_cache: HashMap<u128, String>,
+}
+
+impl<'a> SolutionsIterator<'a> {
+    fn new(
+        storage: &'a dyn Storage,
+        iter: ResolvedVariablesIterator<'a>,
+        bindings: BTreeMap<String, usize>,
+    ) -> Self {
+        Self {
+            storage,
+            iter,
+            bindings,
+            ns_cache: HashMap::new(),
+        }
+    }
+
+    fn resolve_ns(&mut self, ns_key: u128) -> StdResult<String> {
+        if let Some(ns) = self.ns_cache.get(&ns_key) {
+            return Ok(ns.clone());
+        }
+
+        let ns = namespaces().idx.key.item(self.storage, ns_key).and_then(
+            |maybe_ns| match maybe_ns {
+                Some(ns) => Ok(ns.1.value),
+                None => Err(StdError::not_found("Namespace")),
+            },
+        )?;
+
+        self.ns_cache.insert(ns_key, ns.clone());
+        Ok(ns)
+    }
+}
+
+impl<'a> Iterator for SolutionsIterator<'a> {
+    type Item = StdResult<BTreeMap<String, Value>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let resolved_variables = match self.iter.next() {
+            None => None?,
+            Some(res) => res,
+        };
+
+        resolved_variables
+            .and_then(|variables| {
+                self.bindings
+                    .clone()
+                    .into_iter()
+                    .map(|(name, index)| (name, variables.get(index)))
+                    .map(|(name, var)| match var {
+                        None => Err(StdError::generic_err(
+                            "Couldn't find variable in result set",
+                        )),
+                        Some(val) => Ok((name, val)),
+                    })
+                    .map(|res| {
+                        res.and_then(|(name, var)| -> StdResult<(String, Value)> {
+                            Ok((name, var.as_value(&mut |ns_key| self.resolve_ns(ns_key))?))
+                        })
+                    })
+                    .collect::<StdResult<BTreeMap<String, Value>>>()
+            })
+            .into()
     }
 }

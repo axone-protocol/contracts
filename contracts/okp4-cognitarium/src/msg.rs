@@ -363,7 +363,7 @@ pub struct SelectQuery {
     /// If `None`, there is no limit.
     /// Note: the value of the limit cannot exceed the maximum query limit defined in the store
     /// limitations.
-    pub limit: Option<u64>,
+    pub limit: Option<u32>,
 }
 
 /// # DescribeQuery

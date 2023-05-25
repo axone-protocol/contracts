@@ -16,6 +16,37 @@ impl<'a> QueryEngine<'a> {
         Self { storage }
     }
 
+    pub fn select(
+        &'a self,
+        plan: QueryPlan,
+        selection: Vec<SelectItem>,
+    ) -> StdResult<SelectResponse> {
+        let bindings = selection
+            .iter()
+            .map(|item| match item {
+                SelectItem::Variable(v) => v,
+            })
+            .map(|name| -> StdResult<(String, usize)> {
+                match plan.get_var_index(name.as_str()) {
+                    Some(index) => Ok((name.clone(), index)),
+                    None => Err(StdError::generic_err(
+                        "Selected variable not found in query",
+                    )),
+                }
+            })
+            .collect::<StdResult<BTreeMap<String, usize>>>()?;
+
+        Ok(SelectResponse {
+            head: Head {
+                vars: bindings.keys().cloned().collect(),
+            },
+            results: Results {
+                bindings: SolutionsIterator::new(self.storage, self.eval_plan(plan), bindings)
+                    .collect::<StdResult<Vec<BTreeMap<String, Value>>>>()?,
+            },
+        })
+    }
+
     pub fn eval_plan(&'a self, plan: QueryPlan) -> ResolvedVariablesIterator {
         return self.eval_node(plan.entrypoint)(ResolvedVariables::with_capacity(
             plan.variables.len(),

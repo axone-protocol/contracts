@@ -12,6 +12,17 @@ pub struct QueryPlan {
     pub variables: Vec<String>,
 }
 
+impl QueryPlan {
+    pub fn get_var_index(&self, var_name: &str) -> Option<usize> {
+        self.variables.iter().enumerate().find_map(|(index, it)| {
+            if it.as_str() == var_name {
+                return Some(index);
+            }
+            None
+        })
+    }
+}
+
 /// Represents a single part of the query plan processing. Each node is intended to provide a
 /// specific behavior given an evaluation context.
 pub enum QueryNode {

@@ -699,4 +699,107 @@ mod tests {
             assert_eq!(result, expected);
         }
     }
+
+    #[test]
+    fn invalid_select() {
+        let cases = vec![
+            (
+                SelectQuery {
+                    prefixes: vec![],
+                    select: vec![
+                        SelectItem::Variable("a".to_string()),
+                        SelectItem::Variable("b".to_string()),
+                    ],
+                    r#where: vec![],
+                    limit: None,
+                },
+                Err(StdError::generic_err(
+                    "Maximum query variable count exceeded",
+                )),
+            ),
+            (
+                SelectQuery {
+                    prefixes: vec![],
+                    select: vec![],
+                    r#where: vec![],
+                    limit: Some(8000),
+                },
+                Err(StdError::generic_err("Maximum query limit exceeded")),
+            ),
+            (
+                SelectQuery {
+                    prefixes: vec![Prefix {
+                        prefix: "core".to_string(),
+                        namespace: "https://ontology.okp4.space/core/".to_string(),
+                    }],
+                    select: vec![SelectItem::Variable("a".to_string())],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Variable("a".to_string()),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "invalid:hasDescription".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString {
+                            value: "A test Dataset.".to_string(),
+                            language: "en".to_string(),
+                        }),
+                    }))],
+                    limit: None,
+                },
+                Err(StdError::generic_err(
+                    "Malformed prefixed IRI: prefix not found",
+                )),
+            ),
+            (
+                SelectQuery {
+                    prefixes: vec![],
+                    select: vec![SelectItem::Variable("u".to_string())],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Variable("a".to_string()),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasDescription".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString {
+                            value: "A test Dataset.".to_string(),
+                            language: "en".to_string(),
+                        }),
+                    }))],
+                    limit: None,
+                },
+                Err(StdError::generic_err(
+                    "Selected variable not found in query",
+                )),
+            ),
+        ];
+
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                limits: StoreLimitsInput {
+                    max_query_variable_count: Some(1),
+                    ..Default::default()
+                },
+            },
+        )
+        .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+        );
+
+        for (q, expected) in cases {
+            let res = query(deps.as_ref(), mock_env(), QueryMsg::Select { query: q });
+            assert_eq!(res, expected);
+        }
+    }
 }

@@ -9,6 +9,17 @@ pub const STORE: Item<Store> = Item::new("store");
 pub struct Store {
     pub owner: Addr,
     pub limits: StoreLimits,
+    pub stat: StoreStat,
+}
+
+impl Store {
+    pub fn new(owner: Addr, limits: StoreLimits) -> Store {
+        Store {
+            owner,
+            limits,
+            stat: StoreStat::default(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -48,4 +59,10 @@ impl From<StoreLimits> for msg::StoreLimits {
             max_insert_data_triple_count: value.max_insert_data_triple_count,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq, Eq)]
+pub struct StoreStat {
+    pub triple_count: Uint128,
+    pub byte_size: Uint128,
 }

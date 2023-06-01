@@ -1,11 +1,12 @@
+use crate::contract::execute::insert;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Store, STORE};
+use crate::msg::{DataFormat, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::{Store, NAMESPACE_KEY_INCREMENT, STORE};
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
@@ -20,25 +21,53 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    STORE.save(
-        deps.storage,
-        &Store {
-            owner: info.sender,
-            limits: msg.limits.into(),
-        },
-    )?;
+    STORE.save(deps.storage, &Store::new(info.sender, msg.limits.into()))?;
+    NAMESPACE_KEY_INCREMENT.save(deps.storage, &0u128)?;
 
     Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _msg: ExecuteMsg,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    Err(ContractError::NotImplemented)
+    match msg {
+        ExecuteMsg::InsertData { format, data } => {
+            insert(deps, info, format.unwrap_or(DataFormat::Turtle), data)
+        }
+        _ => Err(StdError::generic_err("Not implemented").into()),
+    }
+}
+
+pub mod execute {
+    use super::*;
+    use crate::msg::DataFormat;
+    use crate::rdf::TripleReader;
+    use crate::state::TripleStorer;
+    use std::io::BufReader;
+
+    pub fn insert(
+        deps: DepsMut,
+        info: MessageInfo,
+        format: DataFormat,
+        data: Binary,
+    ) -> Result<Response, ContractError> {
+        if STORE.load(deps.storage)?.owner != info.sender {
+            Err(ContractError::Unauthorized)?
+        }
+
+        let buf = BufReader::new(data.as_slice());
+        let mut reader = TripleReader::new(format, buf);
+        let mut storer = TripleStorer::new(deps.storage)?;
+        let count = storer.store_all(&mut reader)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "insert")
+            .add_attribute("triple_count", count))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -49,10 +78,18 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::StoreLimitsInput;
+    use crate::error::StoreError;
+    use crate::msg::ExecuteMsg::InsertData;
+    use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder};
     use crate::state;
+    use crate::state::{namespaces, triples, Namespace, Node, Object, Subject, Triple};
+    use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::Uint128;
+    use cosmwasm_std::{Attribute, Order, Uint128};
+    use std::env;
+    use std::fs::File;
+    use std::io::Read;
+    use std::path::Path;
 
     #[test]
     fn proper_initialization() {
@@ -88,5 +125,279 @@ mod tests {
                 max_insert_data_triple_count: Uint128::from(7u128),
             }
         );
+        assert_eq!(
+            store.stat,
+            state::StoreStat {
+                triple_count: Uint128::zero(),
+                byte_size: Uint128::zero(),
+            }
+        );
+
+        assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 0u128);
+    }
+
+    #[test]
+    fn proper_insert() {
+        let cases = vec![
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+            InsertData {
+                format: Some(DataFormat::Turtle),
+                data: read_test_data("sample.ttl"),
+            },
+            InsertData {
+                format: Some(DataFormat::NTriples),
+                data: read_test_data("sample.nt"),
+            },
+            InsertData {
+                format: Some(DataFormat::NQuads),
+                data: read_test_data("sample.nq"),
+            },
+            InsertData {
+                format: None,
+                data: read_test_data("sample.ttl"),
+            },
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+
+            let info = mock_info("owner", &[]);
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg {
+                    limits: StoreLimitsInput::default(),
+                },
+            )
+            .unwrap();
+
+            let res = execute(deps.as_mut(), mock_env(), info.clone(), case);
+
+            assert!(res.is_ok());
+            assert_eq!(
+                res.unwrap().attributes,
+                vec![
+                    Attribute::new("action", "insert"),
+                    Attribute::new("triple_count", "40")
+                ]
+            );
+
+            assert_eq!(
+                triples()
+                    .range_raw(&deps.storage, None, None, Order::Ascending)
+                    .count(),
+                40
+            );
+            assert_eq!(
+                STORE.load(&deps.storage).unwrap().stat.triple_count,
+                Uint128::from(40u128),
+            );
+            assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 17u128);
+            assert_eq!(
+                namespaces()
+                    .load(
+                        &deps.storage,
+                        "https://ontology.okp4.space/dataverse/dataspace/".to_string()
+                    )
+                    .unwrap(),
+                Namespace {
+                    key: 0u128,
+                    counter: 5u128,
+                }
+            );
+            assert_eq!(
+                triples()
+                    .load(
+                        &deps.storage,
+                        (
+                            Hash::from_hex(
+                                "09653b5306fa80dc7bea8313d84ac6ed9ded591d42c7f4838c39d1d7a4f09d03"
+                            )
+                            .unwrap()
+                            .as_bytes(),
+                            Node {
+                                namespace: 3u128,
+                                value: "hasRegistrar".to_string()
+                            }
+                            .key(),
+                            Subject::Named(Node {
+                                namespace: 0u128,
+                                value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string()
+                            })
+                            .key()
+                        )
+                    )
+                    .unwrap(),
+                Triple {
+                    object: Object::Named(Node {
+                        namespace: 4u128,
+                        value: "0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
+                            .to_string()
+                    }),
+                    predicate: Node {
+                        namespace: 3u128,
+                        value: "hasRegistrar".to_string()
+                    },
+                    subject: Subject::Named(Node {
+                        namespace: 0u128,
+                        value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string()
+                    }),
+                }
+            )
+        }
+    }
+
+    #[test]
+    fn insert_unauthorized() {
+        let mut deps = mock_dependencies();
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("owner", &[]),
+            InstantiateMsg {
+                limits: StoreLimitsInput::default(),
+            },
+        )
+        .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("not-owner", &[]),
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+        );
+        assert!(res.is_err());
+        assert_eq!(res.err().unwrap(), ContractError::Unauthorized);
+    }
+
+    #[test]
+    fn insert_limits() {
+        let cases = vec![
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_triple_count(30u128)
+                    .build()
+                    .unwrap(),
+                Some(ContractError::from(StoreError::TripleCount(30u128.into()))),
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_triple_count(40u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_byte_size(50u128)
+                    .build()
+                    .unwrap(),
+                Some(ContractError::from(StoreError::ByteSize(50u128.into()))),
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_byte_size(50000u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_insert_data_byte_size(500u128)
+                    .build()
+                    .unwrap(),
+                Some(ContractError::from(StoreError::InsertDataByteSize(
+                    500u128.into(),
+                ))),
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_insert_data_byte_size(50000u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_triple_byte_size(150u128)
+                    .build()
+                    .unwrap(),
+                Some(ContractError::from(StoreError::TripleByteSize(
+                    176u128.into(),
+                    150u128.into(),
+                ))),
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_triple_byte_size(400u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_insert_data_triple_count(30u128)
+                    .build()
+                    .unwrap(),
+                Some(ContractError::from(StoreError::InsertDataTripleCount(
+                    30u128.into(),
+                ))),
+            ),
+            (
+                StoreLimitsInputBuilder::default()
+                    .max_insert_data_triple_count(40u128)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+        ];
+
+        let exec_msg = InsertData {
+            format: Some(DataFormat::RDFXml),
+            data: read_test_data("sample.rdf.xml"),
+        };
+        for case in cases {
+            let mut deps = mock_dependencies();
+
+            let info = mock_info("owner", &[]);
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg { limits: case.0 },
+            )
+            .unwrap();
+
+            let res = execute(deps.as_mut(), mock_env(), info.clone(), exec_msg.clone());
+
+            if let Some(err) = case.1 {
+                assert!(res.is_err());
+                assert_eq!(res.err().unwrap(), err);
+            } else {
+                assert!(res.is_ok());
+            }
+        }
+    }
+
+    fn read_test_data(file: &str) -> Binary {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        File::open(
+            Path::new(env::var("CARGO_MANIFEST_DIR").unwrap().as_str())
+                .join("testdata")
+                .join(file),
+        )
+        .unwrap()
+        .read_to_end(&mut bytes)
+        .unwrap();
+
+        Binary::from(bytes)
     }
 }

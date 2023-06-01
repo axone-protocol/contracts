@@ -894,9 +894,9 @@ dependencies = [
 
 [[package]]
 name = "rio_api"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42e121c6d7cd351521b2f18d9443ffadc622ff4941cb9a332755fceaf22f8d2a"
+checksum = "1924fa1f0e6d851f9b73b3c569e607c368a0d92995d99d563ad7bf1414696603"
 
 [[package]]
 name = "rio_turtle"

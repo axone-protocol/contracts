@@ -139,3 +139,63 @@ impl ResolvedVariables {
         self.variables.get(index).unwrap_or(&None)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::{BlankNode, Literal, Node};
+
+    #[test]
+    fn as_subject() {
+        let cases: Vec<(Option<Subject>, Option<Predicate>, Option<Object>)> = vec![
+            (
+                Some(Subject::Blank("_".to_string())),
+                None,
+                Some(Object::Blank("_".to_string())),
+            ),
+            (
+                Some(Subject::Named(Node {
+                    namespace: 4,
+                    value: "test".to_string(),
+                })),
+                Some(Node {
+                    namespace: 4,
+                    value: "test".to_string(),
+                }),
+                Some(Object::Named(Node {
+                    namespace: 4,
+                    value: "test".to_string(),
+                })),
+            ),
+            (
+                None,
+                None,
+                Some(Object::Literal(Literal::I18NString {
+                    value: "test".to_string(),
+                    language: "en".to_string(),
+                })),
+            ),
+        ];
+
+        for (s, p, o) in cases {
+            if let Some(ref subject) = s {
+                let subject = ResolvedVariable::Subject(subject.clone());
+                assert_eq!(subject.as_subject(), s);
+                assert_eq!(subject.as_predicate(), p);
+                assert_eq!(subject.as_object(), o);
+            }
+            if let Some(ref predicate) = p {
+                let predicate = ResolvedVariable::Predicate(predicate.clone());
+                assert_eq!(predicate.as_subject(), s);
+                assert_eq!(predicate.as_predicate(), p);
+                assert_eq!(predicate.as_object(), o);
+            }
+            if let Some(ref object) = o {
+                let object = ResolvedVariable::Object(object.clone());
+                assert_eq!(object.as_subject(), s);
+                assert_eq!(object.as_predicate(), p);
+                assert_eq!(object.as_object(), o);
+            }
+        }
+    }
+}

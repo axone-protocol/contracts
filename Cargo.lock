@@ -900,9 +900,9 @@ checksum = "1924fa1f0e6d851f9b73b3c569e607c368a0d92995d99d563ad7bf1414696603"
 
 [[package]]
 name = "rio_turtle"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ab908d64c750d82f0e4bc79acb686143d8c26d750e4eb02ba8dd91e1531c2dc"
+checksum = "5cec59971eafd99b9c7e3544bfcabafea81a7072ac51c9f46985ca0bd7ba6016"
 dependencies = [
  "oxilangtag",
  "oxiri",

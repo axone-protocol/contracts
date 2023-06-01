@@ -116,7 +116,14 @@ mod tests {
     use super::*;
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::InsertData;
-    use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder, StoreResponse};
+    use crate::msg::Node::{BlankNode, NamedNode};
+    use crate::msg::SimpleWhereCondition::TriplePattern;
+    use crate::msg::IRI::{Full, Prefixed};
+    use crate::msg::{
+        Head, Literal, Prefix, Results, SelectItem, SelectQuery, SelectResponse,
+        SimpleWhereCondition, StoreLimitsInput, StoreLimitsInputBuilder, StoreResponse, Value,
+        VarOrNode, VarOrNodeOrLiteral, WhereCondition, IRI,
+    };
     use crate::state::{
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
     };
@@ -124,6 +131,7 @@ mod tests {
     use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{from_binary, Addr, Attribute, Order, Uint128};
+    use std::collections::BTreeMap;
     use std::env;
     use std::fs::File;
     use std::io::Read;
@@ -493,5 +501,202 @@ mod tests {
         .unwrap();
 
         Binary::from(bytes)
+    }
+
+    #[test]
+    fn proper_select() {
+        let cases = vec![
+            (
+                SelectQuery {
+                    prefixes: vec![],
+                    select: vec![
+                        SelectItem::Variable("a".to_string()),
+                        SelectItem::Variable("b".to_string()),
+                    ],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Variable("a".to_string()),
+                            predicate: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/core/hasDescription".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Variable("b".to_string()),
+                        },
+                    ))],
+                    limit: None,
+                },
+                SelectResponse {
+                    head: Head {
+                        vars: vec!["a".to_string(), "b".to_string()],
+                    },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())
+                                    }
+                                ),
+                                (
+                                    "b".to_string(),
+                                    Value::Literal {
+                                        value: "A test Data Space.".to_string(),
+                                        lang: Some("en".to_string()),
+                                        datatype: None,
+                                    }
+                                )
+                            ]),
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
+                                    }
+                                ),
+                                (
+                                    "b".to_string(),
+                                    Value::Literal {
+                                        value: "Un Dataset de test.".to_string(),
+                                        lang: Some("fr".to_string()),
+                                        datatype: None,
+                                    }
+                                )
+                            ]),
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
+                                    }
+                                ),
+                                (
+                                    "b".to_string(),
+                                    Value::Literal {
+                                        value: "A test Dataset.".to_string(),
+                                        lang: Some("en".to_string()),
+                                        datatype: None,
+                                    }
+                                )
+                            ]),
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())
+                                    }
+                                ),
+                                (
+                                    "b".to_string(),
+                                    Value::Literal {
+                                        value: "Un Data Space de test.".to_string(),
+                                        lang: Some("fr".to_string()),
+                                        datatype: None,
+                                    }
+                                )
+                            ])
+                        ],
+                    },
+                },
+            ),
+            (
+                SelectQuery {
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    select: vec![
+                     SelectItem::Variable("a".to_string()),
+                    ],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(
+                     msg::TriplePattern {
+                         subject: VarOrNode::Variable("a".to_string()),
+                         predicate: VarOrNode::Node(NamedNode(Prefixed(
+                             "core:hasDescription".to_string(),
+                         ))),
+                         object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
+                     },
+                    ))],
+                    limit: None,
+                },
+                SelectResponse {
+                 head: Head {
+                     vars: vec!["a".to_string()],
+                 },
+                 results: Results {
+                     bindings: vec![
+                         BTreeMap::from([
+                             (
+                                 "a".to_string(),
+                                 Value::URI {
+                                     value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
+                                 }
+                             ),
+                         ])
+                     ],
+                 },
+                },
+            ),
+            (
+                SelectQuery {
+                    prefixes: vec![],
+                    select: vec![
+                        SelectItem::Variable("a".to_string()),
+                    ],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string()))),
+                            predicate: VarOrNode::Variable("a".to_string()),
+                            object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
+                        },
+                    ))],
+                    limit: None,
+                },
+                SelectResponse {
+                    head: Head {
+                        vars: vec!["a".to_string()],
+                    },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/core/hasDescription".to_string())
+                                    }
+                                ),
+                            ])
+                        ],
+                    },
+                },
+            )
+        ];
+
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                limits: StoreLimitsInput::default(),
+            },
+        )
+        .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+        );
+
+        for (q, expected) in cases {
+            let res = query(deps.as_ref(), mock_env(), QueryMsg::Select { query: q });
+            assert!(res.is_ok());
+
+            let result = from_binary::<SelectResponse>(&res.unwrap()).unwrap();
+            assert_eq!(result, expected);
+        }
     }
 }

@@ -144,9 +144,10 @@ impl ResolvedVariables {
 mod tests {
     use super::*;
     use crate::state::{BlankNode, Literal, Node};
+    use cosmwasm_std::StdError;
 
     #[test]
-    fn as_subject() {
+    fn conversions() {
         let cases: Vec<(Option<Subject>, Option<Predicate>, Option<Object>)> = vec![
             (
                 Some(Subject::Blank("_".to_string())),
@@ -196,6 +197,98 @@ mod tests {
                 assert_eq!(object.as_predicate(), p);
                 assert_eq!(object.as_object(), o);
             }
+        }
+    }
+
+    fn ns(i: u128) -> StdResult<String> {
+        match i {
+            0 => Ok("foo".to_string()),
+            1 => Ok("bar".to_string()),
+            _ => Err(StdError::generic_err("namespace not found")),
+        }
+    }
+
+    #[test]
+    fn values() {
+        let cases = vec![
+            (
+                ResolvedVariable::Subject(Subject::Named(Node {
+                    namespace: 0,
+                    value: "bar".to_string(),
+                })),
+                Ok(Value::URI {
+                    value: IRI::Full("foobar".to_string()),
+                }),
+            ),
+            (
+                ResolvedVariable::Subject(Subject::Blank("_".to_string())),
+                Ok(Value::BlankNode {
+                    value: "_".to_string(),
+                }),
+            ),
+            (
+                ResolvedVariable::Predicate(Node {
+                    namespace: 1,
+                    value: "foo".to_string(),
+                }),
+                Ok(Value::URI {
+                    value: IRI::Full("barfoo".to_string()),
+                }),
+            ),
+            (
+                ResolvedVariable::Object(Object::Named(Node {
+                    namespace: 1,
+                    value: "foo".to_string(),
+                })),
+                Ok(Value::URI {
+                    value: IRI::Full("barfoo".to_string()),
+                }),
+            ),
+            (
+                ResolvedVariable::Object(Object::Blank("_".to_string())),
+                Ok(Value::BlankNode {
+                    value: "_".to_string(),
+                }),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Simple {
+                    value: "foo".to_string(),
+                })),
+                Ok(Value::Literal {
+                    value: "foo".to_string(),
+                    lang: None,
+                    datatype: None,
+                }),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::I18NString {
+                    value: "foo".to_string(),
+                    language: "fr".to_string(),
+                })),
+                Ok(Value::Literal {
+                    value: "foo".to_string(),
+                    lang: Some("fr".to_string()),
+                    datatype: None,
+                }),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Typed {
+                    value: "foo".to_string(),
+                    datatype: Node {
+                        namespace: 0,
+                        value: "bar".to_string(),
+                    },
+                })),
+                Ok(Value::Literal {
+                    value: "foo".to_string(),
+                    lang: None,
+                    datatype: Some(IRI::Full("foobar".to_string())),
+                }),
+            ),
+        ];
+
+        for (var, expected) in cases {
+            assert_eq!(var.as_value(&mut ns), expected)
         }
     }
 }

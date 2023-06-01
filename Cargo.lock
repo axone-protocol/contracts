@@ -911,9 +911,9 @@ dependencies = [
 
 [[package]]
 name = "rio_xml"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3939c6a1cc5f99ea4ce45b92b9b8a4d50f2047284290c38127c2b6f9cbd4a2aa"
+checksum = "d2edda57b877119dc326c612ba822e3ca1ee22bfc86781a4e9dc0884756b58c3"
 dependencies = [
  "oxilangtag",
  "oxiri",

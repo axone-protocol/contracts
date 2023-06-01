@@ -102,3 +102,42 @@ impl<V> PatternValue<V> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bound_variables() {
+        let query = QueryNode::Limit {
+            first: 20usize,
+            child: Box::new(QueryNode::Skip {
+                first: 20usize,
+                child: Box::new(QueryNode::ForLoopJoin {
+                    left: Box::new(QueryNode::CartesianProductJoin {
+                        left: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Constant(Subject::Blank("_".to_string())),
+                            predicate: PatternValue::Variable(4usize),
+                            object: PatternValue::Variable(0usize),
+                        }),
+                        right: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Variable(3usize),
+                            predicate: PatternValue::Variable(1usize),
+                            object: PatternValue::Constant(Object::Blank("_".to_string())),
+                        }),
+                    }),
+                    right: Box::new(QueryNode::TriplePattern {
+                        subject: PatternValue::Variable(0usize),
+                        predicate: PatternValue::Variable(1usize),
+                        object: PatternValue::Variable(2usize),
+                    }),
+                }),
+            }),
+        };
+
+        assert_eq!(
+            query.bound_variables(),
+            BTreeSet::from([0usize, 1usize, 2usize, 3usize, 4usize])
+        )
+    }
+}

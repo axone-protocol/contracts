@@ -244,9 +244,13 @@ impl<'a> TriplePatternIterator<'a> {
         filters: TriplePatternFilters,
     ) -> Box<dyn Iterator<Item = StdResult<Triple>> + 'a> {
         match filters {
-            (Some(s), Some(p), Some(o)) => Box::new(iter::once(
-                triples().load(storage, (o.as_hash().as_bytes(), p.key(), s.key())),
-            )),
+            (Some(s), Some(p), Some(o)) => {
+                let res = triples().load(storage, (o.as_hash().as_bytes(), p.key(), s.key()));
+                match res {
+                    Err(StdError::NotFound { .. }) => Box::new(iter::empty()),
+                    _ => Box::new(iter::once(res)),
+                }
+            }
             (Some(s), Some(p), None) => Box::new(
                 triples()
                     .idx

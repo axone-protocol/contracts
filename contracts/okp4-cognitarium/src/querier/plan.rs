@@ -2,6 +2,7 @@ use crate::state::{Object, Predicate, Subject};
 use std::collections::BTreeSet;
 
 /// Represents a querying plan.
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct QueryPlan {
     /// References the ending node of the plan, when evaluated others nodes will be invoked in
     /// cascade.
@@ -25,6 +26,7 @@ impl QueryPlan {
 
 /// Represents a single part of the query plan processing. Each node is intended to provide a
 /// specific behavior given an evaluation context.
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub enum QueryNode {
     /// Match the triple pattern against the state. The triple elements can be either a variable or
     /// a constant value, in the case of a variable it'll be either provided by the context of

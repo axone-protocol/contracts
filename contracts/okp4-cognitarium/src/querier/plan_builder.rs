@@ -77,7 +77,7 @@ impl<'a> PlanBuilder<'a> {
             .reduce(|left: QueryNode, right: QueryNode| -> QueryNode {
                 if left
                     .bound_variables()
-                    .union(&right.bound_variables())
+                    .intersection(&right.bound_variables())
                     .next()
                     .is_some()
                 {

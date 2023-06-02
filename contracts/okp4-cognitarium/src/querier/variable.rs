@@ -291,4 +291,65 @@ mod tests {
             assert_eq!(var.as_value(&mut ns), expected)
         }
     }
+
+    #[test]
+    fn merged_variables() {
+        let mut vars1 = ResolvedVariables::with_capacity(3);
+        vars1.set(
+            0,
+            ResolvedVariable::Object(Object::Blank("foo".to_string())),
+        );
+        vars1.set(
+            2,
+            ResolvedVariable::Object(Object::Blank("bar".to_string())),
+        );
+
+        let mut vars2 = ResolvedVariables::with_capacity(3);
+        vars2.set(
+            1,
+            ResolvedVariable::Object(Object::Blank("pop".to_string())),
+        );
+        vars2.set(
+            2,
+            ResolvedVariable::Object(Object::Blank("bar".to_string())),
+        );
+
+        assert_eq!(
+            vars2.get(1),
+            &Some(ResolvedVariable::Object(Object::Blank("pop".to_string())))
+        );
+        assert_eq!(vars1.get(1), &None);
+
+        let mut expected_result = ResolvedVariables::with_capacity(3);
+        expected_result.set(
+            0,
+            ResolvedVariable::Object(Object::Blank("foo".to_string())),
+        );
+        expected_result.set(
+            1,
+            ResolvedVariable::Object(Object::Blank("pop".to_string())),
+        );
+        expected_result.set(
+            2,
+            ResolvedVariable::Object(Object::Blank("bar".to_string())),
+        );
+
+        let result = vars1.merge_with(&vars2);
+        assert_eq!(result, Some(expected_result));
+
+        let mut vars3 = ResolvedVariables::with_capacity(3);
+        vars3.set(
+            1,
+            ResolvedVariable::Object(Object::Blank("pop".to_string())),
+        );
+        vars3.set(
+            2,
+            ResolvedVariable::Predicate(Node {
+                namespace: 0,
+                value: "".to_string(),
+            }),
+        );
+        let result2 = vars1.merge_with(&vars3);
+        assert_eq!(result2, None);
+    }
 }

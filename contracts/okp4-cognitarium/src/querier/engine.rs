@@ -431,3 +431,262 @@ impl<'a> Iterator for SolutionsIterator<'a> {
             .into()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::msg::{DataFormat, StoreLimitsInput};
+    use crate::rdf::TripleReader;
+    use crate::state;
+    use crate::state::{Store, StoreLimits, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
+    use crate::storer::TripleStorer;
+    use cosmwasm_std::testing::mock_dependencies;
+    use cosmwasm_std::{Addr, Uint128};
+    use std::env;
+    use std::fs::File;
+    use std::io::{BufReader, Read};
+    use std::path::Path;
+
+    fn read_test_data(file: &str) -> Vec<u8> {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        File::open(
+            Path::new(env::var("CARGO_MANIFEST_DIR").unwrap().as_str())
+                .join("testdata")
+                .join(file),
+        )
+        .unwrap()
+        .read_to_end(&mut bytes)
+        .unwrap();
+
+        bytes
+    }
+
+    fn fill_test_data(storage: &mut dyn Storage) {
+        STORE
+            .save(
+                storage,
+                &Store {
+                    owner: Addr::unchecked("owner"),
+                    limits: StoreLimitsInput::default().into(),
+                    stat: StoreStat::default(),
+                },
+            )
+            .unwrap();
+        NAMESPACE_KEY_INCREMENT.save(storage, &0u128).unwrap();
+        let data = read_test_data("sample.rdf.xml");
+        let buf = BufReader::new(data.as_slice());
+        let mut reader = TripleReader::new(DataFormat::RDFXml, buf);
+        let mut storer = TripleStorer::new(storage).unwrap();
+        let count = storer.store_all(&mut reader).unwrap();
+
+        assert_eq!(count, Uint128::new(40u128));
+    }
+
+    #[test]
+    fn triple_pattern_iter_compute_io() {
+        let t_subject = Subject::Blank("s".to_string());
+        let t_predicate = state::Node {
+            namespace: 0u128,
+            value: "whatever".to_string(),
+        };
+        let t_object = Object::Blank("o".to_string());
+
+        let mut variables = ResolvedVariables::with_capacity(6);
+        variables.set(1, ResolvedVariable::Subject(t_subject.clone()));
+        variables.set(2, ResolvedVariable::Predicate(t_predicate.clone()));
+        variables.set(3, ResolvedVariable::Object(t_object.clone()));
+
+        struct TestCase {
+            subject: PatternValue<Subject>,
+            predicate: PatternValue<Predicate>,
+            object: PatternValue<Object>,
+            expects: Option<(TriplePatternFilters, TriplePatternBindings)>,
+        }
+        let cases = vec![
+            TestCase {
+                subject: PatternValue::Variable(0),
+                predicate: PatternValue::Variable(4),
+                object: PatternValue::Variable(5),
+                expects: Some(((None, None, None), (Some(0), Some(4), Some(5)))),
+            },
+            TestCase {
+                subject: PatternValue::Variable(1),
+                predicate: PatternValue::Variable(4),
+                object: PatternValue::Variable(5),
+                expects: Some((
+                    (Some(t_subject.clone()), None, None),
+                    (None, Some(4), Some(5)),
+                )),
+            },
+            TestCase {
+                subject: PatternValue::Variable(1),
+                predicate: PatternValue::Variable(2),
+                object: PatternValue::Variable(5),
+                expects: Some((
+                    (Some(t_subject.clone()), Some(t_predicate.clone()), None),
+                    (None, None, Some(5)),
+                )),
+            },
+            TestCase {
+                subject: PatternValue::Variable(1),
+                predicate: PatternValue::Variable(2),
+                object: PatternValue::Variable(3),
+                expects: Some((
+                    (
+                        Some(t_subject.clone()),
+                        Some(t_predicate.clone()),
+                        Some(t_object.clone()),
+                    ),
+                    (None, None, None),
+                )),
+            },
+            TestCase {
+                subject: PatternValue::Variable(3),
+                predicate: PatternValue::Variable(4),
+                object: PatternValue::Variable(5),
+                expects: Some((
+                    (Some(Subject::Blank("o".to_string())), None, None),
+                    (None, Some(4), Some(5)),
+                )),
+            },
+            TestCase {
+                subject: PatternValue::Variable(3),
+                predicate: PatternValue::Variable(1),
+                object: PatternValue::Variable(5),
+                expects: None,
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                TriplePatternIterator::compute_iter_io(
+                    &variables,
+                    case.subject,
+                    case.predicate,
+                    case.object
+                ),
+                case.expects
+            );
+        }
+    }
+
+    #[test]
+    fn triple_pattern_iter_make_state_iter() {
+        let mut deps = mock_dependencies();
+        fill_test_data(deps.as_mut().storage);
+
+        struct TestCase {
+            filters: TriplePatternFilters,
+            expects: usize,
+        }
+        let cases = vec![
+            TestCase {
+                filters: (None, None, None),
+                expects: 40,
+            },
+            TestCase {
+                filters: (
+                    Some(Subject::Named(state::Node {
+                        namespace: 0u128,
+                        value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string(),
+                    })),
+                    None,
+                    None,
+                ),
+                expects: 3,
+            },
+            TestCase {
+                filters: (
+                    None,
+                    Some(state::Node {
+                        namespace: 1u128,
+                        value: "type".to_string(),
+                    }),
+                    None,
+                ),
+                expects: 10,
+            },
+            TestCase {
+                filters: (
+                    None,
+                    None,
+                    Some(Object::Named(state::Node {
+                        namespace: 0u128,
+                        value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string(),
+                    })),
+                ),
+                expects: 2,
+            },
+            TestCase {
+                filters: (
+                    Some(Subject::Named(state::Node {
+                        namespace: 0u128,
+                        value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string(),
+                    })),
+                    Some(state::Node {
+                        namespace: 1u128,
+                        value: "type".to_string(),
+                    }),
+                    None,
+                ),
+                expects: 2,
+            },
+            TestCase {
+                filters: (
+                    None,
+                    Some(state::Node {
+                        namespace: 1u128,
+                        value: "type".to_string(),
+                    }),
+                    Some(Object::Named(state::Node {
+                        namespace: 2u128,
+                        value: "NamedIndividual".to_string(),
+                    })),
+                ),
+                expects: 5,
+            },
+            TestCase {
+                filters: (
+                    Some(Subject::Named(state::Node {
+                        namespace: 0u128,
+                        value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string(),
+                    })),
+                    Some(state::Node {
+                        namespace: 1u128,
+                        value: "type".to_string(),
+                    }),
+                    Some(Object::Named(state::Node {
+                        namespace: 2u128,
+                        value: "NamedIndividual".to_string(),
+                    })),
+                ),
+                expects: 1,
+            },
+            TestCase {
+                filters: (
+                    Some(Subject::Named(state::Node {
+                        namespace: 0u128,
+                        value: "not-existing".to_string(),
+                    })),
+                    Some(state::Node {
+                        namespace: 1u128,
+                        value: "type".to_string(),
+                    }),
+                    Some(Object::Named(state::Node {
+                        namespace: 2u128,
+                        value: "NamedIndividual".to_string(),
+                    })),
+                ),
+                expects: 0,
+            },
+        ];
+
+        for case in cases {
+            assert_eq!(
+                TriplePatternIterator::make_state_iter(&deps.storage, case.filters).count(),
+                case.expects
+            );
+        }
+    }
+}

@@ -222,12 +222,20 @@ impl<'a> TriplePatternIterator<'a> {
         predicate: PatternValue<Predicate>,
         object: PatternValue<Object>,
     ) -> Self {
-        let (filters, output_bindings) = Self::compute_iter_io(&input, subject, predicate, object);
+        if let Some((filters, output_bindings)) =
+            Self::compute_iter_io(&input, subject, predicate, object)
+        {
+            return Self {
+                input,
+                output_bindings,
+                triple_iter: Self::make_state_iter(storage, filters),
+            };
+        }
 
         Self {
             input,
-            output_bindings,
-            triple_iter: Self::make_state_iter(storage, filters),
+            output_bindings: (None, None, None),
+            triple_iter: Box::new(iter::empty()),
         }
     }
 
@@ -301,35 +309,32 @@ impl<'a> TriplePatternIterator<'a> {
         subject: PatternValue<Subject>,
         predicate: PatternValue<Predicate>,
         object: PatternValue<Object>,
-    ) -> (TriplePatternFilters, TriplePatternBindings) {
+    ) -> Option<(TriplePatternFilters, TriplePatternBindings)> {
         let (s_filter, s_bind) =
-            Self::resolve_pattern_part(subject, ResolvedVariable::as_subject, input);
+            Self::resolve_pattern_part(subject, ResolvedVariable::as_subject, input)?;
         let (p_filter, p_bind) =
-            Self::resolve_pattern_part(predicate, ResolvedVariable::as_predicate, input);
+            Self::resolve_pattern_part(predicate, ResolvedVariable::as_predicate, input)?;
         let (o_filter, o_bind) =
-            Self::resolve_pattern_part(object, ResolvedVariable::as_object, input);
+            Self::resolve_pattern_part(object, ResolvedVariable::as_object, input)?;
 
-        ((s_filter, p_filter, o_filter), (s_bind, p_bind, o_bind))
+        Some(((s_filter, p_filter, o_filter), (s_bind, p_bind, o_bind)))
     }
 
     fn resolve_pattern_part<T, M>(
         pattern_part: PatternValue<T>,
         map_fn: M,
         input: &ResolvedVariables,
-    ) -> (Option<T>, Option<usize>)
+    ) -> Option<(Option<T>, Option<usize>)>
     where
         M: FnOnce(&ResolvedVariable) -> Option<T>,
     {
-        match pattern_part {
+        Some(match pattern_part {
             PatternValue::Constant(s) => (Some(s), None),
             PatternValue::Variable(v) => match input.get(v) {
-                Some(var) => match map_fn(var) {
-                    None => (None, Some(v)),
-                    Some(val) => (Some(val), None),
-                },
+                Some(var) => (Some(map_fn(var)?), None),
                 None => (None, Some(v)),
             },
-        }
+        })
     }
 }
 

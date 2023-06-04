@@ -439,10 +439,10 @@ impl<'a> Iterator for SolutionsIterator<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::msg::{DataFormat, StoreLimitsInput};
+    use crate::msg::{DataFormat, StoreLimitsInput, IRI};
     use crate::rdf::TripleReader;
     use crate::state;
-    use crate::state::{Store, StoreLimits, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
+    use crate::state::{Literal, Store, StoreLimits, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
     use crate::storer::TripleStorer;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
@@ -485,6 +485,394 @@ mod test {
         let count = storer.store_all(&mut reader).unwrap();
 
         assert_eq!(count, Uint128::new(40u128));
+    }
+
+    #[test]
+    fn select() {
+        let mut deps = mock_dependencies();
+        fill_test_data(deps.as_mut().storage);
+
+        struct TestCase {
+            plan: QueryPlan,
+            selection: Vec<SelectItem>,
+            expects: StdResult<SelectResponse>,
+        }
+
+        let cases = vec![
+            TestCase {
+                plan: QueryPlan {
+                    entrypoint: QueryNode::TriplePattern {
+                        subject: PatternValue::Variable(0),
+                        predicate: PatternValue::Variable(1),
+                        object: PatternValue::Variable(2),
+                    },
+                    variables: vec![
+                        "v1".to_string(),
+                        "v2".to_string(),
+                        "v3".to_string(),
+                    ],
+                },
+                selection: vec![
+                    SelectItem::Variable("v4".to_string()),
+                ],
+                expects: Err(StdError::generic_err("Selected variable not found in query")),
+            },
+            TestCase {
+                plan: QueryPlan {
+                    entrypoint: QueryNode::TriplePattern {
+                        subject: PatternValue::Constant(Subject::Named(state::Node {
+                            namespace: 0,
+                            value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string(),
+                        })),
+                        predicate: PatternValue::Constant(state::Node {
+                            namespace: 3,
+                            value: "hasRegistrar".to_string(),
+                        }),
+                        object: PatternValue::Variable(0),
+                    },
+                    variables: vec![
+                        "registrar".to_string(),
+                    ],
+                },
+                selection: vec![
+                    SelectItem::Variable("registrar".to_string()),
+                ],
+                expects: Ok(SelectResponse {
+                    head: Head {
+                        vars: vec![
+                            "registrar".to_string(),
+                        ],
+                    },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                ("registrar".to_string(), Value::URI {value: IRI::Full("did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655".to_string())}),
+                            ]),
+                        ],
+                    },
+                }),
+            },
+            TestCase {
+                plan: QueryPlan {
+                    entrypoint: QueryNode::Limit {
+                        child: Box::new(QueryNode::Skip {
+                            child: Box::new(QueryNode::TriplePattern {
+                                subject: PatternValue::Variable(0),
+                                predicate: PatternValue::Variable(1),
+                                object: PatternValue::Variable(2),
+                            }),
+                            first: 10,
+                        }),
+                        first: 3,
+                    },
+                    variables: vec![
+                        "subject".to_string(),
+                        "predicate".to_string(),
+                        "object".to_string(),
+                    ],
+                },
+                selection: vec![
+                    SelectItem::Variable("subject".to_string()),
+                    SelectItem::Variable("predicate".to_string()),
+                    SelectItem::Variable("object".to_string()),
+                ],
+                expects: Ok(SelectResponse {
+                    head: Head {
+                        vars: vec![
+                            "object".to_string(),
+                            "predicate".to_string(),
+                            "subject".to_string(),
+                        ],
+                    },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
+                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/hasIdentifier".to_string())}),
+                                ("object".to_string(), Value::URI {value: IRI::Full("urn:uuid:0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
+                            ]),
+                            BTreeMap::from([
+                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33".to_string())}),
+                                ("predicate".to_string(), Value::URI {value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#type".to_string())}),
+                                ("object".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/DataSpace".to_string())}),
+                            ]),
+                            BTreeMap::from([
+                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
+                                ("predicate".to_string(), Value::URI {value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#type".to_string())}),
+                                ("object".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/Dataset".to_string())}),
+                            ]),
+                        ],
+                    },
+                }),
+            },
+        ];
+
+        for case in cases {
+            let engine = QueryEngine::new(&deps.storage);
+            assert_eq!(engine.select(case.plan, case.selection), case.expects);
+        }
+    }
+
+    #[test]
+    fn eval_plan() {
+        let mut deps = mock_dependencies();
+        fill_test_data(deps.as_mut().storage);
+
+        struct TestCase {
+            plan: QueryPlan,
+            expects: usize,
+        }
+
+        let cases = vec![
+            TestCase {
+                plan: QueryPlan {
+                    entrypoint: QueryNode::TriplePattern {
+                        subject: PatternValue::Variable(0),
+                        predicate: PatternValue::Variable(1),
+                        object: PatternValue::Variable(2),
+                    },
+                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
+                },
+                expects: 40,
+            },
+            TestCase {
+                plan: QueryPlan {
+                    entrypoint: QueryNode::Limit {
+                        child: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Variable(0),
+                            predicate: PatternValue::Variable(1),
+                            object: PatternValue::Variable(2),
+                        }),
+                        first: 30,
+                    },
+                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
+                },
+                expects: 30,
+            },
+            TestCase {
+                plan: QueryPlan {
+                    entrypoint: QueryNode::Limit {
+                        child: Box::new(QueryNode::Skip {
+                            child: Box::new(QueryNode::TriplePattern {
+                                subject: PatternValue::Variable(0),
+                                predicate: PatternValue::Variable(1),
+                                object: PatternValue::Variable(2),
+                            }),
+                            first: 20,
+                        }),
+                        first: 30,
+                    },
+                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
+                },
+                expects: 20,
+            },
+            TestCase {
+                plan: QueryPlan {
+                    entrypoint: QueryNode::CartesianProductJoin {
+                        left: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Variable(0),
+                            predicate: PatternValue::Constant(state::Node {
+                                namespace: 1,
+                                value: "type".to_string(),
+                            }),
+                            object: PatternValue::Constant(Object::Named(state::Node {
+                                namespace: 2,
+                                value: "NamedIndividual".to_string(),
+                            })),
+                        }),
+                        right: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Variable(1),
+                            predicate: PatternValue::Constant(state::Node {
+                                namespace: 3,
+                                value: "hasPublisher".to_string(),
+                            }),
+                            object: PatternValue::Constant(Object::Literal(Literal::Simple {
+                                value: "OKP4".to_string(),
+                            })),
+                        }),
+                    },
+                    variables: vec!["v1".to_string(), "v2".to_string()],
+                },
+                expects: 10,
+            },
+            TestCase {
+                plan: QueryPlan {
+                    entrypoint: QueryNode::ForLoopJoin {
+                        left: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Variable(0),
+                            predicate: PatternValue::Constant(state::Node {
+                                namespace: 1,
+                                value: "type".to_string(),
+                            }),
+                            object: PatternValue::Constant(Object::Named(state::Node {
+                                namespace: 2,
+                                value: "NamedIndividual".to_string(),
+                            })),
+                        }),
+                        right: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Variable(0),
+                            predicate: PatternValue::Constant(state::Node {
+                                namespace: 3,
+                                value: "hasTag".to_string(),
+                            }),
+                            object: PatternValue::Variable(1),
+                        }),
+                    },
+                    variables: vec!["v1".to_string(), "v2".to_string()],
+                },
+                expects: 3,
+            },
+        ];
+
+        let engine = QueryEngine::new(&deps.storage);
+        for case in cases {
+            assert_eq!(engine.eval_plan(case.plan).count(), case.expects);
+        }
+    }
+
+    #[test]
+    fn for_loop_join_iter() {
+        struct TestCase {
+            left: Vec<String>,
+            right: Vec<String>,
+            expects: Vec<(String, String)>,
+        }
+
+        let cases = vec![
+            TestCase {
+                left: vec![],
+                right: vec!["1".to_string(), "2".to_string()],
+                expects: vec![],
+            },
+            TestCase {
+                left: vec!["A".to_string()],
+                right: vec!["1".to_string(), "2".to_string()],
+                expects: vec![
+                    ("A".to_string(), "1".to_string()),
+                    ("A".to_string(), "2".to_string()),
+                ],
+            },
+            TestCase {
+                left: vec!["A".to_string(), "B".to_string()],
+                right: vec!["1".to_string(), "2".to_string()],
+                expects: vec![
+                    ("A".to_string(), "1".to_string()),
+                    ("A".to_string(), "2".to_string()),
+                    ("B".to_string(), "1".to_string()),
+                    ("B".to_string(), "2".to_string()),
+                ],
+            },
+        ];
+
+        for case in cases {
+            let result = ForLoopJoinIterator::new(
+                Box::new(case.left.iter().map(|v| {
+                    let mut vars = ResolvedVariables::with_capacity(3);
+                    vars.set(1, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                    Ok(vars)
+                })),
+                Rc::new(|input| {
+                    Box::new(case.right.iter().map(move |v| {
+                        let mut vars = input.clone();
+                        vars.set(2, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                        Ok(vars)
+                    }))
+                }),
+            )
+            .collect::<StdResult<Vec<ResolvedVariables>>>();
+            assert!(result.is_ok());
+
+            let expects: Vec<ResolvedVariables> = case
+                .expects
+                .iter()
+                .map(|(v1, v2)| {
+                    let mut vars = ResolvedVariables::with_capacity(3);
+                    vars.set(1, ResolvedVariable::Subject(Subject::Blank(v1.clone())));
+                    vars.set(2, ResolvedVariable::Subject(Subject::Blank(v2.clone())));
+                    vars
+                })
+                .collect();
+
+            assert_eq!(result.unwrap(), expects);
+        }
+    }
+
+    #[test]
+    fn cartesian_join_iter() {
+        struct TestCase {
+            left: Vec<String>,
+            right: Vec<String>,
+            expects: Vec<Vec<String>>,
+        }
+
+        let cases = vec![
+            TestCase {
+                left: vec![],
+                right: vec!["1".to_string(), "2".to_string()],
+                expects: vec![],
+            },
+            TestCase {
+                left: vec!["1".to_string(), "2".to_string()],
+                right: vec![],
+                expects: vec![],
+            },
+            TestCase {
+                left: vec!["A".to_string()],
+                right: vec!["1".to_string(), "2".to_string()],
+                expects: vec![
+                    vec!["1".to_string(), "A".to_string()],
+                    vec!["2".to_string(), "A".to_string()],
+                ],
+            },
+            TestCase {
+                left: vec!["A".to_string(), "B".to_string()],
+                right: vec!["1".to_string(), "2".to_string()],
+                expects: vec![
+                    vec!["1".to_string(), "A".to_string()],
+                    vec!["2".to_string(), "A".to_string()],
+                    vec!["1".to_string(), "B".to_string()],
+                    vec!["2".to_string(), "B".to_string()],
+                ],
+            },
+        ];
+
+        for case in cases {
+            let result = CartesianProductJoinIterator::new(
+                case.right
+                    .iter()
+                    .map(|v| {
+                        let mut vars = ResolvedVariables::with_capacity(2);
+                        vars.set(0, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                        vars
+                    })
+                    .collect(),
+                Box::new(case.left.iter().map(|v| {
+                    let mut vars = ResolvedVariables::with_capacity(2);
+                    vars.set(1, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                    Ok(vars)
+                })),
+                VecDeque::new(),
+            )
+            .collect::<StdResult<Vec<ResolvedVariables>>>();
+            assert!(result.is_ok());
+
+            let expects: Vec<ResolvedVariables> = case
+                .expects
+                .iter()
+                .map(|v| {
+                    let mut vars = ResolvedVariables::with_capacity(2);
+                    if let Some(val) = v.get(0) {
+                        vars.set(0, ResolvedVariable::Subject(Subject::Blank(val.clone())));
+                    }
+                    if let Some(val) = v.get(1) {
+                        vars.set(1, ResolvedVariable::Subject(Subject::Blank(val.clone())));
+                    }
+                    vars
+                })
+                .collect();
+
+            assert_eq!(result.unwrap(), expects);
+        }
     }
 
     #[test]

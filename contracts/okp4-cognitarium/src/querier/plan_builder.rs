@@ -530,6 +530,18 @@ mod test {
                 None,
                 None,
                 vec![TriplePattern {
+                    subject: VarOrNode::Variable("subject".to_string()),
+                    predicate: VarOrNode::Node(Node::BlankNode("_".to_string())),
+                    object: VarOrNodeOrLiteral::Variable("object".to_string()),
+                }],
+                Err(StdError::generic_err(
+                    "Predicate pattern must be a named node",
+                )),
+            ),
+            (
+                None,
+                None,
+                vec![TriplePattern {
                     subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
                         "notexisting#outch".to_string(),
                     ))),

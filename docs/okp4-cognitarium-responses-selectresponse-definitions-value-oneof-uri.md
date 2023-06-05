@@ -43,9 +43,9 @@ Represents an IRI.
 
 **enum**: the value of this property must be equal to one of the following values:
 
-| Value     | Explanation |
-| :-------- | :---------- |
-| `"u_r_i"` |             |
+| Value   | Explanation |
+| :------ | :---------- |
+| `"uri"` |             |
 
 ## value
 

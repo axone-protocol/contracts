@@ -442,7 +442,7 @@ mod test {
     use crate::msg::{DataFormat, StoreLimitsInput, IRI};
     use crate::rdf::TripleReader;
     use crate::state;
-    use crate::state::{Literal, Store, StoreLimits, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
+    use crate::state::{Literal, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
     use crate::storer::TripleStorer;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
@@ -925,11 +925,7 @@ mod test {
                 predicate: PatternValue::Variable(2),
                 object: PatternValue::Variable(3),
                 expects: Some((
-                    (
-                        Some(t_subject.clone()),
-                        Some(t_predicate.clone()),
-                        Some(t_object.clone()),
-                    ),
+                    (Some(t_subject), Some(t_predicate), Some(t_object)),
                     (None, None, None),
                 )),
             },

@@ -143,7 +143,7 @@ impl ResolvedVariables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{BlankNode, Literal, Node};
+    use crate::state::{Literal, Node};
     use cosmwasm_std::StdError;
 
     #[test]

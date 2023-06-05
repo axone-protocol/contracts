@@ -116,13 +116,13 @@ mod tests {
     use super::*;
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::InsertData;
-    use crate::msg::Node::{BlankNode, NamedNode};
+    use crate::msg::Node::NamedNode;
     use crate::msg::SimpleWhereCondition::TriplePattern;
     use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
-        Head, Literal, Prefix, Results, SelectItem, SelectQuery, SelectResponse,
-        SimpleWhereCondition, StoreLimitsInput, StoreLimitsInputBuilder, StoreResponse, Value,
-        VarOrNode, VarOrNodeOrLiteral, WhereCondition, IRI,
+        Head, Literal, Prefix, Results, SelectItem, SelectQuery, SelectResponse, StoreLimitsInput,
+        StoreLimitsInputBuilder, StoreResponse, Value, VarOrNode, VarOrNodeOrLiteral,
+        WhereCondition,
     };
     use crate::state::{
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
@@ -681,15 +681,16 @@ mod tests {
         )
         .unwrap();
 
-        let res = execute(
+        execute(
             deps.as_mut(),
             mock_env(),
-            info.clone(),
+            info,
             InsertData {
                 format: Some(DataFormat::RDFXml),
                 data: read_test_data("sample.rdf.xml"),
             },
-        );
+        )
+        .unwrap();
 
         for (q, expected) in cases {
             let res = query(deps.as_ref(), mock_env(), QueryMsg::Select { query: q });
@@ -787,15 +788,16 @@ mod tests {
         )
         .unwrap();
 
-        let res = execute(
+        execute(
             deps.as_mut(),
             mock_env(),
-            info.clone(),
+            info,
             InsertData {
                 format: Some(DataFormat::RDFXml),
                 data: read_test_data("sample.rdf.xml"),
             },
-        );
+        )
+        .unwrap();
 
         for (q, expected) in cases {
             let res = query(deps.as_ref(), mock_env(), QueryMsg::Select { query: q });

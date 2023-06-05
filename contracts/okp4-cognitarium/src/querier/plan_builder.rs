@@ -92,7 +92,7 @@ impl<'a> PlanBuilder<'a> {
                 }
             })
             .map(Ok)
-            .unwrap_or(Err(StdError::generic_err("Empty basic graph pattern")))
+            .unwrap_or_else(|| Err(StdError::generic_err("Empty basic graph pattern")))
     }
 
     fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {
@@ -157,9 +157,11 @@ impl<'a> PlanBuilder<'a> {
             IRI::Prefixed(prefixed) => prefixed
                 .rfind(':')
                 .map(Ok)
-                .unwrap_or(Err(StdError::generic_err(
-                    "Malformed prefixed IRI: no prefix delimiter found",
-                )))
+                .unwrap_or_else(|| {
+                    Err(StdError::generic_err(
+                        "Malformed prefixed IRI: no prefix delimiter found",
+                    ))
+                })
                 .and_then(|index| {
                     self.prefixes
                         .get(&prefixed.as_str()[..index])
@@ -167,9 +169,11 @@ impl<'a> PlanBuilder<'a> {
                             [resolved_prefix, &prefixed.as_str()[index + 1..]].join("")
                         })
                         .map(Ok)
-                        .unwrap_or(Err(StdError::generic_err(
-                            "Malformed prefixed IRI: prefix not found",
-                        )))
+                        .unwrap_or_else(|| {
+                            Err(StdError::generic_err(
+                                "Malformed prefixed IRI: prefix not found",
+                            ))
+                        })
                 }),
             IRI::Full(full) => Ok(full),
         }
@@ -204,7 +208,6 @@ impl<'a> PlanBuilder<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::msg;
     use crate::state::Namespace;
     use cosmwasm_std::testing::mock_dependencies;
 

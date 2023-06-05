@@ -6,7 +6,7 @@ version = "1.0.0"
 
 [dependencies]
 cosmwasm-std.workspace = true
-form_urlencoded = "1.1.0"
+form_urlencoded = "1.2.0"
 schemars.workspace = true
 serde-json-wasm.workspace = true
 serde.workspace = true

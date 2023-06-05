@@ -1,7 +1,9 @@
 use crate::contract::execute::insert;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -71,8 +73,20 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    Err(StdError::generic_err("Not implemented"))
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Store => to_binary(&query::store(deps)?),
+        _ => Err(StdError::generic_err("Not implemented")),
+    }
+}
+
+pub mod query {
+    use super::*;
+    use crate::msg::StoreResponse;
+
+    pub fn store(deps: Deps) -> StdResult<StoreResponse> {
+        STORE.load(deps.storage).map(|s| s.into())
+    }
 }
 
 #[cfg(test)]
@@ -80,12 +94,14 @@ mod tests {
     use super::*;
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::InsertData;
-    use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder};
-    use crate::state;
-    use crate::state::{namespaces, triples, Namespace, Node, Object, Subject, Triple};
+    use crate::msg::{StoreLimitsInput, StoreLimitsInputBuilder, StoreResponse};
+    use crate::state::{
+        namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
+    };
+    use crate::{msg, state};
     use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{Attribute, Order, Uint128};
+    use cosmwasm_std::{from_binary, Addr, Attribute, Order, Uint128};
     use std::env;
     use std::fs::File;
     use std::io::Read;
@@ -127,8 +143,9 @@ mod tests {
         );
         assert_eq!(
             store.stat,
-            state::StoreStat {
+            StoreStat {
                 triple_count: Uint128::zero(),
+                namespace_count: Uint128::zero(),
                 byte_size: Uint128::zero(),
             }
         );
@@ -193,8 +210,12 @@ mod tests {
                 40
             );
             assert_eq!(
-                STORE.load(&deps.storage).unwrap().stat.triple_count,
-                Uint128::from(40u128),
+                STORE.load(&deps.storage).unwrap().stat,
+                StoreStat {
+                    triple_count: 40u128.into(),
+                    namespace_count: 17u128.into(),
+                    byte_size: 7103u128.into(),
+                },
             );
             assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 17u128);
             assert_eq!(
@@ -384,6 +405,56 @@ mod tests {
                 assert!(res.is_ok());
             }
         }
+    }
+
+    #[test]
+    fn proper_store() {
+        let mut deps = mock_dependencies();
+        STORE
+            .save(
+                deps.as_mut().storage,
+                &Store {
+                    owner: Addr::unchecked("owner"),
+                    limits: StoreLimits {
+                        max_triple_count: 1u128.into(),
+                        max_byte_size: 2u128.into(),
+                        max_triple_byte_size: 3u128.into(),
+                        max_query_limit: 4u32,
+                        max_query_variable_count: 5u32,
+                        max_insert_data_byte_size: 6u128.into(),
+                        max_insert_data_triple_count: 7u128.into(),
+                    },
+                    stat: StoreStat {
+                        triple_count: 1u128.into(),
+                        namespace_count: 2u128.into(),
+                        byte_size: 3u128.into(),
+                    },
+                },
+            )
+            .unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Store);
+        assert!(res.is_ok());
+        assert_eq!(
+            from_binary::<StoreResponse>(&res.unwrap()).unwrap(),
+            StoreResponse {
+                owner: "owner".to_string(),
+                limits: msg::StoreLimits {
+                    max_triple_count: 1u128.into(),
+                    max_byte_size: 2u128.into(),
+                    max_triple_byte_size: 3u128.into(),
+                    max_query_limit: 4u32,
+                    max_query_variable_count: 5u32,
+                    max_insert_data_byte_size: 6u128.into(),
+                    max_insert_data_triple_count: 7u128.into(),
+                },
+                stat: msg::StoreStat {
+                    triple_count: 1u128.into(),
+                    namespace_count: 2u128.into(),
+                    byte_size: 3u128.into(),
+                }
+            }
+        );
     }
 
     fn read_test_data(file: &str) -> Binary {

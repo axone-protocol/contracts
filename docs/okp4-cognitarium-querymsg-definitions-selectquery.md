@@ -45,7 +45,7 @@ The maximum number of results to return. If `None`, there is no limit. Note: the
 
 **minimum**: the value of this number must greater than or equal to: `0`
 
-**unknown format**: the value of this string must follow the format: `uint64`
+**unknown format**: the value of this string must follow the format: `uint32`
 
 ## prefixes
 

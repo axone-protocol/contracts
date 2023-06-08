@@ -1,7 +1,7 @@
-# Untitled null in okp4-objectarium Schema
+# Untitled undefined type in okp4-objectarium Schema
 
 ```txt
-undefined#/responses/bucket/definitions/BucketConfig/properties/hash_algorithm/anyOf/1
+undefined#/instantiate/properties/config/default
 ```
 
 
@@ -10,6 +10,6 @@ undefined#/responses/bucket/definitions/BucketConfig/properties/hash_algorithm/a
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-objectarium.json\*](schema/okp4-objectarium.json "open original schema") |
 
-## 1 Type
+## default Type
 
-`null`, the value must be null
+unknown

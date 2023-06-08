@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
 use derive_builder::Builder;
+use enum_iterator::{all, Sequence};
 
 /// ObjectId is the type of identifier of an object in the bucket.
 pub type ObjectId = String;
@@ -16,10 +17,13 @@ pub struct InstantiateMsg {
     /// If name contains whitespace, they will be removed.
     pub bucket: String,
     /// The configuration of the bucket.
+    #[serde(default)]
     pub config: BucketConfig,
     /// The limits of the bucket.
+    #[serde(default)]
     pub limits: BucketLimits,
     /// The configuration for paginated query.
+    #[serde(default)]
     pub pagination: PaginationConfig,
 }
 
@@ -154,7 +158,7 @@ pub struct BucketResponse {
 /// during both compression and decompression, ranging from the lowest to the highest. This particular
 /// order is utilized to establish the default compression algorithm for storing an object.
 #[cw_serde]
-#[derive(Copy, Eq, PartialOrd)]
+#[derive(Copy, Eq, PartialOrd, Sequence)]
 pub enum CompressionAlgorithm {
     /// # Passthrough
     /// Represents no compression algorithm.
@@ -235,19 +239,54 @@ pub enum HashAlgorithm {
     Sha512,
 }
 
+impl Default for HashAlgorithm {
+    fn default() -> Self {
+        Self::Sha256
+    }
+}
+
 /// BucketConfig is the type of the configuration of a bucket.
 ///
 /// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
 /// The configuration is optional and if not set, the default configuration is used.
 #[cw_serde]
-#[derive(Default, Builder)]
+#[derive(Builder)]
 #[builder(default, setter(into, strip_option))]
 pub struct BucketConfig {
     /// The algorithm used to hash the content of the objects to generate the id of the objects.
     /// The algorithm is optional and if not set, the default algorithm is used.
     ///
-    /// The default algorithm is Sha256 .
-    pub hash_algorithm: Option<HashAlgorithm>,
+    /// The default algorithm is Sha256 if not set.
+    #[serde(default)]
+    pub hash_algorithm: HashAlgorithm,
+    /// The acceptable compression algorithms for the objects in the bucket.
+    /// If this parameter is not set (none or empty array), then all compression algorithms are accepted.
+    /// If this parameter is set, then only the compression algorithms in the array are accepted.
+    ///
+    /// When an object is stored in the bucket without a specified compression algorithm, the first
+    /// algorithm in the array is used. Therefore, the order of the algorithms in the array is significant.
+    /// Typically, the most efficient compression algorithm, such as the NoCompression algorithm, should
+    /// be placed first in the array.
+    ///
+    /// Any attempt to store an object using a different compression algorithm than the ones specified
+    /// here will fail.
+    #[serde(default = "CompressionAlgorithm::values")]
+    pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
+}
+
+impl Default for BucketConfig {
+    fn default() -> Self {
+        Self {
+            hash_algorithm: Default::default(),
+            accepted_compression_algorithms: CompressionAlgorithm::values(),
+        }
+    }
+}
+
+impl CompressionAlgorithm {
+    pub fn values() -> Vec<CompressionAlgorithm> {
+        all::<CompressionAlgorithm>().collect::<Vec<_>>()
+    }
 }
 
 /// BucketLimits is the type of the limits of a bucket.
@@ -265,50 +304,44 @@ pub struct BucketLimits {
     pub max_object_size: Option<Uint128>,
     /// The maximum number of pins in the bucket for an object.
     pub max_object_pins: Option<Uint128>,
-    /// The acceptable compression algorithms for the objects in the bucket.
-    /// If this parameter is not set (none or empty array), then all compression algorithms are accepted.
-    /// If this parameter is set, then only the compression algorithms in the array are accepted.
-    ///
-    /// When an object is stored in the bucket without a specified compression algorithm, the first
-    /// algorithm in the array is used. Therefore, the order of the algorithms in the array is significant.
-    /// Typically, the most efficient compression algorithm, such as the NoCompression algorithm, should
-    /// be placed first in the array.
-    ///
-    /// Any attempt to store an object using a different compression algorithm than the ones specified
-    /// here will fail.
-    pub accepted_compression_algorithms: Option<Vec<CompressionAlgorithm>>,
 }
 
 /// PaginationConfig is the type carrying configuration for paginated queries.
 ///
 /// The fields are optional and if not set, there is a default configuration.
 #[cw_serde]
-#[derive(Default, Builder)]
+#[derive(Builder)]
 #[builder(default, setter(strip_option))]
 pub struct PaginationConfig {
     /// The maximum elements a page can contains.
     ///
     /// Shall be less than `u32::MAX - 1`.
     /// Default to '30' if not set.
-    pub max_page_size: Option<u32>,
+    #[serde(default = "PaginationConfig::default_page_max_size")]
+    pub max_page_size: u32,
     /// The default number of elements in a page.
     ///
     /// Shall be less or equal than `max_page_size`.
     /// Default to '10' if not set.
-    pub default_page_size: Option<u32>,
+    #[serde(default = "PaginationConfig::default_page_default_size")]
+    pub default_page_size: u32,
 }
 
 impl PaginationConfig {
-    const DEFAULT_PAGE_MAX_SIZE: u32 = 30;
-    const DEFAULT_PAGE_DEFAULT_SIZE: u32 = 10;
-
-    pub fn max_page_size_or_default(&self) -> u32 {
-        self.max_page_size.unwrap_or(Self::DEFAULT_PAGE_MAX_SIZE)
+    const fn default_page_max_size() -> u32 {
+        30
     }
+    const fn default_page_default_size() -> u32 {
+        10
+    }
+}
 
-    pub fn default_page_size_or_default(&self) -> u32 {
-        self.default_page_size
-            .unwrap_or(Self::DEFAULT_PAGE_DEFAULT_SIZE)
+impl Default for PaginationConfig {
+    fn default() -> Self {
+        PaginationConfig {
+            max_page_size: Self::default_page_max_size(),
+            default_page_size: Self::default_page_default_size(),
+        }
     }
 }
 
@@ -349,4 +382,72 @@ pub struct ObjectPinsResponse {
     pub data: Vec<String>,
     /// The page information.
     pub page_info: PageInfo,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::msg::CompressionAlgorithm::{Passthrough, Snappy};
+    use crate::msg::HashAlgorithm::Sha256;
+    use crate::msg::{BucketConfig, BucketLimits, InstantiateMsg, PaginationConfig};
+    use schemars::_serde_json;
+
+    #[test]
+    fn pagination_config_default_deserialization() {
+        let json = r#"
+          {}
+    "#;
+
+        let page: PaginationConfig = _serde_json::from_str(json).unwrap();
+        assert_eq!(page.max_page_size, 30);
+        assert_eq!(page.default_page_size, 10);
+    }
+
+    #[test]
+    fn bucket_config_default_deserialization() {
+        let json = r#"
+          {}
+    "#;
+
+        let config: BucketConfig = _serde_json::from_str(json).unwrap();
+        assert_eq!(config.hash_algorithm, Sha256);
+        assert_eq!(
+            config.accepted_compression_algorithms,
+            vec![Passthrough, Snappy]
+        );
+    }
+
+    #[test]
+    fn bucket_limit_default_deserialization() {
+        let json = r#"
+          {}
+    "#;
+
+        let limits: BucketLimits = _serde_json::from_str(json).unwrap();
+        assert_eq!(limits.max_object_pins, None);
+        assert_eq!(limits.max_objects, None);
+        assert_eq!(limits.max_object_size, None);
+        assert_eq!(limits.max_total_size, None);
+    }
+
+    #[test]
+    fn instantiate_default_deserialization() {
+        let json = r#"
+          {
+            "bucket": "foo"
+          }
+    "#;
+        let msg: InstantiateMsg = _serde_json::from_str(json).unwrap();
+
+        assert_eq!(msg.pagination.max_page_size, 30);
+        assert_eq!(msg.pagination.default_page_size, 10);
+        assert_eq!(msg.config.hash_algorithm, Sha256);
+        assert_eq!(
+            msg.config.accepted_compression_algorithms,
+            vec![Passthrough, Snappy]
+        );
+        assert_eq!(msg.limits.max_object_pins, None);
+        assert_eq!(msg.limits.max_objects, None);
+        assert_eq!(msg.limits.max_object_size, None);
+        assert_eq!(msg.limits.max_total_size, None);
+    }
 }

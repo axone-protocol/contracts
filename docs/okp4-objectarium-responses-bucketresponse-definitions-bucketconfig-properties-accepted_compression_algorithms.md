@@ -1,7 +1,7 @@
-# Untitled undefined type in okp4-objectarium Schema
+# Untitled array in okp4-objectarium Schema
 
 ```txt
-undefined#/responses/bucket/definitions/BucketLimits/properties/accepted_compression_algorithms
+undefined#/responses/bucket/definitions/BucketConfig/properties/accepted_compression_algorithms
 ```
 
 The acceptable compression algorithms for the objects in the bucket. If this parameter is not set (none or empty array), then all compression algorithms are accepted. If this parameter is set, then only the compression algorithms in the array are accepted.
@@ -17,3 +17,14 @@ Any attempt to store an object using a different compression algorithm than the 
 ## accepted\_compression\_algorithms Type
 
 unknown\[]
+
+## accepted\_compression\_algorithms Default Value
+
+The default value is:
+
+```json
+[
+  "passthrough",
+  "snappy"
+]
+```

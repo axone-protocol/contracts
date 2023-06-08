@@ -1,4 +1,4 @@
-# Untitled undefined type in okp4-objectarium Schema
+# Untitled integer in okp4-objectarium Schema
 
 ```txt
 undefined#/responses/bucket/definitions/PaginationConfig/properties/max_page_size
@@ -21,3 +21,11 @@ Shall be less than `u32::MAX - 1`. Default to '30' if not set.
 **minimum**: the value of this number must greater than or equal to: `0`
 
 **unknown format**: the value of this string must follow the format: `uint32`
+
+## max\_page\_size Default Value
+
+The default value is:
+
+```json
+30
+```

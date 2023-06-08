@@ -1,7 +1,7 @@
 # Untitled undefined type in okp4-objectarium Schema
 
 ```txt
-undefined#/responses/bucket/definitions/BucketConfig/properties/hash_algorithm/anyOf/0
+undefined#/responses/bucket/definitions/BucketConfig/properties/hash_algorithm/allOf/0
 ```
 
 

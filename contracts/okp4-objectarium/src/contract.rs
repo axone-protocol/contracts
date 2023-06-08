@@ -73,7 +73,7 @@ pub mod execute {
     ) -> Result<Response, ContractError> {
         let size = (data.len() as u128).into();
         let bucket = BUCKET.load(deps.storage)?;
-        let compressions = &bucket.limits.accepted_compression_algorithms;
+        let compressions = &bucket.config.accepted_compression_algorithms;
         let compression: CompressionAlgorithm = compression_algorithm
             .map(|a| a.into())
             .or_else(|| compressions.first().cloned())
@@ -106,7 +106,7 @@ pub mod execute {
             return Err(BucketError::CompressionAlgorithmNotAccepted(
                 compression.into(),
                 bucket
-                    .limits
+                    .config
                     .accepted_compression_algorithms
                     .into_iter()
                     .map(|a| a.into())
@@ -116,10 +116,7 @@ pub mod execute {
         }
 
         // store object data
-        let id = crypto::hash(
-            &crypto::HashAlgorithm::from(bucket.config.hash_algorithm_or_default()),
-            &data.0,
-        );
+        let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.0);
         let data_path = DATA.key(id.clone());
         if data_path.has(deps.storage) {
             return Err(ContractError::Bucket(BucketError::ObjectAlreadyStored));
@@ -419,9 +416,8 @@ mod tests {
     use crate::crypto::Hash;
     use crate::error::BucketError;
     use crate::msg::{
-        BucketConfig, BucketLimits, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm,
-        HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
-        PaginationConfigBuilder,
+        BucketConfig, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm, HashAlgorithm,
+        ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -448,18 +444,9 @@ mod tests {
         let value: BucketResponse = from_binary(&res).unwrap();
         assert_eq!("foo", value.name);
         assert_eq!(value.config, Default::default());
-        assert_eq!(
-            value.limits,
-            BucketLimits {
-                accepted_compression_algorithms: Some(vec![
-                    CompressionAlgorithm::Passthrough,
-                    CompressionAlgorithm::Snappy,
-                ]),
-                ..Default::default()
-            }
-        );
-        assert_eq!(value.pagination.max_page_size, Some(30));
-        assert_eq!(value.pagination.default_page_size, Some(10));
+        assert_eq!(value.limits, Default::default());
+        assert_eq!(value.pagination.max_page_size, 30);
+        assert_eq!(value.pagination.default_page_size, 10);
 
         // check internal state too
         let bucket = BUCKET.load(&deps.storage).unwrap();
@@ -474,18 +461,20 @@ mod tests {
 
         // Define the test cases
         let test_cases = vec![
-            (None, None),
-            (Some(HashAlgorithm::MD5), Some(HashAlgorithm::MD5)),
-            (Some(HashAlgorithm::Sha224), Some(HashAlgorithm::Sha224)),
-            (Some(HashAlgorithm::Sha256), Some(HashAlgorithm::Sha256)),
-            (Some(HashAlgorithm::Sha384), Some(HashAlgorithm::Sha384)),
-            (Some(HashAlgorithm::Sha512), Some(HashAlgorithm::Sha512)),
+            (HashAlgorithm::MD5, HashAlgorithm::MD5),
+            (HashAlgorithm::Sha224, HashAlgorithm::Sha224),
+            (HashAlgorithm::Sha256, HashAlgorithm::Sha256),
+            (HashAlgorithm::Sha384, HashAlgorithm::Sha384),
+            (HashAlgorithm::Sha512, HashAlgorithm::Sha512),
         ];
 
         for (hash_algorithm, expected_hash_algorithm) in test_cases {
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
-                config: BucketConfig { hash_algorithm },
+                config: BucketConfig {
+                    hash_algorithm,
+                    ..Default::default()
+                },
                 limits: Default::default(),
                 pagination: Default::default(),
             };
@@ -533,8 +522,8 @@ mod tests {
         assert_eq!(Uint128::new(10), value.limits.max_objects.unwrap());
         assert_eq!(Uint128::new(2000), value.limits.max_object_size.unwrap());
         assert_eq!(Uint128::new(1), value.limits.max_object_pins.unwrap());
-        assert_eq!(value.pagination.max_page_size, Some(50));
-        assert_eq!(value.pagination.default_page_size, Some(30));
+        assert_eq!(value.pagination.max_page_size, 50);
+        assert_eq!(value.pagination.default_page_size, 30);
     }
 
     #[test]
@@ -554,8 +543,8 @@ mod tests {
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_binary(&res).unwrap();
-        assert_eq!(value.pagination.max_page_size, Some(50));
-        assert_eq!(value.pagination.default_page_size, Some(30));
+        assert_eq!(value.pagination.max_page_size, 50);
+        assert_eq!(value.pagination.default_page_size, 30);
     }
 
     #[test]
@@ -639,26 +628,7 @@ mod tests {
 
         let test_cases = vec![
             (
-                None,
-                vec![
-                    (
-                        obj1_content,
-                        true,
-                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
-                            .to_string(),
-                        5,
-                    ),
-                    (
-                        obj2_content,
-                        false,
-                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
-                            .to_string(),
-                        4,
-                    ),
-                ],
-            ),
-            (
-                Some(HashAlgorithm::MD5),
+                HashAlgorithm::MD5,
                 vec![
                     (
                         obj1_content,
@@ -677,7 +647,7 @@ mod tests {
                 ],
             ),
             (
-                Some(HashAlgorithm::Sha224),
+                HashAlgorithm::Sha224,
                 vec![
                     (
                         obj1_content,
@@ -696,7 +666,7 @@ mod tests {
                 ],
             ),
             (
-                Some(HashAlgorithm::Sha256),
+                HashAlgorithm::Sha256,
                 vec![
                     (
                         obj1_content,
@@ -715,7 +685,7 @@ mod tests {
                 ],
             ),
             (
-                Some(HashAlgorithm::Sha384),
+                HashAlgorithm::Sha384,
                 vec![
                     (
                         obj1_content,
@@ -734,7 +704,7 @@ mod tests {
                 ],
             ),
             (
-                Some(HashAlgorithm::Sha512),
+                HashAlgorithm::Sha512,
                 vec![
                     (
                         obj1_content,
@@ -764,7 +734,10 @@ mod tests {
                 info.clone(),
                 InstantiateMsg {
                     bucket: "test".to_string(),
-                    config: BucketConfig { hash_algorithm },
+                    config: BucketConfig {
+                        hash_algorithm,
+                        ..Default::default()
+                    },
                     limits: Default::default(),
                     pagination: Default::default(),
                 },
@@ -977,14 +950,17 @@ mod tests {
             compressed_size: u128,
         }
         struct TC {
-            accepted_compression_algorithms: Option<Vec<CompressionAlgorithm>>,
+            accepted_compression_algorithms: Vec<CompressionAlgorithm>,
             compression_algorithm: Option<CompressionAlgorithm>,
             expected_result: Either<ContractError, ExpectedCompressionResult>,
         }
 
         let cases: Vec<TC> = vec![
             TC {
-                accepted_compression_algorithms: None,
+                accepted_compression_algorithms: vec![
+                    CompressionAlgorithm::Passthrough,
+                    CompressionAlgorithm::Snappy,
+                ],
                 compression_algorithm: None,
                 expected_result: Either::Right(ExpectedCompressionResult {
                     compression_algorithm: CompressionAlgorithm::Passthrough,
@@ -992,34 +968,21 @@ mod tests {
                 }),
             },
             TC {
-                accepted_compression_algorithms: None,
-                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
-                expected_result: Either::Right(ExpectedCompressionResult {
-                    compression_algorithm: CompressionAlgorithm::Passthrough,
-                    compressed_size: 466,
-                }),
-            },
-            TC {
-                accepted_compression_algorithms: None,
-                compression_algorithm: Some(CompressionAlgorithm::Snappy),
-                expected_result: Either::Right(ExpectedCompressionResult {
-                    compression_algorithm: CompressionAlgorithm::Snappy,
-                    compressed_size: 414,
-                }),
-            },
-            TC {
-                accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Passthrough]),
-                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
-                expected_result: Either::Right(ExpectedCompressionResult {
-                    compression_algorithm: CompressionAlgorithm::Passthrough,
-                    compressed_size: 466,
-                }),
-            },
-            TC {
-                accepted_compression_algorithms: Some(vec![
+                accepted_compression_algorithms: vec![
                     CompressionAlgorithm::Passthrough,
                     CompressionAlgorithm::Snappy,
-                ]),
+                ],
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Passthrough,
+                    compressed_size: 466,
+                }),
+            },
+            TC {
+                accepted_compression_algorithms: vec![
+                    CompressionAlgorithm::Passthrough,
+                    CompressionAlgorithm::Snappy,
+                ],
                 compression_algorithm: Some(CompressionAlgorithm::Snappy),
                 expected_result: Either::Right(ExpectedCompressionResult {
                     compression_algorithm: CompressionAlgorithm::Snappy,
@@ -1027,7 +990,15 @@ mod tests {
                 }),
             },
             TC {
-                accepted_compression_algorithms: Some(vec![CompressionAlgorithm::Snappy]),
+                accepted_compression_algorithms: vec![CompressionAlgorithm::Passthrough],
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Passthrough,
+                    compressed_size: 466,
+                }),
+            },
+            TC {
+                accepted_compression_algorithms: vec![CompressionAlgorithm::Snappy],
                 compression_algorithm: Some(CompressionAlgorithm::Passthrough),
                 expected_result: Either::Left(ContractError::Bucket(
                     BucketError::CompressionAlgorithmNotAccepted(
@@ -1052,11 +1023,11 @@ mod tests {
             let info = mock_info("creator", &[]);
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
-                config: Default::default(),
-                limits: BucketLimits {
+                config: BucketConfig {
                     accepted_compression_algorithms: case.accepted_compression_algorithms,
                     ..Default::default()
                 },
+                limits: Default::default(),
                 pagination: Default::default(),
             };
             instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();

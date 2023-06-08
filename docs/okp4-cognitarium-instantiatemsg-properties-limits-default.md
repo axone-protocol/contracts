@@ -1,7 +1,7 @@
 # Untitled undefined type in okp4-cognitarium Schema
 
 ```txt
-undefined#/instantiate/definitions/StoreLimitsInput/properties/max_insert_data_byte_size/anyOf/0
+undefined#/instantiate/properties/limits/default
 ```
 
 
@@ -10,6 +10,6 @@ undefined#/instantiate/definitions/StoreLimitsInput/properties/max_insert_data_b
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-cognitarium.json\*](schema/okp4-cognitarium.json "open original schema") |
 
-## 0 Type
+## default Type
 
 unknown

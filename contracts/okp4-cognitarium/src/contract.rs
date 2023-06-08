@@ -143,13 +143,13 @@ mod tests {
 
         let msg = InstantiateMsg {
             limits: StoreLimitsInput {
-                max_triple_count: Some(Uint128::from(1u128)),
-                max_byte_size: Some(Uint128::from(2u128)),
-                max_triple_byte_size: Some(Uint128::from(3u128)),
+                max_triple_count: Uint128::from(1u128),
+                max_byte_size: Uint128::from(2u128),
+                max_triple_byte_size: Uint128::from(3u128),
                 max_query_limit: 4,
                 max_query_variable_count: 5,
-                max_insert_data_byte_size: Some(Uint128::from(6u128)),
-                max_insert_data_triple_count: Some(Uint128::from(7u128)),
+                max_insert_data_byte_size: Uint128::from(6u128),
+                max_insert_data_triple_count: Uint128::from(7u128),
             },
         };
 
@@ -781,7 +781,7 @@ mod tests {
             info.clone(),
             InstantiateMsg {
                 limits: StoreLimitsInput {
-                    max_query_variable_count: Some(1),
+                    max_query_variable_count: 1,
                     ..Default::default()
                 },
             },

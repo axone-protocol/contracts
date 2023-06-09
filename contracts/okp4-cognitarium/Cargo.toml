@@ -27,7 +27,7 @@ panic = 'abort'
 rpath = false
 
 [dependencies]
-blake3 = "1.3.3"
+blake3 = "1.4.0"
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true

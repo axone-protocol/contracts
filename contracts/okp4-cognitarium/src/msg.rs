@@ -383,7 +383,7 @@ pub struct DescribeQuery {
     /// The prefixes used in the query.
     pub prefixes: Vec<Prefix>,
     /// The resource to describe given as a variable or a node.
-    pub resource: VarOrNode,
+    pub resource: VarOrNamedNode,
     /// The WHERE clause.
     /// This clause is used to specify the resource identifier to describe using variable bindings.
     pub r#where: WhereClause,
@@ -453,6 +453,18 @@ pub enum VarOrNode {
     /// # Node
     /// A node, i.e. an IRI or a blank node.
     Node(Node),
+}
+
+/// # VarOrNamedNode {
+/// Represents either a variable or a named node (IRI).
+#[cw_serde]
+pub enum VarOrNamedNode {
+    /// # Variable
+    /// A variable.
+    Variable(String),
+    /// # NamedNode
+    /// An RDF [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri).
+    NamedNode(IRI),
 }
 
 /// # VarOrNodeOrLiteral

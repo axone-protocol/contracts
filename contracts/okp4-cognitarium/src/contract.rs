@@ -104,10 +104,11 @@ pub mod query {
             Err(StdError::generic_err("Maximum query limit exceeded"))?
         }
 
-        let mut plan_builder =
-            PlanBuilder::new(deps.storage, query.prefixes).with_limit(count as usize);
+        let plan =
+            PlanBuilder::new(deps.storage, query.prefixes).with_limit(count as usize)
+            .build_plan(query.r#where)?;
 
-        QueryEngine::new(deps.storage).select(plan_builder.build_plan(query.r#where)?, query.select)
+        QueryEngine::new(deps.storage).select(plan, query.select)
     }
 }
 

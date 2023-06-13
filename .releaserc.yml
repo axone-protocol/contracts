@@ -18,7 +18,7 @@ plugins:
           to: version = "${nextRelease.version}"
   - - "@semantic-release/exec"
     - prepareCmd: |
-        cargo make schema && cargo make generate_docs && cargo make release-assets
+        cargo make schema && cargo make docs-generate && cargo make release-assets
   - - "@semantic-release/github"
     - assets:
         - path: "./target/wasm32-unknown-unknown/release/okp4_objectarium.wasm"

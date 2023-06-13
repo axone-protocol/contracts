@@ -1,7 +1,7 @@
 use crate::msg::DataFormat;
 use cosmwasm_std::{StdError, StdResult};
 use rio_api::formatter::TriplesFormatter;
-use rio_api::model::{Quad, Triple};
+use rio_api::model::{NamedNode, Quad, Triple};
 use rio_api::parser::{QuadsParser, TriplesParser};
 use rio_turtle::{
     NQuadsFormatter, NQuadsParser, NTriplesFormatter, NTriplesParser, TurtleError, TurtleFormatter,
@@ -81,12 +81,8 @@ impl<W: std::io::Write> TripleWriter<W> {
 
     pub fn write(&mut self, triple: &Triple<'_>) -> io::Result<()> {
         match &mut self.writer {
-            TriplesWriterKind::Turtle(formatter) => {
-                formatter.format(triple)
-            },
-            TriplesWriterKind::NTriples(formatter) => {
-                formatter.format(triple)
-            },
+            TriplesWriterKind::Turtle(formatter) => formatter.format(triple),
+            TriplesWriterKind::NTriples(formatter) => formatter.format(triple),
             TriplesWriterKind::NQuads(formatter) => {
                 use rio_api::formatter::QuadsFormatter;
 
@@ -98,12 +94,10 @@ impl<W: std::io::Write> TripleWriter<W> {
                 };
 
                 formatter.format(quad)
-            },
-            TriplesWriterKind::RdfXml(format_result) => {
-                match format_result {
-                    Ok(formatter) => formatter.format(triple),
-                    Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
-                }
+            }
+            TriplesWriterKind::RdfXml(format_result) => match format_result {
+                Ok(formatter) => formatter.format(triple),
+                Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
             },
         }
     }
@@ -125,7 +119,8 @@ impl<W: std::io::Write> TripleWriter<W> {
                 Ok(formatter) => formatter.finish(),
                 Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
             },
-        }.map(|_| ())
+        }
+        .map(|_| ())
     }
 }
 
@@ -145,6 +140,26 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     }
 
     Err(StdError::generic_err("Couldn't extract IRI namespace"))
+}
+
+// Convenient type which simplifies the management of the lifetime of the IRI
+#[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Clone, Hash)]
+pub struct OwnedNamedNode {
+    pub iri: String,
+}
+
+impl From<NamedNode<'_>> for OwnedNamedNode {
+    fn from(n: NamedNode<'_>) -> Self {
+        Self {
+            iri: n.iri.to_owned(),
+        }
+    }
+}
+
+impl<'a> From<&'a OwnedNamedNode> for NamedNode<'a> {
+    fn from(n: &'a OwnedNamedNode) -> Self {
+        Self { iri: &n.iri }
+    }
 }
 
 #[cfg(test)]

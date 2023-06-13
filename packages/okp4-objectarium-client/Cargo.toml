@@ -2,7 +2,7 @@
 authors = ["OKP4"]
 edition = "2021"
 name = "okp4-objectarium-client"
-version = "1.0.0"
+version = "2.0.0"
 
 [dependencies]
 cosmwasm-std.workspace = true

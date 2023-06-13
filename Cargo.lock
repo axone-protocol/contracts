@@ -285,9 +285,9 @@ dependencies = [
 
 [[package]]
 name = "cw-storage-plus"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "053a5083c258acd68386734f428a5a171b29f7d733151ae83090c6fcc9417ffa"
+checksum = "3f0e92a069d62067f3472c62e30adedb4cab1754725c0f2a682b3128d2bf3c79"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -345,7 +345,7 @@ checksum = "8fb70cee2cf0b4a8ff7253e6bc6647107905e8eb37208f87d54f67810faa62f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus 1.0.1",
+ "cw-storage-plus 1.1.0",
  "schemars",
  "serde",
 ]
@@ -691,7 +691,7 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "okp4-cognitarium"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "base64 0.21.2",
  "blake3",
@@ -699,7 +699,7 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-multi-test",
- "cw-storage-plus 1.0.1",
+ "cw-storage-plus 1.1.0",
  "cw2 1.0.1",
  "derive_builder",
  "rio_api",
@@ -712,13 +712,13 @@ dependencies = [
 
 [[package]]
 name = "okp4-law-stone"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-multi-test",
- "cw-storage-plus 1.0.1",
+ "cw-storage-plus 1.1.0",
  "cw-utils 1.0.1",
  "cw2 1.0.1",
  "itertools",
@@ -733,7 +733,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-logic-bindings"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "cosmwasm-std",
  "form_urlencoded",
@@ -746,7 +746,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-objectarium"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "base16ct 0.2.0",
  "base64 0.21.2",
@@ -755,7 +755,7 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-multi-test",
- "cw-storage-plus 1.0.1",
+ "cw-storage-plus 1.1.0",
  "cw2 1.0.1",
  "derive_builder",
  "either",
@@ -770,7 +770,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-objectarium-client"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "cosmwasm-std",
  "okp4-logic-bindings",

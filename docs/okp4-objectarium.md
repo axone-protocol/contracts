@@ -25,7 +25,7 @@ okp4d tx wasm instantiate $CODE_ID \
     --admin $ADMIN_ADDR \
     --gas 1000000 \
     --broadcast-mode block \
-    '{"bucket":"my-bucket","limits":{}, "config": {}, "pagination": {}}'
+    '{"bucket":"my-bucket"}'
 ```
 
 ### Execute

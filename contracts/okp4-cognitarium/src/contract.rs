@@ -77,14 +77,27 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Store => to_binary(&query::store(deps)?),
         QueryMsg::Select { query } => to_binary(&query::select(deps, query)?),
-        _ => Err(StdError::generic_err("Not implemented")),
+        QueryMsg::Describe { query, format } => to_binary(&query::describe(
+            deps,
+            query,
+            format.unwrap_or(DataFormat::Turtle),
+        )?),
     }
 }
 
 pub mod query {
+    use std::collections::BTreeMap;
+
+    use rio_api::model::Triple;
+
     use super::*;
-    use crate::msg::{SelectQuery, SelectResponse, StoreResponse};
+    use crate::msg::{
+        DescribeQuery, DescribeResponse, Node, SelectItem, SelectQuery, SelectResponse,
+        SimpleWhereCondition, StoreResponse, TriplePattern, Value, VarOrNamedNode, VarOrNode,
+        VarOrNodeOrLiteral, WhereCondition, IRI,
+    };
     use crate::querier::{PlanBuilder, QueryEngine};
+    use crate::rdf::{self, expand_uri, Atom, TripleWriter};
 
     pub fn store(deps: Deps) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(|s| s.into())
@@ -104,11 +117,185 @@ pub mod query {
             Err(StdError::generic_err("Maximum query limit exceeded"))?
         }
 
-        let plan =
-            PlanBuilder::new(deps.storage, query.prefixes).with_limit(count as usize)
+        let plan = PlanBuilder::new(deps.storage, query.prefixes)
+            .with_limit(count as usize)
             .build_plan(query.r#where)?;
 
         QueryEngine::new(deps.storage).select(plan, query.select)
+    }
+
+    pub fn describe(
+        deps: Deps,
+        query: DescribeQuery,
+        format: DataFormat,
+    ) -> StdResult<DescribeResponse> {
+        fn get_value(
+            index: usize,
+            vars: &Vec<String>,
+            bindings: &BTreeMap<String, Value>,
+        ) -> Result<Value, StdError> {
+            vars.get(index)
+                .and_then(|it| bindings.get(it.as_str()))
+                .map(|it| it.to_owned())
+                .ok_or_else(|| {
+                    StdError::generic_err(format!(
+                        "Variable index {} not found (this was unexpected)",
+                        index
+                    ))
+                })
+        }
+
+        let (s, p, o) = ("_1s".to_owned(), "_2p".to_owned(), "_3o".to_owned());
+
+        let store = STORE.load(deps.storage)?;
+
+        let (select, r#where) = match &query.resource {
+            VarOrNamedNode::Variable(var) => {
+                let mut r#where = query.r#where;
+                r#where.push(WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
+                    TriplePattern {
+                        subject: VarOrNode::Variable(var.clone()),
+                        predicate: VarOrNode::Variable(format!("{}{}", var, p)),
+                        object: VarOrNodeOrLiteral::Variable(format!("{}{}", var, o)),
+                    },
+                )));
+
+                (
+                    vec![
+                        SelectItem::Variable(var.clone()),
+                        SelectItem::Variable(format!("{}{}", var, p)),
+                        SelectItem::Variable(format!("{}{}", var, o)),
+                    ],
+                    r#where,
+                )
+            }
+            VarOrNamedNode::NamedNode(iri) => (
+                vec![
+                    SelectItem::Variable(p.clone()),
+                    SelectItem::Variable(o.clone()),
+                ],
+                vec![WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
+                    TriplePattern {
+                        subject: VarOrNode::Node(Node::NamedNode(iri.clone())),
+                        predicate: VarOrNode::Variable(p),
+                        object: VarOrNodeOrLiteral::Variable(o),
+                    },
+                ))],
+            ),
+        };
+
+        let plan = PlanBuilder::new(deps.storage, query.prefixes.clone())
+            .with_limit(store.limits.max_query_limit as usize)
+            .build_plan(r#where)?;
+
+        let response = QueryEngine::new(deps.storage).select(plan, select)?;
+
+        let mut vars = response.head.vars;
+        if let VarOrNamedNode::NamedNode(_) = &query.resource {
+            vars.insert(0, s.clone());
+        }
+
+        let mut bindings = response.results.bindings;
+        if let VarOrNamedNode::NamedNode(iri) = &query.resource {
+            for b in &mut bindings {
+                b.insert(
+                    s.clone(),
+                    Value::URI {
+                        value: iri.to_owned(),
+                    },
+                );
+            }
+        }
+
+        let out: Vec<u8> = Vec::default();
+        let mut writer = TripleWriter::new(&format, out.clone());
+
+        for r in &bindings {
+            let subject_value = get_value(0, &vars, r)?;
+            let subject = match subject_value {
+                Value::URI {
+                    value: IRI::Full(uri),
+                } => uri,
+                Value::URI {
+                    value: IRI::Prefixed(curie),
+                } => expand_uri(curie, &query.prefixes)?,
+                _ => Err(StdError::generic_err(format!(
+                    "Unexpected value: {:?} (this was unexpected)",
+                    subject_value
+                )))?,
+            };
+
+            let predicate_value = get_value(1, &vars, r)?;
+            let predicate = match predicate_value {
+                Value::URI {
+                    value: IRI::Full(uri),
+                } => uri.clone(),
+                Value::URI {
+                    value: IRI::Prefixed(curie),
+                } => expand_uri(curie, &query.prefixes)?,
+                _ => Err(StdError::generic_err(format!(
+                    "Unexpected value: {:?} (this was unexpected)",
+                    predicate_value
+                )))?,
+            };
+
+            let object_value = get_value(2, &vars, r)?;
+            let object = match object_value {
+                Value::URI {
+                    value: IRI::Full(uri),
+                } => rdf::Value::NamedNode(uri),
+                Value::URI {
+                    value: IRI::Prefixed(curie),
+                } => rdf::Value::NamedNode(expand_uri(curie, &query.prefixes)?),
+                Value::Literal {
+                    value,
+                    lang: None,
+                    datatype: None,
+                } => rdf::Value::LiteralSimple(value),
+                Value::Literal {
+                    value,
+                    lang: Some(lang),
+                    datatype: None,
+                } => rdf::Value::LiteralLang(value, lang),
+                Value::Literal {
+                    value,
+                    lang: None,
+                    datatype: Some(IRI::Full(uri)),
+                } => rdf::Value::LiteralDatatype(value, uri),
+                Value::Literal {
+                    value,
+                    lang: None,
+                    datatype: Some(IRI::Prefixed(curie)),
+                } => rdf::Value::LiteralDatatype(value, expand_uri(curie, &query.prefixes)?),
+                Value::BlankNode { value } => rdf::Value::BlankNode(value),
+                _ => Err(StdError::generic_err(format!(
+                    "Unexpected value: {:?} (this was unexpected)",
+                    object_value
+                )))?,
+            };
+
+            let atom = Atom {
+                subject: subject,
+                property: predicate,
+                value: object,
+            };
+            let triple = Triple::from(&atom);
+
+            writer.write(&triple).map_err(|e| {
+                StdError::serialize_err(
+                    "triple",
+                    format!("Error writing triple {}: {}", &triple, e),
+                )
+            })?;
+        }
+        let out = writer.finish().map_err(|e| {
+            StdError::serialize_err("triple", format!("Error writing triple: {}", e))
+        })?;
+
+        Ok(DescribeResponse {
+            format: format,
+            data: Binary::from(out),
+        })
     }
 }
 
@@ -121,14 +308,15 @@ mod tests {
     use crate::msg::SimpleWhereCondition::TriplePattern;
     use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
-        Head, Literal, Prefix, Results, SelectItem, SelectQuery, SelectResponse, StoreLimitsInput,
-        StoreLimitsInputBuilder, StoreResponse, Value, VarOrNode, VarOrNodeOrLiteral,
-        WhereCondition,
+        DescribeQuery, DescribeResponse, Head, Literal, Prefix, Results, SelectItem, SelectQuery,
+        SelectResponse, StoreLimitsInput, StoreLimitsInputBuilder, StoreResponse, Value,
+        VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::state::{
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
     };
     use crate::{msg, state};
+    use base64::{engine::general_purpose, Engine as _};
     use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{from_binary, Addr, Attribute, Order, Uint128};

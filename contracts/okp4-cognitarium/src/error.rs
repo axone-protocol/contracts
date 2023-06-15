@@ -12,6 +12,9 @@ pub enum ContractError {
     ParseRDF(#[from] RDFParseError),
 
     #[error("{0}")]
+    FormatRDF(String),
+
+    #[error("{0}")]
     Store(#[from] StoreError),
 
     #[error("Only the owner can perform this operation.")]

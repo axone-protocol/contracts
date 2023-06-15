@@ -8,6 +8,8 @@ pub enum Value {
 }
 
 use std::fmt;
+
+use rio_api::model::{Literal, NamedNode, Triple};
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -34,5 +36,36 @@ impl std::fmt::Display for Atom {
             self.subject, self.property, self.value
         ))?;
         Ok(())
+    }
+}
+
+impl<'a> From<&'a Atom> for Triple<'a> {
+    fn from(atom: &'a Atom) -> Self {
+        Triple {
+            subject: NamedNode::from(NamedNode {
+                iri: atom.subject.as_str(),
+            })
+            .into(),
+            predicate: NamedNode::from(NamedNode {
+                iri: atom.property.as_str(),
+            }),
+            object: match &atom.value {
+                Value::NamedNode(s) => NamedNode::from(NamedNode { iri: s.as_str() }).into(),
+                Value::BlankNode(s) => NamedNode::from(NamedNode { iri: s.as_str() }).into(),
+                Value::LiteralSimple(s) => {
+                    Literal::from(Literal::Simple { value: s.as_str() }).into()
+                }
+                Value::LiteralLang(s, l) => Literal::from(Literal::LanguageTaggedString {
+                    value: s.as_str(),
+                    language: l.as_str(),
+                })
+                .into(),
+                Value::LiteralDatatype(s, d) => Literal::from(Literal::Typed {
+                    value: s.as_str(),
+                    datatype: NamedNode::from(NamedNode { iri: d.as_str() }),
+                })
+                .into(),
+            },
+        }
     }
 }

@@ -20,7 +20,6 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     Err(StdError::generic_err("Couldn't extract IRI namespace"))
 }
 
-
 // Expand a compacted URI (CURIE - URI with prefix) to a full URI.
 pub fn expand_uri<'a>(curie: String, prefixes: &Vec<Prefix>) -> StdResult<String> {
     let idx = curie

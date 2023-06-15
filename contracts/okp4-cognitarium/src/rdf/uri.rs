@@ -80,4 +80,43 @@ mod tests {
             Err(StdError::generic_err("Couldn't extract IRI namespace"))
         );
     }
+
+    #[test]
+    fn test_expand_uri() {
+        let prefixes = vec![
+            Prefix {
+                prefix: "ex".to_string(),
+                namespace: "http://example.com/".to_string(),
+            },
+            Prefix {
+                prefix: "rdf".to_string(),
+                namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+            },
+        ];
+
+        assert_eq!(
+            expand_uri("ex:resource".to_string(), &prefixes),
+            Ok("http://example.com/resource".to_string())
+        );
+
+        assert_eq!(
+            expand_uri("ex:".to_string(), &prefixes),
+            Ok("http://example.com/".to_string())
+        );
+
+        assert_eq!(
+            expand_uri("unknown:resource".to_string(), &prefixes),
+            Err(StdError::generic_err("Prefix not found: unknown"))
+        );
+
+        assert_eq!(
+            expand_uri("malformed_curie:".to_string(), &prefixes),
+            Err(StdError::generic_err("Prefix not found: malformed_curie"))
+        );
+
+        assert_eq!(
+            expand_uri("malformed_curie".to_string(), &prefixes),
+            Err(StdError::generic_err("Malformed CURIE: malformed_curie"))
+        );
+    }
 }

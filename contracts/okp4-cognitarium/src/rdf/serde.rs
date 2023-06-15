@@ -96,7 +96,7 @@ impl<W: std::io::Write> TripleWriter<W> {
             }
             TriplesWriterKind::RdfXml(format_result) => match format_result {
                 Ok(formatter) => formatter.format(triple),
-                Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
+                Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
             },
         }
     }

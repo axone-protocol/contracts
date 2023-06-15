@@ -13,11 +13,11 @@ use rio_api::model::{Literal, NamedNode, Triple};
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::NamedNode(s) => write!(f, "{}", s),
-            Value::BlankNode(s) => write!(f, "{}", s),
-            Value::LiteralSimple(s) => write!(f, "{}", s),
-            Value::LiteralLang(s, l) => write!(f, "{}@{}", s, l),
-            Value::LiteralDatatype(s, d) => write!(f, "{}^^{}", s, d),
+            Value::NamedNode(s) => write!(f, "{s}"),
+            Value::BlankNode(s) => write!(f, "{s}"),
+            Value::LiteralSimple(s) => write!(f, "{s}"),
+            Value::LiteralLang(s, l) => write!(f, "{s}@{l}"),
+            Value::LiteralDatatype(s, d) => write!(f, "{s}^^{d}"),
         }
     }
 }
@@ -42,28 +42,26 @@ impl std::fmt::Display for Atom {
 impl<'a> From<&'a Atom> for Triple<'a> {
     fn from(atom: &'a Atom) -> Self {
         Triple {
-            subject: NamedNode::from(NamedNode {
+            subject: NamedNode {
                 iri: atom.subject.as_str(),
-            })
+            }
             .into(),
-            predicate: NamedNode::from(NamedNode {
+            predicate: NamedNode {
                 iri: atom.property.as_str(),
-            }),
+            },
             object: match &atom.value {
-                Value::NamedNode(s) => NamedNode::from(NamedNode { iri: s.as_str() }).into(),
-                Value::BlankNode(s) => NamedNode::from(NamedNode { iri: s.as_str() }).into(),
-                Value::LiteralSimple(s) => {
-                    Literal::from(Literal::Simple { value: s.as_str() }).into()
-                }
-                Value::LiteralLang(s, l) => Literal::from(Literal::LanguageTaggedString {
+                Value::NamedNode(s) => NamedNode { iri: s.as_str() }.into(),
+                Value::BlankNode(s) => NamedNode { iri: s.as_str() }.into(),
+                Value::LiteralSimple(s) => Literal::Simple { value: s.as_str() }.into(),
+                Value::LiteralLang(s, l) => Literal::LanguageTaggedString {
                     value: s.as_str(),
                     language: l.as_str(),
-                })
+                }
                 .into(),
-                Value::LiteralDatatype(s, d) => Literal::from(Literal::Typed {
+                Value::LiteralDatatype(s, d) => Literal::Typed {
                     value: s.as_str(),
-                    datatype: NamedNode::from(NamedNode { iri: d.as_str() }),
-                })
+                    datatype: NamedNode { iri: d.as_str() },
+                }
                 .into(),
             },
         }

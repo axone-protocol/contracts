@@ -21,10 +21,10 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
 }
 
 // Expand a compacted URI (CURIE - URI with prefix) to a full URI.
-pub fn expand_uri<'a>(curie: String, prefixes: &Vec<Prefix>) -> StdResult<String> {
+pub fn expand_uri(curie: String, prefixes: &[Prefix]) -> StdResult<String> {
     let idx = curie
         .rfind(':')
-        .ok_or_else(|| StdError::generic_err(format!("Malformed CURIE: {}", curie)))?;
+        .ok_or_else(|| StdError::generic_err(format!("Malformed CURIE: {curie}")))?;
 
     let prefix = curie[..idx].to_string();
     let suffix = curie[idx + 1..].to_string();
@@ -32,10 +32,10 @@ pub fn expand_uri<'a>(curie: String, prefixes: &Vec<Prefix>) -> StdResult<String
     let namespace = &prefixes
         .iter()
         .find(|p| p.prefix == prefix)
-        .ok_or_else(|| StdError::generic_err(format!("Prefix not found: {}", prefix)))?
+        .ok_or_else(|| StdError::generic_err(format!("Prefix not found: {prefix}")))?
         .namespace;
 
-    Ok(format!("{}{}", namespace, suffix))
+    Ok(format!("{namespace}{suffix}"))
 }
 
 #[cfg(test)]

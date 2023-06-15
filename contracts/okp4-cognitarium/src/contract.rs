@@ -131,7 +131,7 @@ pub mod query {
     ) -> StdResult<DescribeResponse> {
         fn get_value(
             index: usize,
-            vars: &Vec<String>,
+            vars: &[String],
             bindings: &BTreeMap<String, Value>,
         ) -> Result<Value, StdError> {
             vars.get(index)
@@ -139,8 +139,7 @@ pub mod query {
                 .map(|it| it.to_owned())
                 .ok_or_else(|| {
                     StdError::generic_err(format!(
-                        "Variable index {} not found (this was unexpected)",
-                        index
+                        "Variable index {index} not found (this was unexpected)"
                     ))
                 })
         }
@@ -155,16 +154,16 @@ pub mod query {
                 r#where.push(WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
                     TriplePattern {
                         subject: VarOrNode::Variable(var.clone()),
-                        predicate: VarOrNode::Variable(format!("{}{}", var, p)),
-                        object: VarOrNodeOrLiteral::Variable(format!("{}{}", var, o)),
+                        predicate: VarOrNode::Variable(format!("{var}{p}")),
+                        object: VarOrNodeOrLiteral::Variable(format!("{var}{p}")),
                     },
                 )));
 
                 (
                     vec![
                         SelectItem::Variable(var.clone()),
-                        SelectItem::Variable(format!("{}{}", var, p)),
-                        SelectItem::Variable(format!("{}{}", var, o)),
+                        SelectItem::Variable(format!("{var}{p}")),
+                        SelectItem::Variable(format!("{var}{o}")),
                     ],
                     r#where,
                 )
@@ -208,7 +207,7 @@ pub mod query {
         }
 
         let out: Vec<u8> = Vec::default();
-        let mut writer = TripleWriter::new(&format, out.clone());
+        let mut writer = TripleWriter::new(&format, out);
 
         for r in &bindings {
             let subject_value = get_value(0, &vars, r)?;
@@ -220,8 +219,7 @@ pub mod query {
                     value: IRI::Prefixed(curie),
                 } => expand_uri(curie, &query.prefixes)?,
                 _ => Err(StdError::generic_err(format!(
-                    "Unexpected value: {:?} (this was unexpected)",
-                    subject_value
+                    "Unexpected value: {subject_value:?} (this was unexpected)"
                 )))?,
             };
 
@@ -234,8 +232,7 @@ pub mod query {
                     value: IRI::Prefixed(curie),
                 } => expand_uri(curie, &query.prefixes)?,
                 _ => Err(StdError::generic_err(format!(
-                    "Unexpected value: {:?} (this was unexpected)",
-                    predicate_value
+                    "Unexpected value: {predicate_value:?} (this was unexpected)"
                 )))?,
             };
 
@@ -269,13 +266,12 @@ pub mod query {
                 } => rdf::Value::LiteralDatatype(value, expand_uri(curie, &query.prefixes)?),
                 Value::BlankNode { value } => rdf::Value::BlankNode(value),
                 _ => Err(StdError::generic_err(format!(
-                    "Unexpected value: {:?} (this was unexpected)",
-                    object_value
+                    "Unexpected value: {object_value:?} (this was unexpected)"
                 )))?,
             };
 
             let atom = Atom {
-                subject: subject,
+                subject,
                 property: predicate,
                 value: object,
             };
@@ -288,12 +284,12 @@ pub mod query {
                 )
             })?;
         }
-        let out = writer.finish().map_err(|e| {
-            StdError::serialize_err("triple", format!("Error writing triple: {}", e))
-        })?;
+        let out = writer
+            .finish()
+            .map_err(|e| StdError::serialize_err("triple", format!("Error writing triple: {e}")))?;
 
         Ok(DescribeResponse {
-            format: format,
+            format,
             data: Binary::from(out),
         })
     }

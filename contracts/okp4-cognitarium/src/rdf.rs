@@ -1,4 +1,4 @@
-use crate::msg::DataFormat;
+use crate::msg::{DataFormat, Prefix};
 use cosmwasm_std::{StdError, StdResult};
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{NamedNode, Quad, Triple};
@@ -140,6 +140,24 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     }
 
     Err(StdError::generic_err("Couldn't extract IRI namespace"))
+}
+
+// Expand a compacted URI (CURIE - URI with prefix) to a full URI.
+pub fn expand_uri<'a>(curie: String, prefixes: &Vec<Prefix>) -> StdResult<String> {
+    let idx = curie
+        .rfind(':')
+        .ok_or_else(|| StdError::generic_err(format!("Malformed CURIE: {}", curie)))?;
+
+    let prefix = curie[..idx].to_string();
+    let suffix = curie[idx + 1..].to_string();
+
+    let namespace = &prefixes
+        .iter()
+        .find(|p| p.prefix == prefix)
+        .ok_or_else(|| StdError::generic_err(format!("Prefix not found: {}", prefix)))?
+        .namespace;
+
+    Ok(format!("{}{}", namespace, suffix))
 }
 
 // Convenient type which simplifies the management of the lifetime of the IRI

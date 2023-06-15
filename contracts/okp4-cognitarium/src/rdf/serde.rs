@@ -68,7 +68,7 @@ impl<R: BufRead> TripleReader<R> {
 }
 
 impl<W: std::io::Write> TripleWriter<W> {
-    pub fn new(format: DataFormat, dst: W) -> Self {
+    pub fn new(format: &DataFormat, dst: W) -> Self {
         TripleWriter {
             writer: match format {
                 DataFormat::RDFXml => TriplesWriterKind::RdfXml(RdfXmlFormatter::new(dst)),
@@ -110,7 +110,7 @@ impl<W: std::io::Write> TripleWriter<W> {
         Ok(())
     }
 
-    pub fn finish(self) -> io::Result<()> {
+    pub fn finish(self) -> io::Result<W> {
         match self.writer {
             TriplesWriterKind::Turtle(formatter) => formatter.finish(),
             TriplesWriterKind::NTriples(formatter) => formatter.finish(),
@@ -120,7 +120,6 @@ impl<W: std::io::Write> TripleWriter<W> {
                 Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
             },
         }
-        .map(|_| ())
     }
 }
 

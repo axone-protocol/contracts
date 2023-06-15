@@ -122,23 +122,3 @@ impl<W: std::io::Write> TripleWriter<W> {
         }
     }
 }
-
-// Convenient type which simplifies the management of the lifetime of the IRI
-#[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Clone, Hash)]
-pub struct OwnedNamedNode {
-    pub iri: String,
-}
-
-impl From<NamedNode<'_>> for OwnedNamedNode {
-    fn from(n: NamedNode<'_>) -> Self {
-        Self {
-            iri: n.iri.to_owned(),
-        }
-    }
-}
-
-impl<'a> From<&'a OwnedNamedNode> for NamedNode<'a> {
-    fn from(n: &'a OwnedNamedNode) -> Self {
-        Self { iri: &n.iri }
-    }
-}

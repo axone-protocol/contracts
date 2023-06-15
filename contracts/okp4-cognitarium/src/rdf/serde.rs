@@ -33,7 +33,7 @@ pub enum TriplesWriterKind<W: std::io::Write> {
 }
 
 impl<R: BufRead> TripleReader<R> {
-    pub fn new(format: DataFormat, src: R) -> Self {
+    pub fn new(format: &DataFormat, src: R) -> Self {
         TripleReader {
             parser: match format {
                 DataFormat::RDFXml => TriplesParserKind::RdfXml(RdfXmlParser::new(src, None)),

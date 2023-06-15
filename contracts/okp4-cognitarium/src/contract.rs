@@ -62,7 +62,7 @@ pub mod execute {
         }
 
         let buf = BufReader::new(data.as_slice());
-        let mut reader = TripleReader::new(format, buf);
+        let mut reader = TripleReader::new(&format, buf);
         let mut storer = TripleStorer::new(deps.storage)?;
         let count = storer.store_all(&mut reader)?;
 
@@ -117,9 +117,9 @@ pub mod query {
             Err(StdError::generic_err("Maximum query limit exceeded"))?
         }
 
-        let plan = PlanBuilder::new(deps.storage, query.prefixes)
+        let plan = PlanBuilder::new(deps.storage, &query.prefixes)
             .with_limit(count as usize)
-            .build_plan(query.r#where)?;
+            .build_plan(&query.r#where)?;
 
         QueryEngine::new(deps.storage).select(plan, query.select)
     }
@@ -184,9 +184,9 @@ pub mod query {
             ),
         };
 
-        let plan = PlanBuilder::new(deps.storage, query.prefixes.clone())
+        let plan = PlanBuilder::new(deps.storage, &query.prefixes)
             .with_limit(store.limits.max_query_limit as usize)
-            .build_plan(r#where)?;
+            .build_plan(&r#where)?;
 
         let response = QueryEngine::new(deps.storage).select(plan, select)?;
 

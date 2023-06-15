@@ -17,7 +17,7 @@ pub struct PlanBuilder<'a> {
 }
 
 impl<'a> PlanBuilder<'a> {
-    pub fn new(storage: &'a dyn Storage, prefixes: Vec<Prefix>) -> Self {
+    pub fn new(storage: &'a dyn Storage, prefixes: &[Prefix]) -> Self {
         Self {
             storage,
             prefixes: Self::make_prefixes(prefixes),
@@ -38,7 +38,7 @@ impl<'a> PlanBuilder<'a> {
         self
     }
 
-    pub fn build_plan(&mut self, where_clause: WhereClause) -> StdResult<QueryPlan> {
+    pub fn build_plan(&mut self, where_clause: &WhereClause) -> StdResult<QueryPlan> {
         let bgp: Vec<QueryNode> = where_clause
             .iter()
             .map(|cond| {
@@ -197,7 +197,7 @@ impl<'a> PlanBuilder<'a> {
         self.variables.len() - 1
     }
 
-    fn make_prefixes(as_list: Vec<Prefix>) -> HashMap<String, String> {
+    fn make_prefixes(as_list: &[Prefix]) -> HashMap<String, String> {
         as_list.iter().fold(HashMap::new(), |mut map, prefix| {
             map.insert(prefix.prefix.clone(), prefix.namespace.clone());
             map
@@ -267,14 +267,14 @@ mod test {
         let deps = mock_dependencies();
 
         for case in cases {
-            let builder = PlanBuilder::new(&deps.storage, case.0);
+            let builder = PlanBuilder::new(&deps.storage, &case.0);
             assert_eq!(builder.skip, None);
             assert_eq!(builder.limit, None);
             assert_eq!(builder.variables, Vec::<String>::new());
             assert_eq!(builder.prefixes, case.1);
         }
 
-        let mut builder = PlanBuilder::new(&deps.storage, vec![]);
+        let mut builder = PlanBuilder::new(&deps.storage, &[]);
         builder = builder.with_skip(20usize).with_limit(50usize);
         assert_eq!(builder.skip, Some(20usize));
         assert_eq!(builder.limit, Some(50usize));
@@ -341,7 +341,7 @@ mod test {
 
         let mut builder = PlanBuilder::new(
             &deps.storage,
-            vec![
+            &[
                 Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
@@ -514,7 +514,7 @@ mod test {
                 },
             )
             .unwrap();
-        let mut builder = PlanBuilder::new(&deps.storage, vec![]);
+        let mut builder = PlanBuilder::new(&deps.storage, &[]);
         for case in cases {
             assert_eq!(builder.build_triple_pattern(&case.0), case.1);
         }
@@ -717,7 +717,7 @@ mod test {
             .unwrap();
 
         for case in cases {
-            let mut builder = PlanBuilder::new(&deps.storage, vec![]);
+            let mut builder = PlanBuilder::new(&deps.storage, &[]);
             if let Some(skip) = case.0 {
                 builder = builder.with_skip(skip);
             }
@@ -727,7 +727,8 @@ mod test {
 
             assert_eq!(
                 builder.build_plan(
-                    case.2
+                    &case
+                        .2
                         .into_iter()
                         .map(SimpleWhereCondition::TriplePattern)
                         .map(WhereCondition::Simple)

@@ -316,7 +316,6 @@ mod tests {
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
     };
     use crate::{msg, state};
-    use base64::{engine::general_purpose, Engine as _};
     use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{from_binary, Addr, Attribute, Order, Uint128};
@@ -991,6 +990,164 @@ mod tests {
         for (q, expected) in cases {
             let res = query(deps.as_ref(), mock_env(), QueryMsg::Select { query: q });
             assert_eq!(res, expected);
+        }
+    }
+
+    #[test]
+    fn formats_describe() {
+        let cases = vec![
+        (
+            QueryMsg::Describe {
+                query: DescribeQuery {
+                    prefixes: vec![],
+                    resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                    r#where: vec![],
+                },
+                format: Some(DataFormat::Turtle),
+            },
+            DescribeResponse {
+                format: DataFormat::Turtle,
+                data: Binary::from(
+                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
+\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;
+\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
+\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
+\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
+\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
+\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
+\
+                ".to_string().as_bytes().to_vec()),
+            }
+        ),
+        (
+            QueryMsg::Describe {
+                query: DescribeQuery {
+                    prefixes: vec![],
+                    resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                    r#where: vec![],
+                },
+                format: Some(DataFormat::RDFXml),
+            },
+            DescribeResponse {
+                format: DataFormat::RDFXml,
+                data: Binary::from(
+                   "<?xml version=\"1.0\" encoding=\"UTF-8\"?><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\
+<rdf:Description rdf:about=\"https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473\">\
+<type xmlns=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" rdf:resource=\"https://ontology.okp4.space/metadata/dataspace/GeneralMetadata\"/>\
+<type xmlns=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" rdf:resource=\"http://www.w3.org/2002/07/owl#NamedIndividual\"/>\
+<hasTag xmlns=\"https://ontology.okp4.space/core/\">Test</hasTag><hasTag xmlns=\"https://ontology.okp4.space/core/\">OKP4</hasTag>\
+<hasTitle xmlns=\"https://ontology.okp4.space/core/\" xml:lang=\"fr\">Data Space de test</hasTitle>\
+<hasTitle xmlns=\"https://ontology.okp4.space/core/\" xml:lang=\"en\">Test Data Space</hasTitle>\
+<hasTopic xmlns=\"https://ontology.okp4.space/core/\" rdf:resource=\"https://ontology.okp4.space/thesaurus/topic/Test\"/>\
+<describes xmlns=\"https://ontology.okp4.space/core/\" rdf:resource=\"https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33\"/>\
+<hasPublisher xmlns=\"https://ontology.okp4.space/core/\">OKP4</hasPublisher>\
+<hasDescription xmlns=\"https://ontology.okp4.space/core/\" xml:lang=\"en\">A test Data Space.</hasDescription>\
+<hasDescription xmlns=\"https://ontology.okp4.space/core/\" xml:lang=\"fr\">Un Data Space de test.</hasDescription></rdf:Description>\
+</rdf:RDF>\
+\
+                ".to_string().as_bytes().to_vec()),
+            }
+        ),
+        (
+            QueryMsg::Describe {
+                query: DescribeQuery {
+                    prefixes: vec![],
+                    resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Variable("a".to_string()),
+                            predicate: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/core/hasDescription".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Variable("b".to_string()),
+                        },
+                    ))],
+                },
+                format: Some(DataFormat::NTriples),
+            },
+            DescribeResponse {
+                format: DataFormat::NTriples,
+                data: Binary::from(
+                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"OKP4\" .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTitle> \"Test Data Space\"@en .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasPublisher> \"OKP4\" .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"Un Data Space de test.\"@fr .
+\
+                ".to_string().as_bytes().to_vec()),
+            }
+        ),
+        (
+            QueryMsg::Describe {
+                query: DescribeQuery {
+                    prefixes: vec![],
+                    resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                    r#where: vec![],
+                },
+                format: Some(DataFormat::NQuads),
+            },
+            DescribeResponse {
+                format: DataFormat::NQuads,
+                data: Binary::from(
+                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"OKP4\" .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTitle> \"Test Data Space\"@en .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasPublisher> \"OKP4\" .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en .
+<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"Un Data Space de test.\"@fr .
+\
+                ".to_string().as_bytes().to_vec()),
+            }
+        ),
+    ];
+
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                limits: StoreLimitsInput::default(),
+            },
+        )
+        .unwrap();
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            info,
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+        )
+        .unwrap();
+
+        for (q, expected) in cases {
+            let res = query(deps.as_ref(), mock_env(), q);
+
+            assert!(res.is_ok());
+
+            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+
+            assert_eq!(result.format, expected.format);
+            assert_eq!(
+                String::from_utf8_lossy(&result.data),
+                String::from_utf8_lossy(&expected.data)
+            );
         }
     }
 }

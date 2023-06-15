@@ -1146,4 +1146,76 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn prefixes_describe() {
+        let cases = vec![
+        (
+            QueryMsg::Describe {
+                query: DescribeQuery {
+                    prefixes: vec![
+                        Prefix {
+                            prefix: "metadata".to_string(),
+                            namespace: "https://ontology.okp4.space/dataverse/dataspace/metadata/".to_string(),
+                        },
+                    ],
+                    resource: VarOrNamedNode::NamedNode(Prefixed("metadata:dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                    r#where: vec![],
+                },
+                format: Some(DataFormat::Turtle),
+            },
+            DescribeResponse {
+                format: DataFormat::Turtle,
+                data: Binary::from(
+                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
+\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;
+\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
+\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
+\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
+\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
+\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
+\
+                ".to_string().as_bytes().to_vec()),
+            }
+        ),
+        ];
+
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                limits: StoreLimitsInput::default(),
+            },
+        )
+        .unwrap();
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            info,
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+        )
+        .unwrap();
+
+        for (q, expected) in cases {
+            let res = query(deps.as_ref(), mock_env(), q);
+
+            assert!(res.is_ok());
+
+            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+
+            assert_eq!(result.format, expected.format);
+            assert_eq!(
+                String::from_utf8_lossy(&result.data),
+                String::from_utf8_lossy(&expected.data)
+            );
+        }
+    }
 }

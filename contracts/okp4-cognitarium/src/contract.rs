@@ -97,7 +97,7 @@ pub mod query {
         VarOrNodeOrLiteral, WhereCondition, IRI,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{self, expand_uri, Atom, TripleWriter};
+    use crate::rdf::{self, expand_uri, Atom, Subject, TripleWriter};
 
     pub fn store(deps: Deps) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(|s| s.into())
@@ -214,12 +214,13 @@ pub mod query {
             let subject = match subject_value {
                 Value::URI {
                     value: IRI::Full(uri),
-                } => uri,
+                } => Subject::NamedNode(uri),
                 Value::URI {
                     value: IRI::Prefixed(curie),
-                } => expand_uri(curie, &query.prefixes)?,
+                } => Subject::NamedNode(expand_uri(curie, &query.prefixes)?),
+                Value::BlankNode { value: id } => Subject::BlankNode(id.clone()),
                 _ => Err(StdError::generic_err(format!(
-                    "Unexpected value: {subject_value:?} (this was unexpected)"
+                    "Unexpected subject value: {subject_value:?} (this was unexpected)"
                 )))?,
             };
 
@@ -232,7 +233,7 @@ pub mod query {
                     value: IRI::Prefixed(curie),
                 } => expand_uri(curie, &query.prefixes)?,
                 _ => Err(StdError::generic_err(format!(
-                    "Unexpected value: {predicate_value:?} (this was unexpected)"
+                    "Unexpected predicate value: {predicate_value:?} (this was unexpected)"
                 )))?,
             };
 
@@ -266,7 +267,7 @@ pub mod query {
                 } => rdf::Value::LiteralDatatype(value, expand_uri(curie, &query.prefixes)?),
                 Value::BlankNode { value } => rdf::Value::BlankNode(value),
                 _ => Err(StdError::generic_err(format!(
-                    "Unexpected value: {object_value:?} (this was unexpected)"
+                    "Unexpected object value: {object_value:?} (this was unexpected)"
                 )))?,
             };
 

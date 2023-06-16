@@ -61,7 +61,7 @@ dependencies = [
  "cc",
  "cfg-if",
  "constant_time_eq",
- "digest 0.10.5",
+ "digest 0.10.7",
 ]
 
 [[package]]
@@ -133,7 +133,7 @@ version = "1.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41c0e41be7e6c7d7ab3c61cdc32fcfaa14f948491a401cbc1c74bb33b6f4b851"
 dependencies = [
- "digest 0.10.5",
+ "digest 0.10.7",
  "ed25519-zebra",
  "k256",
  "rand_core 0.6.4",
@@ -188,7 +188,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde-json-wasm",
- "sha2 0.10.6",
+ "sha2 0.10.7",
  "thiserror",
  "uint",
 ]
@@ -448,9 +448,9 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.10.5"
+version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adfbc57365a37acbd2ebf2b64d7e69bb766e2fea813521ed536f5d0520dcf86c"
+checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer 0.10.3",
  "crypto-common",
@@ -505,7 +505,7 @@ dependencies = [
  "base16ct 0.1.1",
  "crypto-bigint",
  "der",
- "digest 0.10.5",
+ "digest 0.10.7",
  "ff",
  "generic-array",
  "group",
@@ -622,7 +622,7 @@ version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
- "digest 0.10.5",
+ "digest 0.10.7",
 ]
 
 [[package]]
@@ -665,7 +665,7 @@ dependencies = [
  "cfg-if",
  "ecdsa",
  "elliptic-curve",
- "sha2 0.10.6",
+ "sha2 0.10.7",
 ]
 
 [[package]]
@@ -680,7 +680,7 @@ version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6365506850d44bff6e2fbcb5176cf63650e48bd45ef2fe2665ae1570e0f4b9ca"
 dependencies = [
- "digest 0.10.5",
+ "digest 0.10.7",
 ]
 
 [[package]]
@@ -763,7 +763,7 @@ dependencies = [
  "md-5",
  "schemars",
  "serde",
- "sha2 0.10.6",
+ "sha2 0.10.7",
  "snap",
  "thiserror",
 ]
@@ -1037,13 +1037,13 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.6"
+version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82e6b795fe2e3b1e845bafcb27aa35405c4d47cdfc92af5fc8d3002f76cebdc0"
+checksum = "479fb9d862239e610720565ca91403019f2f00410f1864c5aa7479b950a76ed8"
 dependencies = [
  "cfg-if",
  "cpufeatures",
- "digest 0.10.5",
+ "digest 0.10.7",
 ]
 
 [[package]]
@@ -1052,7 +1052,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "deb766570a2825fa972bceff0d195727876a9cdf2460ab2e52d455dc2de47fd9"
 dependencies = [
- "digest 0.10.5",
+ "digest 0.10.7",
  "rand_core 0.6.4",
 ]
 

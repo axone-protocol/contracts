@@ -1297,4 +1297,78 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn blanknode_describe() {
+        let cases = vec![
+        (
+            QueryMsg::Describe {
+                query: DescribeQuery {
+                    prefixes: vec![
+                        Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() },
+                        Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string()}
+                    ],
+                    resource: VarOrNamedNode::Variable("x".to_string()),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Prefixed("metadata-dataset:80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string()))),
+                            predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                "core:hasTemporalCoverage".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Variable("x".to_string()),
+                        },
+                       )),
+                       ],
+                },
+                format: Some(DataFormat::Turtle),
+            },
+            DescribeResponse {
+                format: DataFormat::Turtle,
+                data: Binary::from(
+                   "<riog00000001> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/core/Period> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
+\t<https://ontology.okp4.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+\
+                ".to_string().as_bytes().to_vec()),
+            }
+        ),
+        ];
+
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                limits: StoreLimitsInput::default(),
+            },
+        )
+        .unwrap();
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            info,
+            InsertData {
+                format: Some(DataFormat::Turtle),
+                data: read_test_data("blank-nodes.ttl"),
+            },
+        )
+        .unwrap();
+
+        for (q, expected) in cases {
+            let res = query(deps.as_ref(), mock_env(), q);
+
+            assert!(res.is_ok());
+
+            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+
+            assert_eq!(result.format, expected.format);
+            assert_eq!(
+                String::from_utf8_lossy(&result.data),
+                String::from_utf8_lossy(&expected.data)
+            );
+        }
+    }
 }

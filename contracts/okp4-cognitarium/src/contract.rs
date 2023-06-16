@@ -88,16 +88,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub mod query {
     use std::collections::BTreeMap;
 
-    use rio_api::model::Triple;
-
     use super::*;
     use crate::msg::{
-        DescribeQuery, DescribeResponse, Node, SelectItem, SelectQuery, SelectResponse,
+        DescribeQuery, DescribeResponse, Node, Prefix, SelectItem, SelectQuery, SelectResponse,
         SimpleWhereCondition, StoreResponse, TriplePattern, Value, VarOrNamedNode, VarOrNode,
-        VarOrNodeOrLiteral, WhereCondition, IRI,
+        VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{self, expand_uri, Atom, Subject, TripleWriter};
+    use crate::rdf::{self, Atom, TripleWriter};
 
     pub fn store(deps: Deps) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(|s| s.into())
@@ -210,73 +208,13 @@ pub mod query {
         let mut writer = TripleWriter::new(&format, out);
 
         for r in &bindings {
-            let subject_value = get_value(0, &vars, r)?;
-            let subject = match subject_value {
-                Value::URI {
-                    value: IRI::Full(uri),
-                } => Subject::NamedNode(uri),
-                Value::URI {
-                    value: IRI::Prefixed(curie),
-                } => Subject::NamedNode(expand_uri(curie, &query.prefixes)?),
-                Value::BlankNode { value: id } => Subject::BlankNode(id.clone()),
-                _ => Err(StdError::generic_err(format!(
-                    "Unexpected subject value: {subject_value:?} (this was unexpected)"
-                )))?,
+            let prefixes: &[Prefix] = &query.prefixes;
+            let atom = &Atom {
+                subject: rdf::Subject::try_from((get_value(0, &vars, r)?, prefixes))?,
+                property: rdf::Property::try_from((get_value(1, &vars, r)?, prefixes))?,
+                value: rdf::Value::try_from((get_value(2, &vars, r)?, prefixes))?,
             };
-
-            let predicate_value = get_value(1, &vars, r)?;
-            let predicate = match predicate_value {
-                Value::URI {
-                    value: IRI::Full(uri),
-                } => uri.clone(),
-                Value::URI {
-                    value: IRI::Prefixed(curie),
-                } => expand_uri(curie, &query.prefixes)?,
-                _ => Err(StdError::generic_err(format!(
-                    "Unexpected predicate value: {predicate_value:?} (this was unexpected)"
-                )))?,
-            };
-
-            let object_value = get_value(2, &vars, r)?;
-            let object = match object_value {
-                Value::URI {
-                    value: IRI::Full(uri),
-                } => rdf::Value::NamedNode(uri),
-                Value::URI {
-                    value: IRI::Prefixed(curie),
-                } => rdf::Value::NamedNode(expand_uri(curie, &query.prefixes)?),
-                Value::Literal {
-                    value,
-                    lang: None,
-                    datatype: None,
-                } => rdf::Value::LiteralSimple(value),
-                Value::Literal {
-                    value,
-                    lang: Some(lang),
-                    datatype: None,
-                } => rdf::Value::LiteralLang(value, lang),
-                Value::Literal {
-                    value,
-                    lang: None,
-                    datatype: Some(IRI::Full(uri)),
-                } => rdf::Value::LiteralDatatype(value, uri),
-                Value::Literal {
-                    value,
-                    lang: None,
-                    datatype: Some(IRI::Prefixed(curie)),
-                } => rdf::Value::LiteralDatatype(value, expand_uri(curie, &query.prefixes)?),
-                Value::BlankNode { value } => rdf::Value::BlankNode(value),
-                _ => Err(StdError::generic_err(format!(
-                    "Unexpected object value: {object_value:?} (this was unexpected)"
-                )))?,
-            };
-
-            let atom = Atom {
-                subject,
-                property: predicate,
-                value: object,
-            };
-            let triple = Triple::from(&atom);
+            let triple = atom.into();
 
             writer.write(&triple).map_err(|e| {
                 StdError::serialize_err(

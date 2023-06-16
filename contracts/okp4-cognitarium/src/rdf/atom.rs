@@ -1,5 +1,10 @@
+use cosmwasm_std::StdError;
 use rio_api::model::{Literal, NamedNode, Triple};
 use std::fmt;
+
+use crate::msg::{self, Prefix, IRI};
+
+use super::expand_uri;
 
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub enum Subject {
@@ -13,6 +18,15 @@ impl fmt::Display for Subject {
             Subject::NamedNode(s) => write!(f, "{s}"),
             Subject::BlankNode(s) => write!(f, "{s}"),
         }
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+pub struct Property(String);
+
+impl fmt::Display for Property {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -40,7 +54,7 @@ impl fmt::Display for Value {
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct Atom {
     pub subject: Subject,
-    pub property: String,
+    pub property: Property,
     pub value: Value,
 }
 
@@ -63,7 +77,7 @@ impl<'a> From<&'a Atom> for Triple<'a> {
             }
             .into(),
             predicate: NamedNode {
-                iri: atom.property.as_str(),
+                iri: atom.property.0.as_str(),
             },
             object: match &atom.value {
                 Value::NamedNode(s) => NamedNode { iri: s.as_str() }.into(),
@@ -80,6 +94,82 @@ impl<'a> From<&'a Atom> for Triple<'a> {
                 }
                 .into(),
             },
+        }
+    }
+}
+
+impl TryFrom<(msg::Value, &[Prefix])> for Subject {
+    type Error = StdError;
+
+    fn try_from((value, prefixes): (msg::Value, &[Prefix])) -> Result<Self, Self::Error> {
+        match value {
+            msg::Value::URI {
+                value: IRI::Full(uri),
+            } => Ok(Subject::NamedNode(uri)),
+            msg::Value::URI {
+                value: IRI::Prefixed(curie),
+            } => Ok(Subject::NamedNode(expand_uri(&curie, prefixes)?)),
+            msg::Value::BlankNode { value: id } => Ok(Subject::BlankNode(id)),
+            _ => Err(StdError::generic_err(format!(
+                "Unsupported subject value: {value:?}"
+            ))),
+        }
+    }
+}
+
+impl TryFrom<(msg::Value, &[Prefix])> for Property {
+    type Error = StdError;
+
+    fn try_from((value, prefixes): (msg::Value, &[Prefix])) -> Result<Self, Self::Error> {
+        match value {
+            msg::Value::URI {
+                value: IRI::Full(uri),
+            } => Ok(Property(uri)),
+            msg::Value::URI {
+                value: IRI::Prefixed(curie),
+            } => Ok(Property(expand_uri(&curie, prefixes)?)),
+            _ => Err(StdError::generic_err(format!(
+                "Unsupported predicate value: {value:?}"
+            ))),
+        }
+    }
+}
+
+impl TryFrom<(msg::Value, &[Prefix])> for Value {
+    type Error = StdError;
+
+    fn try_from((value, prefixes): (msg::Value, &[Prefix])) -> Result<Self, Self::Error> {
+        match value {
+            msg::Value::URI {
+                value: IRI::Full(uri),
+            } => Ok(Value::NamedNode(uri)),
+            msg::Value::URI {
+                value: IRI::Prefixed(curie),
+            } => Ok(Value::NamedNode(expand_uri(&curie, prefixes)?)),
+            msg::Value::Literal {
+                value,
+                lang: None,
+                datatype: None,
+            } => Ok(Value::LiteralSimple(value)),
+            msg::Value::Literal {
+                value,
+                lang: Some(lang),
+                datatype: None,
+            } => Ok(Value::LiteralLang(value, lang)),
+            msg::Value::Literal {
+                value,
+                lang: None,
+                datatype: Some(IRI::Full(uri)),
+            } => Ok(Value::LiteralDatatype(value, uri)),
+            msg::Value::Literal {
+                value,
+                lang: None,
+                datatype: Some(IRI::Prefixed(curie)),
+            } => Ok(Value::LiteralDatatype(value, expand_uri(&curie, prefixes)?)),
+            msg::Value::BlankNode { value } => Ok(Value::BlankNode(value)),
+            _ => Err(StdError::generic_err(format!(
+                "Unsupported object value: {value:?}"
+            )))?,
         }
     }
 }

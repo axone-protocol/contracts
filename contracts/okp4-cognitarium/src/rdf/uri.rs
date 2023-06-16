@@ -21,7 +21,7 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
 }
 
 // Expand a compacted URI (CURIE - URI with prefix) to a full URI.
-pub fn expand_uri(curie: String, prefixes: &[Prefix]) -> StdResult<String> {
+pub fn expand_uri(curie: &str, prefixes: &[Prefix]) -> StdResult<String> {
     let idx = curie
         .rfind(':')
         .ok_or_else(|| StdError::generic_err(format!("Malformed CURIE: {curie}")))?;
@@ -95,27 +95,27 @@ mod tests {
         ];
 
         assert_eq!(
-            expand_uri("ex:resource".to_string(), &prefixes),
+            expand_uri("ex:resource", &prefixes),
             Ok("http://example.com/resource".to_string())
         );
 
         assert_eq!(
-            expand_uri("ex:".to_string(), &prefixes),
+            expand_uri("ex:", &prefixes),
             Ok("http://example.com/".to_string())
         );
 
         assert_eq!(
-            expand_uri("unknown:resource".to_string(), &prefixes),
+            expand_uri("unknown:resource", &prefixes),
             Err(StdError::generic_err("Prefix not found: unknown"))
         );
 
         assert_eq!(
-            expand_uri("malformed_curie:".to_string(), &prefixes),
+            expand_uri("malformed_curie:", &prefixes),
             Err(StdError::generic_err("Prefix not found: malformed_curie"))
         );
 
         assert_eq!(
-            expand_uri("malformed_curie".to_string(), &prefixes),
+            expand_uri("malformed_curie", &prefixes),
             Err(StdError::generic_err("Malformed CURIE: malformed_curie"))
         );
     }

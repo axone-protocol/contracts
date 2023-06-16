@@ -66,6 +66,8 @@
 
 *   [NamedNode](./okp4-cognitarium-querymsg-definitions-node-oneof-namednode.md "An RDF IRI") – `undefined#/query/definitions/Node/oneOf/0`
 
+*   [NamedNode](./okp4-cognitarium-querymsg-definitions-varornamednode--oneof-namednode.md "An RDF IRI") – `undefined#/query/definitions/VarOrNamedNode/oneOf/1`
+
 *   [Node](./okp4-cognitarium-executemsg-definitions-varornode-oneof-node.md "A node, i") – `undefined#/execute/definitions/VarOrNode/oneOf/1`
 
 *   [Node](./okp4-cognitarium-executemsg-definitions-varornodeorliteral-oneof-node.md "A node, i") – `undefined#/execute/definitions/VarOrNodeOrLiteral/oneOf/1`
@@ -213,6 +215,8 @@
 *   [Variable](./okp4-cognitarium-executemsg-definitions-varornodeorliteral-oneof-variable.md "A variable") – `undefined#/execute/definitions/VarOrNodeOrLiteral/oneOf/0`
 
 *   [Variable](./okp4-cognitarium-querymsg-definitions-selectitem-oneof-variable.md "Represents a variable") – `undefined#/query/definitions/SelectItem/oneOf/0`
+
+*   [Variable](./okp4-cognitarium-querymsg-definitions-varornamednode--oneof-variable.md "A variable") – `undefined#/query/definitions/VarOrNamedNode/oneOf/0`
 
 *   [Variable](./okp4-cognitarium-querymsg-definitions-varornode-oneof-variable.md "A variable") – `undefined#/query/definitions/VarOrNode/oneOf/0`
 

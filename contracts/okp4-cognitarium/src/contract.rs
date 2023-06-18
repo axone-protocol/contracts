@@ -1237,6 +1237,91 @@ mod tests {
     }
 
     #[test]
+    fn variable_mutiple_resources_describe() {
+        let cases = vec![
+        (
+            QueryMsg::Describe {
+                query: DescribeQuery {
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    resource: VarOrNamedNode::Variable("a".to_string()),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Variable("a".to_string()),
+                            predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                "core:hasPublisher".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Literal(Literal::Simple("OKP4".to_string())),
+                        },
+                       ))],
+                },
+                format: Some(DataFormat::Turtle),
+            },
+            DescribeResponse {
+                format: DataFormat::Turtle,
+                data: Binary::from(
+                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
+\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;
+\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
+\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
+\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
+\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
+\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
+<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> , <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> ;
+\t<https://ontology.okp4.space/core/hasTag> \"test\" ;
+\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;
+\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
+\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;
+\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;
+\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;
+\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;
+\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
+\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .
+\
+                ".to_string().as_bytes().to_vec()),
+            }
+        ),
+        ];
+
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg {
+                limits: StoreLimitsInput::default(),
+            },
+        )
+        .unwrap();
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            info,
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+        )
+        .unwrap();
+
+        for (q, expected) in cases {
+            let res = query(deps.as_ref(), mock_env(), q);
+
+            assert!(res.is_ok());
+
+            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+
+            assert_eq!(result.format, expected.format);
+            assert_eq!(
+                String::from_utf8_lossy(&result.data),
+                String::from_utf8_lossy(&expected.data)
+            );
+        }
+    }
+
+    #[test]
     fn blanknode_describe() {
         let cases = vec![
         (

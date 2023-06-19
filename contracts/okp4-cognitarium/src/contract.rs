@@ -188,12 +188,9 @@ pub mod query {
         let response = QueryEngine::new(deps.storage).select(plan, select)?;
 
         let mut vars = response.head.vars;
-        if let VarOrNamedNode::NamedNode(_) = &query.resource {
-            vars.insert(0, s.clone());
-        }
-
         let mut bindings = response.results.bindings;
         if let VarOrNamedNode::NamedNode(iri) = &query.resource {
+            vars.insert(0, s.clone());
             for b in &mut bindings {
                 b.insert(
                     s.clone(),

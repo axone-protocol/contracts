@@ -173,3 +173,68 @@ impl TryFrom<(msg::Value, &[Prefix])> for Value {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn proper_display() {
+        // # Subject
+        assert_eq!(
+            format!("{}", Subject::BlankNode("blank".to_string())),
+            "blank".to_string()
+        );
+        assert_eq!(
+            format!("{}", Subject::NamedNode("named".to_string())),
+            "named".to_string()
+        );
+
+        // # Property
+        assert_eq!(
+            format!("{}", Property("foo".to_string())),
+            "foo".to_string()
+        );
+
+        // # Value
+        assert_eq!(
+            format!("{}", Value::NamedNode("named".to_string())),
+            "named".to_string()
+        );
+        assert_eq!(
+            format!("{}", Value::BlankNode("blank".to_string())),
+            "blank".to_string()
+        );
+        assert_eq!(
+            format!("{}", Value::LiteralSimple("simple".to_string())),
+            "simple".to_string()
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                Value::LiteralLang("lang".to_string(), "en".to_string())
+            ),
+            "lang@en".to_string()
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                Value::LiteralDatatype("data".to_string(), "uri".to_string())
+            ),
+            "data^^uri".to_string()
+        );
+
+        // # Atom
+        assert_eq!(
+            format!(
+                "{}",
+                Atom {
+                    subject: Subject::NamedNode("subject".to_string()),
+                    property: Property("predicate".to_string()),
+                    value: Value::LiteralLang("object".to_string(), "en".to_string()),
+                }
+            ),
+            "<subject> <predicate> 'object@en'".to_string()
+        );
+    }
+}

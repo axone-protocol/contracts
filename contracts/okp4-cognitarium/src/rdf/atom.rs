@@ -278,20 +278,60 @@ mod tests {
                 "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
             ))
         );
-
-        let r = Subject::try_from((
-            msg::Value::Literal {
-                value: "rdf".to_string(),
-                lang: None,
-                datatype: None,
-            },
-            vec![].as_slice(),
-        ));
-
         assert_eq!(
-            r,
+            Subject::try_from((
+                msg::Value::Literal {
+                    value: "rdf".to_string(),
+                    lang: None,
+                    datatype: None,
+                },
+                vec![].as_slice(),
+            )),
             Err(StdError::generic_err(
                 "Unsupported subject value: Literal { value: \"rdf\", lang: None, datatype: None }"
+            ))
+        );
+    }
+
+    #[test]
+    fn try_from_property() {
+        assert_eq!(
+            (
+                msg::Value::URI {
+                    value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()),
+                },
+                vec![].as_slice(),
+            )
+                .try_into(),
+            Ok(Property(
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+            ))
+        );
+        assert_eq!(
+            (
+                msg::Value::URI {
+                    value: IRI::Prefixed("rdf:".to_string()),
+                },
+                vec![Prefix {
+                    prefix: "rdf".to_string(),
+                    namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+                }]
+                .as_slice(),
+            )
+                .try_into(),
+            Ok(Property(
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+            ))
+        );
+        assert_eq!(
+            Property::try_from((
+                msg::Value::BlankNode {
+                    value: "blank".to_string(),
+                },
+                vec![].as_slice(),
+            )),
+            Err(StdError::generic_err(
+                "Unsupported predicate value: BlankNode { value: \"blank\" }"
             ))
         );
     }

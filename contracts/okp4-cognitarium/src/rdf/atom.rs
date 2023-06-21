@@ -335,4 +335,121 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn try_from_value() {
+        assert_eq!(
+            (
+                msg::Value::URI {
+                    value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()),
+                },
+                vec![].as_slice(),
+            )
+                .try_into(),
+            Ok(Value::NamedNode(
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+            ))
+        );
+        assert_eq!(
+            (
+                msg::Value::URI {
+                    value: IRI::Prefixed("rdf:".to_string()),
+                },
+                vec![Prefix {
+                    prefix: "rdf".to_string(),
+                    namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+                }]
+                .as_slice(),
+            )
+                .try_into(),
+            Ok(Value::NamedNode(
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+            ))
+        );
+        assert_eq!(
+            (
+                msg::Value::Literal {
+                    value: "foo".to_string(),
+                    lang: None,
+                    datatype: None,
+                },
+                vec![].as_slice(),
+            )
+                .try_into(),
+            Ok(Value::LiteralSimple("foo".to_string()))
+        );
+        assert_eq!(
+            (
+                msg::Value::Literal {
+                    value: "foo".to_string(),
+                    lang: Some("en".to_string()),
+                    datatype: None,
+                },
+                vec![].as_slice(),
+            )
+                .try_into(),
+            Ok(Value::LiteralLang("foo".to_string(), "en".to_string()))
+        );
+        assert_eq!(
+            (
+                msg::Value::Literal {
+                    value: "foo".to_string(),
+                    lang: None,
+                    datatype: Some(IRI::Full(
+                        "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+                    )),
+                },
+                vec![].as_slice(),
+            )
+                .try_into(),
+            Ok(Value::LiteralDatatype(
+                "foo".to_string(),
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+            ))
+        );
+        assert_eq!(
+            (
+                msg::Value::Literal {
+                    value: "foo".to_string(),
+                    lang: None,
+                    datatype: Some(IRI::Prefixed("rdf:".to_string())),
+                },
+                vec![Prefix {
+                    prefix: "rdf".to_string(),
+                    namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+                }]
+                .as_slice(),
+            )
+                .try_into(),
+            Ok(Value::LiteralDatatype(
+                "foo".to_string(),
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+            ))
+        );
+        assert_eq!(
+            (
+                msg::Value::BlankNode {
+                    value: "foo".to_string()
+                },
+                vec![].as_slice(),
+            )
+                .try_into(),
+            Ok(Value::BlankNode("foo".to_string()))
+        );
+        assert_eq!(
+            Value::try_from((
+                msg::Value::Literal {
+                    value: "blank".to_string(),
+                    lang: Some("en".to_string()),
+                    datatype: Some(IRI::Full(
+                        "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+                    )),
+                },
+                vec![].as_slice(),
+            )),
+            Err(StdError::generic_err(
+                "Unsupported object value: Literal { value: \"blank\", lang: Some(\"en\"), datatype: Some(Full(\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\")) }"
+            ))
+        );
+    }
 }

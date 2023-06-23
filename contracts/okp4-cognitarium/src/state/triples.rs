@@ -85,7 +85,7 @@ impl Object {
                 hasher
                     .update(&[b'n'])
                     .update(n.namespace.to_be_bytes().as_slice())
-                    .update(n.namespace.to_be_bytes().as_slice());
+                    .update(n.value.as_bytes());
             }
             Object::Blank(n) => {
                 hasher.update(&[b'b']).update(n.as_bytes());

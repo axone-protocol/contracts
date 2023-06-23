@@ -1,56 +1,6 @@
-use crate::msg::DataFormat;
 use cosmwasm_std::{StdError, StdResult};
-use rio_api::model::{Quad, Triple};
-use rio_api::parser::{QuadsParser, TriplesParser};
-use rio_turtle::{NQuadsParser, NTriplesParser, TurtleError, TurtleParser};
-use rio_xml::{RdfXmlError, RdfXmlParser};
-use std::io::BufRead;
 
-pub struct TripleReader<R: BufRead> {
-    parser: TriplesParserKind<R>,
-}
-
-#[allow(clippy::large_enum_variant)]
-pub enum TriplesParserKind<R: BufRead> {
-    NTriples(NTriplesParser<R>),
-    Turtle(TurtleParser<R>),
-    RdfXml(RdfXmlParser<R>),
-    NQuads(NQuadsParser<R>),
-}
-
-impl<R: BufRead> TripleReader<R> {
-    pub fn new(format: DataFormat, src: R) -> Self {
-        TripleReader {
-            parser: match format {
-                DataFormat::RDFXml => TriplesParserKind::RdfXml(RdfXmlParser::new(src, None)),
-                DataFormat::Turtle => TriplesParserKind::Turtle(TurtleParser::new(src, None)),
-                DataFormat::NTriples => TriplesParserKind::NTriples(NTriplesParser::new(src)),
-                DataFormat::NQuads => TriplesParserKind::NQuads(NQuadsParser::new(src)),
-            },
-        }
-    }
-
-    pub fn read_all<E, UF>(&mut self, mut use_fn: UF) -> Result<(), E>
-    where
-        UF: FnMut(Triple) -> Result<(), E>,
-        E: From<TurtleError> + From<RdfXmlError>,
-    {
-        match &mut self.parser {
-            TriplesParserKind::NTriples(parser) => parser.parse_all(&mut use_fn),
-            TriplesParserKind::Turtle(parser) => parser.parse_all(&mut use_fn),
-            TriplesParserKind::RdfXml(parser) => parser.parse_all(&mut use_fn),
-            TriplesParserKind::NQuads(parser) => {
-                parser.parse_all(&mut |quad: Quad| -> Result<(), E> {
-                    use_fn(Triple {
-                        subject: quad.subject,
-                        predicate: quad.predicate,
-                        object: quad.object,
-                    })
-                })
-            }
-        }
-    }
-}
+use crate::msg::Prefix;
 
 pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     let mut marker_index: Option<usize> = None;
@@ -68,6 +18,24 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     }
 
     Err(StdError::generic_err("Couldn't extract IRI namespace"))
+}
+
+// Expand a compacted URI (CURIE - URI with prefix) to a full URI.
+pub fn expand_uri(curie: &str, prefixes: &[Prefix]) -> StdResult<String> {
+    let idx = curie
+        .rfind(':')
+        .ok_or_else(|| StdError::generic_err(format!("Malformed CURIE: {curie}")))?;
+
+    let prefix = curie[..idx].to_string();
+    let suffix = curie[idx + 1..].to_string();
+
+    let namespace = &prefixes
+        .iter()
+        .find(|p| p.prefix == prefix)
+        .ok_or_else(|| StdError::generic_err(format!("Prefix not found: {prefix}")))?
+        .namespace;
+
+    Ok(format!("{namespace}{suffix}"))
 }
 
 #[cfg(test)]
@@ -110,6 +78,45 @@ mod tests {
         assert_eq!(
             explode_iri("this_doesn't_work"),
             Err(StdError::generic_err("Couldn't extract IRI namespace"))
+        );
+    }
+
+    #[test]
+    fn test_expand_uri() {
+        let prefixes = vec![
+            Prefix {
+                prefix: "ex".to_string(),
+                namespace: "http://example.com/".to_string(),
+            },
+            Prefix {
+                prefix: "rdf".to_string(),
+                namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+            },
+        ];
+
+        assert_eq!(
+            expand_uri("ex:resource", &prefixes),
+            Ok("http://example.com/resource".to_string())
+        );
+
+        assert_eq!(
+            expand_uri("ex:", &prefixes),
+            Ok("http://example.com/".to_string())
+        );
+
+        assert_eq!(
+            expand_uri("unknown:resource", &prefixes),
+            Err(StdError::generic_err("Prefix not found: unknown"))
+        );
+
+        assert_eq!(
+            expand_uri("malformed_curie:", &prefixes),
+            Err(StdError::generic_err("Prefix not found: malformed_curie"))
+        );
+
+        assert_eq!(
+            expand_uri("malformed_curie", &prefixes),
+            Err(StdError::generic_err("Malformed CURIE: malformed_curie"))
         );
     }
 }

@@ -384,6 +384,17 @@ all of
 
 *   [Untitled undefined type in okp4-cognitarium](okp4-cognitarium-querymsg-definitions-triplepattern-properties-subject-allof-0.md "check type definition")
 
+## Definitions group VarOrNamedNode
+
+Reference this group by using
+
+```json
+{"$ref":"undefined#/query/definitions/VarOrNamedNode"}
+```
+
+| Property | Type | Required | Nullable | Defined by |
+| :------- | :--- | :------- | :------- | :--------- |
+
 ## Definitions group VarOrNode
 
 Reference this group by using

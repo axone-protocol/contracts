@@ -480,7 +480,7 @@ mod test {
         NAMESPACE_KEY_INCREMENT.save(storage, &0u128).unwrap();
         let data = read_test_data("sample.rdf.xml");
         let buf = BufReader::new(data.as_slice());
-        let mut reader = TripleReader::new(DataFormat::RDFXml, buf);
+        let mut reader = TripleReader::new(&DataFormat::RDFXml, buf);
         let mut storer = TripleStorer::new(storage).unwrap();
         let count = storer.store_all(&mut reader).unwrap();
 

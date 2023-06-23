@@ -248,7 +248,6 @@ mod tests {
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
     };
     use crate::{msg, state};
-    use blake3::Hash;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{from_binary, Addr, Attribute, Order, Uint128};
     use std::collections::BTreeMap;
@@ -386,10 +385,11 @@ mod tests {
                     .load(
                         &deps.storage,
                         (
-                            Hash::from_hex(
-                                "09653b5306fa80dc7bea8313d84ac6ed9ded591d42c7f4838c39d1d7a4f09d03"
-                            )
-                            .unwrap()
+                            Object::Named(Node {
+                                namespace: 4u128,
+                                value: "0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
+                                    .to_string()
+                            }).as_hash()
                             .as_bytes(),
                             Node {
                                 namespace: 3u128,
@@ -1178,18 +1178,7 @@ mod tests {
             DescribeResponse {
                 format: DataFormat::Turtle,
                 data: Binary::from(
-                   "<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> , <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> ;
-\t<https://ontology.okp4.space/core/hasTag> \"test\" ;
-\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;
-\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
-\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;
-\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;
-\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;
-\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;
-\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
-\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .
-\
-                ".to_string().as_bytes().to_vec()),
+                   "<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"test\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
             }
         ),
         ];
@@ -1256,25 +1245,7 @@ mod tests {
             DescribeResponse {
                 format: DataFormat::Turtle,
                 data: Binary::from(
-                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
-\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;
-\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
-\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
-\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
-\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
-\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
-<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> , <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> ;
-\t<https://ontology.okp4.space/core/hasTag> \"test\" ;
-\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;
-\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
-\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;
-\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;
-\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;
-\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;
-\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
-\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .
-\
-                ".to_string().as_bytes().to_vec()),
+                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .\n<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"test\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
             }
         ),
         ];
@@ -1345,10 +1316,7 @@ mod tests {
             DescribeResponse {
                 format: DataFormat::Turtle,
                 data: Binary::from(
-                   "<riog00000001> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/core/Period> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
-\t<https://ontology.okp4.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
-\
-                ".to_string().as_bytes().to_vec()),
+                    "<riog00000001> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> , <https://ontology.okp4.space/core/Period> ;\n\t<https://ontology.okp4.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n".to_string().as_bytes().to_vec()),
             }
         ),
         ];

@@ -85,7 +85,7 @@ impl Object {
                 hasher
                     .update(&[b'n'])
                     .update(n.namespace.to_be_bytes().as_slice())
-                    .update(n.namespace.to_be_bytes().as_slice());
+                    .update(n.value.as_bytes());
             }
             Object::Blank(n) => {
                 hasher.update(&[b'b']).update(n.as_bytes());
@@ -142,4 +142,125 @@ pub enum Literal {
     Simple { value: String },
     I18NString { value: String, language: String },
     Typed { value: String, datatype: Node },
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn object_hash() {
+        let cases = vec![
+            (
+                Object::Named(Node {
+                    namespace: 0,
+                    value: "val1".to_string(),
+                }),
+                Object::Named(Node {
+                    namespace: 0,
+                    value: "val2".to_string(),
+                }),
+            ),
+            (
+                Object::Named(Node {
+                    namespace: 1,
+                    value: "val".to_string(),
+                }),
+                Object::Named(Node {
+                    namespace: 2,
+                    value: "val".to_string(),
+                }),
+            ),
+            (
+                Object::Blank("val1".to_string()),
+                Object::Blank("val2".to_string()),
+            ),
+            (
+                Object::Literal(Literal::Simple {
+                    value: "val1".to_string(),
+                }),
+                Object::Literal(Literal::Simple {
+                    value: "val2".to_string(),
+                }),
+            ),
+            (
+                Object::Literal(Literal::I18NString {
+                    language: "fr".to_string(),
+                    value: "val1".to_string(),
+                }),
+                Object::Literal(Literal::I18NString {
+                    language: "fr".to_string(),
+                    value: "val2".to_string(),
+                }),
+            ),
+            (
+                Object::Literal(Literal::I18NString {
+                    language: "fr".to_string(),
+                    value: "val".to_string(),
+                }),
+                Object::Literal(Literal::I18NString {
+                    language: "en".to_string(),
+                    value: "val".to_string(),
+                }),
+            ),
+            (
+                Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 0,
+                        value: "n".to_string(),
+                    },
+                    value: "val1".to_string(),
+                }),
+                Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 0,
+                        value: "n".to_string(),
+                    },
+                    value: "val2".to_string(),
+                }),
+            ),
+            (
+                Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 0,
+                        value: "n1".to_string(),
+                    },
+                    value: "val".to_string(),
+                }),
+                Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 0,
+                        value: "n2".to_string(),
+                    },
+                    value: "val".to_string(),
+                }),
+            ),
+            (
+                Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 1,
+                        value: "n".to_string(),
+                    },
+                    value: "val".to_string(),
+                }),
+                Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 2,
+                        value: "n".to_string(),
+                    },
+                    value: "val".to_string(),
+                }),
+            ),
+            (
+                Object::Blank("val".to_string()),
+                Object::Literal(Literal::Simple {
+                    value: "val".to_string(),
+                }),
+            ),
+        ];
+
+        for case in cases {
+            assert_ne!(case.0.as_hash(), case.1.as_hash())
+        }
+    }
 }

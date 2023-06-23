@@ -587,19 +587,19 @@ mod test {
                     results: Results {
                         bindings: vec![
                             BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/hasIdentifier".to_string())}),
-                                ("object".to_string(), Value::URI {value: IRI::Full("urn:uuid:0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
+                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
+                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/describes".to_string())}),
+                                ("object".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
                             ]),
                             BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#type".to_string())}),
-                                ("object".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/DataSpace".to_string())}),
+                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
+                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/hasDescription".to_string())}),
+                                ("object".to_string(), Value::Literal {value: "Un Dataset de test.".to_string(), lang: Some("fr".to_string()), datatype: None }),
                             ]),
                             BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#type".to_string())}),
-                                ("object".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/Dataset".to_string())}),
+                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
+                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/hasTitle".to_string())}),
+                                ("object".to_string(), Value::Literal { value: "test Dataset".to_string(), lang: Some("en".to_string()), datatype: None }),
                             ]),
                         ],
                     },

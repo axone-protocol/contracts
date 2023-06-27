@@ -1,5 +1,21 @@
 # ØKP4 contracts
 
+## [2.1.0](https://github.com/okp4/contracts/compare/v2.0.0...v2.1.0) (2023-06-27)
+
+
+### Features
+
+* **cognitarium:** add expand uri utility function ([af26038](https://github.com/okp4/contracts/commit/af2603843cb761da8c4ec6ff8d7bbbd7f6ee2d1c))
+* **cognitarium:** add support for blank nodes in describe ([8e736f1](https://github.com/okp4/contracts/commit/8e736f10b95c6540d9432c18b0346396ab28c24d))
+* **cognitarium:** add support for triples serialization ([2bf805f](https://github.com/okp4/contracts/commit/2bf805f1f51850f1026ca01ed3f1a1dd743dfd23))
+* **cognitarium:** implement describe query ([e21edc4](https://github.com/okp4/contracts/commit/e21edc40859e1632ad2a64039c71a69f14a4849b))
+
+
+### Bug Fixes
+
+* **cognitarium:** ensure different object hash on named nodes ([92656ae](https://github.com/okp4/contracts/commit/92656ae4e257e331bec9ca86a29193ea39af81b2))
+* **cognitarium:** fix incorrect resource type for describe ([5876c74](https://github.com/okp4/contracts/commit/5876c745e03debe7d292d10e38df4ab600502b99))
+
 ## [2.0.0](https://github.com/okp4/contracts/compare/v1.0.0...v2.0.0) (2023-06-13)
 
 

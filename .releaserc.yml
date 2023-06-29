@@ -34,4 +34,5 @@ plugins:
         - contracts/*/Cargo.toml
         - packages/*/Cargo.toml
         - docs/**
+        - Cargo.lock
       message: "chore(release): perform release ${nextRelease.version}"

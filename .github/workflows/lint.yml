@@ -236,7 +236,7 @@ jobs:
         if: steps.changed-toml-files.outputs.any_changed == 'true'
         run: |
           cargo make format-toml
-          if [[ $(git status -s) ]]; then
+          if [[ $(git status -s | grep .toml) ]]; then
             >&2 echo "❌ There is a diff between formatted files and source code"
             >&2 git status
             exit 1

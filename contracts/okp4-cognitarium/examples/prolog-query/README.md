@@ -4,7 +4,7 @@ In this example we'll see how to query the `okp4-cognitarium` from Prolog progra
 
 We'll use for that purpose the [query.pl](query.pl) sample program, multiple predicates are defined in it, we'll explore them step by step.
 
-The query we'll make will be performed against a `okp4-cognitarium` instance filled with the provided [sample data](../sample-data.rdf.xml), see the [basic example](../basic) to insert them. 
+The query we'll make will be performed against a `okp4-cognitarium` instance filled with the provided [sample data](../sample-data.rdf.xml), see the [basic example](../basic) to insert them.
 
 ## Forge the CosmWasm query
 

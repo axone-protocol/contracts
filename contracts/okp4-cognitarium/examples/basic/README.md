@@ -20,6 +20,7 @@ To be noted that we can provide some limitation parameters to restrict usage for
 ## Insert
 
 The insertion can be performed through the `InsertData` execute message which takes as input the triples data base64 encoded and its format, it supports the formats below:
+
 - `RDFXml`
 - `Turtle`
 - `NTriples`

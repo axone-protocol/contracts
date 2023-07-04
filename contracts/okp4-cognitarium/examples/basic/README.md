@@ -1,6 +1,6 @@
 # Basic example
 
-In this example we'll see how to instantiate the `cognitarium` smart contract, insert some sample data and make some query using the [okp4d](https://github.com/okp4/okp4d).
+In this example we'll see how to instantiate the `okp4-cognitarium` smart contract, insert some sample data and make some query using the [okp4d](https://github.com/okp4/okp4d).
 
 ## Instantiate
 
@@ -43,7 +43,7 @@ okp4d query tx $TX_HASH -ojson |
 
 ## Select
 
-Now that we have some triples in the `cognitarium`, let's see how we can query it. For that we can use the `Select` query message which, if you have some experience in [SPARQL](https://www.w3.org/TR/rdf-sparql-query/) you should be comfortable with it.
+Now that we have some triples in the `okp4-cognitarium`, let's see how we can query it. For that we can use the `Select` query message which, if you have some experience in [SPARQL](https://www.w3.org/TR/rdf-sparql-query/) you should be comfortable with it.
 
 This query will basically take a `WHERE` condition composed of triple patterns to express constraints with variables, and `SELECT` some variables and result, let's see some examples.
 

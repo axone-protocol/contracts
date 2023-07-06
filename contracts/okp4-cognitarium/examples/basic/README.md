@@ -31,8 +31,8 @@ Let's try to insert the [sample data](../sample-data.rdf.xml):
 ```bash
 okp4d tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
-    --gas 1000000 \
-    '{\"insert_data\":{\"format\":\"rdf_xml\",\"data\":\"$(cat ./sample-data.rdf.xml | base64)\"}}'
+    --gas 20000000 \
+    "{\"insert_data\":{\"format\":\"rdf_xml\",\"data\":\"$(cat ./sample-data.rdf.xml | base64)\"}}"
 ```
 
 With the transaction hash we can query the number of triples inserted:

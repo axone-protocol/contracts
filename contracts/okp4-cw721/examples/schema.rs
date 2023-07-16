@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use counter::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw721_metadata_onchain::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

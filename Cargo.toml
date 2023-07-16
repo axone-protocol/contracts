@@ -16,3 +16,14 @@ schemars = "0.8.12"
 serde = { version = "1.0.168", default-features = false, features = ["derive"] }
 serde-json-wasm = "0.5.1"
 thiserror = { version = "1.0.43" }
+
+[profile.release]
+codegen-units = 1
+debug = false
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = 3
+overflow-checks = true
+panic = 'abort'
+rpath = false

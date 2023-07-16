@@ -60,22 +60,24 @@ function createData(
 
 const rows: any = [];
 
-const ObjectariumModal = () => {
-  const [open, setOpen] = React.useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+const ObjectariumModal = (props: any) => {
+  const { objectariumOpen, ObjectariumModalClose } = props;
+  const [action, setAction] = React.useState('');
+
+  const handleChange = (event: SelectChangeEvent) => {
+    setAction(event.target.value as string);
+  };
 
   return (
     <div>
-      <Button onClick={handleOpen}>Open modal</Button>
       <Modal
-        open={false}
-        onClose={handleClose}
+        open={objectariumOpen}
+        onClose={ObjectariumModalClose}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
         <Box sx={style}>
-        <h2>Objectarium Store</h2>
+          <h2>Objectarium Store</h2>
           <Box sx={{ minWidth: 800, display: "flex" }}>
             <FormControl fullWidth style={{ width: "8em", marginRight: "1.5em" }}>
               <InputLabel id="demo-simple-select-label">Object Actions</InputLabel>
@@ -83,9 +85,9 @@ const ObjectariumModal = () => {
                 style={{ width: "7.5em" }}
                 labelId="demo-simple-select-label"
                 id="demo-simple-select"
-                value={"age"}
+                value={action}
                 label="object-actions"
-              // onChange={handleChange}
+                onChange={handleChange}
               >
                 <MenuItem value={10}>STORE</MenuItem>
                 <MenuItem value={20}>FORGET</MenuItem>
@@ -105,31 +107,31 @@ const ObjectariumModal = () => {
           <br />
           {/* Table results */}
           <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 700 }} aria-label="customized table">
-        <TableHead>
-          <TableRow>
-            <StyledTableCell>id</StyledTableCell>
-            <StyledTableCell align="right">owner</StyledTableCell>
-            <StyledTableCell align="right">is_pinned</StyledTableCell>
-            <StyledTableCell align="right">size</StyledTableCell>
-            <StyledTableCell align="right">compressed_size</StyledTableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => (
-            <StyledTableRow key={row.id}>
-              <StyledTableCell component="th" scope="row">
-                {row.id}
-              </StyledTableCell>
-              <StyledTableCell align="right">{row.owner}</StyledTableCell>
-              <StyledTableCell align="right">{row.is_pinned}</StyledTableCell>
-              <StyledTableCell align="right">{row.size}</StyledTableCell>
-              <StyledTableCell align="right">{row.compressed_size}</StyledTableCell>
-            </StyledTableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+            <Table sx={{ minWidth: 700 }} aria-label="customized table">
+              <TableHead>
+                <TableRow>
+                  <StyledTableCell>id</StyledTableCell>
+                  <StyledTableCell align="right">owner</StyledTableCell>
+                  <StyledTableCell align="right">is_pinned</StyledTableCell>
+                  <StyledTableCell align="right">size</StyledTableCell>
+                  <StyledTableCell align="right">compressed_size</StyledTableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows.map((row) => (
+                  <StyledTableRow key={row.id}>
+                    <StyledTableCell component="th" scope="row">
+                      {row.id}
+                    </StyledTableCell>
+                    <StyledTableCell align="right">{row.owner}</StyledTableCell>
+                    <StyledTableCell align="right">{row.is_pinned}</StyledTableCell>
+                    <StyledTableCell align="right">{row.size}</StyledTableCell>
+                    <StyledTableCell align="right">{row.compressed_size}</StyledTableCell>
+                  </StyledTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
         </Box>
       </Modal>

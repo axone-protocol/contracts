@@ -6,10 +6,17 @@ import styles from "../styles/Home.module.css";
 import NFTModal from "./components/NFTModal";
 import ObjectariumModal from "./components/ObjectariumModal";
 import Button from '@mui/material/Button';
+import React from "react";
 
 const Home: NextPage = () => {
   const { count, error, increase } = useCount();
   const [isLoading, setLoading] = useState(false);
+  const [nftOpen, nftSetOpen] = React.useState(false);
+  const [objectariumOpen, objectariumSetOpen] = React.useState(false);
+  const NFTModalOpen = () => nftSetOpen(true);
+  const NFTModalClose = () => nftSetOpen(false);
+  const ObjectariumModalOpen = () => objectariumSetOpen(true);
+  const ObjectariumModalClose = () => objectariumSetOpen(false);
 
   const connectKeplr = async () => {
     if (!window.keplr) {
@@ -69,7 +76,7 @@ const Home: NextPage = () => {
             <a
               className={styles.card}
               onClick={() => {
-                console.log("clicked")
+                NFTModalOpen()
               }}
             >
               <h2>Create NFT</h2>
@@ -80,7 +87,7 @@ const Home: NextPage = () => {
             <a
               className={styles.card}
               onClick={() => {
-                console.log("clicked")
+                ObjectariumModalOpen()
               }}
             >
               <h2>Objectarium</h2>
@@ -88,8 +95,8 @@ const Home: NextPage = () => {
           </div>
         </main>
       </div>
-      <NFTModal />
-      <ObjectariumModal />
+      <NFTModal nftOpen={nftOpen} NFTModalClose={NFTModalClose}/>
+      <ObjectariumModal objectariumOpen={objectariumOpen} ObjectariumModalClose={ObjectariumModalClose} />
     </>
   );
 };

@@ -20,23 +20,23 @@ const style = {
   p: 4,
 };
 
-const NFTModal = () => {
-  const [open, setOpen] = React.useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+const NFTModal = (props: any) => {
+  const { nftOpen, NFTModalClose } = props;
 
   return (
     <div>
-      <Button onClick={handleOpen}>Open modal</Button>
       <Modal
-        open={false}
-        onClose={handleClose}
+        open={nftOpen}
+        onClose={NFTModalClose}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
         <Box sx={style}>
           <h2>Create NFT</h2>
           <Box sx={{ minWidth: 120 }}>
+            <TextField id="filled-basic" label="Owner" variant="filled" fullWidth={true}/>
+            <br />
+            <br />
             <TextField id="filled-basic" label="Price" variant="filled" fullWidth={true}/>
             <br />
             <br />
@@ -51,7 +51,14 @@ const NFTModal = () => {
             </Box>
             <br />
             <Box>
-              <Button variant="contained" fullWidth={true} style={{backgroundColor: "#0f224a"}}>Mint</Button>
+              <Button 
+              variant="contained" 
+              fullWidth={true} 
+              style={{backgroundColor: "#0f224a"}}
+              onClick={() => {
+                NFTModalClose()
+              }}
+              >Mint</Button>
             </Box>
           </Box>
         </Box>

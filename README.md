@@ -17,16 +17,58 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
 
 ### 🗄️ Storage oriented Smart Contracts
 
-| contract                                            |                          kind                          |    state    | description                          | status |
-|-----------------------------------------------------|:------------------------------------------------------:|:-----------:|--------------------------------------|:------:|
-| [objectarium](contracts/okp4-objectarium/README.md) | [object](https://en.wikipedia.org/wiki/Object_storage) | `immutable` | Persists unstructured data on-chain. |   ✅    |
-| [cognitarium](contracts/okp4-cognitarium/README.md) | [semantic](https://en.wikipedia.org/wiki/Triplestore)  |  `mutable`  | Persists semantic data on-chain.     |   🚧   |
+<table>
+  <tr>
+    <th>contract</th>
+    <th>kind</th>
+    <th>state</th>
+    <th>description</th>
+    <th>status</th>
+  </tr>
+  <tr>
+    <td>
+      <img src="etc/objectarium.webp" width="150" alt="objectarium" />
+      <br />
+      <a href="contracts/okp4-objectarium/README.md">objectarium</a>
+    </td>
+    <td><a href="https://en.wikipedia.org/wiki/Object_storage">object</a></td>
+    <td><code>immutable</code></td>
+    <td>Persists unstructured data on-chain.</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td>
+      <img src="etc/cognitarium.webp" width="150" alt="cognitarium" />
+      <br />
+      <a href="contracts/okp4-cognitarium/README.md">cognitarium</a>
+    </td>
+    <td><a href="https://en.wikipedia.org/wiki/Triplestore">semantic</a></td>
+    <td><code>mutable</code></td>
+    <td>Persists semantic data on-chain.</td>
+    <td>🚧</td>
+  </tr>
+</table>
 
 ### ⚖️ Sovereignty oriented Smart Contracts
 
-| contract                                        |    state    | description                                                                                                                                                              | status |
-|-------------------------------------------------|:-----------:|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------:|
-| [law-stone](contracts/okp4-law-stone/README.md) | `immutable` | Interprets the law (governance) expressed as [Prolog](https://en.wikipedia.org/wiki/Prolog) program and ensures the availability and immutability of the rules on-chain. |   ✅    |
+<table>
+  <tr>
+    <th>contract</th>
+    <th>state</th>
+    <th>description</th>
+    <th>status</th>
+  </tr>
+  <tr>
+    <td>
+     <img src="etc/law-stone.webp" width="150" alt="law-stone" />
+     <br />
+        <a href="contracts/okp4-law-stone/README.md">law&#8209;stone</a>
+    </td>
+    <td><code>immutable</code></td>
+    <td>Interprets governances expressed as <a href="https://en.wikipedia.org/wiki/Prolog">Prolog</a> program.</td>
+    <td>✅</td>
+  </tr>
+</table>
 
 ## 🗂 Directory Structure
 

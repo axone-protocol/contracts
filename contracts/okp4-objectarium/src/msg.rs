@@ -392,7 +392,7 @@ pub struct ObjectPinsResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::CompressionAlgorithm::{Passthrough, Snappy};
+    use crate::msg::CompressionAlgorithm::{Lzma, Passthrough, Snappy};
     use crate::msg::HashAlgorithm::Sha256;
     use crate::msg::{BucketConfig, BucketLimits, InstantiateMsg, PaginationConfig};
     use schemars::_serde_json;
@@ -418,7 +418,7 @@ mod tests {
         assert_eq!(config.hash_algorithm, Sha256);
         assert_eq!(
             config.accepted_compression_algorithms,
-            vec![Passthrough, Snappy]
+            vec![Passthrough, Snappy, Lzma]
         );
     }
 
@@ -449,7 +449,7 @@ mod tests {
         assert_eq!(msg.config.hash_algorithm, Sha256);
         assert_eq!(
             msg.config.accepted_compression_algorithms,
-            vec![Passthrough, Snappy]
+            vec![Passthrough, Snappy, Lzma]
         );
         assert_eq!(msg.limits.max_object_pins, None);
         assert_eq!(msg.limits.max_objects, None);

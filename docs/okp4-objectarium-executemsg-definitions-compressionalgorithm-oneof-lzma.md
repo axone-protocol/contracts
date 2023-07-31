@@ -1,34 +1,25 @@
-# Untitled undefined type in okp4-objectarium Schema
+# Lzma Schema
 
 ```txt
-undefined#/instantiate/properties/config
+undefined#/execute/definitions/CompressionAlgorithm/oneOf/2
 ```
 
-The configuration of the bucket.
+Represents the LZMA algorithm. LZMA is a lossless data compression/decompression algorithm that features a high compression ratio and a variable compression-dictionary size up to 4 GB.
+
+See [the LZMA wiki page](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm) for more information.
 
 | Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                                     |
 | :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------------- |
 | Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-objectarium.json\*](schema/okp4-objectarium.json "open original schema") |
 
-## config Type
+## 2 Type
 
-merged type ([Details](okp4-objectarium-instantiatemsg-properties-config.md))
+`string` ([Lzma](okp4-objectarium-executemsg-definitions-compressionalgorithm-oneof-lzma.md))
 
-all of
+## 2 Constraints
 
-*   [Untitled undefined type in okp4-objectarium](okp4-objectarium-instantiatemsg-properties-config-allof-0.md "check type definition")
+**enum**: the value of this property must be equal to one of the following values:
 
-## config Default Value
-
-The default value is:
-
-```json
-{
-  "accepted_compression_algorithms": [
-    "passthrough",
-    "snappy",
-    "lzma"
-  ],
-  "hash_algorithm": "sha256"
-}
-```
+| Value    | Explanation |
+| :------- | :---------- |
+| `"lzma"` |             |

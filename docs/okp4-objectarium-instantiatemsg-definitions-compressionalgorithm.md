@@ -21,3 +21,5 @@ one (and only one) of
 *   [Passthrough](okp4-objectarium-instantiatemsg-definitions-compressionalgorithm-oneof-passthrough.md "check type definition")
 
 *   [Snappy](okp4-objectarium-instantiatemsg-definitions-compressionalgorithm-oneof-snappy.md "check type definition")
+
+*   [Lzma](okp4-objectarium-instantiatemsg-definitions-compressionalgorithm-oneof-lzma.md "check type definition")

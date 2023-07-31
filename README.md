@@ -210,7 +210,7 @@ To generate the documentation, just run:
 
 ```sh
 cargo make schema
-cargo make generate_docs
+cargo make docs-generate
 ```
 
 You'll find the generated documentation under the `docs` folder.

@@ -112,15 +112,30 @@ mod tests {
 
     #[test]
     fn test_from_io_decompress_error() {
-        let cases = vec![(
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "the expected decompressed size differs, actual 998, expected 1000",
+        let cases = vec![
+            (
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "the expected decompressed size differs, actual 998, expected 1000",
+                ),
+                CompressionError::Error(
+                    "the expected decompressed size differs, actual 998, expected 1000".to_string(),
+                ),
             ),
-            CompressionError::Error(
-                "the expected decompressed size differs, actual 998, expected 1000".to_string(),
+            (
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    lzma_rs::error::Error::IoError(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "the expected decompressed size differs, actual 998, expected 1000",
+                    )),
+                ),
+                CompressionError::Error(
+                    "io error: the expected decompressed size differs, actual 998, expected 1000"
+                        .to_string(),
+                ),
             ),
-        )];
+        ];
 
         for (error, expected_error) in cases {
             let compression_err = CompressionError::from(error);

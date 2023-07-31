@@ -2,7 +2,7 @@
 
 ## Top-level Schemas
 
-*   [okp4-cognitarium](./okp4-cognitarium.md "TriplestoreOverviewThe okp4-cognitarium smart contract enables the storage of RDF graphs triples (i") – `-`
+*   [okp4-cognitarium](./okp4-cognitarium.md "CognitariumOverviewThe okp4-cognitarium smart contract enables the storage of RDF graphs triples (i") – `-`
 
 *   [okp4-law-stone](./okp4-law-stone.md "Law StoneOverviewThe okp4-law-stone smart contract aims to provide GaaS (i") – `-`
 

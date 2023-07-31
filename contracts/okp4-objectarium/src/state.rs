@@ -116,6 +116,7 @@ impl From<msg::CompressionAlgorithm> for CompressionAlgorithm {
         match algorithm {
             msg::CompressionAlgorithm::Passthrough => CompressionAlgorithm::Passthrough,
             msg::CompressionAlgorithm::Snappy => CompressionAlgorithm::Snappy,
+            msg::CompressionAlgorithm::Lzma => CompressionAlgorithm::Lzma,
         }
     }
 }
@@ -125,6 +126,7 @@ impl From<CompressionAlgorithm> for msg::CompressionAlgorithm {
         match algorithm {
             CompressionAlgorithm::Passthrough => msg::CompressionAlgorithm::Passthrough,
             CompressionAlgorithm::Snappy => msg::CompressionAlgorithm::Snappy,
+            CompressionAlgorithm::Lzma => msg::CompressionAlgorithm::Lzma,
         }
     }
 }

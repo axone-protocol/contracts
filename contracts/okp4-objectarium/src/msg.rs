@@ -171,6 +171,12 @@ pub enum CompressionAlgorithm {
     ///
     /// See [the snappy web page](https://google.github.io/snappy/) for more information.
     Snappy,
+    /// # Lzma
+    /// Represents the LZMA algorithm.
+    /// LZMA is a lossless data compression/decompression algorithm that features a high compression ratio and a variable compression-dictionary size up to 4 GB.
+    ///
+    /// See [the LZMA wiki page](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm) for more information.
+    Lzma,
 }
 
 /// HashAlgorithm is an enumeration that defines the different hash algorithms

@@ -1,6 +1,7 @@
 use std::io;
 
 use enum_iterator::Sequence;
+use lzma_rs;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use snap;
@@ -14,6 +15,8 @@ pub enum CompressionAlgorithm {
     Passthrough,
     /// Represents the Snappy algorithm.
     Snappy,
+    /// Represents the LZMA algorithm.
+    Lzma,
 }
 
 impl CompressionAlgorithm {
@@ -22,6 +25,7 @@ impl CompressionAlgorithm {
         let compressor = match self {
             CompressionAlgorithm::Passthrough => passthrough,
             CompressionAlgorithm::Snappy => snappy_compress,
+            CompressionAlgorithm::Lzma => lzma_compress,
         };
         compressor(data)
     }
@@ -32,6 +36,7 @@ impl CompressionAlgorithm {
         let decompressor = match self {
             CompressionAlgorithm::Passthrough => passthrough,
             CompressionAlgorithm::Snappy => snappy_decompress,
+            CompressionAlgorithm::Lzma => lzma_decompress,
         };
         decompressor(data)
     }
@@ -45,6 +50,12 @@ pub enum CompressionError {
 
 impl From<std::io::Error> for CompressionError {
     fn from(err: std::io::Error) -> Self {
+        CompressionError::Error(err.to_string())
+    }
+}
+
+impl From<lzma_rs::error::Error> for CompressionError {
+    fn from(err: lzma_rs::error::Error) -> Self {
         CompressionError::Error(err.to_string())
     }
 }
@@ -74,6 +85,24 @@ fn snappy_decompress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
     let mut snappy_reader = snap::read::FrameDecoder::new(reader);
     let mut writer = Vec::new();
     io::copy(&mut snappy_reader, &mut writer)?;
+    Ok(writer)
+}
+
+// lzma_compress returns the LZMA compressed data.
+#[inline]
+fn lzma_compress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
+    let mut reader = io::Cursor::new(data);
+    let mut writer = Vec::new();
+    lzma_rs::lzma_compress(&mut reader, &mut writer)?;
+    Ok(writer)
+}
+
+// lzma_decompress returns the LZMA decompressed data.
+#[inline]
+fn lzma_decompress(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
+    let mut reader = io::Cursor::new(data);
+    let mut writer = Vec::new();
+    lzma_rs::lzma_decompress(&mut reader, &mut writer)?;
     Ok(writer)
 }
 

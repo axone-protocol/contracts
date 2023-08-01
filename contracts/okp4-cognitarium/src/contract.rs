@@ -51,15 +51,21 @@ pub mod execute {
     use crate::storer::TripleStorer;
     use std::io::BufReader;
 
+    pub fn verify_owner(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
+        if STORE.load(deps.storage)?.owner != info.sender {
+            Err(ContractError::Unauthorized)
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn insert(
         deps: DepsMut<'_>,
         info: MessageInfo,
         format: DataFormat,
         data: Binary,
     ) -> Result<Response, ContractError> {
-        if STORE.load(deps.storage)?.owner != info.sender {
-            Err(ContractError::Unauthorized)?;
-        }
+        verify_owner(&deps, &info)?;
 
         let buf = BufReader::new(data.as_slice());
         let mut reader = TripleReader::new(&format, buf);

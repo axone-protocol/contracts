@@ -67,24 +67,19 @@ impl Bucket {
 
 /// HashAlgorithm is an enumeration that defines the different hash algorithms
 /// supported for hashing the content of objects.
-#[derive(Serialize, Copy, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Copy, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema, Default)]
 pub enum HashAlgorithm {
     /// Represents the MD5 algorithm.
     MD5,
     /// Represents the SHA-224 algorithm.
     Sha224,
     /// Represents the SHA-256 algorithm.
+    #[default]
     Sha256,
     /// Represents the SHA-384 algorithm.
     Sha384,
     /// Represents the SHA-512 algorithm.
     Sha512,
-}
-
-impl Default for HashAlgorithm {
-    fn default() -> Self {
-        HashAlgorithm::Sha256
-    }
 }
 
 impl From<msg::HashAlgorithm> for HashAlgorithm {

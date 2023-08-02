@@ -38,6 +38,7 @@ cw2.workspace = true
 derive_builder = "0.12.0"
 either = "1.8.1"
 enum-iterator = "1.4.1"
+lzma-rs = "0.3.0"
 md-5 = "0.10.5"
 schemars.workspace = true
 serde.workspace = true

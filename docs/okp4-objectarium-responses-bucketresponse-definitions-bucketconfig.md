@@ -52,7 +52,8 @@ The default value is:
 ```json
 [
   "passthrough",
-  "snappy"
+  "snappy",
+  "lzma"
 ]
 ```
 

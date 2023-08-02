@@ -171,6 +171,12 @@ pub enum CompressionAlgorithm {
     ///
     /// See [the snappy web page](https://google.github.io/snappy/) for more information.
     Snappy,
+    /// # Lzma
+    /// Represents the LZMA algorithm.
+    /// LZMA is a lossless data compression/decompression algorithm that features a high compression ratio and a variable compression-dictionary size up to 4 GB.
+    ///
+    /// See [the LZMA wiki page](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm) for more information.
+    Lzma,
 }
 
 /// HashAlgorithm is an enumeration that defines the different hash algorithms
@@ -386,7 +392,7 @@ pub struct ObjectPinsResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::CompressionAlgorithm::{Passthrough, Snappy};
+    use crate::msg::CompressionAlgorithm::{Lzma, Passthrough, Snappy};
     use crate::msg::HashAlgorithm::Sha256;
     use crate::msg::{BucketConfig, BucketLimits, InstantiateMsg, PaginationConfig};
     use schemars::_serde_json;
@@ -412,7 +418,7 @@ mod tests {
         assert_eq!(config.hash_algorithm, Sha256);
         assert_eq!(
             config.accepted_compression_algorithms,
-            vec![Passthrough, Snappy]
+            vec![Passthrough, Snappy, Lzma]
         );
     }
 
@@ -443,7 +449,7 @@ mod tests {
         assert_eq!(msg.config.hash_algorithm, Sha256);
         assert_eq!(
             msg.config.accepted_compression_algorithms,
-            vec![Passthrough, Snappy]
+            vec![Passthrough, Snappy, Lzma]
         );
         assert_eq!(msg.limits.max_object_pins, None);
         assert_eq!(msg.limits.max_objects, None);

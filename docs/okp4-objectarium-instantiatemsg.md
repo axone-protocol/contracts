@@ -71,7 +71,8 @@ The default value is:
 {
   "accepted_compression_algorithms": [
     "passthrough",
-    "snappy"
+    "snappy",
+    "lzma"
   ],
   "hash_algorithm": "sha256"
 }
@@ -189,7 +190,8 @@ The default value is:
 ```json
 [
   "passthrough",
-  "snappy"
+  "snappy",
+  "lzma"
 ]
 ```
 

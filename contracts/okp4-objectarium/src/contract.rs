@@ -960,6 +960,7 @@ mod tests {
                 accepted_compression_algorithms: vec![
                     CompressionAlgorithm::Passthrough,
                     CompressionAlgorithm::Snappy,
+                    CompressionAlgorithm::Lzma,
                 ],
                 compression_algorithm: None,
                 expected_result: Either::Right(ExpectedCompressionResult {
@@ -971,6 +972,7 @@ mod tests {
                 accepted_compression_algorithms: vec![
                     CompressionAlgorithm::Passthrough,
                     CompressionAlgorithm::Snappy,
+                    CompressionAlgorithm::Lzma,
                 ],
                 compression_algorithm: Some(CompressionAlgorithm::Passthrough),
                 expected_result: Either::Right(ExpectedCompressionResult {
@@ -982,11 +984,24 @@ mod tests {
                 accepted_compression_algorithms: vec![
                     CompressionAlgorithm::Passthrough,
                     CompressionAlgorithm::Snappy,
+                    CompressionAlgorithm::Lzma,
                 ],
                 compression_algorithm: Some(CompressionAlgorithm::Snappy),
                 expected_result: Either::Right(ExpectedCompressionResult {
                     compression_algorithm: CompressionAlgorithm::Snappy,
                     compressed_size: 414,
+                }),
+            },
+            TC {
+                accepted_compression_algorithms: vec![
+                    CompressionAlgorithm::Passthrough,
+                    CompressionAlgorithm::Snappy,
+                    CompressionAlgorithm::Lzma,
+                ],
+                compression_algorithm: Some(CompressionAlgorithm::Lzma),
+                expected_result: Either::Right(ExpectedCompressionResult {
+                    compression_algorithm: CompressionAlgorithm::Lzma,
+                    compressed_size: 344,
                 }),
             },
             TC {

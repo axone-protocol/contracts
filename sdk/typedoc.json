@@ -1,0 +1,7 @@
+{
+  "out": "./docs",
+  "name": "ui",
+  "theme": "markdown",
+  "readme": "none",
+  "tsconfig": "./tsconfig.bundle.json"
+}

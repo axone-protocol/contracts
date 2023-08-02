@@ -6,3 +6,9 @@ target/
 *.lcov
 lcov.info
 contracts/*/schema/
+debug/
+artifacts/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+**/state.local.json

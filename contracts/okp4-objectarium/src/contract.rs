@@ -1156,44 +1156,64 @@ mod tests {
 
     #[test]
     fn object_data() {
-        let mut deps = mock_dependencies();
-        let info = mock_info("creator", &[]);
-
-        let msg = InstantiateMsg {
-            bucket: String::from("test"),
-            config: Default::default(),
-            limits: Default::default(),
-            pagination: Default::default(),
-        };
-        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-
-        match query(
-            deps.as_ref(),
-            mock_env(),
-            QueryMsg::ObjectData {
-                id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
-            },
-        )
-        .err()
-        .unwrap()
-        {
-            ContractError::Std(NotFound { .. }) => (),
-            _ => panic!("assertion failed"),
+        struct TC {
+            compression_algorithm: Option<CompressionAlgorithm>,
         }
 
-        let data = Binary::from_base64(general_purpose::STANDARD.encode("okp4").as_str()).unwrap();
-        let msg = ExecuteMsg::StoreObject {
-            data: data.clone(),
-            pin: false,
-            compression_algorithm: Some(CompressionAlgorithm::Passthrough),
-        };
-        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let cases = vec![
+            TC {
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+            },
+            TC {
+                compression_algorithm: Some(CompressionAlgorithm::Snappy),
+            },
+            TC {
+                compression_algorithm: Some(CompressionAlgorithm::Lzma),
+            },
+        ];
 
-        let msg = QueryMsg::ObjectData {
-            id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
-        };
-        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        assert_eq!(result, to_binary(&data).unwrap());
+        for case in cases {
+            let mut deps = mock_dependencies();
+            let info = mock_info("creator", &[]);
+            let data =
+                Binary::from_base64(general_purpose::STANDARD.encode("okp4").as_str()).unwrap();
+
+            let msg = InstantiateMsg {
+                bucket: String::from("test"),
+                config: Default::default(),
+                limits: Default::default(),
+                pagination: Default::default(),
+            };
+            instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            match query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::ObjectData {
+                    id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
+                        .to_string(),
+                },
+            )
+            .err()
+            .unwrap()
+            {
+                ContractError::Std(NotFound { .. }) => (),
+                _ => panic!("assertion failed"),
+            }
+
+            let msg = ExecuteMsg::StoreObject {
+                data: data.clone(),
+                pin: false,
+                compression_algorithm: case.compression_algorithm,
+            };
+            execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            let msg = QueryMsg::ObjectData {
+                id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
+            };
+            let result = query(deps.as_ref(), mock_env(), msg).unwrap();
+            assert_eq!(result, to_binary(&data).unwrap());
+        }
     }
 
     #[test]

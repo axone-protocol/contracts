@@ -108,7 +108,7 @@ impl TryFrom<(msg::Value, &[msg::Prefix])> for Subject {
             } => Ok(Subject::NamedNode(expand_uri(&curie, prefixes)?)),
             msg::Value::BlankNode { value: id } => Ok(Subject::BlankNode(id)),
             _ => Err(StdError::generic_err(format!(
-                "Unsupported subject value: {value:?}"
+                "Unsupported subject value: {value:?}. Expected URI or BlankNode",
             ))),
         }
     }
@@ -126,7 +126,7 @@ impl TryFrom<(msg::Value, &[msg::Prefix])> for Property {
                 value: msg::IRI::Prefixed(curie),
             } => Ok(Property(expand_uri(&curie, prefixes)?)),
             _ => Err(StdError::generic_err(format!(
-                "Unsupported predicate value: {value:?}"
+                "Unsupported predicate value: {value:?}. Expected URI"
             ))),
         }
     }
@@ -165,7 +165,7 @@ impl TryFrom<(msg::Value, &[msg::Prefix])> for Value {
             } => Ok(Value::LiteralDatatype(value, expand_uri(&curie, prefixes)?)),
             msg::Value::BlankNode { value } => Ok(Value::BlankNode(value)),
             _ => Err(StdError::generic_err(format!(
-                "Unsupported object value: {value:?}"
+                "Unsupported object value: {value:?}. Expected URI, BlankNode or Literal"
             )))?,
         }
     }
@@ -195,7 +195,7 @@ impl TryFrom<(msg::Node, &[msg::Prefix])> for Property {
                 Ok(Property(expand_uri(&curie, prefixes)?))
             }
             _ => Err(StdError::generic_err(format!(
-                "Unsupported predicate node: {node:?}"
+                "Unsupported predicate node: {node:?}. Expected URI"
             ))),
         }
     }

@@ -96,10 +96,8 @@ pub mod execute {
 
         let variables = delete
             .iter()
-            .fold(HashSet::new(), |mut acc, tp| {
-                acc.extend(tp.variables());
-                acc
-            })
+            .flat_map(|tp| tp.variables())
+            .collect::<HashSet<_>>()
             .into_iter()
             .map(SelectItem::Variable)
             .collect();

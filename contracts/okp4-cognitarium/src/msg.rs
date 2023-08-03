@@ -483,6 +483,27 @@ pub struct TriplePattern {
     pub object: VarOrNodeOrLiteral,
 }
 
+impl TriplePattern {
+    /// Returns the variables used in the triple pattern.
+    pub fn variables(&self) -> Vec<String> {
+        let mut variables: Vec<String> = vec![];
+
+        if let VarOrNode::Variable(var) = &self.subject {
+            variables.push(var.clone());
+        }
+
+        if let VarOrNode::Variable(var) = &self.predicate {
+            variables.push(var.clone());
+        }
+
+        if let VarOrNodeOrLiteral::Variable(var) = &self.object {
+            variables.push(var.clone());
+        }
+
+        variables
+    }
+}
+
 /// # VarOrNode
 /// Represents either a variable or a node.
 #[cw_serde]

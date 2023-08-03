@@ -1,4 +1,3 @@
-use crate::contract::execute::insert;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -38,17 +37,23 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::InsertData { format, data } => {
-            insert(deps, info, format.unwrap_or(DataFormat::Turtle), data)
+            execute::insert(deps, info, format.unwrap_or_default(), data)
         }
-        _ => Err(StdError::generic_err("Not implemented").into()),
+        ExecuteMsg::DeleteData {
+            prefixes,
+            delete,
+            r#where,
+        } => execute::delete(deps, info, prefixes, delete, r#where),
     }
 }
 
 pub mod execute {
     use super::*;
-    use crate::msg::DataFormat;
-    use crate::rdf::TripleReader;
-    use crate::storer::TripleStorer;
+    use crate::msg::{DataFormat, Prefix, SelectItem, TriplePattern, WhereClause};
+    use crate::querier::{PlanBuilder, QueryEngine};
+    use crate::rdf::{Atom, TripleReader};
+    use crate::storer::StoreEngine;
+    use std::collections::HashSet;
     use std::io::BufReader;
 
     pub fn verify_owner(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
@@ -69,11 +74,49 @@ pub mod execute {
 
         let buf = BufReader::new(data.as_slice());
         let mut reader = TripleReader::new(&format, buf);
-        let mut storer = TripleStorer::new(deps.storage)?;
+        let mut storer = StoreEngine::new(deps.storage)?;
         let count = storer.store_all(&mut reader)?;
 
         Ok(Response::new()
             .add_attribute("action", "insert")
+            .add_attribute("triple_count", count))
+    }
+
+    pub fn delete(
+        deps: DepsMut,
+        info: MessageInfo,
+        prefixes: Vec<Prefix>,
+        delete: Vec<TriplePattern>,
+        r#where: Option<WhereClause>,
+    ) -> Result<Response, ContractError> {
+        verify_owner(&deps, &info)?;
+
+        let plan =
+            PlanBuilder::new(deps.storage, &prefixes).build_plan(&r#where.unwrap_or_default())?;
+
+        let variables = delete
+            .iter()
+            .fold(HashSet::new(), |mut acc, tp| {
+                acc.extend(tp.variables());
+                acc
+            })
+            .into_iter()
+            .map(SelectItem::Variable)
+            .collect();
+
+        let response = QueryEngine::new(deps.storage).select(plan, variables)?;
+        let atoms: Vec<Atom> = response
+            .results
+            .bindings
+            .iter()
+            .flat_map(|row| delete.iter().map(|pattern| pattern.resolve(row, &prefixes)))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut storer = StoreEngine::new(deps.storage)?;
+        let count = storer.delete_all(&atoms)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "delete")
             .add_attribute("triple_count", count))
     }
 }
@@ -83,11 +126,9 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Store => to_binary(&query::store(deps)?),
         QueryMsg::Select { query } => to_binary(&query::select(deps, query)?),
-        QueryMsg::Describe { query, format } => to_binary(&query::describe(
-            deps,
-            query,
-            format.unwrap_or(DataFormat::default()),
-        )?),
+        QueryMsg::Describe { query, format } => {
+            to_binary(&query::describe(deps, query, format.unwrap_or_default())?)
+        }
         QueryMsg::Construct { query, format } => to_binary(&query::construct(
             deps,
             query,

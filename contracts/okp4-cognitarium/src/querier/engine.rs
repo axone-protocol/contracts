@@ -443,7 +443,7 @@ mod test {
     use crate::rdf::TripleReader;
     use crate::state;
     use crate::state::{Literal, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
-    use crate::storer::TripleStorer;
+    use crate::storer::StoreEngine;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
     use std::env;
@@ -481,7 +481,7 @@ mod test {
         let data = read_test_data("sample.rdf.xml");
         let buf = BufReader::new(data.as_slice());
         let mut reader = TripleReader::new(&DataFormat::RDFXml, buf);
-        let mut storer = TripleStorer::new(storage).unwrap();
+        let mut storer = StoreEngine::new(storage).unwrap();
         let count = storer.store_all(&mut reader).unwrap();
 
         assert_eq!(count, Uint128::new(40u128));

@@ -91,6 +91,30 @@ impl<'a> StoreEngine<'a> {
             .map_err(ContractError::Std)
     }
 
+    pub fn delete_all(&mut self, atoms: &[rdf::Atom]) -> Result<Uint128, ContractError> {
+        for atom in atoms {
+            self.delete_triple(atom)?;
+        }
+        self.finish()
+    }
+
+    pub fn delete_triple(&mut self, atom: &rdf::Atom) -> Result<(), ContractError> {
+        let triple = self.rio_to_triple(atom.into())?;
+        let object_hash: Hash = triple.object.as_hash();
+
+        self.store.stat.triple_count -= Uint128::one();
+        triples()
+            .remove(
+                self.storage,
+                (
+                    object_hash.as_bytes(),
+                    triple.predicate.key(),
+                    triple.subject.key(),
+                ),
+            )
+            .map_err(ContractError::Std)
+    }
+
     pub fn finish(&mut self) -> Result<Uint128, ContractError> {
         STORE.save(self.storage, &self.store)?;
         NAMESPACE_KEY_INCREMENT.save(self.storage, &self.ns_key_inc_offset)?;

@@ -1,8 +1,10 @@
 use cosmwasm_std::StdError;
 use rio_api::model::{Literal, NamedNode, Triple};
+use std::collections::BTreeMap;
 use std::fmt;
 
-use crate::msg::{self, Prefix, IRI};
+use crate::msg;
+use crate::msg::TriplePattern;
 
 use super::expand_uri;
 
@@ -93,16 +95,16 @@ impl<'a> From<&'a Atom> for Triple<'a> {
     }
 }
 
-impl TryFrom<(msg::Value, &[Prefix])> for Subject {
+impl TryFrom<(msg::Value, &[msg::Prefix])> for Subject {
     type Error = StdError;
 
-    fn try_from((value, prefixes): (msg::Value, &[Prefix])) -> Result<Self, Self::Error> {
+    fn try_from((value, prefixes): (msg::Value, &[msg::Prefix])) -> Result<Self, Self::Error> {
         match value {
             msg::Value::URI {
-                value: IRI::Full(uri),
+                value: msg::IRI::Full(uri),
             } => Ok(Subject::NamedNode(uri)),
             msg::Value::URI {
-                value: IRI::Prefixed(curie),
+                value: msg::IRI::Prefixed(curie),
             } => Ok(Subject::NamedNode(expand_uri(&curie, prefixes)?)),
             msg::Value::BlankNode { value: id } => Ok(Subject::BlankNode(id)),
             _ => Err(StdError::generic_err(format!(
@@ -112,16 +114,16 @@ impl TryFrom<(msg::Value, &[Prefix])> for Subject {
     }
 }
 
-impl TryFrom<(msg::Value, &[Prefix])> for Property {
+impl TryFrom<(msg::Value, &[msg::Prefix])> for Property {
     type Error = StdError;
 
-    fn try_from((value, prefixes): (msg::Value, &[Prefix])) -> Result<Self, Self::Error> {
+    fn try_from((value, prefixes): (msg::Value, &[msg::Prefix])) -> Result<Self, Self::Error> {
         match value {
             msg::Value::URI {
-                value: IRI::Full(uri),
+                value: msg::IRI::Full(uri),
             } => Ok(Property(uri)),
             msg::Value::URI {
-                value: IRI::Prefixed(curie),
+                value: msg::IRI::Prefixed(curie),
             } => Ok(Property(expand_uri(&curie, prefixes)?)),
             _ => Err(StdError::generic_err(format!(
                 "Unsupported predicate value: {value:?}"
@@ -130,16 +132,16 @@ impl TryFrom<(msg::Value, &[Prefix])> for Property {
     }
 }
 
-impl TryFrom<(msg::Value, &[Prefix])> for Value {
+impl TryFrom<(msg::Value, &[msg::Prefix])> for Value {
     type Error = StdError;
 
-    fn try_from((value, prefixes): (msg::Value, &[Prefix])) -> Result<Self, Self::Error> {
+    fn try_from((value, prefixes): (msg::Value, &[msg::Prefix])) -> Result<Self, Self::Error> {
         match value {
             msg::Value::URI {
-                value: IRI::Full(uri),
+                value: msg::IRI::Full(uri),
             } => Ok(Value::NamedNode(uri)),
             msg::Value::URI {
-                value: IRI::Prefixed(curie),
+                value: msg::IRI::Prefixed(curie),
             } => Ok(Value::NamedNode(expand_uri(&curie, prefixes)?)),
             msg::Value::Literal {
                 value,
@@ -154,18 +156,131 @@ impl TryFrom<(msg::Value, &[Prefix])> for Value {
             msg::Value::Literal {
                 value,
                 lang: None,
-                datatype: Some(IRI::Full(uri)),
+                datatype: Some(msg::IRI::Full(uri)),
             } => Ok(Value::LiteralDatatype(value, uri)),
             msg::Value::Literal {
                 value,
                 lang: None,
-                datatype: Some(IRI::Prefixed(curie)),
+                datatype: Some(msg::IRI::Prefixed(curie)),
             } => Ok(Value::LiteralDatatype(value, expand_uri(&curie, prefixes)?)),
             msg::Value::BlankNode { value } => Ok(Value::BlankNode(value)),
             _ => Err(StdError::generic_err(format!(
                 "Unsupported object value: {value:?}"
             )))?,
         }
+    }
+}
+
+impl TryFrom<(msg::Node, &[msg::Prefix])> for Subject {
+    type Error = StdError;
+
+    fn try_from((node, prefixes): (msg::Node, &[msg::Prefix])) -> Result<Self, Self::Error> {
+        match node {
+            msg::Node::BlankNode(id) => Ok(Subject::BlankNode(id)),
+            msg::Node::NamedNode(msg::IRI::Full(uri)) => Ok(Subject::NamedNode(uri)),
+            msg::Node::NamedNode(msg::IRI::Prefixed(curie)) => {
+                Ok(Subject::NamedNode(expand_uri(&curie, prefixes)?))
+            }
+        }
+    }
+}
+
+impl TryFrom<(msg::Node, &[msg::Prefix])> for Property {
+    type Error = StdError;
+
+    fn try_from((node, prefixes): (msg::Node, &[msg::Prefix])) -> Result<Self, Self::Error> {
+        match node {
+            msg::Node::NamedNode(msg::IRI::Full(uri)) => Ok(Property(uri)),
+            msg::Node::NamedNode(msg::IRI::Prefixed(curie)) => {
+                Ok(Property(expand_uri(&curie, prefixes)?))
+            }
+            _ => Err(StdError::generic_err(format!(
+                "Unsupported predicate node: {node:?}"
+            ))),
+        }
+    }
+}
+
+impl TryFrom<(msg::Node, &[msg::Prefix])> for Value {
+    type Error = StdError;
+
+    fn try_from((node, prefixes): (msg::Node, &[msg::Prefix])) -> Result<Self, Self::Error> {
+        match node {
+            msg::Node::NamedNode(msg::IRI::Full(uri)) => Ok(Value::NamedNode(uri)),
+            msg::Node::NamedNode(msg::IRI::Prefixed(curie)) => {
+                Ok(Value::NamedNode(expand_uri(&curie, prefixes)?))
+            }
+            msg::Node::BlankNode(id) => Ok(Value::BlankNode(id)),
+        }
+    }
+}
+
+impl TryFrom<(msg::Literal, &[msg::Prefix])> for Value {
+    type Error = StdError;
+
+    fn try_from((literal, prefixes): (msg::Literal, &[msg::Prefix])) -> Result<Self, Self::Error> {
+        match literal {
+            msg::Literal::Simple(value) => Ok(Value::LiteralSimple(value)),
+            msg::Literal::LanguageTaggedString { value, language } => {
+                Ok(Value::LiteralLang(value, language))
+            }
+            msg::Literal::TypedValue {
+                value,
+                datatype: msg::IRI::Full(uri),
+            } => Ok(Value::LiteralDatatype(value, uri)),
+            msg::Literal::TypedValue {
+                value,
+                datatype: msg::IRI::Prefixed(prefix),
+            } => Ok(Value::LiteralDatatype(
+                value,
+                expand_uri(&prefix, prefixes)?,
+            )),
+        }
+    }
+}
+
+impl TriplePattern {
+    pub fn resolve(
+        &self,
+        bindings: &BTreeMap<String, msg::Value>,
+        prefixes: &[msg::Prefix],
+    ) -> Result<Atom, StdError> {
+        let subject = match &self.subject {
+            msg::VarOrNode::Variable(var) => {
+                let value = bindings.get(var).ok_or_else(|| {
+                    StdError::generic_err(format!("Unbound subject variable: {:?}", var))
+                })?;
+                (value.clone(), prefixes).try_into()?
+            }
+            msg::VarOrNode::Node(node) => (node.clone(), prefixes).try_into()?,
+        };
+
+        let property = match &self.predicate {
+            msg::VarOrNode::Variable(var) => {
+                let value = bindings.get(var).ok_or_else(|| {
+                    StdError::generic_err(format!("Unbound predicate variable: {:?}", var))
+                })?;
+                (value.clone(), prefixes).try_into()?
+            }
+            msg::VarOrNode::Node(node) => (node.clone(), prefixes).try_into()?,
+        };
+
+        let value = match &self.object {
+            msg::VarOrNodeOrLiteral::Variable(var) => {
+                let value = bindings.get(var).ok_or_else(|| {
+                    StdError::generic_err(format!("Unbound object variable: {:?}", var))
+                })?;
+                (value.clone(), prefixes).try_into()?
+            }
+            msg::VarOrNodeOrLiteral::Node(node) => (node.clone(), prefixes).try_into()?,
+            msg::VarOrNodeOrLiteral::Literal(literal) => (literal.clone(), prefixes).try_into()?,
+        };
+
+        Ok(Atom {
+            subject,
+            property,
+            value,
+        })
     }
 }
 
@@ -238,7 +353,9 @@ mod tests {
         assert_eq!(
             (
                 msg::Value::URI {
-                    value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()),
+                    value: msg::IRI::Full(
+                        "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+                    ),
                 },
                 vec![].as_slice(),
             )
@@ -260,9 +377,9 @@ mod tests {
         assert_eq!(
             (
                 msg::Value::URI {
-                    value: IRI::Prefixed("rdf:".to_string()),
+                    value: msg::IRI::Prefixed("rdf:".to_string()),
                 },
-                vec![Prefix {
+                vec![msg::Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
                 }]
@@ -293,7 +410,9 @@ mod tests {
         assert_eq!(
             (
                 msg::Value::URI {
-                    value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()),
+                    value: msg::IRI::Full(
+                        "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+                    ),
                 },
                 vec![].as_slice(),
             )
@@ -305,9 +424,9 @@ mod tests {
         assert_eq!(
             (
                 msg::Value::URI {
-                    value: IRI::Prefixed("rdf:".to_string()),
+                    value: msg::IRI::Prefixed("rdf:".to_string()),
                 },
-                vec![Prefix {
+                vec![msg::Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
                 }]
@@ -336,7 +455,9 @@ mod tests {
         assert_eq!(
             (
                 msg::Value::URI {
-                    value: IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()),
+                    value: msg::IRI::Full(
+                        "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
+                    ),
                 },
                 vec![].as_slice(),
             )
@@ -348,9 +469,9 @@ mod tests {
         assert_eq!(
             (
                 msg::Value::URI {
-                    value: IRI::Prefixed("rdf:".to_string()),
+                    value: msg::IRI::Prefixed("rdf:".to_string()),
                 },
-                vec![Prefix {
+                vec![msg::Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
                 }]
@@ -390,7 +511,7 @@ mod tests {
                 msg::Value::Literal {
                     value: "foo".to_string(),
                     lang: None,
-                    datatype: Some(IRI::Full(
+                    datatype: Some(msg::IRI::Full(
                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
                     )),
                 },
@@ -407,9 +528,9 @@ mod tests {
                 msg::Value::Literal {
                     value: "foo".to_string(),
                     lang: None,
-                    datatype: Some(IRI::Prefixed("rdf:".to_string())),
+                    datatype: Some(msg::IRI::Prefixed("rdf:".to_string())),
                 },
-                vec![Prefix {
+                vec![msg::Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
                 }]
@@ -436,7 +557,7 @@ mod tests {
                 msg::Value::Literal {
                     value: "blank".to_string(),
                     lang: Some("en".to_string()),
-                    datatype: Some(IRI::Full(
+                    datatype: Some(msg::IRI::Full(
                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
                     )),
                 },

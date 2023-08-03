@@ -12,7 +12,7 @@ use rio_api::model::Term;
 use std::collections::BTreeMap;
 use std::io::BufRead;
 
-pub struct TripleStorer<'a> {
+pub struct StoreEngine<'a> {
     storage: &'a mut dyn Storage,
     store: Store,
     ns_key_inc_offset: u128,
@@ -21,7 +21,7 @@ pub struct TripleStorer<'a> {
     initial_byte_size: Uint128,
 }
 
-impl<'a> TripleStorer<'a> {
+impl<'a> StoreEngine<'a> {
     pub fn new(storage: &'a mut dyn Storage) -> StdResult<Self> {
         let store = STORE.load(storage)?;
         let ns_key_inc_offset = NAMESPACE_KEY_INCREMENT.load(storage)?;
@@ -43,7 +43,7 @@ impl<'a> TripleStorer<'a> {
         self.finish()
     }
 
-    pub fn store_triple(&mut self, t: model::Triple<'_>) -> Result<(), ContractError> {
+    fn store_triple(&mut self, t: model::Triple<'_>) -> Result<(), ContractError> {
         self.store.stat.triple_count += Uint128::one();
         if self.store.stat.triple_count > self.store.limits.max_triple_count {
             Err(StoreError::TripleCount(self.store.limits.max_triple_count))?;

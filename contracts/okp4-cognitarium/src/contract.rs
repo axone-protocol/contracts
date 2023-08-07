@@ -51,9 +51,9 @@ pub mod execute {
     use super::*;
     use crate::msg::{DataFormat, Prefix, SelectItem, TriplePattern, WhereClause};
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{Atom, TripleReader};
+    use crate::rdf::TripleReader;
     use crate::storer::StoreEngine;
-    use std::collections::HashSet;
+    use std::collections::{BTreeMap, HashSet};
     use std::io::BufReader;
 
     pub fn verify_owner(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
@@ -103,12 +103,16 @@ pub mod execute {
             .collect();
 
         let response = QueryEngine::new(deps.storage).select(plan, variables)?;
-        let atoms: Vec<Atom> = response
-            .results
-            .bindings
-            .iter()
-            .flat_map(|row| delete.iter().map(|pattern| pattern.resolve(row, &prefixes)))
-            .collect::<Result<Vec<_>, _>>()?;
+        let atoms: Vec<Atom> = if response.results.bindings.is_empty() {
+            vec![]
+        } else {
+            response
+                .results
+                .bindings
+                .iter()
+                .flat_map(|row| delete.iter().map(|pattern| pattern.resolve(row, &prefixes)))
+                .collect::<Result<Vec<_>, _>>()?
+        };
 
         let mut storer = StoreEngine::new(deps.storage)?;
         let count = storer.delete_all(&atoms)?;

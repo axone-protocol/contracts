@@ -115,6 +115,8 @@ impl<'a> StoreEngine<'a> {
             .map_err(ContractError::Std)
     }
 
+    /// Flushes the store to the storage.
+    /// Returns the number of triples added or removed (absolute value).
     pub fn finish(&mut self) -> Result<Uint128, ContractError> {
         STORE.save(self.storage, &self.store)?;
         NAMESPACE_KEY_INCREMENT.save(self.storage, &self.ns_key_inc_offset)?;
@@ -122,7 +124,11 @@ impl<'a> StoreEngine<'a> {
             namespaces().save(self.storage, entry.0.to_string(), entry.1)?;
         }
 
-        Ok(self.store.stat.triple_count - self.initial_triple_count)
+        if self.store.stat.triple_count > self.initial_triple_count {
+            Ok(self.store.stat.triple_count - self.initial_triple_count)
+        } else {
+            Ok(self.initial_triple_count - self.store.stat.triple_count)
+        }
     }
 
     fn resolve_namespace_key(&mut self, ns_str: String) -> StdResult<u128> {

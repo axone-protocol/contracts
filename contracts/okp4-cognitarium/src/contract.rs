@@ -51,9 +51,9 @@ pub mod execute {
     use super::*;
     use crate::msg::{DataFormat, Prefix, SelectItem, TriplePattern, WhereClause};
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::TripleReader;
+    use crate::rdf::{Atom, TripleReader};
     use crate::storer::StoreEngine;
-    use std::collections::{BTreeMap, HashSet};
+    use std::collections::HashSet;
     use std::io::BufReader;
 
     pub fn verify_owner(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
@@ -114,8 +114,8 @@ pub mod execute {
                 .collect::<Result<Vec<_>, _>>()?
         };
 
-        let mut storer = StoreEngine::new(deps.storage)?;
-        let count = storer.delete_all(&atoms)?;
+        let mut store = StoreEngine::new(deps.storage)?;
+        let count = store.delete_all(&atoms)?;
 
         Ok(Response::new()
             .add_attribute("action", "delete")
@@ -292,7 +292,7 @@ pub mod query {
 mod tests {
     use super::*;
     use crate::error::StoreError;
-    use crate::msg::ExecuteMsg::InsertData;
+    use crate::msg::ExecuteMsg::{DeleteData, InsertData};
     use crate::msg::Node::NamedNode;
     use crate::msg::QueryMsg::Construct;
     use crate::msg::SimpleWhereCondition::TriplePattern;
@@ -613,6 +613,192 @@ mod tests {
             } else {
                 assert!(res.is_ok());
             }
+        }
+    }
+
+    #[test]
+    fn proper_delete() {
+        let id = "https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
+        let cases = vec![
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/dataverse/dataspace/metadata/unknown"
+                                .to_string(),
+                        ))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }],
+                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/dataverse/dataspace/metadata/unknown"
+                                    .to_string(),
+                            ))),
+                            predicate: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            ))),
+                        },
+                    ))]),
+                },
+                0,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }],
+                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            ))),
+                        },
+                    ))]),
+                },
+                1,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![
+                        Prefix {
+                            prefix: "core".to_string(),
+                            namespace: "https://ontology.okp4.space/core/".to_string(),
+                        },
+                        Prefix {
+                            prefix: "thesaurus".to_string(),
+                            namespace: "https://ontology.okp4.space/thesaurus/topic/".to_string(),
+                        },
+                    ],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "core:hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Prefixed(
+                            "thesaurus:Test".to_string(),
+                        ))),
+                    }],
+                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                "core:hasTopic".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Node(NamedNode(Prefixed(
+                                "thesaurus:Test".to_string(),
+                            ))),
+                        },
+                    ))]),
+                },
+                1,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![
+                        Prefix {
+                            prefix: "core".to_string(),
+                            namespace: "https://ontology.okp4.space/core/".to_string(),
+                        },
+                        Prefix {
+                            prefix: "thesaurus".to_string(),
+                            namespace: "https://ontology.okp4.space/thesaurus/topic/".to_string(),
+                        },
+                    ],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "core:hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }],
+                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                "core:hasTopic".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        },
+                    ))]),
+                },
+                1,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }],
+                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNode::Variable("p".to_string()),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        },
+                    ))]),
+                },
+                11,
+            ),
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+
+            let info = mock_info("owner", &[]);
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg {
+                    limits: StoreLimitsInput::default(),
+                },
+            )
+            .unwrap();
+
+            execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InsertData {
+                    format: Some(DataFormat::RDFXml),
+                    data: read_test_data("sample.rdf.xml"),
+                },
+            )
+            .unwrap();
+
+            let res = execute(deps.as_mut(), mock_env(), info, case.0);
+
+            assert!(res.is_ok());
+            assert_eq!(
+                res.unwrap().attributes,
+                vec![
+                    Attribute::new("action", "delete"),
+                    Attribute::new("triple_count", case.1.to_string())
+                ]
+            );
         }
     }
 

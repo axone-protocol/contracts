@@ -583,7 +583,12 @@ pub enum Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::{InstantiateMsg, StoreLimitsInput};
+    use crate::msg::Literal::Simple;
+    use crate::msg::Node::{BlankNode, NamedNode};
+    use crate::msg::IRI::{Full, Prefixed};
+    use crate::msg::{
+        InstantiateMsg, StoreLimitsInput, TriplePattern, VarOrNode, VarOrNodeOrLiteral,
+    };
     use cosmwasm_std::Uint128;
     use schemars::_serde_json;
 
@@ -617,5 +622,78 @@ mod tests {
         assert_eq!(msg.limits.max_triple_byte_size, Uint128::MAX);
         assert_eq!(msg.limits.max_insert_data_byte_size, Uint128::MAX);
         assert_eq!(msg.limits.max_insert_data_triple_count, Uint128::MAX);
+    }
+
+    #[test]
+    fn variables_from_triple_pattern() {
+        let (s, p, o) = ("s".to_string(), "p".to_string(), "o".to_string());
+        let (node, prefixed, literal) = (
+            "node".to_string(),
+            "a:node".to_string(),
+            "literal".to_string(),
+        );
+
+        let cases = vec![
+            (
+                TriplePattern {
+                    subject: VarOrNode::Variable(s.clone()),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![s.clone(), p.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Node(NamedNode(Full(node.clone()))),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![p.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Node(NamedNode(Prefixed(prefixed.clone()))),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![p.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Node(BlankNode(node.clone())),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![p.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Variable(s.clone()),
+                    predicate: VarOrNode::Node(NamedNode(Full(node.clone()))),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![s.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Variable(s.clone()),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Literal(Simple(literal.clone())),
+                },
+                vec![s.clone(), p.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Node(BlankNode(node.clone())),
+                    predicate: VarOrNode::Node(NamedNode(Prefixed(prefixed.clone()))),
+                    object: VarOrNodeOrLiteral::Literal(Simple(literal)),
+                },
+                vec![],
+            ),
+        ];
+
+        for (triple_pattern, expected) in cases {
+            assert_eq!(triple_pattern.variables(), expected);
+        }
     }
 }

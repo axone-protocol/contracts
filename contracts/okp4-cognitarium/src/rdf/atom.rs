@@ -144,61 +144,58 @@ mod tests {
 
     #[test]
     fn proper_display() {
-        // # Subject
-        assert_eq!(
-            format!("{}", Subject::BlankNode("blank".to_string())),
-            "blank".to_string()
-        );
-        assert_eq!(
-            format!("{}", Subject::NamedNode("named".to_string())),
-            "named".to_string()
-        );
-
-        // # Property
-        assert_eq!(
-            format!("{}", Property("foo".to_string())),
-            "foo".to_string()
-        );
-
-        // # Value
-        assert_eq!(
-            format!("{}", Value::NamedNode("named".to_string())),
-            "named".to_string()
-        );
-        assert_eq!(
-            format!("{}", Value::BlankNode("blank".to_string())),
-            "blank".to_string()
-        );
-        assert_eq!(
-            format!("{}", Value::LiteralSimple("simple".to_string())),
-            "simple".to_string()
-        );
-        assert_eq!(
-            format!(
-                "{}",
-                Value::LiteralLang("lang".to_string(), "en".to_string())
-            ),
-            "lang@en".to_string()
-        );
-        assert_eq!(
-            format!(
-                "{}",
-                Value::LiteralDatatype("data".to_string(), "uri".to_string())
-            ),
-            "data^^uri".to_string()
-        );
-
-        // # Atom
-        assert_eq!(
-            format!(
-                "{}",
-                Atom {
-                    subject: Subject::NamedNode("subject".to_string()),
-                    property: Property("predicate".to_string()),
-                    value: Value::LiteralLang("object".to_string(), "en".to_string()),
-                }
-            ),
-            "<subject> <predicate> 'object@en'".to_string()
-        );
+        struct TC<'a> {
+            input: Box<dyn fmt::Display + 'a>,
+            expected: String,
+        }
+        let cases = vec![
+            // # Subject
+            TC {
+                input: Box::new(Subject::BlankNode("blank".into())),
+                expected: "blank".into(),
+            },
+            TC {
+                input: Box::new(Subject::NamedNode("named".into())),
+                expected: "named".into(),
+            },
+            // # Property
+            TC {
+                input: Box::new(Property("foo".into())),
+                expected: "foo".into(),
+            },
+            // #  Value
+            TC {
+                input: Box::new(Value::NamedNode("named".into())),
+                expected: "named".into(),
+            },
+            TC {
+                input: Box::new(Value::BlankNode("blank".into())),
+                expected: "blank".into(),
+            },
+            TC {
+                input: Box::new(Value::LiteralSimple("simple".into())),
+                expected: "simple".into(),
+            },
+            TC {
+                input: Box::new(Value::LiteralLang("lang".into(), "en".into())),
+                expected: "lang@en".into(),
+            },
+            TC {
+                input: Box::new(Value::LiteralDatatype("data".into(), "uri".into())),
+                expected: "data^^uri".into(),
+            },
+            // # Atom
+            TC {
+                input: Box::new(Atom {
+                    subject: Subject::NamedNode("subject".into()),
+                    property: Property("predicate".into()),
+                    value: Value::LiteralLang("object".into(), "en".into()),
+                }),
+                expected: "<subject> <predicate> 'object@en'".into(),
+            },
+        ];
+        for tc in cases {
+            assert_eq!(format!("{}", tc.input), tc.expected);
+        }
     }
 }

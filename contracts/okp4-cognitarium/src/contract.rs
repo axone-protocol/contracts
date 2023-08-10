@@ -648,20 +648,18 @@ mod tests {
                             "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
                         ))),
                     }],
-                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/dataverse/dataspace/metadata/unknown"
-                                    .to_string(),
-                            ))),
-                            predicate: VarOrNode::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/core/hasTopic".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
-                            ))),
-                        },
-                    ))]),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/dataverse/dataspace/metadata/unknown"
+                                .to_string(),
+                        ))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }))],
                 },
                 0,
             ),
@@ -677,17 +675,15 @@ mod tests {
                             "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
                         ))),
                     }],
-                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                            predicate: VarOrNode::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/core/hasTopic".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
-                            ))),
-                        },
-                    ))]),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }))],
                 },
                 1,
             ),
@@ -712,17 +708,15 @@ mod tests {
                             "thesaurus:Test".to_string(),
                         ))),
                     }],
-                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                            predicate: VarOrNode::Node(NamedNode(Prefixed(
-                                "core:hasTopic".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Node(NamedNode(Prefixed(
-                                "thesaurus:Test".to_string(),
-                            ))),
-                        },
-                    ))]),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "core:hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Prefixed(
+                            "thesaurus:Test".to_string(),
+                        ))),
+                    }))],
                 },
                 1,
             ),
@@ -745,15 +739,13 @@ mod tests {
                         ))),
                         object: VarOrNodeOrLiteral::Variable("o".to_string()),
                     }],
-                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                            predicate: VarOrNode::Node(NamedNode(Prefixed(
-                                "core:hasTopic".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                        },
-                    ))]),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "core:hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
                 },
                 1,
             ),
@@ -765,13 +757,23 @@ mod tests {
                         predicate: VarOrNode::Variable("p".to_string()),
                         object: VarOrNodeOrLiteral::Variable("o".to_string()),
                     }],
-                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                            predicate: VarOrNode::Variable("p".to_string()),
-                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                        },
-                    ))]),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                11,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
                 },
                 11,
             ),
@@ -832,17 +834,15 @@ mod tests {
                             "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
                         ))),
                     }],
-                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
-                            predicate: VarOrNode::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/core/hasTopic".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
-                            ))),
-                        },
-                    ))]),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }))],
                 },
                 expected: StdError::generic_err("Malformed prefixed IRI: prefix not found").into(),
             },
@@ -856,17 +856,33 @@ mod tests {
                         predicate: VarOrNode::Variable("z".to_string()),
                         object: VarOrNodeOrLiteral::Variable("o".to_string()),
                     }],
-                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
-                            ))),
-                            predicate: VarOrNode::Variable("p".to_string()),
-                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                        },
-                    ))]),
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
                 },
                 expected: StdError::generic_err("Selected variable not found in query").into(),
+            },
+            TC {
+                command: DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }],
+                    r#where: vec![],
+                },
+                expected: StdError::generic_err("Empty basic graph pattern").into(),
             },
         ];
 

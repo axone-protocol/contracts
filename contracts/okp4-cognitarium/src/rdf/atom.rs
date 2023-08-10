@@ -56,12 +56,8 @@ pub struct Atom {
 }
 
 impl fmt::Display for Atom {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt.write_str(&format!(
-            "<{}> <{}> '{}'",
-            self.subject, self.property, self.value
-        ))?;
-        Ok(())
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<{}> <{}> '{}'", self.subject, self.property, self.value)
     }
 }
 
@@ -73,19 +69,19 @@ impl<'a> From<&'a Atom> for Triple<'a> {
             }
             .into(),
             predicate: NamedNode {
-                iri: atom.property.0.as_str(),
+                iri: &atom.property.0,
             },
             object: match &atom.value {
                 Value::NamedNode(s) | Value::BlankNode(s) => NamedNode { iri: s.as_str() }.into(),
                 Value::LiteralSimple(s) => Literal::Simple { value: s.as_str() }.into(),
                 Value::LiteralLang(s, l) => Literal::LanguageTaggedString {
-                    value: s.as_str(),
-                    language: l.as_str(),
+                    value: s,
+                    language: l,
                 }
                 .into(),
                 Value::LiteralDatatype(s, d) => Literal::Typed {
-                    value: s.as_str(),
-                    datatype: NamedNode { iri: d.as_str() },
+                    value: s,
+                    datatype: NamedNode { iri: d },
                 }
                 .into(),
             },

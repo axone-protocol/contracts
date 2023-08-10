@@ -168,10 +168,8 @@ impl<'a> PlanBuilder<'a> {
                 )
                 .and_then(|index| {
                     self.prefixes
-                        .get(&prefixed.as_str()[..index])
-                        .map(|resolved_prefix| {
-                            [resolved_prefix, &prefixed.as_str()[index + 1..]].join("")
-                        })
+                        .get(&prefixed[..index])
+                        .map(|resolved_prefix| [resolved_prefix, &prefixed[index + 1..]].join(""))
                         .map_or_else(
                             || {
                                 Err(StdError::generic_err(
@@ -183,7 +181,7 @@ impl<'a> PlanBuilder<'a> {
                 }),
             IRI::Full(full) => Ok(full),
         }
-        .and_then(|iri| rdf::explode_iri(iri.as_str()))
+        .and_then(|iri| rdf::explode_iri(&iri))
         .and_then(|(ns_key, v)| {
             namespaces()
                 .load(self.storage, ns_key)

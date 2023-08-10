@@ -672,7 +672,7 @@ mod tests {
                     predicate: VarOrNode::Node(NamedNode(Full(node.clone()))),
                     object: VarOrNodeOrLiteral::Variable(o.clone()),
                 },
-                vec![s.clone(), o.clone()],
+                vec![s.clone(), o],
             ),
             (
                 TriplePattern {
@@ -680,12 +680,12 @@ mod tests {
                     predicate: VarOrNode::Variable(p.clone()),
                     object: VarOrNodeOrLiteral::Literal(Simple(literal.clone())),
                 },
-                vec![s.clone(), p.clone()],
+                vec![s, p],
             ),
             (
                 TriplePattern {
-                    subject: VarOrNode::Node(BlankNode(node.clone())),
-                    predicate: VarOrNode::Node(NamedNode(Prefixed(prefixed.clone()))),
+                    subject: VarOrNode::Node(BlankNode(node)),
+                    predicate: VarOrNode::Node(NamedNode(Prefixed(prefixed))),
                     object: VarOrNodeOrLiteral::Literal(Simple(literal)),
                 },
                 vec![],

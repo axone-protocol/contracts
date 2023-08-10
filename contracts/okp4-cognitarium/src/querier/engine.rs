@@ -27,7 +27,7 @@ impl<'a> QueryEngine<'a> {
                 SelectItem::Variable(v) => v,
             })
             .map(|name| -> StdResult<(String, usize)> {
-                match plan.get_var_index(name.as_str()) {
+                match plan.get_var_index(name) {
                     Some(index) => Ok((name.clone(), index)),
                     None => Err(StdError::generic_err(
                         "Selected variable not found in query",
@@ -455,7 +455,7 @@ mod test {
         let mut bytes: Vec<u8> = Vec::new();
 
         File::open(
-            Path::new(env::var("CARGO_MANIFEST_DIR").unwrap().as_str())
+            Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap())
                 .join("testdata")
                 .join(file),
         )

@@ -132,7 +132,7 @@ impl<'a> StoreEngine<'a> {
     }
 
     fn resolve_namespace_key(&mut self, ns_str: String) -> StdResult<u128> {
-        if let Some(namespace) = self.ns_cache.get_mut(ns_str.as_str()) {
+        if let Some(namespace) = self.ns_cache.get_mut(&ns_str) {
             namespace.counter += 1;
             Ok(namespace.key)
         } else {

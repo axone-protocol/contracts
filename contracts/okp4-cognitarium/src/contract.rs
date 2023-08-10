@@ -187,7 +187,7 @@ pub mod query {
             bindings: &BTreeMap<String, Value>,
         ) -> Result<Value, StdError> {
             vars.get(index)
-                .and_then(|it| bindings.get(it.as_str()))
+                .and_then(|it| bindings.get(it))
                 .cloned()
                 .ok_or_else(|| {
                     StdError::generic_err(format!(
@@ -856,7 +856,7 @@ mod tests {
         let mut bytes: Vec<u8> = Vec::new();
 
         File::open(
-            Path::new(env::var("CARGO_MANIFEST_DIR").unwrap().as_str())
+            Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap())
                 .join("testdata")
                 .join(file),
         )

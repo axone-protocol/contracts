@@ -49,7 +49,10 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::msg::{DataFormat, Prefix, SelectItem, TriplePattern, WhereClause};
+    use crate::msg::{
+        DataFormat, Prefix, SelectItem, SimpleWhereCondition, TriplePattern, WhereClause,
+        WhereCondition,
+    };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::{Atom, TripleReader};
     use crate::storer::StoreEngine;
@@ -87,20 +90,30 @@ pub mod execute {
         info: MessageInfo,
         prefixes: Vec<Prefix>,
         delete: Vec<TriplePattern>,
-        r#where: Option<WhereClause>,
+        r#where: WhereClause,
     ) -> Result<Response, ContractError> {
         verify_owner(&deps, &info)?;
 
-        let plan =
-            PlanBuilder::new(deps.storage, &prefixes).build_plan(&r#where.unwrap_or_default())?;
-
-        let variables = delete
+        let patterns: Vec<TriplePattern> = if delete.is_empty() {
+            r#where
+                .iter()
+                .map(|c| match c {
+                    WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => {
+                        Ok(tp.clone())
+                    }
+                })
+                .collect::<Result<_, ContractError>>()?
+        } else {
+            delete
+        };
+        let variables = patterns
             .iter()
             .flat_map(|tp| tp.variables())
             .collect::<HashSet<_>>()
             .into_iter()
             .map(SelectItem::Variable)
             .collect();
+        let plan = PlanBuilder::new(deps.storage, &prefixes).build_plan(&r#where)?;
 
         let response = QueryEngine::new(deps.storage).select(plan, variables)?;
         let atoms: Vec<Atom> = if response.results.bindings.is_empty() {
@@ -110,8 +123,12 @@ pub mod execute {
                 .results
                 .bindings
                 .iter()
-                .flat_map(|row| delete.iter().map(|pattern| pattern.resolve(row, &prefixes)))
-                .collect::<Result<Vec<_>, _>>()?
+                .flat_map(|row| {
+                    patterns
+                        .iter()
+                        .map(|pattern| pattern.resolve(row, &prefixes))
+                })
+                .collect::<Result<_, _>>()?
         };
 
         let mut store = StoreEngine::new(deps.storage)?;

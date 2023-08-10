@@ -803,6 +803,93 @@ mod tests {
     }
 
     #[test]
+    fn invalid_delete() {
+        struct TC {
+            command: ExecuteMsg,
+            expected: ContractError,
+        }
+        let cases = vec![
+            TC {
+                command: DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }],
+                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
+                            predicate: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            ))),
+                        },
+                    ))]),
+                },
+                expected: StdError::generic_err("Malformed prefixed IRI: prefix not found").into(),
+            },
+            TC {
+                command: DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                        predicate: VarOrNode::Variable("z".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }],
+                    r#where: Some(vec![WhereCondition::Simple(TriplePattern(
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            ))),
+                            predicate: VarOrNode::Variable("p".to_string()),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        },
+                    ))]),
+                },
+                expected: StdError::generic_err("Selected variable not found in query").into(),
+            },
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+
+            let info = mock_info("owner", &[]);
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg::default(),
+            )
+            .unwrap();
+
+            execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InsertData {
+                    format: Some(DataFormat::RDFXml),
+                    data: read_test_data("sample.rdf.xml"),
+                },
+            )
+            .unwrap();
+
+            let res = execute(deps.as_mut(), mock_env(), info, case.command);
+
+            assert!(res.is_err());
+            assert_eq!(res.unwrap_err(), case.expected);
+        }
+    }
+
+    #[test]
     fn proper_store() {
         let mut deps = mock_dependencies();
         STORE

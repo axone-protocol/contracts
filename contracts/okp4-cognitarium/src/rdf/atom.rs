@@ -138,6 +138,7 @@ impl TriplePattern {
 mod tests {
     use super::*;
     use crate::msg::IRI;
+    use crate::rdf::PrefixMap;
 
     #[test]
     fn proper_display() {
@@ -630,7 +631,10 @@ mod tests {
 
         for tc in cases {
             assert_eq!(
-                tc.triple_pattern.resolve(tc.bindings, tc.prefixes),
+                tc.triple_pattern.resolve(
+                    tc.bindings,
+                    &<PrefixMap>::from(tc.prefixes.clone()).into_inner()
+                ),
                 tc.expected
             );
         }

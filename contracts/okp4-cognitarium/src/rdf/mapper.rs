@@ -193,7 +193,7 @@ mod tests {
                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
                     ),
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner(),
             )
                 .try_into(),
             Ok(Subject::NamedNode(
@@ -205,7 +205,7 @@ mod tests {
                 msg::Value::BlankNode {
                     value: "blank".to_string(),
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner(),
             )
                 .try_into(),
             Ok(Subject::BlankNode("blank".to_string()))
@@ -215,11 +215,11 @@ mod tests {
                 msg::Value::URI {
                     value: msg::IRI::Prefixed("rdf:".to_string()),
                 },
-                vec![msg::Prefix {
+                &<PrefixMap>::from(vec![msg::Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-                }]
-                .as_slice(),
+                }])
+                .into_inner(),
             )
                 .try_into(),
             Ok(Subject::NamedNode(
@@ -233,7 +233,7 @@ mod tests {
                     lang: None,
                     datatype: None,
                 },
-                vec![].as_slice(),
+                 &PrefixMap::default().into_inner(),
             )),
             Err(StdError::generic_err(
                 "Unsupported subject value: Literal { value: \"rdf\", lang: None, datatype: None }. Expected URI or BlankNode"
@@ -250,7 +250,7 @@ mod tests {
                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
                     ),
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner(),
             )
                 .try_into(),
             Ok(Property(
@@ -262,11 +262,11 @@ mod tests {
                 msg::Value::URI {
                     value: msg::IRI::Prefixed("rdf:".to_string()),
                 },
-                vec![msg::Prefix {
+                &<PrefixMap>::from(vec![msg::Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-                }]
-                .as_slice(),
+                }])
+                .into_inner(),
             )
                 .try_into(),
             Ok(Property(
@@ -278,7 +278,7 @@ mod tests {
                 msg::Value::BlankNode {
                     value: "blank".to_string(),
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner(),
             )),
             Err(StdError::generic_err(
                 "Unsupported predicate value: BlankNode { value: \"blank\" }. Expected URI"
@@ -295,7 +295,7 @@ mod tests {
                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
                     ),
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner()
             )
                 .try_into(),
             Ok(Value::NamedNode(
@@ -307,11 +307,11 @@ mod tests {
                 msg::Value::URI {
                     value: msg::IRI::Prefixed("rdf:".to_string()),
                 },
-                vec![msg::Prefix {
+                &<PrefixMap>::from(vec![msg::Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-                }]
-                .as_slice(),
+                }])
+                .into_inner(),
             )
                 .try_into(),
             Ok(Value::NamedNode(
@@ -325,7 +325,7 @@ mod tests {
                     lang: None,
                     datatype: None,
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner(),
             )
                 .try_into(),
             Ok(Value::LiteralSimple("foo".to_string()))
@@ -337,7 +337,7 @@ mod tests {
                     lang: Some("en".to_string()),
                     datatype: None,
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner()
             )
                 .try_into(),
             Ok(Value::LiteralLang("foo".to_string(), "en".to_string()))
@@ -351,7 +351,7 @@ mod tests {
                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
                     )),
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner(),
             )
                 .try_into(),
             Ok(Value::LiteralDatatype(
@@ -366,11 +366,11 @@ mod tests {
                     lang: None,
                     datatype: Some(msg::IRI::Prefixed("rdf:".to_string())),
                 },
-                vec![msg::Prefix {
+                &<PrefixMap>::from(vec![msg::Prefix {
                     prefix: "rdf".to_string(),
                     namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-                }]
-                .as_slice(),
+                }])
+                .into_inner(),
             )
                 .try_into(),
             Ok(Value::LiteralDatatype(
@@ -383,7 +383,7 @@ mod tests {
                 msg::Value::BlankNode {
                     value: "foo".to_string()
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner(),
             )
                 .try_into(),
             Ok(Value::BlankNode("foo".to_string()))
@@ -397,7 +397,7 @@ mod tests {
                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string()
                     )),
                 },
-                vec![].as_slice(),
+                &PrefixMap::default().into_inner(),
             )),
             Err(StdError::generic_err(
                 "Unsupported object value: Literal { value: \"blank\", lang: Some(\"en\"), datatype: Some(Full(\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\")) }. Expected URI, BlankNode or Literal"

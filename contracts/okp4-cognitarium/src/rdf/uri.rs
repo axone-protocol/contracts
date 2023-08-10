@@ -37,6 +37,8 @@ pub fn expand_uri(curie: &str, prefixes: &HashMap<String, String>) -> StdResult<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::msg::Prefix;
+    use crate::rdf::PrefixMap;
 
     #[test]
     fn proper_explode_iri() {
@@ -79,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_expand_uri() {
-        let prefixes = vec![
+        let prefixes = &<PrefixMap>::from(vec![
             Prefix {
                 prefix: "ex".to_string(),
                 namespace: "http://example.com/".to_string(),
@@ -88,30 +90,31 @@ mod tests {
                 prefix: "rdf".to_string(),
                 namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
             },
-        ];
+        ])
+        .into_inner();
 
         assert_eq!(
-            expand_uri("ex:resource", &prefixes),
+            expand_uri("ex:resource", prefixes),
             Ok("http://example.com/resource".to_string())
         );
 
         assert_eq!(
-            expand_uri("ex:", &prefixes),
+            expand_uri("ex:", prefixes),
             Ok("http://example.com/".to_string())
         );
 
         assert_eq!(
-            expand_uri("unknown:resource", &prefixes),
+            expand_uri("unknown:resource", prefixes),
             Err(StdError::generic_err("Prefix not found: unknown"))
         );
 
         assert_eq!(
-            expand_uri("malformed_curie:", &prefixes),
+            expand_uri("malformed_curie:", prefixes),
             Err(StdError::generic_err("Prefix not found: malformed_curie"))
         );
 
         assert_eq!(
-            expand_uri("malformed_curie", &prefixes),
+            expand_uri("malformed_curie", prefixes),
             Err(StdError::generic_err("Malformed CURIE: malformed_curie"))
         );
     }

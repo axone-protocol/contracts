@@ -845,7 +845,7 @@ mod tests {
                         ))),
                     }))],
                 },
-                expected: StdError::generic_err("Malformed prefixed IRI: prefix not found").into(),
+                expected: StdError::generic_err("Prefix not found: foo").into(),
             },
             TC {
                 command: DeleteData {
@@ -1223,9 +1223,7 @@ mod tests {
                     }))],
                     limit: None,
                 },
-                Err(StdError::generic_err(
-                    "Malformed prefixed IRI: prefix not found",
-                )),
+                Err(StdError::generic_err("Prefix not found: invalid")),
             ),
             (
                 SelectQuery {

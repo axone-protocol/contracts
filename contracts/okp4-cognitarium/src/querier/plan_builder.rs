@@ -184,6 +184,8 @@ impl<'a> PlanBuilder<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::msg::Prefix;
+    use crate::rdf::PrefixMap;
     use crate::state::Namespace;
     use cosmwasm_std::testing::mock_dependencies;
 
@@ -243,14 +245,16 @@ mod test {
         let deps = mock_dependencies();
 
         for case in cases {
-            let builder = PlanBuilder::new(&deps.storage, &case.0);
+            let prefixes = &PrefixMap::from(case.0).into_inner();
+            let builder = PlanBuilder::new(&deps.storage, prefixes);
             assert_eq!(builder.skip, None);
             assert_eq!(builder.limit, None);
             assert_eq!(builder.variables, Vec::<String>::new());
-            assert_eq!(builder.prefixes, case.1);
+            assert_eq!(builder.prefixes, &case.1);
         }
 
-        let mut builder = PlanBuilder::new(&deps.storage, &[]);
+        let prefixes = &PrefixMap::default().into_inner();
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
         builder = builder.with_skip(20usize).with_limit(50usize);
         assert_eq!(builder.skip, Some(20usize));
         assert_eq!(builder.limit, Some(50usize));
@@ -285,15 +289,11 @@ mod test {
             ),
             (
                 IRI::Prefixed("resource".to_string()),
-                Err(StdError::generic_err(
-                    "Malformed prefixed IRI: no prefix delimiter found",
-                )),
+                Err(StdError::generic_err("Malformed CURIE: resource")),
             ),
             (
                 IRI::Prefixed("okp5:resource".to_string()),
-                Err(StdError::generic_err(
-                    "Malformed prefixed IRI: prefix not found",
-                )),
+                Err(StdError::generic_err("Prefix not found: okp5")),
             ),
         ];
 
@@ -321,19 +321,19 @@ mod test {
             )
             .unwrap();
 
-        let mut builder = PlanBuilder::new(
-            &deps.storage,
-            &[
-                Prefix {
-                    prefix: "rdf".to_string(),
-                    namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-                },
-                Prefix {
-                    prefix: "okp4".to_string(),
-                    namespace: "http://okp4.space/".to_string(),
-                },
-            ],
-        );
+        let prefixes = &<PrefixMap>::from(vec![
+            Prefix {
+                prefix: "rdf".to_string(),
+                namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+            },
+            Prefix {
+                prefix: "okp4".to_string(),
+                namespace: "http://okp4.space/".to_string(),
+            },
+        ])
+        .into_inner();
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+
         for case in cases {
             assert_eq!(builder.build_named_node(case.0), case.1);
         }
@@ -496,7 +496,9 @@ mod test {
                 },
             )
             .unwrap();
-        let mut builder = PlanBuilder::new(&deps.storage, &[]);
+        let prefixes = &PrefixMap::default().into_inner();
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+
         for case in cases {
             assert_eq!(builder.build_triple_pattern(&case.0), case.1);
         }
@@ -699,7 +701,8 @@ mod test {
             .unwrap();
 
         for case in cases {
-            let mut builder = PlanBuilder::new(&deps.storage, &[]);
+            let prefixes = &PrefixMap::default().into_inner();
+            let mut builder = PlanBuilder::new(&deps.storage, prefixes);
             if let Some(skip) = case.0 {
                 builder = builder.with_skip(skip);
             }

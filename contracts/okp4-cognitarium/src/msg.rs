@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 
 /// Instantiate message
 #[cw_serde]
+#[derive(Default)]
 pub struct InstantiateMsg {
     /// Limitations regarding store usage.
     #[serde(default)]

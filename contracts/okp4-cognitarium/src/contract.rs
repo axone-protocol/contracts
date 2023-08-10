@@ -393,9 +393,7 @@ mod tests {
                 deps.as_mut(),
                 mock_env(),
                 info.clone(),
-                InstantiateMsg {
-                    limits: StoreLimitsInput::default(),
-                },
+                InstantiateMsg::default(),
             )
             .unwrap();
 
@@ -488,9 +486,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             mock_info("owner", &[]),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -772,9 +768,7 @@ mod tests {
                 deps.as_mut(),
                 mock_env(),
                 info.clone(),
-                InstantiateMsg {
-                    limits: StoreLimitsInput::default(),
-                },
+                InstantiateMsg::default(),
             )
             .unwrap();
 
@@ -1126,9 +1120,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1382,9 +1374,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1454,9 +1444,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1521,9 +1509,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1588,9 +1574,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1659,9 +1643,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 

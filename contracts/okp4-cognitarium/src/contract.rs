@@ -54,7 +54,7 @@ pub mod execute {
         WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{Atom, TripleReader};
+    use crate::rdf::{Atom, PrefixMap, TripleReader};
     use crate::storer::StoreEngine;
     use std::collections::HashSet;
     use std::io::BufReader;
@@ -113,7 +113,8 @@ pub mod execute {
             .into_iter()
             .map(SelectItem::Variable)
             .collect();
-        let plan = PlanBuilder::new(deps.storage, &prefixes).build_plan(&r#where)?;
+        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
+        let plan = PlanBuilder::new(deps.storage, &prefix_map).build_plan(&r#where)?;
 
         let response = QueryEngine::new(deps.storage).select(plan, variables)?;
         let atoms: Vec<Atom> = if response.results.bindings.is_empty() {
@@ -126,7 +127,7 @@ pub mod execute {
                 .flat_map(|row| {
                     patterns
                         .iter()
-                        .map(|pattern| pattern.resolve(row, &prefixes))
+                        .map(|pattern| pattern.resolve(row, &prefix_map))
                 })
                 .collect::<Result<_, _>>()?
         };
@@ -161,12 +162,12 @@ pub mod query {
 
     use super::*;
     use crate::msg::{
-        ConstructQuery, DescribeQuery, DescribeResponse, Node, Prefix, SelectItem, SelectQuery,
+        ConstructQuery, DescribeQuery, DescribeResponse, Node, SelectItem, SelectQuery,
         SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value, VarOrNamedNode,
         VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{self, Atom, TripleWriter};
+    use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -186,7 +187,8 @@ pub mod query {
             Err(StdError::generic_err("Maximum query limit exceeded"))?;
         }
 
-        let plan = PlanBuilder::new(deps.storage, &query.prefixes)
+        let prefix_map = PrefixMap::from(query.prefixes).into_inner();
+        let plan = PlanBuilder::new(deps.storage, &prefix_map)
             .with_limit(count as usize)
             .build_plan(&query.r#where)?;
 
@@ -251,8 +253,8 @@ pub mod query {
                 ))],
             ),
         };
-
-        let plan = PlanBuilder::new(deps.storage, &query.prefixes)
+        let prefix_map = <PrefixMap>::from(query.prefixes).into_inner();
+        let plan = PlanBuilder::new(deps.storage, &prefix_map)
             .with_limit(store.limits.max_query_limit as usize)
             .build_plan(&r#where)?;
 
@@ -271,11 +273,10 @@ pub mod query {
         let mut writer = TripleWriter::new(&format, out);
 
         for r in &bindings {
-            let prefixes: &[Prefix] = &query.prefixes;
             let atom = &Atom {
-                subject: rdf::Subject::try_from((get_value(0, &vars, r)?, prefixes))?,
-                property: rdf::Property::try_from((get_value(1, &vars, r)?, prefixes))?,
-                value: rdf::Value::try_from((get_value(2, &vars, r)?, prefixes))?,
+                subject: rdf::Subject::try_from((get_value(0, &vars, r)?, &prefix_map))?,
+                property: rdf::Property::try_from((get_value(1, &vars, r)?, &prefix_map))?,
+                value: rdf::Value::try_from((get_value(2, &vars, r)?, &prefix_map))?,
             };
             let triple = atom.into();
 

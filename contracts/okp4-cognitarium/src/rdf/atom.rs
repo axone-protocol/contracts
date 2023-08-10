@@ -1,6 +1,6 @@
 use cosmwasm_std::StdError;
 use rio_api::model::{Literal, NamedNode, Triple};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
 use crate::msg;
@@ -93,7 +93,7 @@ impl TriplePattern {
     pub fn resolve(
         &self,
         bindings: &BTreeMap<String, msg::Value>,
-        prefixes: &[msg::Prefix],
+        prefixes: &HashMap<String, String>,
     ) -> Result<Atom, StdError> {
         let subject = match &self.subject {
             msg::VarOrNode::Variable(var) => {

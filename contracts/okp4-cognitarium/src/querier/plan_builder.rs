@@ -1,8 +1,9 @@
 use crate::msg::{
-    Literal, Node, Prefix, SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral,
-    WhereClause, WhereCondition, IRI,
+    Literal, Node, SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereClause,
+    WhereCondition, IRI,
 };
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
+use crate::rdf::expand_uri;
 use crate::state::{namespaces, Object, Predicate, Subject};
 use crate::{rdf, state};
 use cosmwasm_std::{StdError, StdResult, Storage};
@@ -10,17 +11,17 @@ use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
     storage: &'a dyn Storage,
-    prefixes: HashMap<String, String>,
+    prefixes: &'a HashMap<String, String>,
     variables: Vec<String>,
     limit: Option<usize>,
     skip: Option<usize>,
 }
 
 impl<'a> PlanBuilder<'a> {
-    pub fn new(storage: &'a dyn Storage, prefixes: &[Prefix]) -> Self {
+    pub fn new(storage: &'a dyn Storage, prefixes: &'a HashMap<String, String>) -> Self {
         Self {
             storage,
-            prefixes: Self::make_prefixes(prefixes),
+            prefixes,
             variables: Vec::new(),
             skip: None,
             limit: None,
@@ -156,29 +157,7 @@ impl<'a> PlanBuilder<'a> {
 
     fn build_named_node(&mut self, value: IRI) -> StdResult<state::Node> {
         match value {
-            IRI::Prefixed(prefixed) => prefixed
-                .rfind(':')
-                .map_or_else(
-                    || {
-                        Err(StdError::generic_err(
-                            "Malformed prefixed IRI: no prefix delimiter found",
-                        ))
-                    },
-                    Ok,
-                )
-                .and_then(|index| {
-                    self.prefixes
-                        .get(&prefixed[..index])
-                        .map(|resolved_prefix| [resolved_prefix, &prefixed[index + 1..]].join(""))
-                        .map_or_else(
-                            || {
-                                Err(StdError::generic_err(
-                                    "Malformed prefixed IRI: prefix not found",
-                                ))
-                            },
-                            Ok,
-                        )
-                }),
+            IRI::Prefixed(prefixed) => expand_uri(&prefixed, self.prefixes),
             IRI::Full(full) => Ok(full),
         }
         .and_then(|iri| rdf::explode_iri(&iri))
@@ -199,13 +178,6 @@ impl<'a> PlanBuilder<'a> {
 
         self.variables.push(v);
         self.variables.len() - 1
-    }
-
-    fn make_prefixes(as_list: &[Prefix]) -> HashMap<String, String> {
-        as_list.iter().fold(HashMap::new(), |mut map, prefix| {
-            map.insert(prefix.prefix.clone(), prefix.namespace.clone());
-            map
-        })
     }
 }
 

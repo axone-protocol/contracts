@@ -1,6 +1,5 @@
 use cosmwasm_std::{StdError, StdResult};
-
-use crate::msg::Prefix;
+use std::collections::HashMap;
 
 pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     let mut marker_index: Option<usize> = None;
@@ -21,19 +20,16 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
 }
 
 // Expand a compacted URI (CURIE - URI with prefix) to a full URI.
-pub fn expand_uri(curie: &str, prefixes: &[Prefix]) -> StdResult<String> {
+pub fn expand_uri(curie: &str, prefixes: &HashMap<String, String>) -> StdResult<String> {
     let idx = curie
         .rfind(':')
         .ok_or_else(|| StdError::generic_err(format!("Malformed CURIE: {curie}")))?;
 
     let prefix = curie[..idx].to_string();
+    let namespace = prefixes
+        .get(&prefix)
+        .ok_or_else(|| StdError::generic_err(format!("Prefix not found: {prefix}")))?;
     let suffix = curie[idx + 1..].to_string();
-
-    let namespace = &prefixes
-        .iter()
-        .find(|p| p.prefix == prefix)
-        .ok_or_else(|| StdError::generic_err(format!("Prefix not found: {prefix}")))?
-        .namespace;
 
     Ok(format!("{namespace}{suffix}"))
 }

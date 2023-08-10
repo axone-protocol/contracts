@@ -1,11 +1,14 @@
 use crate::msg;
 use crate::rdf::{expand_uri, Property, Subject, Value};
 use cosmwasm_std::StdError;
+use std::collections::HashMap;
 
-impl TryFrom<(msg::Value, &[msg::Prefix])> for Subject {
+impl TryFrom<(msg::Value, &HashMap<String, String>)> for Subject {
     type Error = StdError;
 
-    fn try_from((value, prefixes): (msg::Value, &[msg::Prefix])) -> Result<Self, Self::Error> {
+    fn try_from(
+        (value, prefixes): (msg::Value, &HashMap<String, String>),
+    ) -> Result<Self, Self::Error> {
         match value {
             msg::Value::URI {
                 value: msg::IRI::Full(uri),
@@ -21,10 +24,12 @@ impl TryFrom<(msg::Value, &[msg::Prefix])> for Subject {
     }
 }
 
-impl TryFrom<(msg::Value, &[msg::Prefix])> for Property {
+impl TryFrom<(msg::Value, &HashMap<String, String>)> for Property {
     type Error = StdError;
 
-    fn try_from((value, prefixes): (msg::Value, &[msg::Prefix])) -> Result<Self, Self::Error> {
+    fn try_from(
+        (value, prefixes): (msg::Value, &HashMap<String, String>),
+    ) -> Result<Self, Self::Error> {
         match value {
             msg::Value::URI {
                 value: msg::IRI::Full(uri),
@@ -39,10 +44,12 @@ impl TryFrom<(msg::Value, &[msg::Prefix])> for Property {
     }
 }
 
-impl TryFrom<(msg::Value, &[msg::Prefix])> for Value {
+impl TryFrom<(msg::Value, &HashMap<String, String>)> for Value {
     type Error = StdError;
 
-    fn try_from((value, prefixes): (msg::Value, &[msg::Prefix])) -> Result<Self, Self::Error> {
+    fn try_from(
+        (value, prefixes): (msg::Value, &HashMap<String, String>),
+    ) -> Result<Self, Self::Error> {
         match value {
             msg::Value::URI {
                 value: msg::IRI::Full(uri),
@@ -78,10 +85,12 @@ impl TryFrom<(msg::Value, &[msg::Prefix])> for Value {
     }
 }
 
-impl TryFrom<(msg::Node, &[msg::Prefix])> for Subject {
+impl TryFrom<(msg::Node, &HashMap<String, String>)> for Subject {
     type Error = StdError;
 
-    fn try_from((node, prefixes): (msg::Node, &[msg::Prefix])) -> Result<Self, Self::Error> {
+    fn try_from(
+        (node, prefixes): (msg::Node, &HashMap<String, String>),
+    ) -> Result<Self, Self::Error> {
         match node {
             msg::Node::BlankNode(id) => Ok(Subject::BlankNode(id)),
             msg::Node::NamedNode(msg::IRI::Full(uri)) => Ok(Subject::NamedNode(uri)),
@@ -92,10 +101,12 @@ impl TryFrom<(msg::Node, &[msg::Prefix])> for Subject {
     }
 }
 
-impl TryFrom<(msg::Node, &[msg::Prefix])> for Property {
+impl TryFrom<(msg::Node, &HashMap<String, String>)> for Property {
     type Error = StdError;
 
-    fn try_from((node, prefixes): (msg::Node, &[msg::Prefix])) -> Result<Self, Self::Error> {
+    fn try_from(
+        (node, prefixes): (msg::Node, &HashMap<String, String>),
+    ) -> Result<Self, Self::Error> {
         match node {
             msg::Node::NamedNode(msg::IRI::Full(uri)) => Ok(Property(uri)),
             msg::Node::NamedNode(msg::IRI::Prefixed(curie)) => {
@@ -108,10 +119,12 @@ impl TryFrom<(msg::Node, &[msg::Prefix])> for Property {
     }
 }
 
-impl TryFrom<(msg::Node, &[msg::Prefix])> for Value {
+impl TryFrom<(msg::Node, &HashMap<String, String>)> for Value {
     type Error = StdError;
 
-    fn try_from((node, prefixes): (msg::Node, &[msg::Prefix])) -> Result<Self, Self::Error> {
+    fn try_from(
+        (node, prefixes): (msg::Node, &HashMap<String, String>),
+    ) -> Result<Self, Self::Error> {
         match node {
             msg::Node::NamedNode(msg::IRI::Full(uri)) => Ok(Value::NamedNode(uri)),
             msg::Node::NamedNode(msg::IRI::Prefixed(curie)) => {
@@ -122,10 +135,12 @@ impl TryFrom<(msg::Node, &[msg::Prefix])> for Value {
     }
 }
 
-impl TryFrom<(msg::Literal, &[msg::Prefix])> for Value {
+impl TryFrom<(msg::Literal, &HashMap<String, String>)> for Value {
     type Error = StdError;
 
-    fn try_from((literal, prefixes): (msg::Literal, &[msg::Prefix])) -> Result<Self, Self::Error> {
+    fn try_from(
+        (literal, prefixes): (msg::Literal, &HashMap<String, String>),
+    ) -> Result<Self, Self::Error> {
         match literal {
             msg::Literal::Simple(value) => Ok(Value::LiteralSimple(value)),
             msg::Literal::LanguageTaggedString { value, language } => {
@@ -143,6 +158,25 @@ impl TryFrom<(msg::Literal, &[msg::Prefix])> for Value {
                 expand_uri(&prefix, prefixes)?,
             )),
         }
+    }
+}
+
+#[derive(Default)]
+pub struct PrefixMap(HashMap<String, String>);
+impl PrefixMap {
+    pub fn into_inner(self) -> HashMap<String, String> {
+        self.0
+    }
+}
+
+impl From<Vec<msg::Prefix>> for PrefixMap {
+    fn from(as_list: Vec<msg::Prefix>) -> Self {
+        PrefixMap(
+            as_list
+                .into_iter()
+                .map(|prefix| (prefix.prefix, prefix.namespace))
+                .collect(),
+        )
     }
 }
 

@@ -67,11 +67,12 @@ pub enum ExecuteMsg {
     DeleteData {
         /// The prefixes used in the operation.
         prefixes: Vec<Prefix>,
-        /// The items to delete.
+        /// Specifies the specific triple patterns to delete.
+        /// If nothing is provided, the patterns from the `where` clause are used for deletion.
         delete: Vec<TriplePattern>,
-        /// The WHERE clause to apply.
-        /// If not provided, all the RDF triples are considered.
-        r#where: Option<WhereClause>,
+        /// Defines the patterns that data (RDF triples) should match in order for it to be
+        /// considered for deletion.
+        r#where: WhereClause,
     },
 }
 
@@ -431,7 +432,7 @@ pub struct ConstructQuery {
 }
 
 /// # Prefix
-/// Represents a prefix in a [SelectQuery]. A prefix is a shortcut for a namespace used in the query.
+/// Represents a prefix, i.e. a shortcut for a namespace used in a query.
 #[cw_serde]
 pub struct Prefix {
     /// The prefix.

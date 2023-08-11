@@ -124,11 +124,11 @@ impl<'a> StoreEngine<'a> {
             namespaces().save(self.storage, entry.0.to_string(), entry.1)?;
         }
 
-        if self.store.stat.triple_count > self.initial_triple_count {
-            Ok(self.store.stat.triple_count - self.initial_triple_count)
-        } else {
-            Ok(self.initial_triple_count - self.store.stat.triple_count)
-        }
+        Ok(self
+            .store
+            .stat
+            .triple_count
+            .abs_diff(self.initial_triple_count))
     }
 
     fn resolve_namespace_key(&mut self, ns_str: String) -> StdResult<u128> {

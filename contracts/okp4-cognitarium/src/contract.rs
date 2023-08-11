@@ -59,7 +59,7 @@ pub mod execute {
     use std::collections::HashSet;
     use std::io::BufReader;
 
-    pub fn verify_owner(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
+    pub fn verify_owner(deps: &DepsMut<'_>, info: &MessageInfo) -> Result<(), ContractError> {
         if STORE.load(deps.storage)?.owner != info.sender {
             Err(ContractError::Unauthorized)
         } else {
@@ -86,7 +86,7 @@ pub mod execute {
     }
 
     pub fn delete(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: MessageInfo,
         prefixes: Vec<Prefix>,
         delete: Vec<TriplePattern>,
@@ -108,7 +108,7 @@ pub mod execute {
         };
         let variables = patterns
             .iter()
-            .flat_map(|tp| tp.variables())
+            .flat_map(TriplePattern::variables)
             .collect::<HashSet<_>>()
             .into_iter()
             .map(SelectItem::Variable)

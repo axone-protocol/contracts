@@ -6,3 +6,7 @@ target/
 *.lcov
 lcov.info
 contracts/*/schema/
+
+node_modules
+package-lock.json
+package.json

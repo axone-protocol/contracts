@@ -100,6 +100,18 @@ rm -rf ${DOCS_FOLDER}/*
 dependencies = ["docs-clean", "schema"]
 description = "Generate documentation"
 script = '''
+echo "🔎 Checking \`npx\` installed..."
+if ! which npx >/dev/null;
+then
+   echo "\n❌ npx could not be found"
+   echo "  Consider installing npx to generate documentation.\n"
+   echo "＞ \`npm install -g npx\`\n\n"
+   exit 1
+fi
+
+echo "🧹 Cleaning old documentation..."
+rm -rf $SCHEMA_FOLDER
+rm -rf $DOCS_FOLDER
 
 echo "📚 Generating documentation in ${DOCS_FOLDER} folder..."
 
@@ -107,7 +119,7 @@ mkdir -p $SCHEMA_FOLDER
 find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
     -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
 
-rm -rf $DOCS_FOLDER
+
 mkdir -p $DOCS_FOLDER
 
 for SCHEMA in $(ls $SCHEMA_FOLDER); do

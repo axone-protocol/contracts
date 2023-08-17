@@ -100,9 +100,6 @@ rm -rf ${DOCS_FOLDER}/*
 dependencies = ["docs-clean", "schema"]
 description = "Generate documentation"
 script = '''
-echo "📦 Installing fadroma-schema..."
-
-npm install --save-dev @fadroma/schema@1.0.5
 
 echo "📚 Generating documentation in ${DOCS_FOLDER} folder..."
 
@@ -116,7 +113,7 @@ mkdir -p $DOCS_FOLDER
 for SCHEMA in $(ls $SCHEMA_FOLDER); do
     awk "{sub(\"#/definitions\",\"./${SCHEMA}/#/definitions\")} {print}"  ${SCHEMA_FOLDER}/${SCHEMA} > ${SCHEMA_FOLDER}/tmp
 
-    npm exec fadroma-schema ${SCHEMA_FOLDER}/tmp > "${SCHEMA%.json}.md"
+    npx --yes @fadroma/schema@1.0.6 ${SCHEMA_FOLDER}/tmp > "${SCHEMA%.json}.md"
 
     mv "${SCHEMA%.json}.md" "docs/${SCHEMA%.json}.md"
 done

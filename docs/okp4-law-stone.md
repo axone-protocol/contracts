@@ -1,9 +1,3 @@
-# okp4-law-stone Schema
-
-```txt
-undefined
-```
-
 # Law Stone
 
 ## Overview
@@ -20,10 +14,112 @@ To be able to free the underlying resources (i.e. objects in `okp4-objectarium`)
 
 ➡️ Checkout the [examples](https://github.com/okp4/contracts/tree/main/contracts/okp4-law-stone/examples/) for usage information.
 
-| Abstract            | Extensible | Status         | Identifiable            | Custom Properties | Additional Properties | Access Restrictions | Defined In                                                               |
-| :------------------ | :--------- | :------------- | :---------------------- | :---------------- | :-------------------- | :------------------ | :----------------------------------------------------------------------- |
-| Can be instantiated | No         | Unknown status | Unknown identifiability | Forbidden         | Allowed               | none                | [okp4-law-stone.json](schema/okp4-law-stone.json "open original schema") |
+## InstantiateMsg
 
-## okp4-law-stone Type
+Instantiate message
 
-unknown ([okp4-law-stone](okp4-law-stone.md))
+|parameter|description|
+|----------|-----------|
+|`program`|*(Required.) * **[Binary](#binary)**. The Prolog program carrying law rules and facts.|
+|`storage_address`|*(Required.) * **string**. The `okp4-objectarium` contract address on which to store the law program.|
+
+## ExecuteMsg
+
+Execute messages
+
+### ExecuteMsg::BreakStone
+
+Break the stone making this contract unusable, by clearing all the related resources: - Unpin all the pinned objects on `okp4-objectarium` contracts, if any. - Forget the main program (i.e. or at least unpin it). Only the contract admin is authorized to break it, if any. If already broken, this is a no-op.
+
+|literal|
+|-------|
+|`"break_stone"`|
+
+## QueryMsg
+
+Query messages
+
+### QueryMsg::Ask
+
+If not broken, ask the logic module the provided query with the law program loaded.
+
+|parameter|description|
+|----------|-----------|
+|`ask`|*(Required.) * **object**. |
+|`ask.query`|*(Required.) * **string**. |
+
+### QueryMsg::Program
+
+If not broken, returns the law program location information.
+
+|literal|
+|-------|
+|`"program"`|
+
+## Responses
+
+### ask
+
+
+
+|property|description|
+|----------|-----------|
+|`answer`|**[Answer](#answer)\|null**. |
+|`gas_used`|*(Required.) * **integer**. |
+|`height`|*(Required.) * **integer**. |
+
+### program
+
+ProgramResponse carry elements to locate the program in a `okp4-objectarium` contract.
+
+|property|description|
+|----------|-----------|
+|`object_id`|*(Required.) * **string**. The program object id in the `okp4-objectarium` contract.|
+|`storage_address`|*(Required.) * **string**. The `okp4-objectarium` contract address on which the law program is stored.|
+
+## Definitions
+
+### Answer
+
+
+
+|property|description|
+|----------|-----------|
+|`has_more`|*(Required.) * **boolean**. |
+|`results`|*(Required.) * **Array&lt;[Result](#result)&gt;**. |
+|`success`|*(Required.) * **boolean**. |
+|`variables`|*(Required.) * **Array&lt;string&gt;**. |
+
+### Binary
+
+A string containing Base64-encoded data.
+
+|type|
+|----|
+|**string**.|
+
+### Result
+
+
+
+|property|description|
+|----------|-----------|
+|`substitutions`|*(Required.) * **Array&lt;[Substitution](#substitution)&gt;**. |
+
+### Substitution
+
+
+
+|property|description|
+|----------|-----------|
+|`term`|*(Required.) * **object**. |
+|`variable`|*(Required.) * **string**. |
+
+### Term
+
+
+
+|property|description|
+|----------|-----------|
+|`arguments`|*(Required.) * **Array&lt;[Term](#term)&gt;**. |
+|`name`|*(Required.) * **string**. |

@@ -100,7 +100,7 @@ Be sure you have the following tools installed:
 - [cargo-make](https://github.com/sagiegurari/cargo-make) v0.36.3 or higher
 - [Docker](https://docs.docker.com/get-docker/)
 - [jq](https://stedolan.github.io/jq/download/) v1.6 or higher
-- [jsonschema2md](https://github.com/adobe/jsonschema2md) v7.1.15 or higher
+- [npx](https://www.npmjs.com/package/npx) v8.19.2 or higher
 
 And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List_of_GNU_Core_Utilities_commands):
 

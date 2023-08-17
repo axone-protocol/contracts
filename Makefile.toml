@@ -100,14 +100,18 @@ rm -rf ${DOCS_FOLDER}/*
 dependencies = ["docs-clean", "schema"]
 description = "Generate documentation"
 script = '''
-echo "🔎 Checking jsonschema2md installed..."
-if ! which jsonschema2md >/dev/null;
+echo "🔎 Checking \`npx\` installed..."
+if ! which npx >/dev/null;
 then
-    echo "\n❌ jsonschema2md could not be found"
-    echo "  Consider installing jsonschema2md to generate documentation.\n"
-    echo "＞ \`npm install -g @adobe/jsonschema2md\`\n\n"
-    exit 1
+   echo "\n❌ npx could not be found"
+   echo "  Consider installing npx to generate documentation.\n"
+   echo "＞ \`npm install -g npx\`\n\n"
+   exit 1
 fi
+
+echo "🧹 Cleaning old documentation..."
+rm -rf $SCHEMA_FOLDER
+rm -rf $DOCS_FOLDER
 
 echo "📚 Generating documentation in ${DOCS_FOLDER} folder..."
 
@@ -115,17 +119,16 @@ mkdir -p $SCHEMA_FOLDER
 find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
     -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
 
+
+mkdir -p $DOCS_FOLDER
+
 for SCHEMA in $(ls $SCHEMA_FOLDER); do
     awk "{sub(\"#/definitions\",\"./${SCHEMA}/#/definitions\")} {print}"  ${SCHEMA_FOLDER}/${SCHEMA} > ${SCHEMA_FOLDER}/tmp
 
-    mv ${SCHEMA_FOLDER}/tmp ${SCHEMA_FOLDER}/${SCHEMA}
+    npx --yes @fadroma/schema@1.0.6 ${SCHEMA_FOLDER}/tmp > "${SCHEMA%.json}.md"
+
+    mv "${SCHEMA%.json}.md" "docs/${SCHEMA%.json}.md"
 done
-
-rm -rf $DOCS_FOLDER
-
-jsonschema2md -d schema -o $DOCS_FOLDER --schema-extension json --schema-out $DOCS_FOLDER/schema
-sed -i.tmp -E 's/([a-zA-Z]+)<([a-zA-Z0-9]+)>/<code>\1\&lt;\2\&gt;\<\/code>/g' $DOCS_FOLDER/*.md
-rm $DOCS_FOLDER/*.tmp
 
 rm -rf $SCHEMA_FOLDER
 

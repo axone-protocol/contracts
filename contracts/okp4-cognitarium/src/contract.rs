@@ -235,7 +235,7 @@ pub mod query {
         _query: ConstructQuery,
         _format: DataFormat,
     ) -> StdResult<SelectResponse> {
-        todo!()
+        Err(StdError::generic_err("Not implemented"))
     }
 }
 
@@ -245,12 +245,13 @@ mod tests {
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::InsertData;
     use crate::msg::Node::NamedNode;
+    use crate::msg::QueryMsg::Construct;
     use crate::msg::SimpleWhereCondition::TriplePattern;
     use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
-        DescribeQuery, DescribeResponse, Head, Literal, Prefix, Results, SelectItem, SelectQuery,
-        SelectResponse, StoreLimitsInput, StoreLimitsInputBuilder, StoreResponse, Value,
-        VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, DescribeQuery, DescribeResponse, Head, Literal, Prefix, Results,
+        SelectItem, SelectQuery, SelectResponse, StoreLimitsInput, StoreLimitsInputBuilder,
+        StoreResponse, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::state::{
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
@@ -1365,6 +1366,69 @@ mod tests {
                 String::from_utf8_lossy(&result.data),
                 String::from_utf8_lossy(&expected.data)
             );
+        }
+    }
+
+    #[test]
+    fn proper_construct() {
+        let id = "https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
+        let cases = vec![(
+            ConstructQuery {
+                prefixes: vec![],
+                construct: vec![msg::TriplePattern {
+                    subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                    predicate: VarOrNode::Variable("p".to_string()),
+                    object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                }],
+                r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                    subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                    predicate: VarOrNode::Node(NamedNode(Full(
+                        "https://ontology.okp4.space/core/hasTopic".to_string(),
+                    ))),
+                    object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                        "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                    ))),
+                }))],
+            },
+            0,
+        )];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+
+            let info = mock_info("owner", &[]);
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg {
+                    limits: StoreLimitsInput::default(),
+                },
+            )
+            .unwrap();
+
+            execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InsertData {
+                    format: Some(DataFormat::RDFXml),
+                    data: read_test_data("sample.rdf.xml"),
+                },
+            )
+            .unwrap();
+
+            let res = query(
+                deps.as_ref(),
+                mock_env(),
+                Construct {
+                    query: case.0,
+                    format: Some(DataFormat::default()),
+                },
+            );
+
+            assert!(res.is_err());
+            assert_eq!(res.err().unwrap(), StdError::generic_err("Not implemented"));
         }
     }
 }

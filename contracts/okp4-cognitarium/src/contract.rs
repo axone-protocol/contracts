@@ -80,7 +80,12 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Describe { query, format } => to_binary(&query::describe(
             deps,
             query,
-            format.unwrap_or(DataFormat::Turtle),
+            format.unwrap_or(DataFormat::default()),
+        )?),
+        QueryMsg::Construct { query, format } => to_binary(&query::construct(
+            deps,
+            query,
+            format.unwrap_or(DataFormat::default()),
         )?),
     }
 }
@@ -90,9 +95,9 @@ pub mod query {
 
     use super::*;
     use crate::msg::{
-        DescribeQuery, DescribeResponse, Node, Prefix, SelectItem, SelectQuery, SelectResponse,
-        SimpleWhereCondition, StoreResponse, TriplePattern, Value, VarOrNamedNode, VarOrNode,
-        VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, DescribeQuery, DescribeResponse, Node, Prefix, SelectItem, SelectQuery,
+        SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value, VarOrNamedNode,
+        VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::{self, Atom, TripleWriter};
@@ -223,6 +228,14 @@ pub mod query {
             format,
             data: Binary::from(out),
         })
+    }
+
+    pub fn construct(
+        _deps: Deps<'_>,
+        _query: ConstructQuery,
+        _format: DataFormat,
+    ) -> StdResult<SelectResponse> {
+        todo!()
     }
 }
 

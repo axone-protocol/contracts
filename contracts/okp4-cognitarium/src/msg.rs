@@ -107,12 +107,26 @@ pub enum QueryMsg {
         /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
         format: Option<DataFormat>,
     },
+
+    /// # Construct
+    ///
+    /// Returns the resources matching the criteria defined by the provided query as a set of RDF
+    /// triples serialized in the provided format.
+    #[returns(ConstructResponse)]
+    Construct {
+        /// The query to execute.
+        query: ConstructQuery,
+        /// The format in which the triples are serialized.
+        /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
+        format: Option<DataFormat>,
+    },
 }
 
 /// # DataFormat
 /// Represents the format in which the data are serialized, for example when returned by a query or
 /// when inserted in the store.
 #[cw_serde]
+#[derive(Default)]
 pub enum DataFormat {
     /// # RDF XML
     /// Output in [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) format.
@@ -121,6 +135,7 @@ pub enum DataFormat {
     /// # Turtle
     /// Output in [Turtle](https://www.w3.org/TR/turtle/) format.
     #[serde(rename = "turtle")]
+    #[default]
     Turtle,
     /// # N-Triples
     /// Output in [N-Triples](https://www.w3.org/TR/n-triples/) format.
@@ -308,6 +323,16 @@ pub struct DescribeResponse {
     pub data: Binary,
 }
 
+/// # ConstructResponse
+/// Represents the response of a [QueryMsg::Construct] query.
+#[cw_serde]
+pub struct ConstructResponse {
+    /// The format of the data.
+    pub format: DataFormat,
+    /// The data serialized in the specified format.
+    pub data: Binary,
+}
+
 /// # Head
 /// Represents the head of a [SelectResponse].
 #[cw_serde]
@@ -386,6 +411,21 @@ pub struct DescribeQuery {
     pub resource: VarOrNamedNode,
     /// The WHERE clause.
     /// This clause is used to specify the resource identifier to describe using variable bindings.
+    pub r#where: WhereClause,
+}
+
+/// # ConstructQuery
+/// Represents a CONSTRUCT query over the triple store, allowing to retrieve a set of triples
+/// serialized in a specific format.
+#[cw_serde]
+pub struct ConstructQuery {
+    /// The prefixes used in the query.
+    pub prefixes: Vec<Prefix>,
+    /// The triples to construct.
+    /// If nothing is provided, the patterns from the `where` clause are used for construction.
+    pub construct: Vec<TriplePattern>,
+    /// The WHERE clause.
+    /// This clause is used to specify the triples to construct using variable bindings.
     pub r#where: WhereClause,
 }
 

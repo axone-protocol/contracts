@@ -118,6 +118,14 @@ pub enum ExecuteMsg {
         /// This metadata should adhere to the format specified in the `format` field.
         metadata: Binary,
     },
+
+    /// # DetachMetadata
+    /// Remove a previously associated metadata (from a specific resource within the dataverse).
+    /// Once removed the metadata is no longer accessible.
+    DetachMetadata {
+        /// The RDF identifier of the metadata to be removed.
+        resource_identifier: URI,
+    },
 }
 
 /// # RDFFormat

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 /// Store a key increment used a unique key for referencing a namespace. Given the size of an `u128`
 /// there is no need to implement a garbage collector mechanism in case some namespaces are removed.
-pub const NAMESPACE_KEY_INCREMENT: Item<u128> = Item::new("namespace_key");
+pub const NAMESPACE_KEY_INCREMENT: Item<'_, u128> = Item::new("namespace_key");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Namespace {
@@ -23,7 +23,8 @@ pub struct NamespaceIndexes<'a> {
 
 impl IndexList<Namespace> for NamespaceIndexes<'_> {
     fn get_indexes(&self) -> Box<dyn Iterator<Item = &'_ dyn Index<Namespace>> + '_> {
-        Box::new(vec![&self.key as &dyn Index<Namespace>].into_iter())
+        let key: &dyn Index<Namespace> = &self.key;
+        Box::new(vec![key].into_iter())
     }
 }
 

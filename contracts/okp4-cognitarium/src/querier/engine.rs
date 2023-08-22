@@ -47,7 +47,7 @@ impl<'a> QueryEngine<'a> {
         })
     }
 
-    pub fn eval_plan(&'a self, plan: QueryPlan) -> ResolvedVariablesIterator {
+    pub fn eval_plan(&'a self, plan: QueryPlan) -> ResolvedVariablesIterator<'_> {
         return self.eval_node(plan.entrypoint)(ResolvedVariables::with_capacity(
             plan.variables.len(),
         ));

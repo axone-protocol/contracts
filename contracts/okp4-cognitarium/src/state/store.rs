@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 
-pub const STORE: Item<Store> = Item::new("store");
+pub const STORE: Item<'_, Store> = Item::new("store");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Store {

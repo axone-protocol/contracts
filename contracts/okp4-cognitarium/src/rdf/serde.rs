@@ -46,7 +46,7 @@ impl<R: BufRead> TripleReader<R> {
 
     pub fn read_all<E, UF>(&mut self, mut use_fn: UF) -> Result<(), E>
     where
-        UF: FnMut(Triple) -> Result<(), E>,
+        UF: FnMut(Triple<'_>) -> Result<(), E>,
         E: From<TurtleError> + From<RdfXmlError>,
     {
         match &mut self.parser {
@@ -54,7 +54,7 @@ impl<R: BufRead> TripleReader<R> {
             TriplesParserKind::Turtle(parser) => parser.parse_all(&mut use_fn),
             TriplesParserKind::RdfXml(parser) => parser.parse_all(&mut use_fn),
             TriplesParserKind::NQuads(parser) => {
-                parser.parse_all(&mut |quad: Quad| -> Result<(), E> {
+                parser.parse_all(&mut |quad: Quad<'_>| -> Result<(), E> {
                     use_fn(Triple {
                         subject: quad.subject,
                         predicate: quad.predicate,

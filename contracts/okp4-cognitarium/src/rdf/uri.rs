@@ -14,7 +14,7 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     }
 
     if let Some(index) = marker_index {
-        return Ok((iri[..index + 1].to_string(), iri[index + 1..].to_string()));
+        return Ok((iri[..=index].to_string(), iri[index + 1..].to_string()));
     }
 
     Err(StdError::generic_err("Couldn't extract IRI namespace"))

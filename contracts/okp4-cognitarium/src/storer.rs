@@ -43,17 +43,17 @@ impl<'a> TripleStorer<'a> {
         self.finish()
     }
 
-    pub fn store_triple(&mut self, t: model::Triple) -> Result<(), ContractError> {
+    pub fn store_triple(&mut self, t: model::Triple<'_>) -> Result<(), ContractError> {
         self.store.stat.triple_count += Uint128::one();
         if self.store.stat.triple_count > self.store.limits.max_triple_count {
-            Err(StoreError::TripleCount(self.store.limits.max_triple_count))?
+            Err(StoreError::TripleCount(self.store.limits.max_triple_count))?;
         }
         if self.store.stat.triple_count - self.initial_triple_count
             > self.store.limits.max_insert_data_triple_count
         {
             Err(StoreError::InsertDataTripleCount(
                 self.store.limits.max_insert_data_triple_count,
-            ))?
+            ))?;
         }
 
         let t_size = Uint128::from(Self::triple_size(t) as u128);
@@ -61,19 +61,19 @@ impl<'a> TripleStorer<'a> {
             Err(StoreError::TripleByteSize(
                 t_size,
                 self.store.limits.max_triple_byte_size,
-            ))?
+            ))?;
         }
 
         self.store.stat.byte_size += t_size;
         if self.store.stat.byte_size > self.store.limits.max_byte_size {
-            Err(StoreError::ByteSize(self.store.limits.max_byte_size))?
+            Err(StoreError::ByteSize(self.store.limits.max_byte_size))?;
         }
         if self.store.stat.byte_size - self.initial_byte_size
             > self.store.limits.max_insert_data_byte_size
         {
             Err(StoreError::InsertDataByteSize(
                 self.store.limits.max_insert_data_byte_size,
-            ))?
+            ))?;
         }
 
         let triple = self.rio_to_triple(t)?;
@@ -102,22 +102,19 @@ impl<'a> TripleStorer<'a> {
     }
 
     fn resolve_namespace_key(&mut self, ns_str: String) -> StdResult<u128> {
-        match self.ns_cache.get_mut(ns_str.as_str()) {
-            Some(namespace) => {
-                namespace.counter += 1;
-                Ok(namespace.key)
-            }
-            None => {
-                let mut namespace = match namespaces().load(self.storage, ns_str.clone()) {
-                    Err(StdError::NotFound { .. }) => Ok(self.allocate_namespace(ns_str.clone())),
-                    Ok(n) => Ok(n),
-                    Err(e) => Err(e),
-                }?;
+        if let Some(namespace) = self.ns_cache.get_mut(ns_str.as_str()) {
+            namespace.counter += 1;
+            Ok(namespace.key)
+        } else {
+            let mut namespace = match namespaces().load(self.storage, ns_str.clone()) {
+                Err(StdError::NotFound { .. }) => Ok(self.allocate_namespace(ns_str.clone())),
+                Ok(n) => Ok(n),
+                Err(e) => Err(e),
+            }?;
 
-                namespace.counter += 1;
-                self.ns_cache.insert(ns_str, namespace.clone());
-                Ok(namespace.key)
-            }
+            namespace.counter += 1;
+            self.ns_cache.insert(ns_str, namespace.clone());
+            Ok(namespace.key)
         }
     }
 
@@ -134,7 +131,7 @@ impl<'a> TripleStorer<'a> {
         ns
     }
 
-    fn rio_to_triple(&mut self, triple: model::Triple) -> StdResult<Triple> {
+    fn rio_to_triple(&mut self, triple: model::Triple<'_>) -> StdResult<Triple> {
         Ok(Triple {
             subject: self.rio_to_subject(triple.subject)?,
             predicate: self.rio_to_node(triple.predicate)?,
@@ -142,7 +139,7 @@ impl<'a> TripleStorer<'a> {
         })
     }
 
-    fn rio_to_subject(&mut self, subject: model::Subject) -> StdResult<Subject> {
+    fn rio_to_subject(&mut self, subject: model::Subject<'_>) -> StdResult<Subject> {
         match subject {
             model::Subject::NamedNode(node) => self.rio_to_node(node).map(Subject::Named),
             model::Subject::BlankNode(node) => Ok(Subject::Blank(node.id.to_string())),
@@ -150,7 +147,7 @@ impl<'a> TripleStorer<'a> {
         }
     }
 
-    fn rio_to_node(&mut self, node: model::NamedNode) -> StdResult<Node> {
+    fn rio_to_node(&mut self, node: model::NamedNode<'_>) -> StdResult<Node> {
         let (ns, v) = rdf::explode_iri(node.iri)?;
         Ok(Node {
             namespace: self.resolve_namespace_key(ns)?,
@@ -158,7 +155,7 @@ impl<'a> TripleStorer<'a> {
         })
     }
 
-    fn rio_to_object(&mut self, object: Term) -> StdResult<Object> {
+    fn rio_to_object(&mut self, object: Term<'_>) -> StdResult<Object> {
         match object {
             Term::BlankNode(node) => Ok(Object::Blank(node.id.to_string())),
             Term::NamedNode(node) => self.rio_to_node(node).map(Object::Named),
@@ -167,7 +164,7 @@ impl<'a> TripleStorer<'a> {
         }
     }
 
-    fn rio_to_literal(&mut self, literal: model::Literal) -> StdResult<Literal> {
+    fn rio_to_literal(&mut self, literal: model::Literal<'_>) -> StdResult<Literal> {
         match literal {
             model::Literal::Simple { value } => Ok(Literal::Simple {
                 value: value.to_string(),
@@ -185,13 +182,13 @@ impl<'a> TripleStorer<'a> {
         }
     }
 
-    fn triple_size(triple: model::Triple) -> usize {
+    fn triple_size(triple: model::Triple<'_>) -> usize {
         Self::subject_size(triple.subject)
             + Self::node_size(triple.predicate)
             + Self::object_size(triple.object)
     }
 
-    fn subject_size(subject: model::Subject) -> usize {
+    fn subject_size(subject: model::Subject<'_>) -> usize {
         match subject {
             model::Subject::NamedNode(n) => Self::node_size(n),
             model::Subject::BlankNode(n) => n.id.len(),
@@ -199,11 +196,11 @@ impl<'a> TripleStorer<'a> {
         }
     }
 
-    fn node_size(node: model::NamedNode) -> usize {
+    fn node_size(node: model::NamedNode<'_>) -> usize {
         node.iri.len()
     }
 
-    fn object_size(term: Term) -> usize {
+    fn object_size(term: Term<'_>) -> usize {
         match term {
             Term::NamedNode(n) => Self::node_size(n),
             Term::BlankNode(n) => n.id.len(),

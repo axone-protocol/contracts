@@ -16,7 +16,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -31,7 +31,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -52,13 +52,13 @@ pub mod execute {
     use std::io::BufReader;
 
     pub fn insert(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: MessageInfo,
         format: DataFormat,
         data: Binary,
     ) -> Result<Response, ContractError> {
         if STORE.load(deps.storage)?.owner != info.sender {
-            Err(ContractError::Unauthorized)?
+            Err(ContractError::Unauthorized)?;
         }
 
         let buf = BufReader::new(data.as_slice());
@@ -73,7 +73,7 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Store => to_binary(&query::store(deps)?),
         QueryMsg::Select { query } => to_binary(&query::select(deps, query)?),
@@ -97,22 +97,22 @@ pub mod query {
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::{self, Atom, TripleWriter};
 
-    pub fn store(deps: Deps) -> StdResult<StoreResponse> {
-        STORE.load(deps.storage).map(|s| s.into())
+    pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
+        STORE.load(deps.storage).map(Into::into)
     }
 
-    pub fn select(deps: Deps, query: SelectQuery) -> StdResult<SelectResponse> {
+    pub fn select(deps: Deps<'_>, query: SelectQuery) -> StdResult<SelectResponse> {
         let store = STORE.load(deps.storage)?;
 
         if query.select.len() > store.limits.max_query_variable_count as usize {
             Err(StdError::generic_err(
                 "Maximum query variable count exceeded",
-            ))?
+            ))?;
         }
 
         let count = query.limit.unwrap_or(store.limits.max_query_limit);
         if count > store.limits.max_query_limit {
-            Err(StdError::generic_err("Maximum query limit exceeded"))?
+            Err(StdError::generic_err("Maximum query limit exceeded"))?;
         }
 
         let plan = PlanBuilder::new(deps.storage, &query.prefixes)
@@ -123,7 +123,7 @@ pub mod query {
     }
 
     pub fn describe(
-        deps: Deps,
+        deps: Deps<'_>,
         query: DescribeQuery,
         format: DataFormat,
     ) -> StdResult<DescribeResponse> {
@@ -134,7 +134,7 @@ pub mod query {
         ) -> Result<Value, StdError> {
             vars.get(index)
                 .and_then(|it| bindings.get(it.as_str()))
-                .map(|it| it.to_owned())
+                .cloned()
                 .ok_or_else(|| {
                     StdError::generic_err(format!(
                         "Variable index {index} not found (this was unexpected)"
@@ -192,12 +192,7 @@ pub mod query {
         if let VarOrNamedNode::NamedNode(iri) = &query.resource {
             vars.insert(0, s.clone());
             for b in &mut bindings {
-                b.insert(
-                    s.clone(),
-                    Value::URI {
-                        value: iri.to_owned(),
-                    },
-                );
+                b.insert(s.clone(), Value::URI { value: iri.clone() });
             }
         }
 

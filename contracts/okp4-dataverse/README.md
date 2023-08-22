@@ -2,7 +2,9 @@
 
 ## Overview
 
-The `dataverse smart contract is responsible for overseeing and managing the dataverse. The Dataverse is an ever-expanding universe that encompasses a wide range of digital resources. These include datasets, data processing algorithms, storage resources, computational resources, identity management solutions, orchestration engines, oracles, and many other resources recorded on the blockchain. Within the Dataverse, there are defined Zones where specific rules apply. Digital resources recognized within these Zones are the ones compatible with these rules, considering the associated consents. Hence the smart contract also provides mechanisms to manage these Zones, ensuring the implementation of precise governance rules.
+The `dataverse` smart contract is responsible for overseeing and managing the dataverse. The Dataverse is an ever-expanding universe that encompasses a wide range of digital resources. These include datasets, data processing algorithms, storage resources, computational resources, identity management solutions, orchestration engines, oracles, and many other resources recorded on the blockchain. Within the Dataverse, there are defined Zones where specific rules apply. 
+
+Digital resources recognized within these Zones are the ones compatible with these rules, considering the associated consents. Hence the smart contract also provides mechanisms to manage these Zones, ensuring the implementation of precise governance rules.
 
 ## Instances
 

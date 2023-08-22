@@ -1,4 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Binary;
 #[allow(unused_imports)]
 use okp4_logic_bindings::AskResponse;
 
@@ -79,6 +80,7 @@ pub enum ExecuteMsg {
         registrar: URI,
     },
 
+    /// # FoundZone
     /// Founds a new zone within the dataverse.
     ///
     /// `Zone` is a conceptual framework that is established based on a set of rules, within which recognized digital Resources must conform, considering
@@ -98,7 +100,63 @@ pub enum ExecuteMsg {
 
         /// The URI of the entity responsible for registering and managing the zone.
         registrar: URI,
-    }
+    },
+
+    /// # AttachMetadata
+    /// Attaches metadata to a specified resource registered in the dataverse.
+    ///
+    /// Metadata provides additional information or details about a resource.
+    AttachMetadata {
+        /// The RDF identifier of the resource for which the metadata should be attached.
+        resource_identifier: URI,
+
+        /// RDF format in which the metadata is represented.
+        /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
+        format: Option<RDFFormat>,
+
+        /// The serialized metadata intended for attachment.
+        /// This metadata should adhere to the format specified in the `format` field.
+        metadata: Binary,
+    },
+}
+
+/// # RDFFormat
+/// `RDFFormat` represents the various serialization formats for RDF (Resource Description Framework) data.
+#[cw_serde]
+#[derive(Default)]
+pub enum RDFFormat {
+    /// # RDFXml
+    /// RDF/XML Format
+    ///
+    /// RDF/XML is a syntax to express RDF information in XML.
+    /// See the [official RDF/XML specification](https://www.w3.org/TR/rdf-syntax-grammar/).
+    #[serde(rename = "rdf_xml")]
+    RDFXml,
+
+    /// # Turtle
+    /// Turtle (Terse RDF Triple Language) Format
+    ///
+    /// Turtle is a textual format for representing RDF triples in a more compact and human-readable way compared to RDF/XML.
+    /// See the [official Turtle specification](https://www.w3.org/TR/turtle/).
+    #[serde(rename = "turtle")]
+    #[default]
+    Turtle,
+
+    /// # NTriples
+    /// N-Triples Format
+    ///
+    /// N-Triples is a line-based, plain text format for encoding an RDF graph. Each line corresponds to a single RDF triple.
+    /// See the [official N-Triples specification](https://www.w3.org/TR/n-triples/).
+    #[serde(rename = "n_triples")]
+    NTriples,
+
+    /// # NQuads
+    /// N-Quads Format
+    ///
+    /// N-Quads is an extension of N-Triples to support RDF datasets by adding an optional fourth element to represent the graph name.
+    /// See the [official N-Quads specification](https://www.w3.org/TR/n-quads/).
+    #[serde(rename = "n_quads")]
+    NQuads,
 }
 
 /// `QueryMsg` defines the set of possible queries that can be made to retrieve information about the dataverse.

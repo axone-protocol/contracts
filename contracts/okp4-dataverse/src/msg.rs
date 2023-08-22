@@ -11,18 +11,22 @@ pub struct InstantiateMsg {
 
 /// Execute messages
 #[cw_serde]
-pub enum ExecuteMsg {
-    Foo,
-}
+pub enum ExecuteMsg {}
 
 /// Query messages
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(FooResponse)]
-    Foo,
+    /// # Dataverse
+    /// Dataverse returns the information about the dataverse.
+    #[returns(DataverseResponse)]
+    Dataverse {},
 }
 
-/// # QueryResponses
+/// # DataverseResponse
+/// DataverseResponse is the response of the Dataverse query.
 #[cw_serde]
-pub struct FooResponse {}
+pub struct DataverseResponse {
+    /// The name of the dataverse.
+    pub name: String,
+}

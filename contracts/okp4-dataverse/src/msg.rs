@@ -36,6 +36,26 @@ pub enum ExecuteMsg {
         /// managing the service.
         registrar: URI,
     },
+
+    /// # RegisterDataset
+    /// RegisterDataset registers a dataset in the dataverse.
+    ///
+    /// `Dataset` represents the group of related data that is organized and presented in a specific format by the provider. This data can take many forms,
+    /// including csv files, images, videos, and more, as well as data sources such as databases and APIs.
+    ///
+    /// Each dataset is identified and located by its unique [URI](https://en.wikipedia.org/wiki/Uniform_Resource_Identifier) which defines the path and
+    /// mean to access the data through the provider service.
+    RegisterDataset {
+        /// Identifier of the dataset.
+        identifier: URI,
+
+        /// References the Service, already registered in the dataverse, that provides the dataset.
+        provided_by: URI,
+
+        /// References the individual, company, or organization that is responsible for registering and
+        /// managing the dataset.
+        registrar: URI,
+    },
 }
 
 /// Query messages

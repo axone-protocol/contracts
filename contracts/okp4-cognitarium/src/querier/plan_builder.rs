@@ -314,6 +314,12 @@ mod test {
                 }),
             ),
             (
+                IRI::Prefixed("resource".to_string()),
+                Err(StdError::generic_err(
+                    "Malformed prefixed IRI: no prefix delimiter found",
+                )),
+            ),
+            (
                 IRI::Prefixed("okp5:resource".to_string()),
                 Err(StdError::generic_err(
                     "Malformed prefixed IRI: prefix not found",

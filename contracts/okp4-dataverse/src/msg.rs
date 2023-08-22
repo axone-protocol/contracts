@@ -78,6 +78,27 @@ pub enum ExecuteMsg {
         /// The URI of the entity responsible for registering and managing the dataset.
         registrar: URI,
     },
+
+    /// Founds a new zone within the dataverse.
+    ///
+    /// `Zone` is a conceptual framework that is established based on a set of rules, within which recognized digital Resources must conform, considering
+    ///  associated consents.
+    ///
+    /// #### Example
+    ///
+    /// ```
+    /// ExecuteMsg::FoundZone {
+    ///     identifier: "urn:uuid:6d1aaad8-9411-4758-a9f9-ed43358af1fd",
+    ///     registrar: "did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655",
+    /// }
+    /// ```
+    FoundZone {
+        /// The unique URI that identifies the zone.
+        identifier: URI,
+
+        /// The URI of the entity responsible for registering and managing the zone.
+        registrar: URI,
+    }
 }
 
 /// `QueryMsg` defines the set of possible queries that can be made to retrieve information about the dataverse.

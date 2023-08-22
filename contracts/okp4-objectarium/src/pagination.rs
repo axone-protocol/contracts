@@ -39,7 +39,7 @@ pub trait QueryPage<'a, T, PK> {
         first: Option<u32>,
     ) -> StdResult<(Vec<T>, PageInfo)>
     where
-        I: FnOnce(Option<Bound<PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>;
+        I: FnOnce(Option<Bound<'_, PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>;
 }
 
 impl<'a, T, PK> QueryPage<'a, T, PK> for PaginationHandler<'a, T, PK>
@@ -54,12 +54,12 @@ where
         first: Option<u32>,
     ) -> StdResult<(Vec<T>, PageInfo)>
     where
-        I: FnOnce(Option<Bound<PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
+        I: FnOnce(Option<Bound<'_, PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
     {
         self.query_page_cursor_fn(
             iter_fn,
             |c| T::decode_cursor(c),
-            |i| i.encode_cursor(),
+            AsCursor::encode_cursor,
             after,
             first,
         )
@@ -90,7 +90,7 @@ where
         first: Option<u32>,
     ) -> StdResult<(Vec<T>, PageInfo)>
     where
-        I: FnOnce(Option<Bound<PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
+        I: FnOnce(Option<Bound<'_, PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
         CD: FnOnce(Cursor) -> StdResult<PK>,
         CE: FnOnce(&T) -> Cursor,
     {
@@ -109,10 +109,7 @@ where
             items.pop();
         }
 
-        let cursor = items
-            .last()
-            .map(cursor_enc_fn)
-            .unwrap_or_else(|| "".to_string());
+        let cursor = items.last().map_or_else(String::new, cursor_enc_fn);
 
         Ok((
             items,

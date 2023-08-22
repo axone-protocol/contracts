@@ -62,6 +62,7 @@ impl From<lzma_rs::error::Error> for CompressionError {
 
 /// pass_through returns the data as is.
 #[inline]
+#[allow(clippy::unnecessary_wraps)]
 fn passthrough(data: &[u8]) -> Result<Vec<u8>, CompressionError> {
     Ok(data.to_vec())
 }

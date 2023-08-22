@@ -36,7 +36,7 @@ pub mod execute {}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps<'_>, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    Err(StdError::generic_err("Not implemented").into())
+    Err(StdError::generic_err("Not implemented"))
 }
 
 pub mod query {}

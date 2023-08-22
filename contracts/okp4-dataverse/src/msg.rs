@@ -10,15 +10,6 @@ pub struct InstantiateMsg {
     pub name: String,
 }
 
-/// `DID` represents a Decentralized Identifier (DID), a globally unique identifier.
-/// see https://www.w3.org/TR/did-core/.
-type DID = String;
-
-/// `URI` represents a Uniform Resource Identifier (URI), a string of characters that provides a simple way
-/// to identify a resource.
-/// see https://en.wikipedia.org/wiki/Uniform_Resource_Identifier.
-type URI = String;
-
 /// `ExecuteMsg` defines the set of possible actions that can be performed on the dataverse.
 ///
 /// This enum provides variants for registering services, datasets, and other operations related to the dataverse.
@@ -35,22 +26,25 @@ pub enum ExecuteMsg {
     ///
     /// ```rust
     /// ExecuteMsg::RegisterService {
-    ///     identity: "did:key:z6MkrpCPVDHcsqi3aaqnemLC1aBTUwkfPwTyzc8sFWYwm1PA",
+    ///     subject:    "https://ontology.okp4.space/dataverse/service/metadata/52549532-887d-409b-a9c0-fb68f9e521d2",
+    ///     identity:   "did:key:z6MkrpCPVDHcsqi3aaqnemLC1aBTUwkfPwTyzc8sFWYwm1PA",
     ///     identifier: "urn:uuid:803cd033-2eed-4db7-847b-f46715a42a70",
-    ///     registrar: "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp",
+    ///     registrar:  "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp",
     /// }
     /// ```
     RegisterService {
+        /// The unique RDF identifier for the resource representation of the service within the dataverse.
+        subject: Iri,
         /// The decentralized identity of the service.
-        identity: DID,
+        identity: Did,
         /// The unique URI that identifies and locates the service.
         ///
         /// The URI serves a dual purpose:
         /// 1. **Identification**: It provides a unique identifier for the service, ensuring that each service can be distinctly recognized within the dataverse.
         /// 2. **Endpoint**: The URI acts as the access point or endpoint for the service. It specifies where the service can be accessed and how interactions with the service should be initiated.
-        identifier: URI,
+        identifier: Uri,
         /// The URI of the entity responsible for registering and managing the service.
-        registrar: URI,
+        registrar: Uri,
     },
 
     /// # RegisterDataset
@@ -64,20 +58,21 @@ pub enum ExecuteMsg {
     ///
     /// ```rust
     /// ExecuteMsg::RegisterDataset {
-    ///     identifier: "urn:uuid:3ed871dc-72d0-499f-b8c2-7edcad56a76e",
+    ///     subject:     "https://ontology.okp4.space/dataverse/dataset/96a562a9-5feb-4a41-bcf2-cc8610af9f78",
+    ///     identifier:  "urn:uuid:3ed871dc-72d0-499f-b8c2-7edcad56a76e",
     ///     provided_by: "urn:uuid:803cd033-2eed-4db7-847b-f46715a42a70",
-    ///     registrar: "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp",
+    ///     registrar:   "did:key:z6MkiTBz1ymuepAQ4HEHYSF1H8quG5GLVVQR3djdX3mDooWp",
     /// }
     /// ```
     RegisterDataset {
+        /// The unique RDF identifier for the resource representation of the dataset within the dataverse.
+        subject: Iri,
         /// The unique URI that identifies the dataset.
-        identifier: URI,
-
+        identifier: Uri,
         /// The URI of the service, already registered in the dataverse, that provides the dataset.
-        provided_by: URI,
-
+        provided_by: Uri,
         /// The URI of the entity responsible for registering and managing the dataset.
-        registrar: URI,
+        registrar: Uri,
     },
 
     /// # FoundZone
@@ -90,16 +85,18 @@ pub enum ExecuteMsg {
     ///
     /// ```
     /// ExecuteMsg::FoundZone {
+    ///     subject:    "https://ontology.okp4.space/dataverse/zone/ef347285-e52a-430d-9679-dcb76b962ce7",
     ///     identifier: "urn:uuid:6d1aaad8-9411-4758-a9f9-ed43358af1fd",
-    ///     registrar: "did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655",
+    ///     registrar:  "did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655",
     /// }
     /// ```
     FoundZone {
+        /// The unique RDF identifier for the resource representation of the zone within the dataverse.
+        subject: Iri,
         /// The unique URI that identifies the zone.
-        identifier: URI,
-
+        identifier: Uri,
         /// The URI of the entity responsible for registering and managing the zone.
-        registrar: URI,
+        registrar: Uri,
     },
 
     /// # AttachMetadata
@@ -108,12 +105,10 @@ pub enum ExecuteMsg {
     /// Metadata provides additional information or details about a resource.
     AttachMetadata {
         /// The RDF identifier of the resource for which the metadata should be attached.
-        resource_identifier: URI,
-
+        subject: Uri,
         /// RDF format in which the metadata is represented.
         /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
-        format: Option<RDFFormat>,
-
+        format: Option<RdfFormat>,
         /// The serialized metadata intended for attachment.
         /// This metadata should adhere to the format specified in the `format` field.
         metadata: Binary,
@@ -124,37 +119,35 @@ pub enum ExecuteMsg {
     /// Once removed the metadata is no longer accessible.
     DetachMetadata {
         /// The RDF identifier of the metadata to be removed.
-        resource_identifier: URI,
+        resource_identifier: Uri,
     },
 
     /// # ReviseMetadata
     /// Revises a previously associated metadata in order to update it or amend it.
     ReviseMetadata {
         /// The RDF identifier of the metadata to be revised.
-        resource_identifier: URI,
-
+        subject: Uri,
         /// RDF format in which the metadata is represented.
         /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
-        format: Option<RDFFormat>,
-
+        format: Option<RdfFormat>,
         /// The serialized metadata intended for revision.
         /// This metadata should adhere to the format specified in the `format` field.
         metadata: Binary,
     },
 }
 
-/// # RDFFormat
-/// `RDFFormat` represents the various serialization formats for RDF (Resource Description Framework) data.
+/// # RdfFormat
+/// `RdfFormat` represents the various serialization formats for RDF (Resource Description Framework) data.
 #[cw_serde]
 #[derive(Default)]
-pub enum RDFFormat {
-    /// # RDFXml
+pub enum RdfFormat {
+    /// # RdfXml
     /// RDF/XML Format
     ///
     /// RDF/XML is a syntax to express RDF information in XML.
     /// See the [official RDF/XML specification](https://www.w3.org/TR/rdf-syntax-grammar/).
     #[serde(rename = "rdf_xml")]
-    RDFXml,
+    RdfXml,
 
     /// # Turtle
     /// Turtle (Terse RDF Triple Language) Format
@@ -181,6 +174,21 @@ pub enum RDFFormat {
     #[serde(rename = "n_quads")]
     NQuads,
 }
+
+/// # Did
+/// `Did` represents a Decentralized Identifier (DID), a globally unique identifier.
+/// see https://www.w3.org/TR/did-core/.
+type Did = String;
+
+/// # Uri
+/// `Uri` represents a Uniform Resource Identifier (URI), a string of characters that provides a simple way
+/// to identify a resource.
+/// see https://en.wikipedia.org/wiki/Uniform_Resource_Identifier.
+type Uri = String;
+
+/// # Iri
+/// `Iri` (Internationalized Resource Identifier) represents a unique identifier used to identify resources.
+type Iri = String;
 
 /// `QueryMsg` defines the set of possible queries that can be made to retrieve information about the dataverse.
 ///

@@ -126,6 +126,21 @@ pub enum ExecuteMsg {
         /// The RDF identifier of the metadata to be removed.
         resource_identifier: URI,
     },
+
+    /// # ReviseMetadata
+    /// Revises a previously associated metadata in order to update it or amend it.
+    ReviseMetadata {
+        /// The RDF identifier of the metadata to be revised.
+        resource_identifier: URI,
+
+        /// RDF format in which the metadata is represented.
+        /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
+        format: Option<RDFFormat>,
+
+        /// The serialized metadata intended for revision.
+        /// This metadata should adhere to the format specified in the `format` field.
+        metadata: Binary,
+    },
 }
 
 /// # RDFFormat

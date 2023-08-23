@@ -113,7 +113,7 @@ impl<'a> PrimaryKey<'a> for Hash {
     type Suffix = Self;
     type SuperSuffix = Self;
 
-    fn key(&self) -> Vec<Key> {
+    fn key(&self) -> Vec<Key<'_>> {
         vec![Key::Ref(self.0.as_ref())]
     }
 }
@@ -137,7 +137,7 @@ impl KeyDeserialize for &Hash {
 }
 
 impl<'a> Prefixer<'a> for Hash {
-    fn prefix(&self) -> Vec<Key> {
+    fn prefix(&self) -> Vec<Key<'_>> {
         vec![Key::Ref(self.0.as_ref())]
     }
 }

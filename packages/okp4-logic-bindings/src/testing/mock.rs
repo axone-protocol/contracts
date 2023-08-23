@@ -45,6 +45,6 @@ impl LogicQuerier {
     where
         LH: Fn(&LogicCustomQuery) -> QuerierResult,
     {
-        self.handler = Box::from(handler)
+        self.handler = Box::from(handler);
     }
 }

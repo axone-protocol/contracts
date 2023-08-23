@@ -28,7 +28,7 @@ impl AsCursor<Hash> for Object {
     fn decode_cursor(cursor: Cursor) -> StdResult<Hash> {
         bs58::decode(cursor)
             .into_vec()
-            .map(|e| e.into())
+            .map(Into::into)
             .map_err(|err| StdError::parse_err("Cursor", err))
     }
 }

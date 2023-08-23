@@ -88,7 +88,7 @@ impl<'a> Parser<'a> {
         loop {
             match self.peek() {
                 Some(t) if [b'[', b'(', b'\'', b'"', b' '].contains(&t) => {
-                    Err(TermParseError::UnexpectedValueToken(char::from(t)))?
+                    Err(TermParseError::UnexpectedValueToken(char::from(t)))?;
                 }
                 Some(b) if ![b']', b')', b','].contains(&b) => {
                     self.eat_char();
@@ -178,8 +178,7 @@ impl<'a> Parser<'a> {
         }
 
         if values.len() == 1 {
-            let val = values.first().unwrap();
-            return Ok(val.clone());
+            return Ok(values[0].clone());
         }
 
         Ok(TermValue::Tuple(values))

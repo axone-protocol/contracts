@@ -15,7 +15,8 @@ pub struct TripleIndexes<'a> {
 
 impl IndexList<Triple> for TripleIndexes<'_> {
     fn get_indexes(&self) -> Box<dyn Iterator<Item = &'_ dyn Index<Triple>> + '_> {
-        Box::new(vec![&self.subject_and_predicate as &dyn Index<Triple>].into_iter())
+        let subject_and_predicate: &dyn Index<Triple> = &self.subject_and_predicate;
+        Box::new(vec![subject_and_predicate].into_iter())
     }
 }
 
@@ -133,7 +134,7 @@ impl Node {
     where
         F: FnMut(u128) -> StdResult<String>,
     {
-        ns_fn(self.namespace).map(|ns| vec![ns.as_str(), self.value.as_str()].join(""))
+        ns_fn(self.namespace).map(|ns| [ns.as_str(), self.value.as_str()].join(""))
     }
 }
 

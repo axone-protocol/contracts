@@ -77,16 +77,14 @@ impl QueryNode {
                 predicate.lookup_bound_variable(callback);
                 object.lookup_bound_variable(callback);
             }
-            QueryNode::CartesianProductJoin { left, right } => {
+            QueryNode::CartesianProductJoin { left, right }
+            | QueryNode::ForLoopJoin { left, right } => {
                 left.lookup_bound_variables(callback);
                 right.lookup_bound_variables(callback);
             }
-            QueryNode::ForLoopJoin { left, right } => {
-                left.lookup_bound_variables(callback);
-                right.lookup_bound_variables(callback);
+            QueryNode::Skip { child, .. } | QueryNode::Limit { child, .. } => {
+                child.lookup_bound_variables(callback);
             }
-            QueryNode::Skip { child, .. } => child.lookup_bound_variables(callback),
-            QueryNode::Limit { child, .. } => child.lookup_bound_variables(callback),
         }
     }
 }

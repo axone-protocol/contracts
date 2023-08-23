@@ -47,7 +47,7 @@ impl<'a> PlanBuilder<'a> {
             })
             .collect::<StdResult<Vec<QueryNode>>>()?;
 
-        self.build_from_bgp(bgp)
+        Self::build_from_bgp(bgp)
             .map(|mut node| {
                 if let Some(skip) = self.skip {
                     node = QueryNode::Skip {
@@ -72,7 +72,7 @@ impl<'a> PlanBuilder<'a> {
             })
     }
 
-    fn build_from_bgp(&self, bgp: Vec<QueryNode>) -> StdResult<QueryNode> {
+    fn build_from_bgp(bgp: Vec<QueryNode>) -> StdResult<QueryNode> {
         bgp.into_iter()
             .reduce(|left: QueryNode, right: QueryNode| -> QueryNode {
                 if left
@@ -91,8 +91,10 @@ impl<'a> PlanBuilder<'a> {
                     right: Box::new(right),
                 }
             })
-            .map(Ok)
-            .unwrap_or_else(|| Err(StdError::generic_err("Empty basic graph pattern")))
+            .map_or_else(
+                || Err(StdError::generic_err("Empty basic graph pattern")),
+                Ok,
+            )
     }
 
     fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {
@@ -156,24 +158,28 @@ impl<'a> PlanBuilder<'a> {
         match value {
             IRI::Prefixed(prefixed) => prefixed
                 .rfind(':')
-                .map(Ok)
-                .unwrap_or_else(|| {
-                    Err(StdError::generic_err(
-                        "Malformed prefixed IRI: no prefix delimiter found",
-                    ))
-                })
+                .map_or_else(
+                    || {
+                        Err(StdError::generic_err(
+                            "Malformed prefixed IRI: no prefix delimiter found",
+                        ))
+                    },
+                    Ok,
+                )
                 .and_then(|index| {
                     self.prefixes
                         .get(&prefixed.as_str()[..index])
                         .map(|resolved_prefix| {
                             [resolved_prefix, &prefixed.as_str()[index + 1..]].join("")
                         })
-                        .map(Ok)
-                        .unwrap_or_else(|| {
-                            Err(StdError::generic_err(
-                                "Malformed prefixed IRI: prefix not found",
-                            ))
-                        })
+                        .map_or_else(
+                            || {
+                                Err(StdError::generic_err(
+                                    "Malformed prefixed IRI: prefix not found",
+                                ))
+                            },
+                            Ok,
+                        )
                 }),
             IRI::Full(full) => Ok(full),
         }
@@ -306,6 +312,12 @@ mod test {
                     namespace: 1,
                     value: "resource".to_string(),
                 }),
+            ),
+            (
+                IRI::Prefixed("resource".to_string()),
+                Err(StdError::generic_err(
+                    "Malformed prefixed IRI: no prefix delimiter found",
+                )),
             ),
             (
                 IRI::Prefixed("okp5:resource".to_string()),

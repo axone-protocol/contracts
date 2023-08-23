@@ -153,7 +153,7 @@ pub mod query {
         let program_uri = object_ref_to_uri(program)?.to_string();
 
         Ok(LogicCustomQuery::Ask {
-            program: "".to_string(),
+            program: String::new(),
             query: ["consult('", program_uri.as_str(), "'), ", query.as_str()].join(""),
         })
     }

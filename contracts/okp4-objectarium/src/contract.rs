@@ -16,7 +16,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -37,7 +37,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -65,7 +65,7 @@ pub mod execute {
     use std::any::type_name;
 
     pub fn store_object(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: MessageInfo,
         data: Binary,
         pin: bool,
@@ -75,7 +75,7 @@ pub mod execute {
         let bucket = BUCKET.load(deps.storage)?;
         let compressions = &bucket.config.accepted_compression_algorithms;
         let compression: CompressionAlgorithm = compression_algorithm
-            .map(|a| a.into())
+            .map(Into::into)
             .or_else(|| compressions.first().cloned())
             .unwrap_or(CompressionAlgorithm::Passthrough);
 
@@ -109,7 +109,7 @@ pub mod execute {
                     .config
                     .accepted_compression_algorithms
                     .into_iter()
-                    .map(|a| a.into())
+                    .map(Into::into)
                     .collect(),
             )
             .into());
@@ -123,7 +123,7 @@ pub mod execute {
         }
         let compressed_data = compression.compress(&data.0)?;
 
-        data_path.save(deps.storage, &compressed_data.to_vec())?;
+        data_path.save(deps.storage, &compressed_data)?;
 
         // store object
         let compressed_size = (compressed_data.len() as u128).into();
@@ -165,7 +165,7 @@ pub mod execute {
     }
 
     pub fn pin_object(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
@@ -210,7 +210,7 @@ pub mod execute {
     }
 
     pub fn unpin_object(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
@@ -235,7 +235,7 @@ pub mod execute {
     }
 
     pub fn forget_object(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
@@ -271,7 +271,7 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     Ok(match msg {
         QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
         QueryMsg::Object { id } => to_binary(&query::object(deps, id)?),
@@ -297,7 +297,7 @@ pub mod query {
     use crate::pagination::{PaginationHandler, QueryPage};
     use cosmwasm_std::{Addr, Order};
 
-    pub fn bucket(deps: Deps) -> Result<BucketResponse, ContractError> {
+    pub fn bucket(deps: Deps<'_>) -> Result<BucketResponse, ContractError> {
         let bucket = BUCKET.load(deps.storage)?;
 
         Ok(BucketResponse {
@@ -308,13 +308,13 @@ pub mod query {
         })
     }
 
-    pub fn object(deps: Deps, object_id: ObjectId) -> Result<ObjectResponse, ContractError> {
+    pub fn object(deps: Deps<'_>, object_id: ObjectId) -> Result<ObjectResponse, ContractError> {
         let id: Hash = object_id.try_into()?;
         let object = objects().load(deps.storage, id)?;
         Ok((&object).into())
     }
 
-    pub fn data(deps: Deps, object_id: ObjectId) -> Result<Binary, ContractError> {
+    pub fn data(deps: Deps<'_>, object_id: ObjectId) -> Result<Binary, ContractError> {
         let id: Hash = object_id.try_into()?;
         let compression = objects().load(deps.storage, id.clone())?.compression;
         let data = DATA.load(deps.storage, id)?;
@@ -323,7 +323,7 @@ pub mod query {
     }
 
     pub fn fetch_objects(
-        deps: Deps,
+        deps: Deps<'_>,
         address: Option<String>,
         after: Option<Cursor>,
         first: Option<u32>,
@@ -333,7 +333,7 @@ pub mod query {
             _ => None,
         };
 
-        let handler: PaginationHandler<Object, Hash> =
+        let handler: PaginationHandler<'_, Object, Hash> =
             PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
 
         let page: (Vec<Object>, PageInfo) = handler.query_page(
@@ -351,13 +351,13 @@ pub mod query {
         )?;
 
         Ok(ObjectsResponse {
-            data: page.0.iter().map(|object| object.into()).collect(),
+            data: page.0.iter().map(Into::into).collect(),
             page_info: page.1,
         })
     }
 
     pub fn object_pins(
-        deps: Deps,
+        deps: Deps<'_>,
         object_id: ObjectId,
         after: Option<Cursor>,
         first: Option<u32>,
@@ -365,7 +365,7 @@ pub mod query {
         let id: Hash = object_id.try_into()?;
         objects().load(deps.storage, id.clone())?;
 
-        let handler: PaginationHandler<Pin, (Hash, Addr)> =
+        let handler: PaginationHandler<'_, Pin, (Hash, Addr)> =
             PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
 
         let page: (Vec<Pin>, PageInfo) = handler.query_page_cursor_fn(

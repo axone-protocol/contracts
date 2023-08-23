@@ -9,7 +9,7 @@ use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub const DATA: Map<Hash, Vec<u8>> = Map::new("DATA");
+pub const DATA: Map<'_, Hash, Vec<u8>> = Map::new("DATA");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Bucket {
@@ -254,7 +254,7 @@ impl TryFrom<PaginationConfig> for Pagination {
     }
 }
 
-pub const BUCKET: Item<Bucket> = Item::new("bucket");
+pub const BUCKET: Item<'_, Bucket> = Item::new("bucket");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Object {
@@ -291,7 +291,8 @@ pub struct ObjectIndexes<'a> {
 
 impl IndexList<Object> for ObjectIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Object>> + '_> {
-        Box::new(vec![&self.owner as &dyn Index<Object>].into_iter())
+        let owner: &dyn Index<Object> = &self.owner;
+        Box::new(vec![owner].into_iter())
     }
 }
 
@@ -318,7 +319,8 @@ pub struct PinIndexes<'a> {
 
 impl IndexList<Pin> for PinIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Pin>> + '_> {
-        Box::new(vec![&self.object as &dyn Index<Pin>].into_iter())
+        let object: &dyn Index<Pin> = &self.object;
+        Box::new(vec![object].into_iter())
     }
 }
 

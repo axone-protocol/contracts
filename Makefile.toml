@@ -11,17 +11,7 @@ dependencies = ["install-rustfmt"]
 description = "Check format of sources files."
 
 [tasks.lint-rust]
-args = [
-  "clippy",
-  "--workspace",
-  "--locked",
-  "--all-targets",
-  "--",
-  "-D",
-  "clippy::all",
-  "-D",
-  "warnings",
-]
+args = ["cranky"]
 command = "cargo"
 dependencies = ["install-clippy"]
 description = "Check lint of all sources files."
@@ -512,6 +502,10 @@ install_crate = { rustup_component_name = "llvm-tools-preview" }
 
 [tasks.install-clippy]
 install_crate = { rustup_component_name = "clippy" }
+
+[tasks.intall-cranky]
+dependencies = ["install-clippy"]
+install_crate = { crate_name = "cranky" }
 
 [tasks.install-rustfmt]
 install_crate = { rustup_component_name = "rustfmt" }

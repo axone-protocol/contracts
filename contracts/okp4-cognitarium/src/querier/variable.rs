@@ -31,12 +31,12 @@ impl ResolvedVariable {
             ResolvedVariable::Predicate(p) => p.clone(),
             ResolvedVariable::Object(o) => match o {
                 Object::Named(node) => node.clone(),
-                Object::Blank(_) => None?,
-                Object::Literal(_) => None?,
+                Object::Blank(_) | Object::Literal(_) => None?,
             },
         })
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     pub fn as_object(&self) -> Option<Object> {
         Some(match self {
             ResolvedVariable::Subject(s) => match s {
@@ -132,7 +132,7 @@ impl ResolvedVariables {
     }
 
     pub fn set(&mut self, index: usize, var: ResolvedVariable) {
-        self.variables[index] = Some(var)
+        self.variables[index] = Some(var);
     }
 
     pub fn get(&self, index: usize) -> &Option<ResolvedVariable> {

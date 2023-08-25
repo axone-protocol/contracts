@@ -83,7 +83,26 @@ Returns a description of the resource identified by the provided IRI as a set of
 |`describe.format`|**[DataFormat](#dataformat)\|null**. The format in which the triples are serialized. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.|
 |`describe.query`|*(Required.) * **[DescribeQuery](#describequery)**. The query to execute.|
 
+### QueryMsg::Construct
+
+Returns the resources matching the criteria defined by the provided query as a set of RDF triples serialized in the provided format.
+
+|parameter|description|
+|----------|-----------|
+|`construct`|*(Required.) * **object**. |
+|`construct.format`|**[DataFormat](#dataformat)\|null**. The format in which the triples are serialized. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.|
+|`construct.query`|*(Required.) * **[ConstructQuery](#constructquery)**. The query to execute.|
+
 ## Responses
+
+### construct
+
+Represents the response of a [QueryMsg::Construct] query.
+
+|property|description|
+|----------|-----------|
+|`data`|*(Required.) * **[Binary](#binary)**. The data serialized in the specified format.|
+|`format`|*(Required.) * **[DataFormat](#dataformat)**. The format of the data.|
 
 ### describe
 
@@ -142,6 +161,16 @@ An RDF [blank node](https://www.w3.org/TR/rdf11-concepts/#dfn-blank-node).
 |property|description|
 |----------|-----------|
 |`blank_node`|*(Required.) * **string**. |
+
+### ConstructQuery
+
+Represents a CONSTRUCT query over the triple store, allowing to retrieve a set of triples serialized in a specific format.
+
+|property|description|
+|----------|-----------|
+|`construct`|*(Required.) * **Array&lt;[TriplePattern](#triplepattern)&gt;**. The triples to construct. If nothing is provided, the patterns from the `where` clause are used for construction.|
+|`prefixes`|*(Required.) * **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.|
+|`where`|*(Required.) * **Array&lt;[WhereCondition](#wherecondition)&gt;**. The WHERE clause. This clause is used to specify the triples to construct using variable bindings.|
 
 ### DataFormat
 

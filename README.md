@@ -230,11 +230,36 @@ cargo make chain-clean
 ⚠️ Please be cautious when running this command as it will completely clean the chain's home directory and the action is
 irreversible.
 
-## Documentation
+## Develop
+
+### Smart Contracts scaffolding
+
+When developing a new Smart Contract, you can use the scaffolding to generate the Smart Contract's code.
+
+#### Pre-requisites
+
+Be sure you have the following tools installed:
+
+- [ffizer](https://ffizer.github.io/ffizer/book/#install) v2.10.3 or higher
+
+#### Generate the scaffolding
+
+To generate the scaffolding, just run:
+
+```sh
+cargo make scaffold-smart-contract
+```
+
+Then, follow the instructions.
+
+### Documentation
+
+The documentation of the smart contracts must be committed to the repository. The documentation is generated from the
+smart contracts' schema.
 
 To generate the documentation follow the steps below.
 
-### Tools installation
+#### Pre-requisites
 
 Be sure you have the following tools installed:
 
@@ -246,7 +271,7 @@ Then, install the dependencies:
 yarn global add @adobe/jsonschema2md@7.1.5
 ```
 
-### Generate the documentation
+#### Generate the documentation
 
 To generate the documentation, just run:
 
@@ -257,7 +282,7 @@ cargo make docs-generate
 
 You'll find the generated documentation under the `docs` folder.
 
-### Commit the documentation
+#### Commit the documentation
 
 When developing a new contract, you should commit the generated documentation to the repository. For this, gerenate the
 documentation and commit the changes:

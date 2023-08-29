@@ -34,7 +34,6 @@ cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
-itertools = "0.11.0"
 okp4-logic-bindings.workspace = true
 okp4-objectarium-client.workspace = true
 okp4-objectarium.workspace = true
@@ -44,7 +43,6 @@ thiserror.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true
-url = "2.4.0"
 
 [features]
 # for more explicit tests, cargo test --features=backtraces

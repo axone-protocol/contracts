@@ -9,9 +9,9 @@ pub struct InstantiateMsg {
     /// The name of the account. It can be used to provide a human-readable name for the account.
     /// This is an optional field. If not provided, the account will be left unnamed.
     pub name: Option<String>,
-    /// The list of denominations that are accepted by the account.
-    /// If not provided, the account will accept all denominations.
-    pub accepted_denoms: Option<Vec<String>>,
+    /// Specifies the limits for the account.
+    #[serde(default)]
+    pub limits: Limits,
 }
 
 /// `PreAuthorizationId` defines the type for a pre-authorization identifier.
@@ -205,6 +205,37 @@ pub enum ExecuteMsg {
     },
 }
 
+/// Defines the set of possible permissions that can be granted to a provider.
+#[cw_serde]
+#[derive(Default)]
+pub struct WhitelistBlacklistAddress {
+    /// A list of whitelisted addresses.
+    /// If not provided, any address is allowed.
+    #[serde(default)]
+    pub whitelisted_addresses: Option<Vec<String>>,
+    /// A list of blacklisted addresses. Blacklisted addresses always take precedence over whitelisted addresses.
+    /// If not provided, no addresses are blacklisted.
+    #[serde(default)]
+    pub blacklisted_addresses: Option<Vec<String>>,
+}
+
+/// Represents the possible limits that can be configured for an account.
+#[cw_serde]
+#[derive(Default)]
+pub struct Limits {
+    /// The list of denominations that are accepted by the account.
+    /// If not provided, the account will accept all denominations.
+    #[serde(default)]
+    pub accepted_denoms: Option<Vec<String>>,
+    /// Specifies the senders that are allowed to deposit funds into the account.
+    #[serde(default)]
+    pub allowed_deposit_senders: WhitelistBlacklistAddress,
+    /// Specifies the addresses that are allowed to be the recipient for a withdrawal.
+    /// If not provided, any address is allowed.
+    #[serde(default)]
+    pub allowed_withdraw_recipients: WhitelistBlacklistAddress,
+}
+
 /// Represents the filters that can be applied when querying pre-authorization requests.
 #[cw_serde]
 pub enum WhereFilter {
@@ -229,6 +260,11 @@ pub enum QueryMsg {
     /// Query the balance of the account.
     #[returns(BalanceResponse)]
     Balance {},
+
+    /// # Limits
+    /// Query the limits of the account.
+    #[returns(LimitsResponse)]
+    Limits {},
 
     /// # PreAuthorization
     /// Query the details of a pre-authorization request.
@@ -398,6 +434,9 @@ pub struct AccountResponse {
     /// The current status of the account.
     pub status: AccountStatus,
 }
+
+/// Represents the limits response.
+type LimitsResponse = Limits;
 
 /// Represents a balance response.
 #[cw_serde]

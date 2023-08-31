@@ -10,13 +10,6 @@ The primary objective of this smart contract is to provide a robust pre-authoriz
 
 In scenarios where a provider offers services on a deferred payment basis, there's a need for a mechanism that not only verifies but also ensures that the client has adequate funds to fulfill the payment obligation. This smart contract addresses this by "reserving" a specified amount of tokens in the client's account. These reserved funds are deducted from the available balance but remain in the client's account until the provider initiates the final settlement. At that point, the reserved tokens are transferred to the designated recipient, which could be the provider's account or an optional intermediary account, such as an escrow service.
 
-## Features
-
-The smart contract offers two distinct categories of features:
-
-- [Smart Contract Account (SCA)](https://blog.ambire.com/eoas-vs-smart-contract-accounts/) Capabilities: The smart contract is under the ownership and control of the holder. Similar to an Externally Owned Account (EOA), the holder has the ability to deposit, withdraw, and transfer funds to and from this account.
-- Pre-Authorization Features: A provider has the option to pre-authorize a specific amount of tokens along with designating a recipient account for a predetermined duration, after which the pre-authorization will expire. This designated recipient account can serve as an intermediary for holding the pre-authorized funds, such as an escrow service.
-
 ## Terminology
 
 ### Funds
@@ -35,7 +28,9 @@ Funds present in the Holder's smart contract account that aren't tied to any pre
 
 A procedure set in motion by the Provider to confirm the financial capability of the Client's account. This entails momentarily reserving a defined sum of funds as an assurance for service payment. These reserved funds stay in this condition until the service transaction finalizes, the pre-authorization concludes, is revoked or expires.
 
-## Stakeholders
+## Overview
+
+### Stakeholders
 
 ``` plantuml
 @startuml
@@ -61,22 +56,94 @@ System     -- "*" Provider
 @enduml
 ```
 
-### Sender
+#### Sender
 
 The entity that initiates transactions to transfer funds to the Smart Contract.
 
-### Receiver
+#### Receiver
 
 The entity that receives funds from the Smart Contract.
 
-### Holder
+#### Holder
 
 The entity that possesses the Smart Contract and controls the funds stored within it.
 
-### Client
+#### Client
 
 The Holder who aims to acquire a service, securing a specific token quantity as a pre-approval for the Provider.
 
-### Provider
+#### Provider
 
 An entity that offers a service and seeks a token pre-authorization before delivering the said service.
+
+### Features
+
+The smart contract offers two distinct categories of features.
+
+#### [Smart Contract Account (SCA)](https://blog.ambire.com/eoas-vs-smart-contract-accounts/) Capabilities
+
+The smart contract is under the ownership and control of the holder. Similar to an Externally Owned Account (EOA), the holder has the ability to deposit, withdraw, and transfer funds to and from this account.
+
+``` plantuml
+@startuml
+
+left to right direction
+
+:Sender:
+:Holder: as Holder1
+:Holder: as Holder2
+:Reciever:
+
+
+:Sender: <|- :Holder1:
+:Reciever: <|- :Holder2:
+
+rectangle "\nokp4-pay-secure" <<smart contract>> as System {
+  usecase "Deposit" as UC1
+  usecase "Withdraw" as UC2
+  usecase "CloseAccount" as UC3
+}
+
+Sender -- UC1
+UC1 -- Reciever
+Holder1 -- UC2
+UC2 -- Reciever
+Holder1 -- UC3
+
+@enduml
+```
+
+#### Pre-authorization Capabilities
+
+A provider has the option to pre-authorize a specific amount of tokens along with designating a recipient account for a predetermined duration, after which the pre-authorization will expire. This designated recipient account can serve as an intermediary for holding the pre-authorized funds, such as an escrow service.
+
+``` plantuml
+@startuml
+
+left to right direction
+
+:Client:
+:Provider:
+:Sender:
+:Escrow:
+
+:Sender: <|- :Escrow:
+:Holder: <|- :Client:
+
+rectangle "\nokp4-pay-secure" <<smart contract>> as System {
+  usecase "Initiate" as UC1
+  usecase "Approve" as UC2
+  usecase "Decline" as UC3
+  usecase "Cancel" as UC4
+  usecase "Finalize" as UC5
+}
+
+Provider -- UC1
+Client -- UC2
+Client -- UC3
+Provider -- UC4
+Provider -- UC5
+UC5 -- Sender
+
+@enduml
+```

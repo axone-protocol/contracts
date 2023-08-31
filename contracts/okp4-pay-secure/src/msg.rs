@@ -9,9 +9,12 @@ pub struct InstantiateMsg {
     /// The name of the account. It can be used to provide a human-readable name for the account.
     /// This is an optional field. If not provided, the account will be left unnamed.
     pub name: Option<String>,
-    /// Specifies the limits for the account.
+    /// Specifies the limits configured for the account.
     #[serde(default)]
-    pub limits: Limits,
+    pub account_limits: AccountLimitsConfig,
+    /// Specifies the limits configured for the pre-authorization.
+    #[serde(default)]
+    pub pre_authorization_limits: PreAuthorizationLimitsConfig,
 }
 
 /// `PreAuthorizationId` defines the type for a pre-authorization identifier.
@@ -222,18 +225,38 @@ pub struct WhitelistBlacklistAddress {
 /// Represents the possible limits that can be configured for an account.
 #[cw_serde]
 #[derive(Default)]
-pub struct Limits {
-    /// The list of denominations that are accepted by the account.
-    /// If not provided, the account will accept all denominations.
+pub struct AccountLimitsConfig {
+    /// Specifies the list of token denominations that the account will accept.
+    /// If not provided, the account will accept all known token denominations.
     #[serde(default)]
     pub accepted_denoms: Option<Vec<String>>,
-    /// Specifies the senders that are allowed to deposit funds into the account.
+    /// Specifies the addresses that are permitted to deposit funds into the account.
+    /// If not provided, deposits from any address will be accepted.
     #[serde(default)]
     pub allowed_deposit_senders: WhitelistBlacklistAddress,
-    /// Specifies the addresses that are allowed to be the recipient for a withdrawal.
-    /// If not provided, any address is allowed.
+    /// Specifies the addresses that are permitted to receive withdrawals from the account.
+    /// If not provided, withdrawals to any address will be allowed.
     #[serde(default)]
     pub allowed_withdraw_recipients: WhitelistBlacklistAddress,
+}
+
+/// Represents the possible limits that can be configured for pre-authorization requests.
+#[cw_serde]
+#[derive(Default)]
+pub struct PreAuthorizationLimitsConfig {
+    /// Specifies the providers that are permitted to initiate a pre-authorization request for the account.
+    /// If not provided, any provider can initiate a pre-authorization.
+    #[serde(default)]
+    pub allowed_providers: WhitelistBlacklistAddress,
+    /// Specifies the maximum duration for which a pre-authorization can be active.
+    #[serde(default)]
+    pub max_pre_authorization_lifetime: Option<Expiration>,
+    /// Specifies the maximum duration that can be set for the approval phase of a pre-authorization.
+    #[serde(default)]
+    pub max_approval_expiration: Option<Expiration>,
+    /// Specifies the maximum duration that can be set for the locking phase of a pre-authorization.
+    #[serde(default)]
+    pub max_locking_expiration: Option<Expiration>,
 }
 
 /// Represents the filters that can be applied when querying pre-authorization requests.
@@ -436,7 +459,14 @@ pub struct AccountResponse {
 }
 
 /// Represents the limits response.
-type LimitsResponse = Limits;
+#[cw_serde]
+#[derive(Default)]
+pub struct LimitsResponse {
+    /// The limits specifically configured for the account.
+    pub account_limits: AccountLimitsConfig,
+    /// The limits specifically configured for pre-authorization requests.
+    pub pre_authorization_limits: PreAuthorizationLimitsConfig,
+}
 
 /// Represents a balance response.
 #[cw_serde]

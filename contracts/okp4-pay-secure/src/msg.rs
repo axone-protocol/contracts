@@ -81,12 +81,50 @@ pub enum ExecuteMsg {
     /// client. By initiating this, the provider signals the intent to reserve a specified amount of
     /// the client's funds in the smart contract as a guarantee for a future transaction.
     ///
+    /// Upon initiation, the pre-authorization request is assigned a unique identifier that can be
+    /// used to track the status of the request.
+    ///
+    /// The pre-authorization request comes with two distinct expiration timelines. The 'approval expiration'
+    /// sets the time limit within which the client must approve the pre-authorization request. On the other hand,
+    /// the 'locking expiration' defines the maximum time period that the funds will remain locked in the smart
+    /// contract once the client has given approval.
+    ///
+    /// ``` plantuml
+    ///
+    /// @startuml
+    ///
+    /// hide time-axis
+    ///
+    /// scale 10 as 150 pixels
+    ///
+    /// concise "state" as ST
+    ///
+    /// ST is ""
+    ///
+    /// @ST
+    ///
+    /// 0 is pending
+    ///
+    /// +10 is approved
+    ///
+    /// +15 is finalized
+    ///
+    /// highlight 0 to 12 #line:DimGrey : \napproval expiration
+    ///
+    /// highlight 10 to 30 #Gold;line:Gold : \nlocking expiration
+    ///
+    /// @enduml
+    ///
+    /// ```
+    ///
     /// ***Actor:*** Provider
     InitiatePreAuthorization {
         /// The amount of tokens to lock in the pre-authorization.
         amount: Vec<Coin>,
-        /// The expiration of the pre-authorization, expressed as a block height or a block time.
-        expiration: Expiration,
+        /// The expiration of the waiting period for client approval, expressed as a block height or a block time.
+        approval_expiration: Expiration,
+        /// The expiration of the locking period, starting from the time of client approval, expressed as a block height or a block time.
+        locking_expiration: Expiration,
         /// Account to which the funds will be transferred upon finalization of the pre-authorization.
         /// This field allows for the specification of an intermediary account, like an escrow service, to
         /// temporarily hold the funds until all parties reach a mutual agreement on the transaction.
@@ -384,8 +422,10 @@ pub struct PreAuthorizationResponse {
     pub provider: String,
     /// The amount to be locked from the client's account.
     pub amount: Vec<Coin>,
-    /// The expiration of the pre-authorization, expressed as a block height or a block time.
-    pub expiration: Expiration,
+    /// The expiration of the waiting period for client approval, expressed as a block height or a block time.
+    pub approval_expiration: Expiration,
+    /// The expiration of the locking period, starting from the time of client approval, expressed as a block height or a block time.
+    pub locking_expiration: Expiration,
     /// Account to which the funds will be transferred upon finalization of the pre-authorization.
     pub destination_account: Option<String>,
     /// The current status of the pre-authorization request.

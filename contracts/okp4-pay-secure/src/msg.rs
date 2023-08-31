@@ -166,20 +166,237 @@ pub enum ExecuteMsg {
         final_amount: Vec<Coin>,
     },
 }
+
+/// Represents the filters that can be applied when querying pre-authorization requests.
+#[cw_serde]
+pub enum WhereFilter {
+    /// # EqStatus
+    /// Filter by the status of the pre-authorization.
+    EqStatus(PreAuthorizationStatus),
+    /// # EqProvider
+    /// Filter by the provider ID.
+    EqProvider(String),
 }
 
 /// Query messages
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// # Bar
-    #[returns(BarResponse)]
-    Bar { foo: String },
+    /// # Account
+    /// Query the details of the account.
+    #[returns(AccountResponse)]
+    Account {},
+
+    /// # Balance
+    /// Query the balance of the account.
+    #[returns(BalanceResponse)]
+    Balance {},
+
+    /// # PreAuthorization
+    /// Query the details of a pre-authorization request.
+    #[returns(PreAuthorizationResponse)]
+    PreAuthorization {
+        /// The unique identifier of the pre-authorization request to query.
+        id: PreAuthorizationId,
+    },
+
+    /// # PreAuthorizations
+    /// Query all pre-authorization requests initiated by a provider according to the specified filters.
+    #[returns(PreAuthorizationsResponse)]
+    PreAuthorizations {
+        /// The maximum number of pre-authorization requests to return.
+        first: Option<u32>,
+        /// The cursor from which to start returning pre-authorization requests.
+        after: Option<Cursor>,
+        /// The filters to apply to the pre-authorization requests.
+        r#where: Option<WhereFilter>,
+    },
 }
 
-/// # BarResponse
+/// Represents the current phase during the pre-authorization process.
+///
+/// ``` plantuml
+///
+/// @startuml
+///
+/// state Declined
+///
+/// state Expired
+///
+/// state Finalized #line.bold
+///
+/// state Cancelled {
+///
+///   state PreApprovalCancelled
+///
+///   state PostApprovalCancelled
+///
+/// }
+///
+/// state Expired {
+///
+///  state PreApprovalExpired
+///
+///  state PostApprovalExpired
+///
+/// }
+///
+/// state Approved #line.bold
+///
+/// state Pending #line.bold
+///
+/// [*] -[bold]-> Pending : (Provider) Initiate
+///
+/// Pending --> Pending : [insufficient funds]\n(Client) Approve
+///
+/// Pending -[bold]-> Approved : [sufficient funds]\n(Client) Approve
+///
+/// Pending --> PreApprovalCancelled : (Provider) Cancel
+///
+/// Pending --> Declined : (Client) Decline
+///
+/// Pending --> PreApprovalExpired : (System) Expire
+///
+/// Approved -[bold]-> Finalized : (Provider) Finalize
+///
+/// Approved --> PostApprovalCancelled : (Provider) Cancel
+///
+/// Approved --> PostApprovalExpired : (System) Expire
+///
+/// Declined --> [*]
+///
+/// Cancelled --> [*]
+///
+/// PreApprovalExpired --> [*]
+///
+/// PostApprovalExpired --> [*]
+///
+/// Finalized -[bold]-> [*]
+///
+/// @enduml
+///
+/// ```
 #[cw_serde]
-pub struct BarResponse {
-    /// The foo value
-    pub foo: String,
+#[derive(Eq, PartialOrd)]
+pub enum PreAuthorizationStatus {
+    /// # Pending
+    /// Represents the period after the provider has initiated a pre-authorization request and is waiting for the client's approval.
+    Pending,
+    /// # Approved
+    /// The client has approved the pre-authorization request, and the funds are now locked in and reserved for the transaction. The provider can now deliver the service, and upon completion, finalize the transaction.
+    Approved,
+    /// # Declined
+    /// The client has declined the pre-authorization request. No funds are locked or transferred, and the transaction process ends.
+    Declined,
+    /// # Cancelled
+    /// The provider has chosen to cancel the pre-authorization request. This could be due to various reasons,
+    /// such as service unavailability or a change in terms. Any locked funds are unlocked for the client, and the transaction process ends.
+    Cancelled {
+        /// Indicates whether this occurs Pre or Post approval.
+        phase: PreAuthorizationPhase,
+        /// The reason for the cancellation (if any).
+        reason: Option<String>,
+    },
+    /// # Expired
+    /// The pre-authorization request has not been finalized within a specified timeframe and has thus expired. Any locked funds are unlocked for the client, and the transaction process ends.
+    Expired {
+        /// The phase indicates whether this occurs Pre or Post approval.
+        phase: PreAuthorizationPhase,
+    },
+    /// # Finalized
+    /// Upon successful provision of the service, the provider finalizes the transaction. The appropriate amount, which could be all or a portion of the locked funds, is transferred to the provider as payment. Any remaining funds are unlocked for the client, concluding the transaction process.
+    Finalized,
+}
+
+/// Represents the phase of the pre-authorization process.
+#[cw_serde]
+#[derive(Copy, Eq, PartialOrd)]
+pub enum PreAuthorizationPhase {
+    /// # PreApproval
+    /// Occurs before the client has given their approval.
+    PreApproval,
+    /// # PostApproval
+    /// Occurs after the client has given their approval (but before finalization).
+    PostApproval,
+}
+
+/// Represents the status of the Holder's account.
+///
+/// ``` plantuml
+///
+/// @startuml
+///
+/// [*] -[bold]-> Open : (Holder) Create account\n(Smart Contract instantiation)
+///
+/// Open --> Open : (*) *
+///
+/// Open --> Closed : [balance is 0]\n(Holder) Close
+///
+/// Closed --> [*]
+///
+/// @enduml
+///
+/// ```
+#[cw_serde]
+#[derive(Copy, Eq, PartialOrd)]
+pub enum AccountStatus {
+    /// # Open
+    /// The account is open, and all operations can be performed on the Holder's account.
+    Open,
+
+    /// # Closed
+    /// The account is closed, and no operations can be performed on the Holder's account.
+    /// Once in this state, the account becomes inoperable, and no further transactions or operations can be executed on the Holder's account.
+    Closed,
+}
+
+/// Represents an account response.
+#[cw_serde]
+pub struct AccountResponse {
+    /// The name of the account.
+    pub name: Option<String>,
+    /// The accepted denominations for this account.
+    pub accepted_denoms: Option<Vec<String>>,
+    /// The current status of the account.
+    pub status: AccountStatus,
+}
+
+/// Represents a balance response.
+#[cw_serde]
+pub struct BalanceResponse {
+    /// The current balance of the account.
+    /// This is the total amount of funds that are currently in the account.
+    pub balance: Vec<Coin>,
+    /// The current available balance of the account.
+    /// This is the amount of funds that are currently available for use.
+    pub available_balance: Vec<Coin>,
+    /// The current locked balance of the account.
+    /// This is the amount of funds that are currently locked in pre-authorization requests.
+    pub locked_balance: Vec<Coin>,
+}
+
+/// Represents a pre-authorization response.
+#[cw_serde]
+pub struct PreAuthorizationResponse {
+    /// The unique identifier of the pre-authorization request.
+    pub id: PreAuthorizationId,
+    /// The provider's identity.
+    pub provider: String,
+    /// The amount to be locked from the client's account.
+    pub amount: Vec<Coin>,
+    /// The expiration of the pre-authorization, expressed as a block height or a block time.
+    pub expiration: Expiration,
+    /// Account to which the funds will be transferred upon finalization of the pre-authorization.
+    pub destination_account: Option<String>,
+    /// The current status of the pre-authorization request.
+    pub status: PreAuthorizationStatus,
+}
+
+/// Represents a pre-authorization set response.
+#[cw_serde]
+pub struct PreAuthorizationsResponse {
+    /// The pre-authorization requests.
+    pub data: Vec<PreAuthorizationResponse>,
+    /// The page information.
+    pub page_info: PageInfo,
 }

@@ -128,6 +128,9 @@ pub enum ExecuteMsg {
     ///
     /// ***Actor:*** Provider
     InitiatePreAuthorization {
+        /// An external identifier for the pre-authorization request.
+        /// This field can be used to link the pre-authorization request to an external system.
+        reference_id: Option<String>,
         /// The amount of tokens to lock in the pre-authorization.
         amount: Vec<Coin>,
         /// The expiration of the waiting period for client approval, expressed as a block height or a block time.
@@ -265,6 +268,16 @@ pub struct PreAuthorizationLimitsConfig {
     pub max_locking_expiration: Option<Expiration>,
 }
 
+/// Represents the filter that can be applied when querying for a specific pre-authorization request.
+#[cw_serde]
+pub enum ByFilter {
+    /// # EqId
+    /// Filter by the unique identifier of the pre-authorization request.
+    EqId(PreAuthorizationId),
+    /// # EqReferenceId
+    EqReferenceId(String),
+}
+
 /// Represents the filters that can be applied when querying pre-authorization requests.
 #[cw_serde]
 pub enum WhereFilter {
@@ -299,8 +312,8 @@ pub enum QueryMsg {
     /// Query the details of a pre-authorization request.
     #[returns(PreAuthorizationResponse)]
     PreAuthorization {
-        /// The unique identifier of the pre-authorization request to query.
-        id: PreAuthorizationId,
+        /// The filter to apply to the pre-authorization request.
+        by: ByFilter,
     },
 
     /// # PreAuthorizations
@@ -493,6 +506,8 @@ pub struct BalanceResponse {
 pub struct PreAuthorizationResponse {
     /// The unique identifier of the pre-authorization request.
     pub id: PreAuthorizationId,
+    /// The reference identifier of the pre-authorization request.
+    pub reference_id: Option<String>,
     /// The provider's identity.
     pub provider: String,
     /// The amount to be locked from the client's account.

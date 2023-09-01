@@ -16,6 +16,26 @@
 This repository hosts Smart Contracts that are deployed on the [OKP4 network](http://okp4.network). But they are compatible with any
 [Cosmos blockchains](https://cosmos.network/) that uses the [CosmWasm](https://cosmwasm.com/) framework.
 
+### Maturity
+
+The maturity of each contract is indicated by the following emojis:
+
+💥 Genesis Stage
+
+This stage represents the initial spark or idea that leads to the development of the smart contract.
+
+🥚 Initial Stage
+
+The smart contract is still in its infancy, with basic functionalities just being implemented. It is still under development, and its evolution may lead to breaking changes. It is not recommended for production use.
+
+🐣 Intermediate Stage
+
+The smart contract has undergone a number of tests and improvements, and presents a coherent functional package, but may still lack some advanced features or optimizations. It can be used in production in testnets.
+
+🐥 Mature Stage
+
+The smart contract is fully developed and tested. It's considered safe for production use, offering robust features and optimized performance.
+
 ### 🗄️ Storage oriented Smart Contracts
 
 <table>
@@ -35,7 +55,7 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
     <td><a href="https://en.wikipedia.org/wiki/Object_storage">object</a></td>
     <td><code>immutable</code></td>
     <td>Persists unstructured data on-chain.</td>
-    <td>✅</td>
+    <td>🐥</td>
   </tr>
   <tr>
     <td>
@@ -46,7 +66,7 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
     <td><a href="https://en.wikipedia.org/wiki/Triplestore">semantic</a></td>
     <td><code>mutable</code></td>
     <td>Persists semantic data on-chain.</td>
-    <td>🚧</td>
+    <td>🐣</td>
   </tr>
 </table>
 
@@ -67,7 +87,7 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
     </td>
     <td><code>immutable</code></td>
     <td>Interprets governances expressed as <a href="https://en.wikipedia.org/wiki/Prolog">Prolog</a> program.</td>
-    <td>✅</td>
+    <td>💥</td>
   </tr>
 </table>
 
@@ -87,7 +107,7 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
     </td>
     <td><code>pre-authorization</code></td>
     <td>Enables Providers to temporarily lock an amount pre-approved by the Holder, thereby reducing the Holder's available balance until the transaction is finalized.</td>
-    <td>🚧</td>
+    <td>🥚</td>
   </tr>
 </table>
 

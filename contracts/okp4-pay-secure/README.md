@@ -28,6 +28,10 @@ Funds present in the Holder's smart contract account that aren't tied to any pre
 
 A procedure set in motion by the Provider to confirm the financial capability of the Client's account. This entails momentarily reserving a defined sum of funds as an assurance for service payment. These reserved funds stay in this condition until the service transaction finalizes, the pre-authorization concludes, is revoked or expires.
 
+### Capture
+
+A procedure activated by the Provider to complete the service transaction. This involves instructing the payment processor to move the funds that were previously pre-authorized (reserved) in the Client's account. The transfer can be directed to the Provider's own account or to an escrow account, which adds an additional layer of security to the transaction and allows for dispute resolution.
+
 ## Overview
 
 ### Stakeholders
@@ -144,6 +148,79 @@ Client -- UC3
 Provider -- UC4
 Provider -- UC5
 UC5 -- Sender
+
+@enduml
+```
+
+### Scenarios
+
+#### Pre-authorization & Capture to Provider
+
+In this scenarios, the Client places an order with the Provider, who then initiates a pre-authorization request through the `okp4-pay-secure`` smart contract. The Client approves this request, allowing the Provider to finalize the transaction and capture the portion of the funds corresponding to the actual cost of the service.
+
+1. *Order*: The Client places an order with the Provider.
+2. *Initiate*: The Provider initiates a pre-authorization request in the smart contract.
+3. *Approve*: The Client approves the pre-authorization, locking the funds.
+4. *Finalize and Partial Capture*: The Provider finalizes the transaction and captures only the portion of the locked funds that corresponds to the actual cost.
+
+``` plantuml
+@startuml
+
+left to right direction
+
+:Client:
+:Provider:
+:Reciever:
+:Reciever: <|- :Provider:
+rectangle "\nokp4-pay-secure" <<smart contract>> as System
+
+Client -.-> Provider : "1. Order"
+
+System <-- Provider  : "2. Initiate"
+
+Client --> System  : "3. Approve"
+
+System <-- Provider : "4.1 Finalize"
+
+System -.-> Provider : "4.2 Capture" 
+
+@enduml
+```
+
+#### Pre-authorization & Capture to Escrow
+
+In this scenario, the process is similar to the first scenario, but with an added layer of security: an `escrow` service. After the Client approves the pre-authorization, the Provider can finalize the transaction. However, instead of capturing the funds directly, only the portion corresponding to the actual cost is sent to an `escrow` smart contract. This allows for a third-party Arbitrator to resolve any disputes.
+
+- *Order*: The Client places an order with the Provider.
+- *Initiate*: The Provider initiates a pre-authorization request in the smart contract.
+- *Approve*: The Client approves the pre-authorization, locking the funds.
+- *Finalize and Partial Capture to Escrow*: The Provider finalizes the transaction, but only the portion of the funds corresponding to the actual cost is captured to an `escrow`` smart contract. Both the Client and Provider, as well as an Arbitrator, have access to this escrow.
+
+``` plantuml
+@startuml
+
+left to right direction
+
+:Client:
+:Provider:
+:Arbitrator:
+
+rectangle "\nokp4-pay-secure" <<smart contract>> as System
+rectangle "\nescrow" <<smart contract>> as Escrow
+
+Client -.-> Provider : "1. Order"
+
+System <-- Provider  : "2. Initiate"
+
+Client --> System  : "3. Approve"
+
+System <-- Provider : "4.1 Finalize"
+
+System -.-> Escrow : "4.2 Capture" 
+
+Client -- Escrow
+Provider -- Escrow
+Arbitrator -- Escrow
 
 @enduml
 ```

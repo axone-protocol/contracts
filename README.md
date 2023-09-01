@@ -71,6 +71,26 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
   </tr>
 </table>
 
+### 💳 Payment oriented Smart Contracts
+
+<table>
+  <tr>
+    <th>contract</th>
+    <th>type</th>
+    <th>description</th>
+    <th>status</th>
+  </tr>
+  <tr>
+    <td>
+     <br />
+        <a href="contracts/okp4-pay-secure/README.md">law&#8209;stone</a>
+    </td>
+    <td><code>pre-authorization</code></td>
+    <td>Enables Providers to temporarily lock an amount pre-approved by the Holder, thereby reducing the Holder's available balance until the transaction is finalized.</td>
+    <td>🚧</td>
+  </tr>
+</table>
+
 ## 🗂 Directory Structure
 
 The project is structured around a set of Rust workspaces, each defining a smart contract.

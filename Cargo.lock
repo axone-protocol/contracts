@@ -816,6 +816,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "okp4-pay-secure"
+version = "0.0.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.1.0",
+ "cw-utils 1.0.1",
+ "cw2 1.1.0",
+ "derive_builder",
+ "itertools 0.11.0",
+ "okp4-logic-bindings",
+ "okp4-objectarium",
+ "okp4-objectarium-client",
+ "schemars",
+ "serde",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

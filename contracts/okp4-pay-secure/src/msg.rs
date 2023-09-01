@@ -70,8 +70,14 @@ pub enum ExecuteMsg {
     },
     /// # CloseAccount
     ///
-    /// Initiate the process of closing the Holder's account. Once the account is closed, no further
-    /// operations can be performed on it. This action is irreversible.
+    /// Initiate the process of closing the Holder's account. Once closed, the account becomes inoperable,
+    /// and no further transactions or operations can be conducted. This action is irreversible.
+    ///
+    /// The account balance must be zero for the closure to proceed. If there are pending pre-authorization
+    /// requests, the account can still be closed. This ensures that the Holder's intent to close the account
+    /// is not hindered by any pending transactions. If any pre-authorization requests have received approval,
+    /// they must be finalized and settled before the Holder can proceed to empty the account and complete the
+    /// closure process.
     ///
     /// ***Actor:*** Holder
     ///

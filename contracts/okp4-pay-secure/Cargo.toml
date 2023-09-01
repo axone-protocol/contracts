@@ -34,6 +34,7 @@ cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
+derive_builder = "0.12.0"
 itertools = "0.11.0"
 okp4-logic-bindings.workspace = true
 okp4-objectarium-client.workspace = true

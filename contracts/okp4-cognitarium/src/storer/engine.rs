@@ -103,6 +103,7 @@ impl<'a> StoreEngine<'a> {
         let object_hash: Hash = triple.object.as_hash();
 
         self.store.stat.triple_count -= Uint128::one();
+        self.store.stat.byte_size -= Uint128::from(Self::triple_size(t) as u128);
         triples()
             .remove(
                 self.storage,

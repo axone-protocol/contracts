@@ -522,7 +522,7 @@ install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help
 install_crate = { crate_name = "cargo-llvm-cov" }
 
 [tasks.install-cosmwasm-check]
-install_crate = { crate_name = "cosmwasm-check" }
+install_crate = { crate_name = "cosmwasm-check", min_version = "1.2.7" }
 
 [tasks.install-ffizer]
 install_script = '''
@@ -537,6 +537,8 @@ default_to_workspace = false
 min_version = "0.36.3"
 
 [env]
+CARGO_MAKE_CRATE_INSTALLATION_LOCKED = true
+
 DOCS_FOLDER = "docs"
 SCHEMA_FOLDER = "schema"
 

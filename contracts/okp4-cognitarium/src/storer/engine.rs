@@ -99,11 +99,13 @@ impl<'a> StoreEngine<'a> {
     }
 
     pub fn delete_triple(&mut self, atom: &rdf::Atom) -> Result<(), ContractError> {
-        let triple = self.rio_to_triple(atom.into())?;
+        let triple_model = atom.into();
+        let triple = self.rio_to_triple(triple_model)?;
         let object_hash: Hash = triple.object.as_hash();
 
         self.store.stat.triple_count -= Uint128::one();
-        self.store.stat.byte_size -= Uint128::from(Self::triple_size(t) as u128);
+        self.store.stat.byte_size -= Uint128::from(Self::triple_size(triple_model) as u128);
+
         triples()
             .remove(
                 self.storage,

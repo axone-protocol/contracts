@@ -16,7 +16,7 @@ pub struct QueryPlan {
 impl QueryPlan {
     pub fn get_var_index(&self, var_name: &str) -> Option<usize> {
         self.variables.iter().enumerate().find_map(|(index, it)| {
-            if it.as_str() == var_name {
+            if it == var_name {
                 return Some(index);
             }
             None

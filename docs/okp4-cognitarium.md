@@ -48,9 +48,9 @@ Only the smart contract owner (i.e. the address who instantiated it) is authoriz
 |parameter|description|
 |----------|-----------|
 |`delete_data`|*(Required.) * **object**. |
-|`delete_data.delete`|*(Required.) * **Array&lt;[TriplePattern](#triplepattern)&gt;**. The items to delete.|
+|`delete_data.delete`|*(Required.) * **Array&lt;[TriplePattern](#triplepattern)&gt;**. Specifies the specific triple patterns to delete. If nothing is provided, the patterns from the `where` clause are used for deletion.|
 |`delete_data.prefixes`|*(Required.) * **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the operation.|
-|`delete_data.where`|**array\|null**. The WHERE clause to apply. If not provided, all the RDF triples are considered.|
+|`delete_data.where`|*(Required.) * **Array&lt;[WhereCondition](#wherecondition)&gt;**. Defines the patterns that data (RDF triples) should match in order for it to be considered for deletion.|
 
 ## QueryMsg
 
@@ -273,7 +273,7 @@ Represents either an IRI (named node) or a blank node.
 
 ### Prefix
 
-Represents a prefix in a [SelectQuery]. A prefix is a shortcut for a namespace used in the query.
+Represents a prefix, i.e. a shortcut for a namespace used in a query.
 
 |property|description|
 |----------|-----------|

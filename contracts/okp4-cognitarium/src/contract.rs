@@ -1,4 +1,3 @@
-use crate::contract::execute::insert;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -38,18 +37,35 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::InsertData { format, data } => {
-            insert(deps, info, format.unwrap_or(DataFormat::Turtle), data)
+            execute::insert(deps, info, format.unwrap_or_default(), data)
         }
-        _ => Err(StdError::generic_err("Not implemented").into()),
+        ExecuteMsg::DeleteData {
+            prefixes,
+            delete,
+            r#where,
+        } => execute::delete(deps, info, prefixes, delete, r#where),
     }
 }
 
 pub mod execute {
     use super::*;
-    use crate::msg::DataFormat;
-    use crate::rdf::TripleReader;
-    use crate::storer::TripleStorer;
+    use crate::msg::{
+        DataFormat, Prefix, SelectItem, SimpleWhereCondition, TriplePattern, WhereClause,
+        WhereCondition,
+    };
+    use crate::querier::{PlanBuilder, QueryEngine};
+    use crate::rdf::{Atom, PrefixMap, TripleReader};
+    use crate::storer::StoreEngine;
+    use std::collections::HashSet;
     use std::io::BufReader;
+
+    pub fn verify_owner(deps: &DepsMut<'_>, info: &MessageInfo) -> Result<(), ContractError> {
+        if STORE.load(deps.storage)?.owner != info.sender {
+            Err(ContractError::Unauthorized)
+        } else {
+            Ok(())
+        }
+    }
 
     pub fn insert(
         deps: DepsMut<'_>,
@@ -57,17 +73,70 @@ pub mod execute {
         format: DataFormat,
         data: Binary,
     ) -> Result<Response, ContractError> {
-        if STORE.load(deps.storage)?.owner != info.sender {
-            Err(ContractError::Unauthorized)?;
-        }
+        verify_owner(&deps, &info)?;
 
         let buf = BufReader::new(data.as_slice());
         let mut reader = TripleReader::new(&format, buf);
-        let mut storer = TripleStorer::new(deps.storage)?;
+        let mut storer = StoreEngine::new(deps.storage)?;
         let count = storer.store_all(&mut reader)?;
 
         Ok(Response::new()
             .add_attribute("action", "insert")
+            .add_attribute("triple_count", count))
+    }
+
+    pub fn delete(
+        deps: DepsMut<'_>,
+        info: MessageInfo,
+        prefixes: Vec<Prefix>,
+        delete: Vec<TriplePattern>,
+        r#where: WhereClause,
+    ) -> Result<Response, ContractError> {
+        verify_owner(&deps, &info)?;
+
+        let patterns: Vec<TriplePattern> = if delete.is_empty() {
+            r#where
+                .iter()
+                .map(|c| match c {
+                    WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => {
+                        Ok(tp.clone())
+                    }
+                })
+                .collect::<Result<_, ContractError>>()?
+        } else {
+            delete
+        };
+        let variables = patterns
+            .iter()
+            .flat_map(TriplePattern::variables)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(SelectItem::Variable)
+            .collect();
+        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
+        let plan = PlanBuilder::new(deps.storage, &prefix_map).build_plan(&r#where)?;
+
+        let response = QueryEngine::new(deps.storage).select(plan, variables)?;
+        let atoms: Vec<Atom> = if response.results.bindings.is_empty() {
+            vec![]
+        } else {
+            response
+                .results
+                .bindings
+                .iter()
+                .flat_map(|row| {
+                    patterns
+                        .iter()
+                        .map(|pattern| pattern.resolve(row, &prefix_map))
+                })
+                .collect::<Result<_, _>>()?
+        };
+
+        let mut store = StoreEngine::new(deps.storage)?;
+        let count = store.delete_all(&atoms)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "delete")
             .add_attribute("triple_count", count))
     }
 }
@@ -77,11 +146,9 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Store => to_binary(&query::store(deps)?),
         QueryMsg::Select { query } => to_binary(&query::select(deps, query)?),
-        QueryMsg::Describe { query, format } => to_binary(&query::describe(
-            deps,
-            query,
-            format.unwrap_or(DataFormat::default()),
-        )?),
+        QueryMsg::Describe { query, format } => {
+            to_binary(&query::describe(deps, query, format.unwrap_or_default())?)
+        }
         QueryMsg::Construct { query, format } => to_binary(&query::construct(
             deps,
             query,
@@ -95,12 +162,12 @@ pub mod query {
 
     use super::*;
     use crate::msg::{
-        ConstructQuery, DescribeQuery, DescribeResponse, Node, Prefix, SelectItem, SelectQuery,
+        ConstructQuery, DescribeQuery, DescribeResponse, Node, SelectItem, SelectQuery,
         SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value, VarOrNamedNode,
         VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{self, Atom, TripleWriter};
+    use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -120,7 +187,8 @@ pub mod query {
             Err(StdError::generic_err("Maximum query limit exceeded"))?;
         }
 
-        let plan = PlanBuilder::new(deps.storage, &query.prefixes)
+        let prefix_map = PrefixMap::from(query.prefixes).into_inner();
+        let plan = PlanBuilder::new(deps.storage, &prefix_map)
             .with_limit(count as usize)
             .build_plan(&query.r#where)?;
 
@@ -138,7 +206,7 @@ pub mod query {
             bindings: &BTreeMap<String, Value>,
         ) -> Result<Value, StdError> {
             vars.get(index)
-                .and_then(|it| bindings.get(it.as_str()))
+                .and_then(|it| bindings.get(it))
                 .cloned()
                 .ok_or_else(|| {
                     StdError::generic_err(format!(
@@ -185,8 +253,8 @@ pub mod query {
                 ))],
             ),
         };
-
-        let plan = PlanBuilder::new(deps.storage, &query.prefixes)
+        let prefix_map = <PrefixMap>::from(query.prefixes).into_inner();
+        let plan = PlanBuilder::new(deps.storage, &prefix_map)
             .with_limit(store.limits.max_query_limit as usize)
             .build_plan(&r#where)?;
 
@@ -205,11 +273,10 @@ pub mod query {
         let mut writer = TripleWriter::new(&format, out);
 
         for r in &bindings {
-            let prefixes: &[Prefix] = &query.prefixes;
             let atom = &Atom {
-                subject: rdf::Subject::try_from((get_value(0, &vars, r)?, prefixes))?,
-                property: rdf::Property::try_from((get_value(1, &vars, r)?, prefixes))?,
-                value: rdf::Value::try_from((get_value(2, &vars, r)?, prefixes))?,
+                subject: rdf::Subject::try_from((get_value(0, &vars, r)?, &prefix_map))?,
+                property: rdf::Property::try_from((get_value(1, &vars, r)?, &prefix_map))?,
+                value: rdf::Value::try_from((get_value(2, &vars, r)?, &prefix_map))?,
             };
             let triple = atom.into();
 
@@ -243,7 +310,7 @@ pub mod query {
 mod tests {
     use super::*;
     use crate::error::StoreError;
-    use crate::msg::ExecuteMsg::InsertData;
+    use crate::msg::ExecuteMsg::{DeleteData, InsertData};
     use crate::msg::Node::NamedNode;
     use crate::msg::QueryMsg::Construct;
     use crate::msg::SimpleWhereCondition::TriplePattern;
@@ -344,9 +411,7 @@ mod tests {
                 deps.as_mut(),
                 mock_env(),
                 info.clone(),
-                InstantiateMsg {
-                    limits: StoreLimitsInput::default(),
-                },
+                InstantiateMsg::default(),
             )
             .unwrap();
 
@@ -439,9 +504,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             mock_info("owner", &[]),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -568,6 +631,293 @@ mod tests {
     }
 
     #[test]
+    fn proper_delete() {
+        let id = "https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
+        let cases = vec![
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/dataverse/dataspace/metadata/unknown"
+                                .to_string(),
+                        ))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/dataverse/dataspace/metadata/unknown"
+                                .to_string(),
+                        ))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }))],
+                },
+                0,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }))],
+                },
+                1,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![
+                        Prefix {
+                            prefix: "core".to_string(),
+                            namespace: "https://ontology.okp4.space/core/".to_string(),
+                        },
+                        Prefix {
+                            prefix: "thesaurus".to_string(),
+                            namespace: "https://ontology.okp4.space/thesaurus/topic/".to_string(),
+                        },
+                    ],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "core:hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Prefixed(
+                            "thesaurus:Test".to_string(),
+                        ))),
+                    }],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "core:hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Prefixed(
+                            "thesaurus:Test".to_string(),
+                        ))),
+                    }))],
+                },
+                1,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![
+                        Prefix {
+                            prefix: "core".to_string(),
+                            namespace: "https://ontology.okp4.space/core/".to_string(),
+                        },
+                        Prefix {
+                            prefix: "thesaurus".to_string(),
+                            namespace: "https://ontology.okp4.space/thesaurus/topic/".to_string(),
+                        },
+                    ],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "core:hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Prefixed(
+                            "core:hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                1,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                11,
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                11,
+            ),
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+
+            let info = mock_info("owner", &[]);
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg::default(),
+            )
+            .unwrap();
+
+            execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InsertData {
+                    format: Some(DataFormat::RDFXml),
+                    data: read_test_data("sample.rdf.xml"),
+                },
+            )
+            .unwrap();
+
+            let res = execute(deps.as_mut(), mock_env(), info, case.0);
+
+            assert!(res.is_ok());
+            assert_eq!(
+                res.unwrap().attributes,
+                vec![
+                    Attribute::new("action", "delete"),
+                    Attribute::new("triple_count", case.1.to_string())
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_delete() {
+        struct TC {
+            command: ExecuteMsg,
+            expected: ContractError,
+        }
+        let cases = vec![
+            TC {
+                command: DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }))],
+                },
+                expected: StdError::generic_err("Prefix not found: foo").into(),
+            },
+            TC {
+                command: DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                        predicate: VarOrNode::Variable("z".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                expected: StdError::generic_err("Selected variable not found in query").into(),
+            },
+            TC {
+                command: DeleteData {
+                    prefixes: vec![],
+                    delete: vec![msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                        ))),
+                    }],
+                    r#where: vec![],
+                },
+                expected: StdError::generic_err("Empty basic graph pattern").into(),
+            },
+        ];
+
+        for case in cases {
+            let mut deps = mock_dependencies();
+
+            let info = mock_info("owner", &[]);
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg::default(),
+            )
+            .unwrap();
+
+            execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InsertData {
+                    format: Some(DataFormat::RDFXml),
+                    data: read_test_data("sample.rdf.xml"),
+                },
+            )
+            .unwrap();
+
+            let res = execute(deps.as_mut(), mock_env(), info, case.command);
+
+            assert!(res.is_err());
+            assert_eq!(res.unwrap_err(), case.expected);
+        }
+    }
+
+    #[test]
     fn proper_store() {
         let mut deps = mock_dependencies();
         STORE
@@ -621,7 +971,7 @@ mod tests {
         let mut bytes: Vec<u8> = Vec::new();
 
         File::open(
-            Path::new(env::var("CARGO_MANIFEST_DIR").unwrap().as_str())
+            Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap())
                 .join("testdata")
                 .join(file),
         )
@@ -804,9 +1154,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -875,9 +1223,7 @@ mod tests {
                     }))],
                     limit: None,
                 },
-                Err(StdError::generic_err(
-                    "Malformed prefixed IRI: prefix not found",
-                )),
+                Err(StdError::generic_err("Prefix not found: invalid")),
             ),
             (
                 SelectQuery {
@@ -1060,9 +1406,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1132,9 +1476,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1199,9 +1541,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1266,9 +1606,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 
@@ -1337,9 +1675,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             info.clone(),
-            InstantiateMsg {
-                limits: StoreLimitsInput::default(),
-            },
+            InstantiateMsg::default(),
         )
         .unwrap();
 

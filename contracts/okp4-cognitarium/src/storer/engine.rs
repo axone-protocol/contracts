@@ -12,7 +12,7 @@ use rio_api::model::Term;
 use std::collections::BTreeMap;
 use std::io::BufRead;
 
-pub struct TripleStorer<'a> {
+pub struct StoreEngine<'a> {
     storage: &'a mut dyn Storage,
     store: Store,
     ns_key_inc_offset: u128,
@@ -21,7 +21,7 @@ pub struct TripleStorer<'a> {
     initial_byte_size: Uint128,
 }
 
-impl<'a> TripleStorer<'a> {
+impl<'a> StoreEngine<'a> {
     pub fn new(storage: &'a mut dyn Storage) -> StdResult<Self> {
         let store = STORE.load(storage)?;
         let ns_key_inc_offset = NAMESPACE_KEY_INCREMENT.load(storage)?;
@@ -43,7 +43,7 @@ impl<'a> TripleStorer<'a> {
         self.finish()
     }
 
-    pub fn store_triple(&mut self, t: model::Triple<'_>) -> Result<(), ContractError> {
+    fn store_triple(&mut self, t: model::Triple<'_>) -> Result<(), ContractError> {
         self.store.stat.triple_count += Uint128::one();
         if self.store.stat.triple_count > self.store.limits.max_triple_count {
             Err(StoreError::TripleCount(self.store.limits.max_triple_count))?;
@@ -91,6 +91,33 @@ impl<'a> TripleStorer<'a> {
             .map_err(ContractError::Std)
     }
 
+    pub fn delete_all(&mut self, atoms: &[rdf::Atom]) -> Result<Uint128, ContractError> {
+        for atom in atoms {
+            self.delete_triple(atom)?;
+        }
+        self.finish()
+    }
+
+    pub fn delete_triple(&mut self, atom: &rdf::Atom) -> Result<(), ContractError> {
+        let triple = self.rio_to_triple(atom.into())?;
+        let object_hash: Hash = triple.object.as_hash();
+
+        self.store.stat.triple_count -= Uint128::one();
+        self.store.stat.byte_size -= Uint128::from(Self::triple_size(t) as u128);
+        triples()
+            .remove(
+                self.storage,
+                (
+                    object_hash.as_bytes(),
+                    triple.predicate.key(),
+                    triple.subject.key(),
+                ),
+            )
+            .map_err(ContractError::Std)
+    }
+
+    /// Flushes the store to the storage.
+    /// Returns the number of triples added or removed (absolute value).
     pub fn finish(&mut self) -> Result<Uint128, ContractError> {
         STORE.save(self.storage, &self.store)?;
         NAMESPACE_KEY_INCREMENT.save(self.storage, &self.ns_key_inc_offset)?;
@@ -98,11 +125,15 @@ impl<'a> TripleStorer<'a> {
             namespaces().save(self.storage, entry.0.to_string(), entry.1)?;
         }
 
-        Ok(self.store.stat.triple_count - self.initial_triple_count)
+        Ok(self
+            .store
+            .stat
+            .triple_count
+            .abs_diff(self.initial_triple_count))
     }
 
     fn resolve_namespace_key(&mut self, ns_str: String) -> StdResult<u128> {
-        if let Some(namespace) = self.ns_cache.get_mut(ns_str.as_str()) {
+        if let Some(namespace) = self.ns_cache.get_mut(&ns_str) {
             namespace.counter += 1;
             Ok(namespace.key)
         } else {

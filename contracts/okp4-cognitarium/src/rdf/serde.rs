@@ -66,7 +66,7 @@ impl<R: BufRead> TripleReader<R> {
     }
 }
 
-impl<W: std::io::Write> TripleWriter<W> {
+impl<W: io::Write> TripleWriter<W> {
     pub fn new(format: &DataFormat, dst: W) -> Self {
         TripleWriter {
             writer: match format {

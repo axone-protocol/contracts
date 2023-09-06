@@ -1,6 +1,5 @@
 use cosmwasm_std::{StdError, StdResult};
-
-use crate::msg::Prefix;
+use std::collections::HashMap;
 
 pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
     let mut marker_index: Option<usize> = None;
@@ -21,19 +20,16 @@ pub fn explode_iri(iri: &str) -> StdResult<(String, String)> {
 }
 
 // Expand a compacted URI (CURIE - URI with prefix) to a full URI.
-pub fn expand_uri(curie: &str, prefixes: &[Prefix]) -> StdResult<String> {
+pub fn expand_uri(curie: &str, prefixes: &HashMap<String, String>) -> StdResult<String> {
     let idx = curie
         .rfind(':')
         .ok_or_else(|| StdError::generic_err(format!("Malformed CURIE: {curie}")))?;
 
     let prefix = curie[..idx].to_string();
+    let namespace = prefixes
+        .get(&prefix)
+        .ok_or_else(|| StdError::generic_err(format!("Prefix not found: {prefix}")))?;
     let suffix = curie[idx + 1..].to_string();
-
-    let namespace = &prefixes
-        .iter()
-        .find(|p| p.prefix == prefix)
-        .ok_or_else(|| StdError::generic_err(format!("Prefix not found: {prefix}")))?
-        .namespace;
 
     Ok(format!("{namespace}{suffix}"))
 }
@@ -41,6 +37,8 @@ pub fn expand_uri(curie: &str, prefixes: &[Prefix]) -> StdResult<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::msg::Prefix;
+    use crate::rdf::PrefixMap;
 
     #[test]
     fn proper_explode_iri() {
@@ -83,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_expand_uri() {
-        let prefixes = vec![
+        let prefixes = &<PrefixMap>::from(vec![
             Prefix {
                 prefix: "ex".to_string(),
                 namespace: "http://example.com/".to_string(),
@@ -92,30 +90,31 @@ mod tests {
                 prefix: "rdf".to_string(),
                 namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
             },
-        ];
+        ])
+        .into_inner();
 
         assert_eq!(
-            expand_uri("ex:resource", &prefixes),
+            expand_uri("ex:resource", prefixes),
             Ok("http://example.com/resource".to_string())
         );
 
         assert_eq!(
-            expand_uri("ex:", &prefixes),
+            expand_uri("ex:", prefixes),
             Ok("http://example.com/".to_string())
         );
 
         assert_eq!(
-            expand_uri("unknown:resource", &prefixes),
+            expand_uri("unknown:resource", prefixes),
             Err(StdError::generic_err("Prefix not found: unknown"))
         );
 
         assert_eq!(
-            expand_uri("malformed_curie:", &prefixes),
+            expand_uri("malformed_curie:", prefixes),
             Err(StdError::generic_err("Prefix not found: malformed_curie"))
         );
 
         assert_eq!(
-            expand_uri("malformed_curie", &prefixes),
+            expand_uri("malformed_curie", prefixes),
             Err(StdError::generic_err("Malformed CURIE: malformed_curie"))
         );
     }

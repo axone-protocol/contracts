@@ -134,7 +134,7 @@ impl Node {
     where
         F: FnMut(u128) -> StdResult<String>,
     {
-        ns_fn(self.namespace).map(|ns| [ns.as_str(), self.value.as_str()].join(""))
+        Ok(ns_fn(self.namespace)? + &self.value)
     }
 }
 

@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 
 /// Instantiate message
 #[cw_serde]
+#[derive(Default)]
 pub struct InstantiateMsg {
     /// Limitations regarding store usage.
     #[serde(default)]
@@ -66,11 +67,12 @@ pub enum ExecuteMsg {
     DeleteData {
         /// The prefixes used in the operation.
         prefixes: Vec<Prefix>,
-        /// The items to delete.
+        /// Specifies the specific triple patterns to delete.
+        /// If nothing is provided, the patterns from the `where` clause are used for deletion.
         delete: Vec<TriplePattern>,
-        /// The WHERE clause to apply.
-        /// If not provided, all the RDF triples are considered.
-        r#where: Option<WhereClause>,
+        /// Defines the patterns that data (RDF triples) should match in order for it to be
+        /// considered for deletion.
+        r#where: WhereClause,
     },
 }
 
@@ -430,7 +432,7 @@ pub struct ConstructQuery {
 }
 
 /// # Prefix
-/// Represents a prefix in a [SelectQuery]. A prefix is a shortcut for a namespace used in the query.
+/// Represents a prefix, i.e. a shortcut for a namespace used in a query.
 #[cw_serde]
 pub struct Prefix {
     /// The prefix.
@@ -481,6 +483,27 @@ pub struct TriplePattern {
     pub predicate: VarOrNode,
     /// The object of the triple pattern.
     pub object: VarOrNodeOrLiteral,
+}
+
+impl TriplePattern {
+    /// Returns the variables used in the triple pattern.
+    pub fn variables(&self) -> Vec<String> {
+        let mut variables: Vec<String> = vec![];
+
+        if let VarOrNode::Variable(var) = &self.subject {
+            variables.push(var.clone());
+        }
+
+        if let VarOrNode::Variable(var) = &self.predicate {
+            variables.push(var.clone());
+        }
+
+        if let VarOrNodeOrLiteral::Variable(var) = &self.object {
+            variables.push(var.clone());
+        }
+
+        variables
+    }
 }
 
 /// # VarOrNode
@@ -562,7 +585,12 @@ pub enum Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::{InstantiateMsg, StoreLimitsInput};
+    use crate::msg::Literal::Simple;
+    use crate::msg::Node::{BlankNode, NamedNode};
+    use crate::msg::IRI::{Full, Prefixed};
+    use crate::msg::{
+        InstantiateMsg, StoreLimitsInput, TriplePattern, VarOrNode, VarOrNodeOrLiteral,
+    };
     use cosmwasm_std::Uint128;
     use schemars::_serde_json;
 
@@ -596,5 +624,78 @@ mod tests {
         assert_eq!(msg.limits.max_triple_byte_size, Uint128::MAX);
         assert_eq!(msg.limits.max_insert_data_byte_size, Uint128::MAX);
         assert_eq!(msg.limits.max_insert_data_triple_count, Uint128::MAX);
+    }
+
+    #[test]
+    fn variables_from_triple_pattern() {
+        let (s, p, o) = ("s".to_string(), "p".to_string(), "o".to_string());
+        let (node, prefixed, literal) = (
+            "node".to_string(),
+            "a:node".to_string(),
+            "literal".to_string(),
+        );
+
+        let cases = vec![
+            (
+                TriplePattern {
+                    subject: VarOrNode::Variable(s.clone()),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![s.clone(), p.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Node(NamedNode(Full(node.clone()))),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![p.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Node(NamedNode(Prefixed(prefixed.clone()))),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![p.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Node(BlankNode(node.clone())),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![p.clone(), o.clone()],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Variable(s.clone()),
+                    predicate: VarOrNode::Node(NamedNode(Full(node.clone()))),
+                    object: VarOrNodeOrLiteral::Variable(o.clone()),
+                },
+                vec![s.clone(), o],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Variable(s.clone()),
+                    predicate: VarOrNode::Variable(p.clone()),
+                    object: VarOrNodeOrLiteral::Literal(Simple(literal.clone())),
+                },
+                vec![s, p],
+            ),
+            (
+                TriplePattern {
+                    subject: VarOrNode::Node(BlankNode(node)),
+                    predicate: VarOrNode::Node(NamedNode(Prefixed(prefixed))),
+                    object: VarOrNodeOrLiteral::Literal(Simple(literal)),
+                },
+                vec![],
+            ),
+        ];
+
+        for (triple_pattern, expected) in cases {
+            assert_eq!(triple_pattern.variables(), expected);
+        }
     }
 }

@@ -1,8 +1,9 @@
 use crate::msg::{
-    Literal, Node, Prefix, SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral,
-    WhereClause, WhereCondition, IRI,
+    Literal, Node, SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereClause,
+    WhereCondition, IRI,
 };
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
+use crate::rdf::expand_uri;
 use crate::state::{namespaces, Object, Predicate, Subject};
 use crate::{rdf, state};
 use cosmwasm_std::{StdError, StdResult, Storage};
@@ -10,17 +11,17 @@ use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
     storage: &'a dyn Storage,
-    prefixes: HashMap<String, String>,
+    prefixes: &'a HashMap<String, String>,
     variables: Vec<String>,
     limit: Option<usize>,
     skip: Option<usize>,
 }
 
 impl<'a> PlanBuilder<'a> {
-    pub fn new(storage: &'a dyn Storage, prefixes: &[Prefix]) -> Self {
+    pub fn new(storage: &'a dyn Storage, prefixes: &'a HashMap<String, String>) -> Self {
         Self {
             storage,
-            prefixes: Self::make_prefixes(prefixes),
+            prefixes,
             variables: Vec::new(),
             skip: None,
             limit: None,
@@ -156,34 +157,10 @@ impl<'a> PlanBuilder<'a> {
 
     fn build_named_node(&mut self, value: IRI) -> StdResult<state::Node> {
         match value {
-            IRI::Prefixed(prefixed) => prefixed
-                .rfind(':')
-                .map_or_else(
-                    || {
-                        Err(StdError::generic_err(
-                            "Malformed prefixed IRI: no prefix delimiter found",
-                        ))
-                    },
-                    Ok,
-                )
-                .and_then(|index| {
-                    self.prefixes
-                        .get(&prefixed.as_str()[..index])
-                        .map(|resolved_prefix| {
-                            [resolved_prefix, &prefixed.as_str()[index + 1..]].join("")
-                        })
-                        .map_or_else(
-                            || {
-                                Err(StdError::generic_err(
-                                    "Malformed prefixed IRI: prefix not found",
-                                ))
-                            },
-                            Ok,
-                        )
-                }),
+            IRI::Prefixed(prefixed) => expand_uri(&prefixed, self.prefixes),
             IRI::Full(full) => Ok(full),
         }
-        .and_then(|iri| rdf::explode_iri(iri.as_str()))
+        .and_then(|iri| rdf::explode_iri(&iri))
         .and_then(|(ns_key, v)| {
             namespaces()
                 .load(self.storage, ns_key)
@@ -202,18 +179,13 @@ impl<'a> PlanBuilder<'a> {
         self.variables.push(v);
         self.variables.len() - 1
     }
-
-    fn make_prefixes(as_list: &[Prefix]) -> HashMap<String, String> {
-        as_list.iter().fold(HashMap::new(), |mut map, prefix| {
-            map.insert(prefix.prefix.clone(), prefix.namespace.clone());
-            map
-        })
-    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::msg::Prefix;
+    use crate::rdf::PrefixMap;
     use crate::state::Namespace;
     use cosmwasm_std::testing::mock_dependencies;
 
@@ -273,14 +245,16 @@ mod test {
         let deps = mock_dependencies();
 
         for case in cases {
-            let builder = PlanBuilder::new(&deps.storage, &case.0);
+            let prefixes = &PrefixMap::from(case.0).into_inner();
+            let builder = PlanBuilder::new(&deps.storage, prefixes);
             assert_eq!(builder.skip, None);
             assert_eq!(builder.limit, None);
             assert_eq!(builder.variables, Vec::<String>::new());
-            assert_eq!(builder.prefixes, case.1);
+            assert_eq!(builder.prefixes, &case.1);
         }
 
-        let mut builder = PlanBuilder::new(&deps.storage, &[]);
+        let prefixes = &PrefixMap::default().into_inner();
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
         builder = builder.with_skip(20usize).with_limit(50usize);
         assert_eq!(builder.skip, Some(20usize));
         assert_eq!(builder.limit, Some(50usize));
@@ -315,15 +289,11 @@ mod test {
             ),
             (
                 IRI::Prefixed("resource".to_string()),
-                Err(StdError::generic_err(
-                    "Malformed prefixed IRI: no prefix delimiter found",
-                )),
+                Err(StdError::generic_err("Malformed CURIE: resource")),
             ),
             (
                 IRI::Prefixed("okp5:resource".to_string()),
-                Err(StdError::generic_err(
-                    "Malformed prefixed IRI: prefix not found",
-                )),
+                Err(StdError::generic_err("Prefix not found: okp5")),
             ),
         ];
 
@@ -351,19 +321,19 @@ mod test {
             )
             .unwrap();
 
-        let mut builder = PlanBuilder::new(
-            &deps.storage,
-            &[
-                Prefix {
-                    prefix: "rdf".to_string(),
-                    namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-                },
-                Prefix {
-                    prefix: "okp4".to_string(),
-                    namespace: "http://okp4.space/".to_string(),
-                },
-            ],
-        );
+        let prefixes = &<PrefixMap>::from(vec![
+            Prefix {
+                prefix: "rdf".to_string(),
+                namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+            },
+            Prefix {
+                prefix: "okp4".to_string(),
+                namespace: "http://okp4.space/".to_string(),
+            },
+        ])
+        .into_inner();
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+
         for case in cases {
             assert_eq!(builder.build_named_node(case.0), case.1);
         }
@@ -526,7 +496,9 @@ mod test {
                 },
             )
             .unwrap();
-        let mut builder = PlanBuilder::new(&deps.storage, &[]);
+        let prefixes = &PrefixMap::default().into_inner();
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+
         for case in cases {
             assert_eq!(builder.build_triple_pattern(&case.0), case.1);
         }
@@ -729,7 +701,8 @@ mod test {
             .unwrap();
 
         for case in cases {
-            let mut builder = PlanBuilder::new(&deps.storage, &[]);
+            let prefixes = &PrefixMap::default().into_inner();
+            let mut builder = PlanBuilder::new(&deps.storage, prefixes);
             if let Some(skip) = case.0 {
                 builder = builder.with_skip(skip);
             }

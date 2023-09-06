@@ -1,4 +1,4 @@
-name: update-draft-docs
+name: Notify externals repositories
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
             {
               "ref": "main",
               "inputs": {
-                "version": "main",
+                "ref": "main",
                 "draft": "true"
               }
             }

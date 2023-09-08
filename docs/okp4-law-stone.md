@@ -126,4 +126,4 @@ A string containing Base64-encoded data.
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `tmp` (`20c06a648259a4b3`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`20c06a648259a4b3`)*

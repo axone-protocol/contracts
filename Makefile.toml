@@ -113,6 +113,7 @@ find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
 mkdir -p $DOCS_FOLDER
 
 for SCHEMA in $(ls $SCHEMA_FOLDER); do
+    echo "Rendering $SCHEMA..."
     awk "{sub(\"#/definitions\",\"./${SCHEMA}/#/definitions\")} {print}"  ${SCHEMA_FOLDER}/${SCHEMA} > ${SCHEMA_FOLDER}/tmp
 
     npx --yes @fadroma/schema@1.1.0 ${SCHEMA_FOLDER}/tmp > "${SCHEMA%.json}.md"

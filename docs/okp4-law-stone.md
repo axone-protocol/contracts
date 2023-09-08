@@ -123,3 +123,7 @@ A string containing Base64-encoded data.
 |----------|-----------|
 |`arguments`|*(Required.) * **Array&lt;[Term](#term)&gt;**. |
 |`name`|*(Required.) * **string**. |
+
+---
+
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `tmp` (`20c06a648259a4b3`)*

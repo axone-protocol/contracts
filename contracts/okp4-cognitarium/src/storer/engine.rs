@@ -98,7 +98,7 @@ impl<'a> StoreEngine<'a> {
         self.finish()
     }
 
-    pub fn delete_triple(&mut self, atom: &rdf::Atom) -> Result<(), ContractError> {
+    fn delete_triple(&mut self, atom: &rdf::Atom) -> Result<(), ContractError> {
         let triple_model = atom.into();
         let triple =
             Self::rio_to_triple(triple_model, &mut |ns_str| self.resolve_and_free_ns(ns_str))?;
@@ -121,7 +121,7 @@ impl<'a> StoreEngine<'a> {
 
     /// Flushes the store to the storage.
     /// Returns the number of triples added or removed (absolute value).
-    pub fn finish(&mut self) -> Result<Uint128, ContractError> {
+    fn finish(&mut self) -> Result<Uint128, ContractError> {
         NAMESPACE_KEY_INCREMENT.save(self.storage, &self.ns_key_inc_offset)?;
 
         for entry in &self.ns_cache {
@@ -135,11 +135,17 @@ impl<'a> StoreEngine<'a> {
 
         STORE.save(self.storage, &self.store)?;
 
-        Ok(self
+        let count_diff = self
             .store
             .stat
             .triple_count
-            .abs_diff(self.initial_triple_count))
+            .abs_diff(self.initial_triple_count);
+
+        self.initial_triple_count = self.store.stat.triple_count;
+        self.initial_byte_size = self.store.stat.byte_size;
+        self.ns_cache.clear();
+
+        Ok(count_diff)
     }
 
     fn resolve_and_reference_ns(&mut self, ns_str: String) -> StdResult<u128> {

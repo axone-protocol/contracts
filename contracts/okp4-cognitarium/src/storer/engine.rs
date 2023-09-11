@@ -76,7 +76,7 @@ impl<'a> StoreEngine<'a> {
             ))?;
         }
 
-        let triple = self.rio_to_triple(t)?;
+        let triple = Self::rio_to_triple(t, &mut |ns_str| self.resolve_and_reference_ns(ns_str))?;
         let object_hash: Hash = triple.object.as_hash();
         triples()
             .save(
@@ -100,7 +100,8 @@ impl<'a> StoreEngine<'a> {
 
     pub fn delete_triple(&mut self, atom: &rdf::Atom) -> Result<(), ContractError> {
         let triple_model = atom.into();
-        let triple = self.rio_to_triple(triple_model)?;
+        let triple =
+            Self::rio_to_triple(triple_model, &mut |ns_str| self.resolve_and_free_ns(ns_str))?;
         let object_hash: Hash = triple.object.as_hash();
 
         self.store.stat.triple_count -= Uint128::one();
@@ -121,11 +122,18 @@ impl<'a> StoreEngine<'a> {
     /// Flushes the store to the storage.
     /// Returns the number of triples added or removed (absolute value).
     pub fn finish(&mut self) -> Result<Uint128, ContractError> {
-        STORE.save(self.storage, &self.store)?;
         NAMESPACE_KEY_INCREMENT.save(self.storage, &self.ns_key_inc_offset)?;
+
         for entry in &self.ns_cache {
-            namespaces().save(self.storage, entry.0.to_string(), entry.1)?;
+            if entry.1.counter > 0 {
+                namespaces().save(self.storage, entry.0.to_string(), entry.1)?;
+            } else {
+                self.store.stat.namespace_count -= Uint128::one();
+                namespaces().remove(self.storage, entry.0.to_string())?;
+            }
         }
+
+        STORE.save(self.storage, &self.store)?;
 
         Ok(self
             .store
@@ -134,7 +142,7 @@ impl<'a> StoreEngine<'a> {
             .abs_diff(self.initial_triple_count))
     }
 
-    fn resolve_namespace_key(&mut self, ns_str: String) -> StdResult<u128> {
+    fn resolve_and_reference_ns(&mut self, ns_str: String) -> StdResult<u128> {
         if let Some(namespace) = self.ns_cache.get_mut(&ns_str) {
             namespace.counter += 1;
             Ok(namespace.key)
@@ -151,9 +159,24 @@ impl<'a> StoreEngine<'a> {
         }
     }
 
+    fn resolve_and_free_ns(&mut self, ns_str: String) -> StdResult<u128> {
+        if let Some(namespace) = self.ns_cache.get_mut(&ns_str) {
+            namespace.counter -= 1;
+            Ok(namespace.key)
+        } else {
+            let mut namespace = match namespaces().load(self.storage, ns_str.clone()) {
+                Ok(n) => Ok(n),
+                Err(e) => Err(e),
+            }?;
+
+            namespace.counter -= 1;
+            self.ns_cache.insert(ns_str, namespace.clone());
+            Ok(namespace.key)
+        }
+    }
+
     fn allocate_namespace(&mut self, value: String) -> Namespace {
         self.store.stat.namespace_count += Uint128::one();
-
         let ns = Namespace {
             value,
             key: self.ns_key_inc_offset,
@@ -164,40 +187,55 @@ impl<'a> StoreEngine<'a> {
         ns
     }
 
-    fn rio_to_triple(&mut self, triple: model::Triple<'_>) -> StdResult<Triple> {
+    fn rio_to_triple<F>(triple: model::Triple<'_>, ns_fn: &mut F) -> StdResult<Triple>
+    where
+        F: FnMut(String) -> StdResult<u128>,
+    {
         Ok(Triple {
-            subject: self.rio_to_subject(triple.subject)?,
-            predicate: self.rio_to_node(triple.predicate)?,
-            object: self.rio_to_object(triple.object)?,
+            subject: Self::rio_to_subject(triple.subject, ns_fn)?,
+            predicate: Self::rio_to_node(triple.predicate, ns_fn)?,
+            object: Self::rio_to_object(triple.object, ns_fn)?,
         })
     }
 
-    fn rio_to_subject(&mut self, subject: model::Subject<'_>) -> StdResult<Subject> {
+    fn rio_to_subject<F>(subject: model::Subject<'_>, ns_fn: &mut F) -> StdResult<Subject>
+    where
+        F: FnMut(String) -> StdResult<u128>,
+    {
         match subject {
-            model::Subject::NamedNode(node) => self.rio_to_node(node).map(Subject::Named),
+            model::Subject::NamedNode(node) => Self::rio_to_node(node, ns_fn).map(Subject::Named),
             model::Subject::BlankNode(node) => Ok(Subject::Blank(node.id.to_string())),
             model::Subject::Triple(_) => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
 
-    fn rio_to_node(&mut self, node: model::NamedNode<'_>) -> StdResult<Node> {
+    fn rio_to_node<F>(node: model::NamedNode<'_>, ns_fn: &mut F) -> StdResult<Node>
+    where
+        F: FnMut(String) -> StdResult<u128>,
+    {
         let (ns, v) = rdf::explode_iri(node.iri)?;
         Ok(Node {
-            namespace: self.resolve_namespace_key(ns)?,
+            namespace: ns_fn(ns)?,
             value: v,
         })
     }
 
-    fn rio_to_object(&mut self, object: Term<'_>) -> StdResult<Object> {
+    fn rio_to_object<F>(object: Term<'_>, ns_fn: &mut F) -> StdResult<Object>
+    where
+        F: FnMut(String) -> StdResult<u128>,
+    {
         match object {
             Term::BlankNode(node) => Ok(Object::Blank(node.id.to_string())),
-            Term::NamedNode(node) => self.rio_to_node(node).map(Object::Named),
-            Term::Literal(literal) => self.rio_to_literal(literal).map(Object::Literal),
+            Term::NamedNode(node) => Self::rio_to_node(node, ns_fn).map(Object::Named),
+            Term::Literal(literal) => Self::rio_to_literal(literal, ns_fn).map(Object::Literal),
             Term::Triple(_) => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
 
-    fn rio_to_literal(&mut self, literal: model::Literal<'_>) -> StdResult<Literal> {
+    fn rio_to_literal<F>(literal: model::Literal<'_>, ns_fn: &mut F) -> StdResult<Literal>
+    where
+        F: FnMut(String) -> StdResult<u128>,
+    {
         match literal {
             model::Literal::Simple { value } => Ok(Literal::Simple {
                 value: value.to_string(),
@@ -207,7 +245,7 @@ impl<'a> StoreEngine<'a> {
                 language: language.to_string(),
             }),
             model::Literal::Typed { value, datatype } => {
-                self.rio_to_node(datatype).map(|node| Literal::Typed {
+                Self::rio_to_node(datatype, ns_fn).map(|node| Literal::Typed {
                     value: value.to_string(),
                     datatype: node,
                 })

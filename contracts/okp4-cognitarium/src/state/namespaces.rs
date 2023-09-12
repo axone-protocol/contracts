@@ -64,6 +64,11 @@ impl<'a> NamespaceResolver<'a> {
             .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
     }
 
+    pub fn resolve_from_key(&mut self, key: u128) -> StdResult<Option<Namespace>> {
+        self.resolve_cell_from_key(key)
+            .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
+    }
+
     fn resolve_cell_from_val(
         &mut self,
         value: String,
@@ -75,6 +80,18 @@ impl<'a> NamespaceResolver<'a> {
         namespaces()
             .may_load(self.storage, value)
             .map(|maybe_ns| maybe_ns.map(|ns| self.insert(ns)))
+    }
+
+    fn resolve_cell_from_key(&mut self, key: u128) -> StdResult<Option<Rc<RefCell<Namespace>>>> {
+        if let Some(rc) = self.by_key.get(&key) {
+            return Ok(Some(rc.clone()));
+        }
+
+        namespaces()
+            .idx
+            .key
+            .item(self.storage, key)
+            .map(|maybe_ns| maybe_ns.map(|ns| self.insert(ns.1)))
     }
 
     fn insert(&mut self, ns: Namespace) -> Rc<RefCell<Namespace>> {

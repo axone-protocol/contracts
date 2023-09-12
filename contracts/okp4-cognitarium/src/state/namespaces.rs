@@ -59,6 +59,24 @@ impl<'a> NamespaceResolver<'a> {
         }
     }
 
+    pub fn resolve_from_val(&mut self, value: String) -> StdResult<Option<Namespace>> {
+        self.resolve_cell_from_val(value)
+            .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
+    }
+
+    fn resolve_cell_from_val(
+        &mut self,
+        value: String,
+    ) -> StdResult<Option<Rc<RefCell<Namespace>>>> {
+        if let Some(rc) = self.by_val.get(value.as_str()) {
+            return Ok(Some(rc.clone()));
+        }
+
+        namespaces()
+            .may_load(self.storage, value)
+            .map(|maybe_ns| maybe_ns.map(|ns| self.insert(ns)))
+    }
+
     fn insert(&mut self, ns: Namespace) -> Rc<RefCell<Namespace>> {
         let ns_rc = Rc::new(RefCell::new(ns.clone()));
 

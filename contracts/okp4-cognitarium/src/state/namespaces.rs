@@ -175,7 +175,11 @@ impl<'a> NamespaceBatchService<'a> {
             }
         }
 
-        self.Ok(self.ns_count_diff)
+        let count_diff = self.ns_count_diff;
+        self.ns_count_diff = 0;
+        self.ns_resolver.clear();
+
+        Ok(count_diff)
     }
 
     fn allocate(&mut self, value: String) -> Namespace {

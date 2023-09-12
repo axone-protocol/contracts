@@ -1,5 +1,9 @@
+use cosmwasm_std::{StdError, StdResult, Storage};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, UniqueIndex};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::rc::Rc;
 
 /// Store a key increment used a unique key for referencing a namespace. Given the size of an `u128`
 /// there is no need to implement a garbage collector mechanism in case some namespaces are removed.
@@ -35,4 +39,32 @@ pub fn namespaces<'a>() -> IndexedMap<'a, String, Namespace, NamespaceIndexes<'a
             key: UniqueIndex::new(|ns| ns.key, "NAMESPACE__KEY"),
         },
     )
+}
+
+/// [NamespaceResolver] is a [Namespace] querying service allowing to resolve namespaces either by
+/// namespace's value or namespace's internal state key. It implements a two way indexed in memory
+/// cache to mitigate state access.
+pub struct NamespaceResolver<'a> {
+    storage: &'a dyn Storage,
+    by_val: BTreeMap<String, Rc<RefCell<Namespace>>>,
+    by_key: BTreeMap<u128, Rc<RefCell<Namespace>>>,
+}
+
+impl<'a> NamespaceResolver<'a> {
+    pub fn new(storage: &'a dyn Storage) -> Self {
+        Self {
+            storage,
+            by_key: BTreeMap::new(),
+            by_val: BTreeMap::new(),
+        }
+    }
+
+    fn insert(&mut self, ns: Namespace) -> Rc<RefCell<Namespace>> {
+        let ns_rc = Rc::new(RefCell::new(ns.clone()));
+
+        self.by_val.insert(ns.value.clone(), ns_rc.clone());
+        self.by_key.insert(ns.key.clone(), ns_rc.clone());
+
+        ns_rc
+    }
 }

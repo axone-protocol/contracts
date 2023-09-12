@@ -103,3 +103,86 @@ impl<'a> NamespaceResolver<'a> {
         ns_rc
     }
 }
+
+pub struct NamespaceBatchService<'a> {
+    ns_resolver: NamespaceResolver<'a>,
+    ns_key_inc: u128,
+    ns_count_diff: i128,
+}
+
+impl<'a> NamespaceBatchService<'a> {
+    pub fn new(storage: &'a dyn Storage) -> StdResult<Self> {
+        Ok(Self {
+            ns_resolver: NamespaceResolver::new(storage),
+            ns_key_inc: NAMESPACE_KEY_INCREMENT.load(storage)?,
+            ns_count_diff: 0,
+        })
+    }
+
+    pub fn count_ref(&mut self, value: String) -> StdResult<Namespace> {
+        self.ns_resolver
+            .resolve_cell_from_val(value.clone())
+            .map(|maybe_cell| {
+                maybe_cell
+                    .map(|cell| {
+                        let mut ns = cell.borrow_mut();
+                        ns.counter += 1;
+                        ns.clone()
+                    })
+                    .unwrap_or_else(|| self.allocate(value))
+            })
+    }
+
+    pub fn free_ref(&mut self, value: String) -> StdResult<Namespace> {
+        self.ns_resolver
+            .resolve_cell_from_val(value.clone())
+            .and_then(|maybe_cell| {
+                let cell = match maybe_cell.filter(|c| c.borrow().counter > 0) {
+                    Some(c) => c,
+                    None => Err(StdError::generic_err(
+                        "Trying to delete a non existing namespace",
+                    ))?,
+                };
+
+                let mut ns = cell.borrow_mut();
+                ns.counter -= 1;
+                if ns.counter == 0 {
+                    self.ns_count_diff -= 1;
+                }
+
+                let tmp = ns.clone();
+                Ok(tmp)
+            })
+    }
+
+    pub fn flush(&mut self, storage: &'a mut dyn Storage) -> StdResult<i128> {
+        NAMESPACE_KEY_INCREMENT.save(storage, &self.ns_key_inc)?;
+
+        for entry in &self.ns_resolver.by_val {
+            if entry.1.borrow().counter > 0 {
+                namespaces().save(storage, entry.0.to_string(), &entry.1.borrow().clone())?;
+            } else {
+                let res = namespaces().remove(storage, entry.0.to_string());
+                match res {
+                    Err(StdError::NotFound { .. }) => Ok(()),
+                    _ => res,
+                }?;
+            }
+        }
+
+        Ok(self.ns_count_diff)
+    }
+
+    fn allocate(&mut self, value: String) -> Namespace {
+        let ns = Namespace {
+            value,
+            key: self.ns_key_inc,
+            counter: 0u128,
+        };
+
+        self.ns_key_inc += 1;
+        self.ns_count_diff += 1;
+
+        self.ns_resolver.insert(ns).borrow().clone()
+    }
+}

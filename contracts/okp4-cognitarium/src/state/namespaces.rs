@@ -69,6 +69,11 @@ impl<'a> NamespaceResolver<'a> {
             .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
     }
 
+    pub fn clear(&mut self) -> () {
+        self.by_val.clear();
+        self.by_key.clear();
+    }
+
     fn resolve_cell_from_val(
         &mut self,
         value: String,
@@ -170,7 +175,7 @@ impl<'a> NamespaceBatchService<'a> {
             }
         }
 
-        Ok(self.ns_count_diff)
+        self.Ok(self.ns_count_diff)
     }
 
     fn allocate(&mut self, value: String) -> Namespace {

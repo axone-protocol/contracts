@@ -4,13 +4,13 @@ use crate::msg::{
 };
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::rdf::expand_uri;
-use crate::state::{namespaces, Object, Predicate, Subject};
+use crate::state::{namespaces, NamespaceResolver, Object, Predicate, Subject};
 use crate::{rdf, state};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
-    storage: &'a dyn Storage,
+    ns_resolver: NamespaceResolver<'a>,
     prefixes: &'a HashMap<String, String>,
     variables: Vec<String>,
     limit: Option<usize>,
@@ -20,7 +20,7 @@ pub struct PlanBuilder<'a> {
 impl<'a> PlanBuilder<'a> {
     pub fn new(storage: &'a dyn Storage, prefixes: &'a HashMap<String, String>) -> Self {
         Self {
-            storage,
+            ns_resolver: NamespaceResolver::new(storage),
             prefixes,
             variables: Vec::new(),
             skip: None,
@@ -162,8 +162,9 @@ impl<'a> PlanBuilder<'a> {
         }
         .and_then(|iri| rdf::explode_iri(&iri))
         .and_then(|(ns_key, v)| {
-            namespaces()
-                .load(self.storage, ns_key)
+            self.ns_resolver
+                .resolve_from_val(ns_key)
+                .and_then(NamespaceResolver::none_as_error_middleware)
                 .map(|ns| state::Node {
                     namespace: ns.key,
                     value: v,
@@ -276,9 +277,7 @@ mod test {
             ),
             (
                 IRI::Full("http://not-existing#something".to_string()),
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
             (
                 IRI::Prefixed("okp4:resource".to_string()),
@@ -454,9 +453,7 @@ mod test {
                     predicate: VarOrNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
             (
                 TriplePattern {
@@ -466,9 +463,7 @@ mod test {
                     ))),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
             (
                 TriplePattern {
@@ -478,9 +473,7 @@ mod test {
                         "notexisting#outch".to_string(),
                     ))),
                 },
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
         ];
 
@@ -535,9 +528,7 @@ mod test {
                     predicate: VarOrNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
             (
                 None,

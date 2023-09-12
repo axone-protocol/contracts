@@ -188,7 +188,8 @@ pub mod query {
         }
 
         let prefix_map = PrefixMap::from(query.prefixes).into_inner();
-        let plan = PlanBuilder::new(deps.storage, &prefix_map)
+        let plan_builder = PlanBuilder::new(deps.storage, &prefix_map);
+        let plan = plan_builder
             .with_limit(count as usize)
             .build_plan(&query.r#where)?;
 

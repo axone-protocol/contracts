@@ -69,7 +69,7 @@ impl<'a> NamespaceResolver<'a> {
             .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
     }
 
-    pub fn clear(&mut self) -> () {
+    pub fn clear(&mut self) {
         self.by_val.clear();
         self.by_key.clear();
     }
@@ -106,6 +106,13 @@ impl<'a> NamespaceResolver<'a> {
         self.by_key.insert(ns.key.clone(), ns_rc.clone());
 
         ns_rc
+    }
+
+    pub fn none_as_error_middleware(resolve_res: Option<Namespace>) -> StdResult<Namespace> {
+        match resolve_res {
+            Some(ns) => Ok(ns),
+            None => Err(StdError::not_found("Namespace")),
+        }
     }
 }
 

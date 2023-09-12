@@ -327,10 +327,10 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{from_binary, Addr, Attribute, Order, Uint128};
     use std::collections::BTreeMap;
-    use std::env;
     use std::fs::File;
     use std::io::Read;
     use std::path::Path;
+    use std::{env, u128};
 
     #[test]
     fn proper_initialization() {
@@ -663,6 +663,8 @@ mod tests {
                     }))],
                 },
                 0,
+                0,
+                Uint128::from(7103u128),
             ),
             (
                 DeleteData {
@@ -687,6 +689,8 @@ mod tests {
                     }))],
                 },
                 1,
+                0,
+                Uint128::from(6921u128),
             ),
             (
                 DeleteData {
@@ -720,6 +724,8 @@ mod tests {
                     }))],
                 },
                 1,
+                0,
+                Uint128::from(6921u128),
             ),
             (
                 DeleteData {
@@ -749,6 +755,8 @@ mod tests {
                     }))],
                 },
                 1,
+                0,
+                Uint128::from(6921u128),
             ),
             (
                 DeleteData {
@@ -765,6 +773,8 @@ mod tests {
                     }))],
                 },
                 11,
+                2,
+                Uint128::from(5272u128),
             ),
             (
                 DeleteData {
@@ -777,6 +787,22 @@ mod tests {
                     }))],
                 },
                 11,
+                2,
+                Uint128::from(5272u128),
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Variable("s".to_string()),
+                        predicate: VarOrNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("0".to_string()),
+                    }))],
+                },
+                40,
+                17,
+                Uint128::from(0u128),
             ),
         ];
 
@@ -812,6 +838,27 @@ mod tests {
                     Attribute::new("action", "delete"),
                     Attribute::new("triple_count", case.1.to_string())
                 ]
+            );
+
+            assert_eq!(
+                STORE.load(&deps.storage).unwrap().stat,
+                StoreStat {
+                    triple_count: (40u128 - u128::try_from(case.1).unwrap()).into(),
+                    namespace_count: (17u128 - u128::try_from(case.2).unwrap()).into(),
+                    byte_size: case.3,
+                },
+            );
+            assert_eq!(
+                triples()
+                    .range_raw(&deps.storage, None, None, Order::Ascending)
+                    .count(),
+                40 - case.1
+            );
+            assert_eq!(
+                namespaces()
+                    .range_raw(&deps.storage, None, None, Order::Ascending)
+                    .count(),
+                17 - case.2
             );
         }
     }

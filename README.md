@@ -305,7 +305,7 @@ You'll find the generated documentation under the `docs` folder.
 
 #### Commit the documentation
 
-When developing a new contract, you should commit the generated documentation to the repository. For this, gerenate the
+When developing a new contract, you should commit the generated documentation to the repository. For this, generate the
 documentation and commit the changes:
 
 ```sh

@@ -208,7 +208,7 @@ impl From<BucketLimits> for msg::BucketLimits {
 /// Pagination is the type carrying configuration for paginated queries.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Pagination {
-    /// The maximum elements a page can contains.
+    /// The maximum elements a page can contain.
     pub max_page_size: u32,
     /// The default number of elements in a page.
     pub default_page_size: u32,

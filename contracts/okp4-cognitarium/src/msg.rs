@@ -155,17 +155,17 @@ pub enum DataFormat {
 #[derive(Builder)]
 #[builder(default, setter(into, strip_option))]
 pub struct StoreLimitsInput {
-    /// The maximum number of triples the store can contains.
+    /// The maximum number of triples the store can contain.
     /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
     #[serde(default = "StoreLimitsInput::default_max_triple_count")]
     pub max_triple_count: Uint128,
-    /// The maximum number of bytes the store can contains.
+    /// The maximum number of bytes the store can contain.
     /// The size of a triple is counted as the sum of the size of its subject, predicate and object,
     /// including the size of data types and language tags if any.
     /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
     #[serde(default = "StoreLimitsInput::default_max_byte_size")]
     pub max_byte_size: Uint128,
-    /// The maximum number of bytes the store can contains for a single triple.
+    /// The maximum number of bytes the store can contain for a single triple.
     /// The size of a triple is counted as the sum of the size of its subject, predicate and object,
     /// including the size of data types and language tags if any. The limit is used to prevent
     /// storing very large triples, especially literals.
@@ -180,11 +180,11 @@ pub struct StoreLimitsInput {
     /// Default to 30 if not set.
     #[serde(default = "StoreLimitsInput::default_max_query_variable_count")]
     pub max_query_variable_count: u32,
-    /// The maximum number of bytes an insert data query can contains.
+    /// The maximum number of bytes an insert data query can contain.
     /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
     #[serde(default = "StoreLimitsInput::default_max_insert_data_byte_size")]
     pub max_insert_data_byte_size: Uint128,
-    /// The maximum number of triples an insert data query can contains (after parsing).
+    /// The maximum number of triples an insert data query can contain (after parsing).
     /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
     #[serde(default = "StoreLimitsInput::default_max_insert_data_triple_count")]
     pub max_insert_data_triple_count: Uint128,
@@ -249,15 +249,15 @@ pub struct StoreResponse {
 #[derive(Default, Builder)]
 #[builder(default, setter(into, strip_option))]
 pub struct StoreLimits {
-    /// The maximum number of triples the store can contains.
+    /// The maximum number of triples the store can contain.
     pub max_triple_count: Uint128,
 
-    /// The maximum number of bytes the store can contains.
+    /// The maximum number of bytes the store can contain.
     /// The size of a triple is counted as the sum of the size of its subject, predicate and object,
     /// including the size of data types and language tags if any.
     pub max_byte_size: Uint128,
 
-    /// The maximum number of bytes the store can contains for a single triple.
+    /// The maximum number of bytes the store can contain for a single triple.
     /// The size of a triple is counted as the sum of the size of its subject, predicate and object,
     /// including the size of data types and language tags if any. The limit is used to prevent
     /// storing very large triples, especially literals.
@@ -269,10 +269,10 @@ pub struct StoreLimits {
     /// The maximum number of variables a query can select.
     pub max_query_variable_count: u32,
 
-    /// The maximum number of bytes an insert data query can contains.
+    /// The maximum number of bytes an insert data query can contain.
     pub max_insert_data_byte_size: Uint128,
 
-    /// The maximum number of triples an insert data query can contains (after parsing).
+    /// The maximum number of triples an insert data query can contain (after parsing).
     pub max_insert_data_triple_count: Uint128,
 }
 

@@ -319,7 +319,7 @@ pub struct BucketLimits {
 #[derive(Builder)]
 #[builder(default, setter(strip_option))]
 pub struct PaginationConfig {
-    /// The maximum elements a page can contains.
+    /// The maximum elements a page can contain.
     ///
     /// Shall be less than `u32::MAX - 1`.
     /// Default to '30' if not set.

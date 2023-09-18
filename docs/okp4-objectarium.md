@@ -116,7 +116,7 @@ Instantiate messages
 |`limits.max_total_size`|**[Uint128](#uint128)\|null**. The maximum total size of the objects in the bucket.|
 |`pagination`|**[PaginationConfig](#paginationconfig)**. The configuration for paginated query.|
 |`pagination.default_page_size`|**integer**. The default number of elements in a page.<br /><br />Shall be less or equal than `max_page_size`. Default to '10' if not set.<br />**Default:** `10`|
-|`pagination.max_page_size`|**integer**. The maximum elements a page can contains.<br /><br />Shall be less than `u32::MAX - 1`. Default to '30' if not set.<br />**Default:** `30`|
+|`pagination.max_page_size`|**integer**. The maximum elements a page can contain.<br /><br />Shall be less than `u32::MAX - 1`. Default to '30' if not set.<br />**Default:** `30`|
 
 ## ExecuteMsg
 

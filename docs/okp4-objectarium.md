@@ -235,7 +235,7 @@ BucketResponse is the response of the Bucket query.
 |`name`|*(Required.) * **string**. The name of the bucket.|
 |`pagination`|*(Required.) * **[PaginationConfig](#paginationconfig)**. The configuration for paginated query.|
 |`pagination.default_page_size`|**integer**. The default number of elements in a page.<br /><br />Shall be less or equal than `max_page_size`. Default to '10' if not set.<br />**Default:** `10`|
-|`pagination.max_page_size`|**integer**. The maximum elements a page can contains.<br /><br />Shall be less than `u32::MAX - 1`. Default to '30' if not set.<br />**Default:** `30`|
+|`pagination.max_page_size`|**integer**. The maximum elements a page can contain.<br /><br />Shall be less than `u32::MAX - 1`. Default to '30' if not set.<br />**Default:** `30`|
 
 ### object
 
@@ -393,7 +393,7 @@ The fields are optional and if not set, there is a default configuration.
 |property|description|
 |----------|-----------|
 |`default_page_size`|**integer**. The default number of elements in a page.<br /><br />Shall be less or equal than `max_page_size`. Default to '10' if not set.|
-|`max_page_size`|**integer**. The maximum elements a page can contains.<br /><br />Shall be less than `u32::MAX - 1`. Default to '30' if not set.|
+|`max_page_size`|**integer**. The maximum elements a page can contain.<br /><br />Shall be less than `u32::MAX - 1`. Default to '30' if not set.|
 
 ### Passthrough
 
@@ -471,4 +471,4 @@ A string containing a 128-bit integer in decimal representation.
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`8624f6ec32a56a5d`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`4d471978e4dc3d25`)*

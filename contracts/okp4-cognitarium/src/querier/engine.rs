@@ -1,9 +1,9 @@
 use crate::msg::{Head, Results, SelectItem, SelectResponse, Value};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
-use crate::state::{namespaces, triples, Object, Predicate, Subject, Triple};
+use crate::state::{triples, NamespaceResolver, Object, Predicate, Subject, Triple};
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
 
@@ -367,10 +367,9 @@ impl<'a> Iterator for TriplePatternIterator<'a> {
 }
 
 struct SolutionsIterator<'a> {
-    storage: &'a dyn Storage,
+    ns_resolver: NamespaceResolver<'a>,
     iter: ResolvedVariablesIterator<'a>,
     bindings: BTreeMap<String, usize>,
-    ns_cache: HashMap<u128, String>,
 }
 
 impl<'a> SolutionsIterator<'a> {
@@ -380,27 +379,10 @@ impl<'a> SolutionsIterator<'a> {
         bindings: BTreeMap<String, usize>,
     ) -> Self {
         Self {
-            storage,
+            ns_resolver: NamespaceResolver::new(storage),
             iter,
             bindings,
-            ns_cache: HashMap::new(),
         }
-    }
-
-    fn resolve_ns(&mut self, ns_key: u128) -> StdResult<String> {
-        if let Some(ns) = self.ns_cache.get(&ns_key) {
-            return Ok(ns.clone());
-        }
-
-        let ns = namespaces().idx.key.item(self.storage, ns_key).and_then(
-            |maybe_ns| match maybe_ns {
-                Some(ns) => Ok(ns.1.value),
-                None => Err(StdError::not_found("Namespace")),
-            },
-        )?;
-
-        self.ns_cache.insert(ns_key, ns.clone());
-        Ok(ns)
     }
 }
 
@@ -427,7 +409,15 @@ impl<'a> Iterator for SolutionsIterator<'a> {
                     })
                     .map(|res| {
                         res.and_then(|(name, var)| -> StdResult<(String, Value)> {
-                            Ok((name, var.as_value(&mut |ns_key| self.resolve_ns(ns_key))?))
+                            Ok((
+                                name,
+                                var.as_value(&mut |ns_key| {
+                                    self.ns_resolver
+                                        .resolve_from_key(ns_key)
+                                        .and_then(&NamespaceResolver::none_as_error_middleware)
+                                        .map(|ns| ns.value)
+                                })?,
+                            ))
                         })
                     })
                     .collect::<StdResult<BTreeMap<String, Value>>>()

@@ -44,28 +44,34 @@ pub fn namespaces<'a>() -> IndexedMap<'a, String, Namespace, NamespaceIndexes<'a
 /// [NamespaceResolver] is a [Namespace] querying service allowing to resolve namespaces either by
 /// namespace's value or namespace's internal state key. It implements a two way indexed in memory
 /// cache to mitigate state access.
-pub struct NamespaceResolver<'a> {
-    storage: &'a dyn Storage,
+pub struct NamespaceResolver {
     by_val: BTreeMap<String, Rc<RefCell<Namespace>>>,
     by_key: BTreeMap<u128, Rc<RefCell<Namespace>>>,
 }
 
-impl<'a> NamespaceResolver<'a> {
-    pub fn new(storage: &'a dyn Storage) -> Self {
+impl NamespaceResolver {
+    pub fn new() -> Self {
         Self {
-            storage,
             by_key: BTreeMap::new(),
             by_val: BTreeMap::new(),
         }
     }
 
-    pub fn resolve_from_val(&mut self, value: String) -> StdResult<Option<Namespace>> {
-        self.resolve_cell_from_val(value)
+    pub fn resolve_from_val(
+        &mut self,
+        storage: &dyn Storage,
+        value: String,
+    ) -> StdResult<Option<Namespace>> {
+        self.resolve_cell_from_val(storage, value)
             .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
     }
 
-    pub fn resolve_from_key(&mut self, key: u128) -> StdResult<Option<Namespace>> {
-        self.resolve_cell_from_key(key)
+    pub fn resolve_from_key(
+        &mut self,
+        storage: &dyn Storage,
+        key: u128,
+    ) -> StdResult<Option<Namespace>> {
+        self.resolve_cell_from_key(storage, key)
             .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
     }
 
@@ -76,6 +82,7 @@ impl<'a> NamespaceResolver<'a> {
 
     fn resolve_cell_from_val(
         &mut self,
+        storage: &dyn Storage,
         value: String,
     ) -> StdResult<Option<Rc<RefCell<Namespace>>>> {
         if let Some(rc) = self.by_val.get(value.as_str()) {
@@ -83,11 +90,15 @@ impl<'a> NamespaceResolver<'a> {
         }
 
         namespaces()
-            .may_load(self.storage, value)
+            .may_load(storage, value)
             .map(|maybe_ns| maybe_ns.map(|ns| self.insert(ns)))
     }
 
-    fn resolve_cell_from_key(&mut self, key: u128) -> StdResult<Option<Rc<RefCell<Namespace>>>> {
+    fn resolve_cell_from_key(
+        &mut self,
+        storage: &dyn Storage,
+        key: u128,
+    ) -> StdResult<Option<Rc<RefCell<Namespace>>>> {
         if let Some(rc) = self.by_key.get(&key) {
             return Ok(Some(rc.clone()));
         }
@@ -95,7 +106,7 @@ impl<'a> NamespaceResolver<'a> {
         namespaces()
             .idx
             .key
-            .item(self.storage, key)
+            .item(storage, key)
             .map(|maybe_ns| maybe_ns.map(|ns| self.insert(ns.1)))
     }
 
@@ -116,24 +127,24 @@ impl<'a> NamespaceResolver<'a> {
     }
 }
 
-pub struct NamespaceBatchService<'a> {
-    ns_resolver: NamespaceResolver<'a>,
+pub struct NamespaceBatchService {
+    ns_resolver: NamespaceResolver,
     ns_key_inc: u128,
     ns_count_diff: i128,
 }
 
-impl<'a> NamespaceBatchService<'a> {
-    pub fn new(storage: &'a dyn Storage) -> StdResult<Self> {
+impl NamespaceBatchService {
+    pub fn new(storage: &dyn Storage) -> StdResult<Self> {
         Ok(Self {
-            ns_resolver: NamespaceResolver::new(storage),
+            ns_resolver: NamespaceResolver::new(),
             ns_key_inc: NAMESPACE_KEY_INCREMENT.load(storage)?,
             ns_count_diff: 0,
         })
     }
 
-    pub fn count_ref(&mut self, value: String) -> StdResult<Namespace> {
+    pub fn count_ref(&mut self, storage: &dyn Storage, value: String) -> StdResult<Namespace> {
         self.ns_resolver
-            .resolve_cell_from_val(value.clone())
+            .resolve_cell_from_val(storage, value.clone())
             .map(|maybe_cell| {
                 maybe_cell
                     .map(|cell| {
@@ -145,9 +156,9 @@ impl<'a> NamespaceBatchService<'a> {
             })
     }
 
-    pub fn free_ref(&mut self, value: String) -> StdResult<Namespace> {
+    pub fn free_ref(&mut self, storage: &dyn Storage, value: String) -> StdResult<Namespace> {
         self.ns_resolver
-            .resolve_cell_from_val(value.clone())
+            .resolve_cell_from_val(storage, value.clone())
             .and_then(|maybe_cell| {
                 let cell = match maybe_cell.filter(|c| c.borrow().counter > 0) {
                     Some(c) => c,
@@ -167,7 +178,7 @@ impl<'a> NamespaceBatchService<'a> {
             })
     }
 
-    pub fn flush(&mut self, storage: &'a mut dyn Storage) -> StdResult<i128> {
+    pub fn flush(&mut self, storage: &mut dyn Storage) -> StdResult<i128> {
         NAMESPACE_KEY_INCREMENT.save(storage, &self.ns_key_inc)?;
 
         for entry in &self.ns_resolver.by_val {
@@ -193,7 +204,7 @@ impl<'a> NamespaceBatchService<'a> {
         let ns = Namespace {
             value,
             key: self.ns_key_inc,
-            counter: 0u128,
+            counter: 1u128,
         };
 
         self.ns_key_inc += 1;

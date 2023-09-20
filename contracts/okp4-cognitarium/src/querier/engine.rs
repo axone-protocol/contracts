@@ -367,7 +367,8 @@ impl<'a> Iterator for TriplePatternIterator<'a> {
 }
 
 struct SolutionsIterator<'a> {
-    ns_resolver: NamespaceResolver<'a>,
+    storage: &'a dyn Storage,
+    ns_resolver: NamespaceResolver,
     iter: ResolvedVariablesIterator<'a>,
     bindings: BTreeMap<String, usize>,
 }
@@ -379,7 +380,8 @@ impl<'a> SolutionsIterator<'a> {
         bindings: BTreeMap<String, usize>,
     ) -> Self {
         Self {
-            ns_resolver: NamespaceResolver::new(storage),
+            storage,
+            ns_resolver: NamespaceResolver::new(),
             iter,
             bindings,
         }
@@ -412,9 +414,9 @@ impl<'a> Iterator for SolutionsIterator<'a> {
                             Ok((
                                 name,
                                 var.as_value(&mut |ns_key| {
-                                    self.ns_resolver
-                                        .resolve_from_key(ns_key)
-                                        .and_then(&NamespaceResolver::none_as_error_middleware)
+                                    let res =
+                                        self.ns_resolver.resolve_from_key(self.storage, ns_key);
+                                    res.and_then(NamespaceResolver::none_as_error_middleware)
                                         .map(|ns| ns.value)
                                 })?,
                             ))

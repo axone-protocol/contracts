@@ -10,7 +10,8 @@ use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
-    ns_resolver: NamespaceResolver<'a>,
+    storage: &'a dyn Storage,
+    ns_resolver: NamespaceResolver,
     prefixes: &'a HashMap<String, String>,
     variables: Vec<String>,
     limit: Option<usize>,
@@ -20,7 +21,8 @@ pub struct PlanBuilder<'a> {
 impl<'a> PlanBuilder<'a> {
     pub fn new(storage: &'a dyn Storage, prefixes: &'a HashMap<String, String>) -> Self {
         Self {
-            ns_resolver: NamespaceResolver::new(storage),
+            storage,
+            ns_resolver: NamespaceResolver::new(),
             prefixes,
             variables: Vec::new(),
             skip: None,
@@ -163,7 +165,7 @@ impl<'a> PlanBuilder<'a> {
         .and_then(|iri| rdf::explode_iri(&iri))
         .and_then(|(ns_key, v)| {
             self.ns_resolver
-                .resolve_from_val(ns_key)
+                .resolve_from_val(self.storage, ns_key)
                 .and_then(NamespaceResolver::none_as_error_middleware)
                 .map(|ns| state::Node {
                     namespace: ns.key,

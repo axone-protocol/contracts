@@ -4,7 +4,9 @@ use crate::msg::{
 };
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::rdf::expand_uri;
-use crate::state::{namespaces, NamespaceResolver, Object, Predicate, Subject};
+use crate::state::{
+    namespaces, HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject,
+};
 use crate::{rdf, state};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
@@ -19,10 +21,16 @@ pub struct PlanBuilder<'a> {
 }
 
 impl<'a> PlanBuilder<'a> {
-    pub fn new(storage: &'a dyn Storage, prefixes: &'a HashMap<String, String>) -> Self {
+    pub fn new(
+        storage: &'a dyn Storage,
+        prefixes: &'a HashMap<String, String>,
+        ns_cache: Option<Vec<Namespace>>,
+    ) -> Self {
         Self {
             storage,
-            ns_resolver: NamespaceResolver::new(),
+            ns_resolver: ns_cache
+                .map(Into::into)
+                .unwrap_or_else(NamespaceResolver::new),
             prefixes,
             variables: Vec::new(),
             skip: None,
@@ -184,6 +192,16 @@ impl<'a> PlanBuilder<'a> {
     }
 }
 
+impl<'a> HasCachedNamespaces for PlanBuilder<'a> {
+    fn cached_namespaces(&self) -> Vec<Namespace> {
+        self.ns_resolver.cached_namespaces()
+    }
+
+    fn clear_cache(&mut self) {
+        self.ns_resolver.clear_cache()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -249,7 +267,7 @@ mod test {
 
         for case in cases {
             let prefixes = &PrefixMap::from(case.0).into_inner();
-            let builder = PlanBuilder::new(&deps.storage, prefixes);
+            let builder = PlanBuilder::new(&deps.storage, prefixes, None);
             assert_eq!(builder.skip, None);
             assert_eq!(builder.limit, None);
             assert_eq!(builder.variables, Vec::<String>::new());
@@ -257,7 +275,7 @@ mod test {
         }
 
         let prefixes = &PrefixMap::default().into_inner();
-        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
         builder = builder.with_skip(20usize).with_limit(50usize);
         assert_eq!(builder.skip, Some(20usize));
         assert_eq!(builder.limit, Some(50usize));
@@ -333,7 +351,7 @@ mod test {
             },
         ])
         .into_inner();
-        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
 
         for case in cases {
             assert_eq!(builder.build_named_node(case.0), case.1);
@@ -492,7 +510,7 @@ mod test {
             )
             .unwrap();
         let prefixes = &PrefixMap::default().into_inner();
-        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
 
         for case in cases {
             assert_eq!(builder.build_triple_pattern(&case.0), case.1);
@@ -695,7 +713,7 @@ mod test {
 
         for case in cases {
             let prefixes = &PrefixMap::default().into_inner();
-            let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+            let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
             if let Some(skip) = case.0 {
                 builder = builder.with_skip(skip);
             }

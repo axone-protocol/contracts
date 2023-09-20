@@ -1,7 +1,9 @@
 use crate::msg::{Head, Results, SelectItem, SelectResponse, Value};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
-use crate::state::{triples, NamespaceResolver, Object, Predicate, Subject, Triple};
+use crate::state::{
+    triples, HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject, Triple,
+};
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use std::collections::{BTreeMap, VecDeque};
 use std::iter;
@@ -20,6 +22,7 @@ impl<'a> QueryEngine<'a> {
         &'a self,
         plan: QueryPlan,
         selection: Vec<SelectItem>,
+        ns_cache: Option<Vec<Namespace>>,
     ) -> StdResult<SelectResponse> {
         let bindings = selection
             .iter()
@@ -41,8 +44,13 @@ impl<'a> QueryEngine<'a> {
                 vars: bindings.keys().cloned().collect(),
             },
             results: Results {
-                bindings: SolutionsIterator::new(self.storage, self.eval_plan(plan), bindings)
-                    .collect::<StdResult<Vec<BTreeMap<String, Value>>>>()?,
+                bindings: SolutionsIterator::new(
+                    self.storage,
+                    self.eval_plan(plan),
+                    bindings,
+                    ns_cache,
+                )
+                .collect::<StdResult<Vec<BTreeMap<String, Value>>>>()?,
             },
         })
     }
@@ -378,13 +386,26 @@ impl<'a> SolutionsIterator<'a> {
         storage: &'a dyn Storage,
         iter: ResolvedVariablesIterator<'a>,
         bindings: BTreeMap<String, usize>,
+        ns_cache: Option<Vec<Namespace>>,
     ) -> Self {
         Self {
             storage,
-            ns_resolver: NamespaceResolver::new(),
+            ns_resolver: ns_cache
+                .map(Into::into)
+                .unwrap_or_else(NamespaceResolver::new),
             iter,
             bindings,
         }
+    }
+}
+
+impl<'a> HasCachedNamespaces for SolutionsIterator<'a> {
+    fn cached_namespaces(&self) -> Vec<Namespace> {
+        self.ns_resolver.cached_namespaces()
+    }
+
+    fn clear_cache(&mut self) {
+        self.ns_resolver.clear_cache()
     }
 }
 
@@ -601,7 +622,7 @@ mod test {
 
         for case in cases {
             let engine = QueryEngine::new(&deps.storage);
-            assert_eq!(engine.select(case.plan, case.selection), case.expects);
+            assert_eq!(engine.select(case.plan, case.selection, None), case.expects);
         }
     }
 

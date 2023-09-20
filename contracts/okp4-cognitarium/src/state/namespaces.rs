@@ -42,7 +42,7 @@ pub fn namespaces<'a>() -> IndexedMap<'a, String, Namespace, NamespaceIndexes<'a
 }
 
 /// [NamespaceResolver] is a [Namespace] querying service allowing to resolve namespaces either by
-/// namespace's value or namespace's internal state key. It implements a two way indexed in memory
+/// namespace's value or namespace's internal state key. It implements a two way indexed in-memory
 /// cache to mitigate state access.
 pub struct NamespaceResolver {
     by_val: BTreeMap<String, Rc<RefCell<Namespace>>>,
@@ -73,11 +73,6 @@ impl NamespaceResolver {
     ) -> StdResult<Option<Namespace>> {
         self.resolve_cell_from_key(storage, key)
             .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
-    }
-
-    pub fn clear(&mut self) {
-        self.by_val.clear();
-        self.by_key.clear();
     }
 
     fn resolve_cell_from_val(
@@ -124,6 +119,37 @@ impl NamespaceResolver {
             Some(ns) => Ok(ns),
             None => Err(StdError::not_found("Namespace")),
         }
+    }
+}
+
+pub trait HasCachedNamespaces {
+    fn cached_namespaces(&self) -> Vec<Namespace>;
+
+    fn clear_cache(&mut self);
+}
+
+impl HasCachedNamespaces for NamespaceResolver {
+    fn cached_namespaces(&self) -> Vec<Namespace> {
+        self.by_key
+            .iter()
+            .map(|cell| cell.1.borrow().clone())
+            .collect()
+    }
+
+    fn clear_cache(&mut self) {
+        self.by_val.clear();
+        self.by_key.clear();
+    }
+}
+
+impl From<Vec<Namespace>> for NamespaceResolver {
+    fn from(value: Vec<Namespace>) -> Self {
+        let mut resolver = NamespaceResolver::new();
+        for ns in value {
+            resolver.insert(ns);
+        }
+
+        resolver
     }
 }
 
@@ -195,7 +221,7 @@ impl NamespaceBatchService {
 
         let count_diff = self.ns_count_diff;
         self.ns_count_diff = 0;
-        self.ns_resolver.clear();
+        self.ns_resolver.clear_cache();
 
         Ok(count_diff)
     }

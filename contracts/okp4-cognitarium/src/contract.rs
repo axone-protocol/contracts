@@ -55,6 +55,7 @@ pub mod execute {
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::{Atom, PrefixMap, TripleReader};
+    use crate::state::HasCachedNamespaces;
     use crate::storer::StoreEngine;
     use std::collections::HashSet;
     use std::io::BufReader;
@@ -114,9 +115,14 @@ pub mod execute {
             .map(SelectItem::Variable)
             .collect();
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
-        let plan = PlanBuilder::new(deps.storage, &prefix_map).build_plan(&r#where)?;
+        let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
+        let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(plan, variables)?;
+        let response = QueryEngine::new(deps.storage).select(
+            plan,
+            variables,
+            plan_builder.cached_namespaces().into(),
+        )?;
         let atoms: Vec<Atom> = if response.results.bindings.is_empty() {
             vec![]
         } else {
@@ -168,6 +174,7 @@ pub mod query {
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
+    use crate::state::HasCachedNamespaces;
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -188,12 +195,15 @@ pub mod query {
         }
 
         let prefix_map = PrefixMap::from(query.prefixes).into_inner();
-        let plan_builder = PlanBuilder::new(deps.storage, &prefix_map);
-        let plan = plan_builder
-            .with_limit(count as usize)
-            .build_plan(&query.r#where)?;
+        let mut plan_builder =
+            PlanBuilder::new(deps.storage, &prefix_map, None).with_limit(count as usize);
+        let plan = plan_builder.build_plan(&query.r#where)?;
 
-        QueryEngine::new(deps.storage).select(plan, query.select)
+        QueryEngine::new(deps.storage).select(
+            plan,
+            query.select,
+            plan_builder.cached_namespaces().into(),
+        )
     }
 
     pub fn describe(
@@ -255,11 +265,15 @@ pub mod query {
             ),
         };
         let prefix_map = <PrefixMap>::from(query.prefixes).into_inner();
-        let plan = PlanBuilder::new(deps.storage, &prefix_map)
-            .with_limit(store.limits.max_query_limit as usize)
-            .build_plan(&r#where)?;
+        let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None)
+            .with_limit(store.limits.max_query_limit as usize);
+        let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(plan, select)?;
+        let response = QueryEngine::new(deps.storage).select(
+            plan,
+            select,
+            plan_builder.cached_namespaces().into(),
+        )?;
 
         let mut vars = response.head.vars;
         let mut bindings = response.results.bindings;

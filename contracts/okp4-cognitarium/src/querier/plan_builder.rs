@@ -4,9 +4,7 @@ use crate::msg::{
 };
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::rdf::expand_uri;
-use crate::state::{
-    namespaces, HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject,
-};
+use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
 use crate::{rdf, state};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
@@ -28,9 +26,7 @@ impl<'a> PlanBuilder<'a> {
     ) -> Self {
         Self {
             storage,
-            ns_resolver: ns_cache
-                .map(Into::into)
-                .unwrap_or_else(NamespaceResolver::new),
+            ns_resolver: ns_cache.map_or_else(NamespaceResolver::new, Into::into),
             prefixes,
             variables: Vec::new(),
             skip: None,
@@ -198,7 +194,7 @@ impl<'a> HasCachedNamespaces for PlanBuilder<'a> {
     }
 
     fn clear_cache(&mut self) {
-        self.ns_resolver.clear_cache()
+        self.ns_resolver.clear_cache();
     }
 }
 

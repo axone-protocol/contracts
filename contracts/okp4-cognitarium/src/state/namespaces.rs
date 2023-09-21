@@ -118,8 +118,8 @@ impl NamespaceResolver {
     fn insert(&mut self, ns: Namespace) -> Rc<RefCell<Namespace>> {
         let ns_rc = Rc::new(RefCell::new(ns.clone()));
 
-        self.by_val.insert(ns.value.clone(), ns_rc.clone());
-        self.by_key.insert(ns.key.clone(), ns_rc.clone());
+        self.by_val.insert(ns.value, ns_rc.clone());
+        self.by_key.insert(ns.key, ns_rc.clone());
 
         ns_rc
     }
@@ -131,6 +131,12 @@ impl NamespaceResolver {
             Some(ns) => Ok(ns),
             None => Err(StdError::not_found("Namespace")),
         }
+    }
+}
+
+impl Default for NamespaceResolver {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -195,13 +201,14 @@ impl NamespaceBatchService {
         self.ns_resolver
             .resolve_cell_from_val(storage, value.clone())
             .map(|maybe_cell| {
-                maybe_cell
-                    .map(|cell| {
+                maybe_cell.map_or_else(
+                    || self.allocate(value),
+                    |cell| {
                         let mut ns = cell.borrow_mut();
                         ns.counter += 1;
                         ns.clone()
-                    })
-                    .unwrap_or_else(|| self.allocate(value))
+                    },
+                )
             })
     }
 
@@ -210,7 +217,7 @@ impl NamespaceBatchService {
     /// to the state.
     pub fn free_ref(&mut self, storage: &dyn Storage, value: String) -> StdResult<Namespace> {
         self.ns_resolver
-            .resolve_cell_from_val(storage, value.clone())
+            .resolve_cell_from_val(storage, value)
             .and_then(|maybe_cell| {
                 let cell = match maybe_cell.filter(|c| c.borrow().counter > 0) {
                     Some(c) => c,

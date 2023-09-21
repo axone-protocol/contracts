@@ -390,9 +390,7 @@ impl<'a> SolutionsIterator<'a> {
     ) -> Self {
         Self {
             storage,
-            ns_resolver: ns_cache
-                .map(Into::into)
-                .unwrap_or_else(NamespaceResolver::new),
+            ns_resolver: ns_cache.map_or_else(NamespaceResolver::new, Into::into),
             iter,
             bindings,
         }
@@ -405,7 +403,7 @@ impl<'a> HasCachedNamespaces for SolutionsIterator<'a> {
     }
 
     fn clear_cache(&mut self) {
-        self.ns_resolver.clear_cache()
+        self.ns_resolver.clear_cache();
     }
 }
 

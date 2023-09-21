@@ -203,7 +203,7 @@ mod test {
     use super::*;
     use crate::msg::Prefix;
     use crate::rdf::PrefixMap;
-    use crate::state::Namespace;
+    use crate::state::{namespaces, Namespace};
     use cosmwasm_std::testing::mock_dependencies;
 
     #[test]

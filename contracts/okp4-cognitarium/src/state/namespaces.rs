@@ -57,6 +57,8 @@ impl NamespaceResolver {
         }
     }
 
+    /// Resolve a [Namespace] from its value, returning it from cache in priority before accessing
+    /// the state.
     pub fn resolve_from_val(
         &mut self,
         storage: &dyn Storage,
@@ -66,6 +68,8 @@ impl NamespaceResolver {
             .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
     }
 
+    /// Resolve a [Namespace] from its internal key, returning it from cache in priority before accessing
+    /// the state.
     pub fn resolve_from_key(
         &mut self,
         storage: &dyn Storage,
@@ -75,6 +79,8 @@ impl NamespaceResolver {
             .map(|maybe_cell| maybe_cell.map(|cell| cell.borrow().clone()))
     }
 
+    /// Resolve a counting reference to a memory location of a cached [Namespace] from its value,
+    /// returning it from cache in priority before accessing the state. It allows to mutate it in place.
     fn resolve_cell_from_val(
         &mut self,
         storage: &dyn Storage,
@@ -89,6 +95,8 @@ impl NamespaceResolver {
             .map(|maybe_ns| maybe_ns.map(|ns| self.insert(ns)))
     }
 
+    /// Resolve a counting reference to a memory location of a cached [Namespace] from its key,
+    /// returning it from cache in priority before accessing the state. It allows to mutate it in place.
     fn resolve_cell_from_key(
         &mut self,
         storage: &dyn Storage,
@@ -105,6 +113,8 @@ impl NamespaceResolver {
             .map(|maybe_ns| maybe_ns.map(|ns| self.insert(ns.1)))
     }
 
+    /// Cache a namespace by creating a dedicated mutable memory location shared between indexes
+    /// returning a counted reference to it.
     fn insert(&mut self, ns: Namespace) -> Rc<RefCell<Namespace>> {
         let ns_rc = Rc::new(RefCell::new(ns.clone()));
 
@@ -114,6 +124,8 @@ impl NamespaceResolver {
         ns_rc
     }
 
+    /// Utility middleware to consider `StdResult::Ok(None)` as `Err(StdError::NotFound)` of namespace.
+    /// Typically used with [Self::resolve_from_key].
     pub fn none_as_error_middleware(resolve_res: Option<Namespace>) -> StdResult<Namespace> {
         match resolve_res {
             Some(ns) => Ok(ns),
@@ -122,9 +134,13 @@ impl NamespaceResolver {
     }
 }
 
+/// Used when managing an internal [Namespace] cache to expose it, the purpose is to allow the cache
+/// to be reusable.
 pub trait HasCachedNamespaces {
+    /// Return the cached namespaces.
     fn cached_namespaces(&self) -> Vec<Namespace>;
 
+    /// Empty the namespace cache.
     fn clear_cache(&mut self);
 }
 
@@ -153,6 +169,10 @@ impl From<Vec<Namespace>> for NamespaceResolver {
     }
 }
 
+/// Allow to batch write operations on [Namespace] taking care of the [NAMESPACE_KEY_INCREMENT], it
+/// manages insertions/deletions as well as counting references. It internally use a [NamespaceResolver]
+/// as a cache of new/removed/modified namespaces, to finally apply writing to the state when
+/// calling [Self::flush].
 pub struct NamespaceBatchService {
     ns_resolver: NamespaceResolver,
     ns_key_inc: u128,
@@ -168,6 +188,9 @@ impl NamespaceBatchService {
         })
     }
 
+    /// Increment the count of references to this namespace, creating it if necessary.
+    /// This is applied to the in-memory cache only, [Self::flush] must be called to write the changes
+    /// to the state.
     pub fn count_ref(&mut self, storage: &dyn Storage, value: String) -> StdResult<Namespace> {
         self.ns_resolver
             .resolve_cell_from_val(storage, value.clone())
@@ -182,6 +205,9 @@ impl NamespaceBatchService {
             })
     }
 
+    /// Decrement the count of references to this namespace, deleting it if not used anymore.
+    /// This is applied to the in-memory cache only, [Self::flush] must be called to write the changes
+    /// to the state.
     pub fn free_ref(&mut self, storage: &dyn Storage, value: String) -> StdResult<Namespace> {
         self.ns_resolver
             .resolve_cell_from_val(storage, value.clone())
@@ -204,6 +230,7 @@ impl NamespaceBatchService {
             })
     }
 
+    /// Writes all the cached changes to the state, returning the namespace count diff.
     pub fn flush(&mut self, storage: &mut dyn Storage) -> StdResult<i128> {
         NAMESPACE_KEY_INCREMENT.save(storage, &self.ns_key_inc)?;
 

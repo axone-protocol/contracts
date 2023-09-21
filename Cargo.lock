@@ -816,6 +816,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "okp4-tax-distribution"
+version = "0.0.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.1.0",
+ "cw-utils 1.0.1",
+ "cw2 1.1.0",
+ "okp4-logic-bindings",
+ "okp4-objectarium",
+ "okp4-objectarium-client",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

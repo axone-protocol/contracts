@@ -15,4 +15,4 @@ okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
 schemars = "0.8.13"
 serde = { version = "1.0.168", default-features = false, features = ["derive"] }
 serde-json-wasm = "0.5.1"
-thiserror = { version = "1.0.47" }
+thiserror = { version = "1.0.48" }

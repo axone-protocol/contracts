@@ -28,7 +28,7 @@ pub enum Recipient {
 
 #[cw_serde]
 pub struct Destination {
-    /// Recipient of token
+    /// Recipient of tokens
     recipient: Recipient,
     /// Set the token rate to receive for this recipient.
     /// Value should be between zero exclusive and one exclusive.
@@ -49,14 +49,20 @@ pub enum ExecuteMsg {
     /// Only contract admin can update the default recipient.
     UpdateDefaultRecipient { recipient: Recipient },
 
-    /// # AddDestination
-    /// Add a new recipient for receiving token with it's corresponding ratio.
-    /// Don't forget that the total ratio already configured shouldn't exceed 1.
-    AddDestination { destination: Destination },
+    /// # UpsertDestinations
+    /// Add new recipients for receiving token with it's corresponding ratio.
+    /// If one of recipient already exist and configured, the ratio is updated.
+    /// Don't forget that the total ratio already configured shouldn't exceed 1, but can be less
+    /// than 1, since the remaining token will be transfer to the default recipient.
+    ///
+    /// Only contract admin can add or update destinations.
+    UpsertDestinations { destinations: Vec<Destination> },
 
-    /// # RemoveRecipient
-    /// Remove a recipient from the tax distribution.
-    RemoveRecipient { recipient: Recipient },
+    /// # RemoveRecipients
+    /// Remove recipients from the tax distribution.
+    ///
+    /// Only contract admin can remove recipients.
+    RemoveRecipients { recipients: Vec<Recipient> },
 }
 
 /// Query messages

@@ -513,6 +513,66 @@ mod tests {
     }
 
     #[test]
+    fn insert_existing_triples() {
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg::default(),
+        )
+        .unwrap();
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+        )
+        .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: read_test_data("sample.rdf.xml"),
+            },
+        );
+
+        assert!(res.is_ok());
+        assert_eq!(
+            res.unwrap().attributes,
+            vec![
+                Attribute::new("action", "insert"),
+                Attribute::new("triple_count", "0")
+            ]
+        );
+
+        assert_eq!(
+            triples()
+                .range_raw(&deps.storage, None, None, Order::Ascending)
+                .count(),
+            40
+        );
+        assert_eq!(
+            STORE.load(&deps.storage).unwrap().stat,
+            StoreStat {
+                triple_count: 40u128.into(),
+                namespace_count: 17u128.into(),
+                byte_size: 7103u128.into(),
+            },
+        );
+        assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 17u128);
+    }
+
+    #[test]
     fn insert_unauthorized() {
         let mut deps = mock_dependencies();
         instantiate(

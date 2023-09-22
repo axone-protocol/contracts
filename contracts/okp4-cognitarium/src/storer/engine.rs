@@ -1,22 +1,20 @@
 use crate::error::StoreError;
 use crate::rdf::TripleReader;
 use crate::state::{
-    namespaces, triples, Literal, Namespace, Node, Object, Store, Subject, Triple,
-    NAMESPACE_KEY_INCREMENT, STORE,
+    triples, Literal, NamespaceBatchService, Node, Object, Store, Subject, Triple, STORE,
 };
 use crate::{rdf, ContractError};
 use blake3::Hash;
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use rio_api::model;
 use rio_api::model::Term;
-use std::collections::BTreeMap;
 use std::io::BufRead;
+use std::ops::Neg;
 
 pub struct StoreEngine<'a> {
     storage: &'a mut dyn Storage,
     store: Store,
-    ns_key_inc_offset: u128,
-    ns_cache: BTreeMap<String, Namespace>,
+    ns_batch_svc: NamespaceBatchService,
     initial_triple_count: Uint128,
     initial_byte_size: Uint128,
 }
@@ -24,12 +22,11 @@ pub struct StoreEngine<'a> {
 impl<'a> StoreEngine<'a> {
     pub fn new(storage: &'a mut dyn Storage) -> StdResult<Self> {
         let store = STORE.load(storage)?;
-        let ns_key_inc_offset = NAMESPACE_KEY_INCREMENT.load(storage)?;
+        let ns_batch_svc = NamespaceBatchService::new(storage)?;
         Ok(Self {
             storage,
             store: store.clone(),
-            ns_key_inc_offset,
-            ns_cache: BTreeMap::new(),
+            ns_batch_svc,
             initial_triple_count: store.stat.triple_count,
             initial_byte_size: store.stat.byte_size,
         })
@@ -76,7 +73,11 @@ impl<'a> StoreEngine<'a> {
             ))?;
         }
 
-        let triple = Self::rio_to_triple(t, &mut |ns_str| self.resolve_and_reference_ns(ns_str))?;
+        let triple = Self::rio_to_triple(t, &mut |ns_str| {
+            self.ns_batch_svc
+                .count_ref(self.storage, ns_str)
+                .map(|ns| ns.key)
+        })?;
         let object_hash: Hash = triple.object.as_hash();
         triples()
             .save(
@@ -100,8 +101,11 @@ impl<'a> StoreEngine<'a> {
 
     fn delete_triple(&mut self, atom: &rdf::Atom) -> Result<(), ContractError> {
         let triple_model = atom.into();
-        let triple =
-            Self::rio_to_triple(triple_model, &mut |ns_str| self.resolve_and_free_ns(ns_str))?;
+        let triple = Self::rio_to_triple(triple_model, &mut |ns_str| {
+            self.ns_batch_svc
+                .free_ref(self.storage, ns_str)
+                .map(|ns| ns.key)
+        })?;
         let object_hash: Hash = triple.object.as_hash();
 
         self.store.stat.triple_count -= Uint128::one();
@@ -122,15 +126,11 @@ impl<'a> StoreEngine<'a> {
     /// Flushes the store to the storage.
     /// Returns the number of triples added or removed (absolute value).
     fn finish(&mut self) -> Result<Uint128, ContractError> {
-        NAMESPACE_KEY_INCREMENT.save(self.storage, &self.ns_key_inc_offset)?;
-
-        for entry in &self.ns_cache {
-            if entry.1.counter > 0 {
-                namespaces().save(self.storage, entry.0.to_string(), entry.1)?;
-            } else {
-                self.store.stat.namespace_count -= Uint128::one();
-                namespaces().remove(self.storage, entry.0.to_string())?;
-            }
+        let ns_diff = self.ns_batch_svc.flush(self.storage)?;
+        if ns_diff > 0 {
+            self.store.stat.namespace_count += Uint128::new(ns_diff as u128);
+        } else {
+            self.store.stat.namespace_count -= Uint128::new(ns_diff.neg() as u128);
         }
 
         STORE.save(self.storage, &self.store)?;
@@ -143,54 +143,8 @@ impl<'a> StoreEngine<'a> {
 
         self.initial_triple_count = self.store.stat.triple_count;
         self.initial_byte_size = self.store.stat.byte_size;
-        self.ns_cache.clear();
 
         Ok(count_diff)
-    }
-
-    fn resolve_and_reference_ns(&mut self, ns_str: String) -> StdResult<u128> {
-        if let Some(namespace) = self.ns_cache.get_mut(&ns_str) {
-            namespace.counter += 1;
-            Ok(namespace.key)
-        } else {
-            let mut namespace = match namespaces().load(self.storage, ns_str.clone()) {
-                Err(StdError::NotFound { .. }) => Ok(self.allocate_namespace(ns_str.clone())),
-                Ok(n) => Ok(n),
-                Err(e) => Err(e),
-            }?;
-
-            namespace.counter += 1;
-            self.ns_cache.insert(ns_str, namespace.clone());
-            Ok(namespace.key)
-        }
-    }
-
-    fn resolve_and_free_ns(&mut self, ns_str: String) -> StdResult<u128> {
-        if let Some(namespace) = self.ns_cache.get_mut(&ns_str) {
-            namespace.counter -= 1;
-            Ok(namespace.key)
-        } else {
-            let mut namespace = match namespaces().load(self.storage, ns_str.clone()) {
-                Ok(n) => Ok(n),
-                Err(e) => Err(e),
-            }?;
-
-            namespace.counter -= 1;
-            self.ns_cache.insert(ns_str, namespace.clone());
-            Ok(namespace.key)
-        }
-    }
-
-    fn allocate_namespace(&mut self, value: String) -> Namespace {
-        self.store.stat.namespace_count += Uint128::one();
-        let ns = Namespace {
-            value,
-            key: self.ns_key_inc_offset,
-            counter: 0u128,
-        };
-        self.ns_key_inc_offset += 1;
-
-        ns
     }
 
     fn rio_to_triple<F>(triple: model::Triple<'_>, ns_fn: &mut F) -> StdResult<Triple>

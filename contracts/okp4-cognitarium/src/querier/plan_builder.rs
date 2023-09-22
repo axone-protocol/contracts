@@ -4,13 +4,14 @@ use crate::msg::{
 };
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::rdf::expand_uri;
-use crate::state::{namespaces, Object, Predicate, Subject};
+use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
 use crate::{rdf, state};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
     storage: &'a dyn Storage,
+    ns_resolver: NamespaceResolver,
     prefixes: &'a HashMap<String, String>,
     variables: Vec<String>,
     limit: Option<usize>,
@@ -18,9 +19,14 @@ pub struct PlanBuilder<'a> {
 }
 
 impl<'a> PlanBuilder<'a> {
-    pub fn new(storage: &'a dyn Storage, prefixes: &'a HashMap<String, String>) -> Self {
+    pub fn new(
+        storage: &'a dyn Storage,
+        prefixes: &'a HashMap<String, String>,
+        ns_cache: Option<Vec<Namespace>>,
+    ) -> Self {
         Self {
             storage,
+            ns_resolver: ns_cache.map_or_else(NamespaceResolver::new, Into::into),
             prefixes,
             variables: Vec::new(),
             skip: None,
@@ -162,8 +168,9 @@ impl<'a> PlanBuilder<'a> {
         }
         .and_then(|iri| rdf::explode_iri(&iri))
         .and_then(|(ns_key, v)| {
-            namespaces()
-                .load(self.storage, ns_key)
+            self.ns_resolver
+                .resolve_from_val(self.storage, ns_key)
+                .and_then(NamespaceResolver::none_as_error_middleware)
                 .map(|ns| state::Node {
                     namespace: ns.key,
                     value: v,
@@ -181,12 +188,22 @@ impl<'a> PlanBuilder<'a> {
     }
 }
 
+impl<'a> HasCachedNamespaces for PlanBuilder<'a> {
+    fn cached_namespaces(&self) -> Vec<Namespace> {
+        self.ns_resolver.cached_namespaces()
+    }
+
+    fn clear_cache(&mut self) {
+        self.ns_resolver.clear_cache();
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::msg::Prefix;
     use crate::rdf::PrefixMap;
-    use crate::state::Namespace;
+    use crate::state::{namespaces, Namespace};
     use cosmwasm_std::testing::mock_dependencies;
 
     #[test]
@@ -246,7 +263,7 @@ mod test {
 
         for case in cases {
             let prefixes = &PrefixMap::from(case.0).into_inner();
-            let builder = PlanBuilder::new(&deps.storage, prefixes);
+            let builder = PlanBuilder::new(&deps.storage, prefixes, None);
             assert_eq!(builder.skip, None);
             assert_eq!(builder.limit, None);
             assert_eq!(builder.variables, Vec::<String>::new());
@@ -254,7 +271,7 @@ mod test {
         }
 
         let prefixes = &PrefixMap::default().into_inner();
-        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
         builder = builder.with_skip(20usize).with_limit(50usize);
         assert_eq!(builder.skip, Some(20usize));
         assert_eq!(builder.limit, Some(50usize));
@@ -276,9 +293,7 @@ mod test {
             ),
             (
                 IRI::Full("http://not-existing#something".to_string()),
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
             (
                 IRI::Prefixed("okp4:resource".to_string()),
@@ -332,7 +347,7 @@ mod test {
             },
         ])
         .into_inner();
-        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
 
         for case in cases {
             assert_eq!(builder.build_named_node(case.0), case.1);
@@ -454,9 +469,7 @@ mod test {
                     predicate: VarOrNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
             (
                 TriplePattern {
@@ -466,9 +479,7 @@ mod test {
                     ))),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
             (
                 TriplePattern {
@@ -478,9 +489,7 @@ mod test {
                         "notexisting#outch".to_string(),
                     ))),
                 },
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
         ];
 
@@ -497,7 +506,7 @@ mod test {
             )
             .unwrap();
         let prefixes = &PrefixMap::default().into_inner();
-        let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+        let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
 
         for case in cases {
             assert_eq!(builder.build_triple_pattern(&case.0), case.1);
@@ -535,9 +544,7 @@ mod test {
                     predicate: VarOrNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
-                Err(StdError::not_found(
-                    "okp4_cognitarium::state::namespaces::Namespace",
-                )),
+                Err(StdError::not_found("Namespace")),
             ),
             (
                 None,
@@ -702,7 +709,7 @@ mod test {
 
         for case in cases {
             let prefixes = &PrefixMap::default().into_inner();
-            let mut builder = PlanBuilder::new(&deps.storage, prefixes);
+            let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
             if let Some(skip) = case.0 {
                 builder = builder.with_skip(skip);
             }

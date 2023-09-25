@@ -1,14 +1,59 @@
 # Objectarium
 
-## Overview
+A [CosmWasm](https://cosmwasm.com/) smart contract designed to store arbitrary objects on the blockchain.
 
-The `okp4-objectarium` smart contract enables the storage of arbitrary `objects` in any [Cosmos blockchains](https://cosmos.network/) using the [CosmWasm](https://cosmwasm.com/) framework.
+## Purpose
 
-This contract allows for storing `objects`, pinning and unpinning `objects` for a given sender address, and it also includes the ability to remove (forget) `objects` if they are no longer pinned.
+The smart contract serves as a robust storage solution, allowing for the storage of arbitrary `objects` on any blockchain within the [Cosmos blockchains](https://cosmos.network/) network, utilizing the [CosmWasm](https://cosmwasm.com/) framework. The key features of the contract include:
+
+**Versatile Data Storage:**
+The contract is designed to accommodate any type of data, be it text, images, or complex data structures. This flexibility makes it an ideal choice for a wide range of decentralized applications (dApps) that require diverse storage needs.
+
+**On-chain Data:**
+By design, the contract stores data on the blockchain, ensuring that it is immutable and publicly accessible. This is particularly useful for applications that require a high level of transparency, and also for any other smart contract that needs to store data on the blockchain.
+
+**Pinning and Unpinning:**
+One unique feature is the ability to 'pin' and 'unpin' objects associated with a specific sender address. Pinning ensures that the object remains stored and accessible, while unpinning releases it from being permanently stored, offering a level of control over data persistence.
+
+**Object Removal:**
+The contract also includes a 'forget' function, allowing for the removal of objects that are no longer pinned. This is particularly useful for managing storage costs and ensuring that only relevant data remains on the blockchain.
+
+**Cost Management:**
+Features like pinning, unpinning, and discarding objects offer a strategic way to control storage costs. Additionally, setting limits on contract size — for instance in terms of object count and their individual sizes — serves as a practical tool to regulate storage costs.
+
+## Rationale
+
+In a sense, we can consider blockchains built on the [Cosmos L0](https://docs.cosmos.network/main) layer as decentralized databases, and their nature can be shaped and modeled through the smart contracts or modules. Given this, it provides a great opportunity to address the wide range of data management needs. One such important area is the management of unstructured, immutable data, which is written once but accessed frequently — commonly known as object storage. This is the primary focus of `okp4-objectarium`: a specialized smart contract designed to offer a versatile and efficient approach to handling *on-chain*, *unstructured*, *immutable* data in a *decentralized* manner.
+
+## Terminology
+
+### Object
+
+In the context of the `okp4-objectarium` smart contract, an `object` refers to a piece of data stored on the blockchain. It can represent various types of information, such as documents, binary files, or any other digital content. Objects are immutable once stored and are identified by their cryptographic hash, which can be generated using algorithms like MD5 or SHA256. This ensures the integrity and security of the stored data, as any modification to the object would result in a different hash value.
+
+### Bucket
+
+The smart contract is organized around buckets. A bucket represents a logical container within the `okp4-objectarium` smart contract instance that groups related Objects together. It acts as a storage unit for Objects and provides a context for managing and organizing them. Each bucket has a unique name and is associated with a set of configurations and limits that define its behaviour and characteristics.
+
+### Pin
+
+Pin refers to a mechanism that allows users to mark or "pin" specific objects within a bucket. Pinning an object serves as a way to ensure that the object remains in storage and cannot be removed (this is called "forgotten"). It provides protection and guarantees that the pinned object will persist in the protocol. When an object is pinned, it is associated with the identity (or sender) that performed the pinning action.
 
 ## Usage
 
-### Instantiate
+The unstructured nature of the data stored in the chain opens up a plethora of possibilities for decentralized applications that require this type of versatile storage.
+
+### In the OKP4 protocol
+
+The primary function of this smart contract within the OKP4 protocol is to enable the persistence of governance rules, which are encoded in Prolog. These programs are stored in an immutable format within the protocol and can be referenced by their unique identifiers in situations where there is a need to refer to these rules.
+
+### In the wild world
+
+A plethora of possibilities opens up for decentralized applications (dApps) that require this kind of versatile storage. However, it's important to consider the following constraints: the data is immutable, the cost of recording the data is proportional to its size, and the data is publicly accessible.
+
+## Play
+
+### Instantiation
 
 The `okp4-objectarium` can be instantiated as follows, refer to the schema for more information on configuration, limits and pagination configuration:
 
@@ -22,7 +67,7 @@ okp4d tx wasm instantiate $CODE_ID \
     '{"bucket":"my-bucket"}'
 ```
 
-### Execute
+### Execution
 
 We can store an object by providing its data in base64 encoded, we can pin the stored object to prevent it from being removed:
 
@@ -62,7 +107,7 @@ okp4d tx wasm execute $CONTRACT_ADDR \
     "{\"forget_object\":{\"id\": \"$OBJECT_ID\"}}"
 ```
 
-### Query
+### Querying
 
 Query an object by its id:
 
@@ -471,4 +516,4 @@ A string containing a 128-bit integer in decimal representation.
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`4d471978e4dc3d25`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`c9bbaeefb8b85833`)*

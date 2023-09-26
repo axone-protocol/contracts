@@ -194,19 +194,32 @@ impl NamespaceBatchService {
         })
     }
 
-    /// Increment the count of references to this namespace, creating it if necessary.
-    /// This is applied to the in-memory cache only, [Self::flush] must be called to write the changes
-    /// to the state.
-    pub fn count_ref(&mut self, storage: &dyn Storage, value: String) -> StdResult<Namespace> {
+    /// Resolve a namespace by its value, or allocate a new one if not existing. This is applied to
+    /// the in-memory cache only, [Self::flush] must be called to write the changes to the state.
+    pub fn resolve_or_allocate(
+        &mut self,
+        storage: &dyn Storage,
+        value: String,
+    ) -> StdResult<Namespace> {
         self.ns_resolver
             .resolve_cell_from_val(storage, value.clone())
             .map(|maybe_cell| {
+                maybe_cell.map_or_else(|| self.allocate(value), |cell| cell.borrow().clone())
+            })
+    }
+
+    /// Increment the count of references to this namespace. This is applied to the in-memory cache
+    /// only, [Self::flush] must be called to write the changes to the state.
+    pub fn count_ref(&mut self, storage: &dyn Storage, key: u128) -> StdResult<Namespace> {
+        self.ns_resolver
+            .resolve_cell_from_key(storage, key)
+            .and_then(|maybe_cell| {
                 maybe_cell.map_or_else(
-                    || self.allocate(value),
+                    || Err(StdError::not_found("Namespace")),
                     |cell| {
                         let mut ns = cell.borrow_mut();
                         ns.counter += 1;
-                        ns.clone()
+                        Ok(ns.clone())
                     },
                 )
             })
@@ -215,7 +228,34 @@ impl NamespaceBatchService {
     /// Decrement the count of references to this namespace, deleting it if not used anymore.
     /// This is applied to the in-memory cache only, [Self::flush] must be called to write the changes
     /// to the state.
-    pub fn free_ref(&mut self, storage: &dyn Storage, value: String) -> StdResult<Namespace> {
+    pub fn free_ref(&mut self, storage: &dyn Storage, key: u128) -> StdResult<Namespace> {
+        self.ns_resolver
+            .resolve_cell_from_key(storage, key)
+            .and_then(|maybe_cell| {
+                let cell = match maybe_cell.filter(|c| c.borrow().counter > 0) {
+                    Some(c) => c,
+                    None => Err(StdError::generic_err(
+                        "Trying to delete a non existing namespace",
+                    ))?,
+                };
+
+                let mut ns = cell.borrow_mut();
+                ns.counter -= 1;
+                if ns.counter == 0 {
+                    self.ns_count_diff -= 1;
+                }
+
+                let tmp = ns.clone();
+                Ok(tmp)
+            })
+    }
+
+    /// Same as [Self::free_ref] but identifying a namespace by value.
+    pub fn free_ref_by_val(
+        &mut self,
+        storage: &dyn Storage,
+        value: String,
+    ) -> StdResult<Namespace> {
         self.ns_resolver
             .resolve_cell_from_val(storage, value)
             .and_then(|maybe_cell| {
@@ -264,7 +304,7 @@ impl NamespaceBatchService {
         let ns = Namespace {
             value,
             key: self.ns_key_inc,
-            counter: 1u128,
+            counter: 0u128,
         };
 
         self.ns_key_inc += 1;

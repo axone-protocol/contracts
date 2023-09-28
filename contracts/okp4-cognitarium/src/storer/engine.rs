@@ -75,21 +75,37 @@ impl<'a> StoreEngine<'a> {
 
         let triple = Self::rio_to_triple(t, &mut |ns_str| {
             self.ns_batch_svc
-                .count_ref(self.storage, ns_str)
+                .resolve_or_allocate(self.storage, ns_str)
                 .map(|ns| ns.key)
         })?;
         let object_hash: Hash = triple.object.as_hash();
+
+        let mut new_ns_refs = Vec::new();
         triples()
-            .save(
+            .update(
                 self.storage,
                 (
                     object_hash.as_bytes(),
                     triple.predicate.key(),
                     triple.subject.key(),
                 ),
-                &triple,
+                |maybe_triple| {
+                    if let Some(t) = maybe_triple {
+                        self.store.stat.triple_count -= Uint128::one();
+                        self.store.stat.byte_size -= t_size;
+                        Ok(t)
+                    } else {
+                        new_ns_refs.append(&mut triple.namespaces());
+                        Ok(triple)
+                    }
+                },
             )
-            .map_err(ContractError::Std)
+            .map_err(ContractError::Std)?;
+
+        for ns_key in new_ns_refs {
+            self.ns_batch_svc.count_ref(self.storage, ns_key)?;
+        }
+        Ok(())
     }
 
     pub fn delete_all(&mut self, atoms: &[rdf::Atom]) -> Result<Uint128, ContractError> {
@@ -103,7 +119,7 @@ impl<'a> StoreEngine<'a> {
         let triple_model = atom.into();
         let triple = Self::rio_to_triple(triple_model, &mut |ns_str| {
             self.ns_batch_svc
-                .free_ref(self.storage, ns_str)
+                .free_ref_by_val(self.storage, ns_str)
                 .map(|ns| ns.key)
         })?;
         let object_hash: Hash = triple.object.as_hash();

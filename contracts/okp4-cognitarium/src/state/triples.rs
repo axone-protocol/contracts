@@ -40,6 +40,25 @@ pub struct Triple {
     pub object: Object,
 }
 
+impl Triple {
+    pub fn namespaces(&self) -> Vec<u128> {
+        let mut namespaces = Vec::with_capacity(3);
+        if let Subject::Named(n) = &self.subject {
+            namespaces.push(n.namespace);
+        }
+
+        namespaces.push(self.predicate.namespace);
+
+        match &self.object {
+            Object::Named(n) => namespaces.push(n.namespace),
+            Object::Literal(Literal::Typed { datatype, .. }) => namespaces.push(datatype.namespace),
+            _ => {}
+        }
+
+        namespaces
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Subject {
     Named(Node),

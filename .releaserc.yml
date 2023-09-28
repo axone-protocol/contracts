@@ -9,7 +9,7 @@ plugins:
   - - "@semantic-release/changelog"
     - changelogFile: CHANGELOG.md
       changelogTitle: "# ØKP4 contracts"
-  - - "@semantic-release-replace-plugin"
+  - - "semantic-release-replace-plugin"
     - replacements:
         - files:
             - contracts/*/Cargo.toml

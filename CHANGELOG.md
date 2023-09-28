@@ -1,5 +1,36 @@
 # ØKP4 contracts
 
+## [3.0.0](https://github.com/okp4/contracts/compare/v2.1.0...v3.0.0) (2023-09-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cognitarium:** make delete triples optional and enforce where clause
+
+### Features
+
+* **cognitarium:** implement DeleteData message ([758c172](https://github.com/okp4/contracts/commit/758c172f6cb4c1cb88e5b73f6d37ee4c5b9d98dd))
+* **cognitarium:** specify construction query ([111a73c](https://github.com/okp4/contracts/commit/111a73c9039572ebf78b6b0d88535625c777a03c))
+* **cognitarium:** support 'delete where {}' form ([3f2f9a0](https://github.com/okp4/contracts/commit/3f2f9a05c9526778da0ce552fd370a6f2ada5528))
+* **docs:** use fadroma-schema to generate docs ([ae792e0](https://github.com/okp4/contracts/commit/ae792e02957da0cefbade4aa4e6565b1c602b860))
+* **objectarium:** add lzma compression algorithm ([b3392f7](https://github.com/okp4/contracts/commit/b3392f7f1dfd1f73969f765e02248dab8e1cbd4c))
+
+
+### Bug Fixes
+
+* **cognitarium:** decrease the store byte size upon deletion ([74c9461](https://github.com/okp4/contracts/commit/74c9461b25f1125b6384df8a3e3a142ce31c1d68))
+* **cognitarium:** do not count existing triples on insert ([b490f23](https://github.com/okp4/contracts/commit/b490f23342e7e71b5271b5d26e505842ed208ea3))
+* **cognitarium:** fix compilation issue ([296c61a](https://github.com/okp4/contracts/commit/296c61ae600cc561aa4b0dbedcc508f09100e170))
+* **cognitarium:** fix incorrect variable resolution on delete ([76abfcd](https://github.com/okp4/contracts/commit/76abfcd964106ef33c2cc90c4e418ca97c6a0ac5))
+* **cognitarium:** make successive store engine calls safe ([0fe529b](https://github.com/okp4/contracts/commit/0fe529b92d6aa1a640c2e50f2a701c62a85a3275))
+* **cognitarium:** update ns ref count on triple deletion ([8ad0144](https://github.com/okp4/contracts/commit/8ad01447288c7a827fd70a6e959d3e542b8c55c3))
+* **docs:** use fixed version of fadroma/schema ([bda29c7](https://github.com/okp4/contracts/commit/bda29c762b43604ad3e15930803473fa541d0568))
+
+
+### Code Refactoring
+
+* **cognitarium:** make delete triples optional and enforce where clause ([5ce531b](https://github.com/okp4/contracts/commit/5ce531b66dc6f14c594dfdf551b65360e5b6f700))
+
 ## [2.1.0](https://github.com/okp4/contracts/compare/v2.0.0...v2.1.0) (2023-06-27)
 
 

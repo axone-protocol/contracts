@@ -3,7 +3,7 @@ authors = ["OKP4"]
 edition = "2021"
 name = "okp4-cognitarium"
 rust-version = "1.69"
-version = "2.1.0"
+version = "3.0.0"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.

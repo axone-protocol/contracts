@@ -719,7 +719,7 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "okp4-cognitarium"
-version = "2.1.0"
+version = "3.0.0"
 dependencies = [
  "base64",
  "blake3",
@@ -740,7 +740,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-law-stone"
-version = "2.1.0"
+version = "3.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -761,7 +761,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-logic-bindings"
-version = "2.1.0"
+version = "3.0.0"
 dependencies = [
  "cosmwasm-std",
  "form_urlencoded",
@@ -774,7 +774,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-objectarium"
-version = "2.1.0"
+version = "3.0.0"
 dependencies = [
  "base16ct",
  "base64",
@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-objectarium-client"
-version = "2.1.0"
+version = "3.0.0"
 dependencies = [
  "cosmwasm-std",
  "okp4-logic-bindings",

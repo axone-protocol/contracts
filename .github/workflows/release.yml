@@ -62,7 +62,7 @@ jobs:
             @semantic-release/changelog
             @semantic-release/exec
             @semantic-release/git
-            @google/semantic-release-replace-plugin
+            @google/semantic-release-replace-plugin@1.2.0
           extends: |
             conventional-changelog-conventionalcommits@6.1.0
         env:

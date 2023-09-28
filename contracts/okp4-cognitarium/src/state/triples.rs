@@ -44,7 +44,7 @@ impl Triple {
     pub fn namespaces(&self) -> Vec<u128> {
         let mut namespaces = Vec::with_capacity(3);
         if let Subject::Named(n) = &self.subject {
-            namespaces.push(n.namespace)
+            namespaces.push(n.namespace);
         }
 
         namespaces.push(self.predicate.namespace);

@@ -89,13 +89,12 @@ impl<'a> StoreEngine<'a> {
                     triple.predicate.key(),
                     triple.subject.key(),
                 ),
-                |maybe_triple| match maybe_triple {
-                    Some(t) => {
+                |maybe_triple| {
+                    if let Some(t) = maybe_triple {
                         self.store.stat.triple_count -= Uint128::one();
                         self.store.stat.byte_size -= t_size;
                         Ok(t)
-                    }
-                    None => {
+                    } else {
                         new_ns_refs.append(&mut triple.namespaces());
                         Ok(triple)
                     }

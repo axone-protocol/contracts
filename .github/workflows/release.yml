@@ -41,7 +41,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 20
 
       - name: Setup rust
         uses: actions-rs/toolchain@v1
@@ -56,15 +56,15 @@ jobs:
       - name: Release project
         uses: cycjimmy/semantic-release-action@v4
         with:
-          semantic_version: 19.0.2
+          semantic_version: 22.0.5
           branch: main
           extra_plugins: |
             @semantic-release/changelog
             @semantic-release/exec
             @semantic-release/git
-            semantic-release-replace-plugin@1.2.0
+            semantic-release-replace-plugin@1.2.7
           extends: |
-            conventional-changelog-conventionalcommits@6.1.0
+            conventional-changelog-conventionalcommits@7.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.OKP4_TOKEN }}
           GIT_AUTHOR_NAME: ${{ secrets.OKP4_BOT_GIT_AUTHOR_NAME }}

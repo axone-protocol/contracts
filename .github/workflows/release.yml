@@ -41,7 +41,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 14
 
       - name: Installing jsonschema2md
         run: |
@@ -69,7 +69,7 @@ jobs:
             @semantic-release/git
             @google/semantic-release-replace-plugin
           extends: |
-            conventional-changelog-conventionalcommits
+            conventional-changelog-conventionalcommits@6.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.OKP4_TOKEN }}
           GIT_AUTHOR_NAME: ${{ secrets.OKP4_BOT_GIT_AUTHOR_NAME }}

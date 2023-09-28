@@ -43,11 +43,6 @@ jobs:
         with:
           node-version: 14
 
-      - name: Installing jsonschema2md
-        run: |
-          yarn global add @adobe/jsonschema2md@7.1.5
-          echo "$(yarn global bin)" >> $GITHUB_PATH
-
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:

@@ -25,9 +25,9 @@ plugins:
         - path: "./target/wasm32-unknown-unknown/release/okp4_law_stone.wasm"
         - path: "./target/wasm32-unknown-unknown/release/okp4_cognitarium.wasm"
         - path: "./target/wasm32-unknown-unknown/release/sha256sum.txt"
-        - path: "./docs/schema/okp4-objectarium.json"
-        - path: "./docs/schema/okp4-law-stone.json"
-        - path: "./docs/schema/okp4-cognitarium.json"
+        - path: "./contracts/okp4-objectarium/schema/okp4-objectarium.json"
+        - path: "./contracts/okp4-law-stone/schema/okp4-law-stone.json"
+        - path: "./contracts/okp4-cognitarium/schema/okp4-cognitarium.json"
   - - "@semantic-release/git"
     - assets:
         - CHANGELOG.md

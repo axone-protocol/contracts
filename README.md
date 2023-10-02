@@ -113,7 +113,7 @@ The project is structured around a set of Rust workspaces, each defining a smart
 
 ## 🏗 Build
 
-### Pre-requisites
+### 🔨 Pre-requisites
 
 Be sure you have the following tools installed:
 
@@ -128,7 +128,7 @@ And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List
 - [shasum](https://linuxhint.com/shasum-linux/) v6.02 or higher
 - [sed](https://www.gnu.org/software/sed/) v4.8 or higher
 
-### Compiling Smart Contracts to Wasm
+### 🔧 Compiling Smart Contracts to Wasm
 
 To compile the Smart Contracts to Wasm, just invoke the `wasm` goal of the makefile:
 
@@ -139,7 +139,7 @@ cargo make wasm
 This will install the rust Wasm toolchain, if not already done, and start the process for compiling the Smart Contracts
 to Wasm.
 
-### Test Smart Contracts
+## ✅ Test Smart Contracts
 
 The Smart Contracts are under unit testing. The tests can be launched with the following invocation:
 
@@ -174,7 +174,9 @@ The list of available tasks for managing the chain is as follows:
 - `chain-start` - Run the full node okp4d application using the chain's home directory under a Docker container.
 - `chain-stop` - Stop the chain's container.
 
-### Initialize the chain
+## 💻 Develop
+
+### 🚀 Initialize the chain
 
 To initialize the chain, just run:
 
@@ -185,7 +187,7 @@ cargo make chain-initialize
 This will initialize the chain's home directory and create a validator's key and a set of predefined keys
 (recovered from the seed phrases).
 
-### Start the chain
+### 🟢 Start the chain
 
 To start the chain, just run:
 
@@ -201,7 +203,7 @@ You can check the chain's logs with:
 cargo make chain-logs
 ```
 
-### Deploy the Smart Contracts
+### 🛳 Deploy the Smart Contracts
 
 To deploy the Smart Contracts, just run:
 
@@ -214,7 +216,7 @@ must be present in the artifacts directory. See the [Build](#-build) section for
 
 Now, you can interact with the deployed smart contracts and test them out.
 
-### Free execution of the CLI command
+### 🎮 Free execution of the CLI command
 
 You can freely interact with the local chain by executing the following CLI command. This will execute the `okp4d`
 binary
@@ -232,7 +234,7 @@ For example, to check the status of the chain, just run:
 cargo make chain status
 ```
 
-### Stop the chain
+### 🔴 Stop the chain
 
 To stop the chain, just run:
 
@@ -240,7 +242,7 @@ To stop the chain, just run:
 cargo make chain-stop
 ```
 
-### Clean the chain
+### 🧼 Clean the chain
 
 To clean the chain, just run:
 
@@ -251,19 +253,17 @@ cargo make chain-clean
 ⚠️ Please be cautious when running this command as it will completely clean the chain's home directory and the action is
 irreversible.
 
-## Develop
-
-### Smart Contracts scaffolding
+### 🏗 Smart Contracts scaffolding
 
 When developing a new Smart Contract, you can use the scaffolding to generate the Smart Contract's code.
 
-#### Pre-requisites
+#### 🔨 Pre-requisites
 
 Be sure you have the following tools installed:
 
 - [ffizer](https://ffizer.github.io/ffizer/book/#install) v2.10.3 or higher
 
-#### Generate the scaffolding
+#### 🚧 Generate the scaffolding
 
 To generate the scaffolding, just run:
 
@@ -273,14 +273,14 @@ cargo make scaffold-smart-contract
 
 Then, follow the instructions.
 
-### Documentation
+## 📚 Documentation
 
 The documentation of the smart contracts must be committed to the repository. The documentation is generated from the
 smart contracts' schema.
 
 To generate the documentation follow the steps below.
 
-#### Pre-requisites
+### 🔨 Pre-requisites
 
 Be sure you have the following tools installed:
 
@@ -292,7 +292,7 @@ Then, install the dependencies:
 yarn global add @adobe/jsonschema2md@7.1.5
 ```
 
-#### Generate the documentation
+### 🖨 Generate the documentation
 
 To generate the documentation, just run:
 
@@ -303,7 +303,7 @@ cargo make docs-generate
 
 You'll find the generated documentation under the `docs` folder.
 
-#### Commit the documentation
+### 🗒 Commit the documentation
 
 When developing a new contract, you should commit the generated documentation to the repository. For this, generate the
 documentation and commit the changes:
@@ -312,7 +312,15 @@ documentation and commit the changes:
 git commit -am "docs: update generated documentation"
 ```
 
-## Resources
+## 🍀 Quality assurance approach
+
+⛓ - The enforcement of stringent rules, monitored by a linter ([Clippy](https://github.com/rust-lang/rust-clippy)) within the Github CI environment.
+
+🤖 - A high level of code coverage through systematic unit testing.
+
+💫 - Future considerations for additional testing approaches, such as fuzzy testing or end-to-end testing, to further enhance quality.
+
+## 📘 Resources
 
 - [CosmWasm Docs](https://docs.cosmwasm.com/)
 - [OKP4 Whitepaper](https://docs.okp4.network/whitepaper/abstract)

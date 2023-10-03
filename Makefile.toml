@@ -344,8 +344,9 @@ docker run --rm \
       --gas auto \
       --gas-adjustment 1.5 \
       --chain-id ${CHAIN} \
-      --broadcast-mode block \
+      --broadcast-mode sync \
       --yes
+  sleep 5 # 🤮 temporary fix since '--brodcast-mode block' is no longer available, new cli command is comming but not available now on okp4d@v5.0.0. Needs cosmos-sdk@v0.47.5 : https://github.com/cosmos/cosmos-sdk/releases/tag/v0.47.5.
 '''
 
 [tasks.chain-deploy-contracts]
@@ -431,10 +432,11 @@ docker run --rm \
       --gas auto \
       --gas-adjustment 1.5 \
       --chain-id ${CHAIN} \
-      --broadcast-mode block \
+      --broadcast-mode sync \
       --yes \
       --label $label \
       --no-admin
+  sleep 5 # 🤮 temporary fix since '--brodcast-mode block' is no longer available, new cli command is comming but not available now on okp4d@v5.0.0. Needs cosmos-sdk@v0.47.5 : https://github.com/cosmos/cosmos-sdk/releases/tag/v0.47.5.
 '''
 
 [tasks.chain-query-contract]
@@ -498,10 +500,11 @@ docker run --rm \
       --gas auto \
       --gas-adjustment 1.5 \
       --chain-id ${CHAIN} \
-      --broadcast-mode block \
+      --broadcast-mode sync \
       --yes \
       --output json \
       | jq -r '.'
+  sleep 5 # 🤮 temporary fix since '--brodcast-mode block' is no longer available, new cli command is comming but not available now on okp4d@v5.0.0. Needs cosmos-sdk@v0.47.5 : https://github.com/cosmos/cosmos-sdk/releases/tag/v0.47.5.
 '''
 
 [tasks.install-llvm-tools-preview]

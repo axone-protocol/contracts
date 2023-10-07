@@ -1,9 +1,7 @@
 use crate::msg::{Head, Results, SelectItem, SelectResponse, Value};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
-use crate::state::{
-    triples, HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject, Triple,
-};
+use crate::state::{triples, HasCachedNamespaces, Object, Predicate, Subject, Triple};
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use std::collections::{BTreeMap, VecDeque};
 use std::iter;
@@ -11,6 +9,11 @@ use std::rc::Rc;
 
 pub struct QueryEngine<'a> {
     storage: &'a dyn Storage,
+}
+
+pub struct SelectResults<'a> {
+    pub head: Vec<String>,
+    pub solutions: SolutionsIterator<'a>,
 }
 
 impl<'a> QueryEngine<'a> {
@@ -22,8 +25,7 @@ impl<'a> QueryEngine<'a> {
         &'a self,
         plan: QueryPlan,
         selection: Vec<SelectItem>,
-        ns_cache: Option<Vec<Namespace>>,
-    ) -> StdResult<SelectResponse> {
+    ) -> StdResult<SelectResults> {
         let bindings = selection
             .iter()
             .map(|item| match item {
@@ -39,19 +41,9 @@ impl<'a> QueryEngine<'a> {
             })
             .collect::<StdResult<BTreeMap<String, usize>>>()?;
 
-        Ok(SelectResponse {
-            head: Head {
-                vars: bindings.keys().cloned().collect(),
-            },
-            results: Results {
-                bindings: SolutionsIterator::new(
-                    self.storage,
-                    self.eval_plan(plan),
-                    bindings,
-                    ns_cache,
-                )
-                .collect::<StdResult<Vec<BTreeMap<String, Value>>>>()?,
-            },
+        Ok(SelectResults {
+            head: bindings.keys().cloned().collect(),
+            solutions: SolutionsIterator::new(self.storage, self.eval_plan(plan), bindings),
         })
     }
 
@@ -376,7 +368,6 @@ impl<'a> Iterator for TriplePatternIterator<'a> {
 
 struct SolutionsIterator<'a> {
     storage: &'a dyn Storage,
-    ns_resolver: NamespaceResolver,
     iter: ResolvedVariablesIterator<'a>,
     bindings: BTreeMap<String, usize>,
 }
@@ -386,29 +377,17 @@ impl<'a> SolutionsIterator<'a> {
         storage: &'a dyn Storage,
         iter: ResolvedVariablesIterator<'a>,
         bindings: BTreeMap<String, usize>,
-        ns_cache: Option<Vec<Namespace>>,
     ) -> Self {
         Self {
             storage,
-            ns_resolver: ns_cache.map_or_else(NamespaceResolver::new, Into::into),
             iter,
             bindings,
         }
     }
 }
 
-impl<'a> HasCachedNamespaces for SolutionsIterator<'a> {
-    fn cached_namespaces(&self) -> Vec<Namespace> {
-        self.ns_resolver.cached_namespaces()
-    }
-
-    fn clear_cache(&mut self) {
-        self.ns_resolver.clear_cache();
-    }
-}
-
 impl<'a> Iterator for SolutionsIterator<'a> {
-    type Item = StdResult<BTreeMap<String, Value>>;
+    type Item = StdResult<BTreeMap<String, ResolvedVariable>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let resolved_variables = match self.iter.next() {
@@ -426,22 +405,9 @@ impl<'a> Iterator for SolutionsIterator<'a> {
                         None => Err(StdError::generic_err(
                             "Couldn't find variable in result set",
                         )),
-                        Some(val) => Ok((name, val)),
+                        Some(val) => Ok((name, val.clone())),
                     })
-                    .map(|res| {
-                        res.and_then(|(name, var)| -> StdResult<(String, Value)> {
-                            Ok((
-                                name,
-                                var.as_value(&mut |ns_key| {
-                                    let res =
-                                        self.ns_resolver.resolve_from_key(self.storage, ns_key);
-                                    res.and_then(NamespaceResolver::none_as_error_middleware)
-                                        .map(|ns| ns.value)
-                                })?,
-                            ))
-                        })
-                    })
-                    .collect::<StdResult<BTreeMap<String, Value>>>()
+                    .collect::<StdResult<BTreeMap<String, ResolvedVariable>>>()
             })
             .into()
     }
@@ -620,7 +586,7 @@ mod test {
 
         for case in cases {
             let engine = QueryEngine::new(&deps.storage);
-            assert_eq!(engine.select(case.plan, case.selection, None), case.expects);
+            assert_eq!(engine.select(case.plan, case.selection), case.expects);
         }
     }
 

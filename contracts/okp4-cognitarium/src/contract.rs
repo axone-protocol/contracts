@@ -143,9 +143,9 @@ pub mod query {
         SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value,
         VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
-    use crate::querier::{PlanBuilder, QueryEngine};
+    use crate::querier::{PlanBuilder, QueryEngine, SelectResults};
     use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
-    use crate::state::{HasCachedNamespaces, NamespaceResolver};
+    use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver};
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -170,27 +170,9 @@ pub mod query {
             PlanBuilder::new(deps.storage, &prefix_map, None).with_limit(count as usize);
         let plan = plan_builder.build_plan(&query.r#where)?;
 
-        let res = QueryEngine::new(deps.storage).select(plan, query.select)?;
-        let mut ns_resolver = plan_builder.cached_namespaces().into();
-
-        Ok(SelectResponse {
-            head: Head { vars: res.head },
-            results: res
-                .solutions
-                .map(|res| {
-                    res.and_then(|(name, var)| -> StdResult<(String, Value)> {
-                        Ok((
-                            name,
-                            var.as_value(&mut |ns_key| {
-                                let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
-                                res.and_then(NamespaceResolver::none_as_error_middleware)
-                                    .map(|ns| ns.value)
-                            })?,
-                        ))
-                    })
-                })
-                .collect()?,
-        })
+        QueryEngine::new(deps.storage)
+            .select(plan, query.select)
+            .and_then(|res| util::map_select_solutions(deps, res, plan_builder.cached_namespaces()))
     }
 
     pub fn describe(
@@ -256,11 +238,11 @@ pub mod query {
             .with_limit(store.limits.max_query_limit as usize);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(
-            plan,
-            select,
-            plan_builder.cached_namespaces().into(),
-        )?;
+        let response = QueryEngine::new(deps.storage)
+            .select(plan, select)
+            .and_then(|res| {
+                util::map_select_solutions(deps, res, plan_builder.cached_namespaces())
+            })?;
 
         let mut vars = response.head.vars;
         let mut bindings = response.results.bindings;
@@ -353,10 +335,15 @@ pub mod query {
 }
 
 pub mod util {
-    use crate::msg::{Results, SelectItem, SimpleWhereCondition, TriplePattern, WhereCondition};
+    use super::*;
+    use crate::msg::{
+        Head, Results, SelectItem, SelectResponse, SimpleWhereCondition, TriplePattern, Value,
+        WhereCondition,
+    };
+    use crate::querier::SelectResults;
     use crate::rdf::Atom;
-    use cosmwasm_std::StdResult;
-    use std::collections::{HashMap, HashSet};
+    use crate::state::{Namespace, NamespaceResolver};
+    use std::collections::{BTreeMap, HashMap, HashSet};
 
     pub fn as_select_veriables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
         let variables = patterns
@@ -397,6 +384,42 @@ pub mod util {
                 .collect::<StdResult<_>>()?
         };
         Ok(atoms)
+    }
+
+    pub fn map_select_solutions(
+        deps: Deps<'_>,
+        res: SelectResults<'_>,
+        ns_cache: Vec<Namespace>,
+    ) -> StdResult<SelectResponse> {
+        let mut ns_resolver = ns_cache.into();
+
+        Ok(SelectResponse {
+            head: Head { vars: res.head },
+            results: Results {
+                bindings: res
+                    .solutions
+                    .map(|res| {
+                        res.and_then(|vars| -> StdResult<BTreeMap<String, Value>> {
+                            vars.iter()
+                                .map(|(name, var)| {
+                                    Ok((
+                                        name,
+                                        var.as_value(&mut |ns_key| {
+                                            let res =
+                                                ns_resolver.resolve_from_key(deps.storage, ns_key);
+                                            res.and_then(
+                                                NamespaceResolver::none_as_error_middleware,
+                                            )
+                                            .map(|ns| ns.value)
+                                        })?,
+                                    ))
+                                })
+                                .collect()
+                        })
+                    })
+                    .collect()?,
+            },
+        })
     }
 }
 

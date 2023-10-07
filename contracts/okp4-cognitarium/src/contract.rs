@@ -139,13 +139,13 @@ pub mod query {
 
     use super::*;
     use crate::msg::{
-        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectItem,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Head, Node, SelectItem,
         SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value,
         VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
-    use crate::state::HasCachedNamespaces;
+    use crate::state::{HasCachedNamespaces, NamespaceResolver};
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -170,11 +170,27 @@ pub mod query {
             PlanBuilder::new(deps.storage, &prefix_map, None).with_limit(count as usize);
         let plan = plan_builder.build_plan(&query.r#where)?;
 
-        QueryEngine::new(deps.storage).select(
-            plan,
-            query.select,
-            plan_builder.cached_namespaces().into(),
-        )
+        let res = QueryEngine::new(deps.storage).select(plan, query.select)?;
+        let mut ns_resolver = plan_builder.cached_namespaces().into();
+
+        Ok(SelectResponse {
+            head: Head { vars: res.head },
+            results: res
+                .solutions
+                .map(|res| {
+                    res.and_then(|(name, var)| -> StdResult<(String, Value)> {
+                        Ok((
+                            name,
+                            var.as_value(&mut |ns_key| {
+                                let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
+                                res.and_then(NamespaceResolver::none_as_error_middleware)
+                                    .map(|ns| ns.value)
+                            })?,
+                        ))
+                    })
+                })
+                .collect()?,
+        })
     }
 
     pub fn describe(

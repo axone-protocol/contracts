@@ -123,6 +123,7 @@ pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdR
     match msg {
         QueryMsg::Ask { query } => to_binary(&query::ask(deps, query)?),
         QueryMsg::Program => to_binary(&query::program(deps)?),
+        QueryMsg::ProgramCode => to_binary(&query::program_code(deps)?),
     }
 }
 
@@ -137,6 +138,18 @@ pub mod query {
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
         let program = PROGRAM.load(deps.storage)?.into();
         Ok(program)
+    }
+
+    pub fn program_code(deps: Deps<'_, LogicCustomQuery>) -> StdResult<Binary> {
+        let ObjectRef {
+            storage_address,
+            object_id,
+        } = PROGRAM.load(deps.storage)?.law;
+
+        deps.querier.query_wasm_smart::<Binary>(
+            storage_address,
+            &StorageQuery::ObjectData { id: object_id },
+        )
     }
 
     pub fn ask(deps: Deps<'_, LogicCustomQuery>, query: String) -> StdResult<AskResponse> {

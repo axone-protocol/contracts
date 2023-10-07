@@ -38,6 +38,11 @@ pub enum QueryMsg {
     /// If not broken, returns the law program location information.
     #[returns(ProgramResponse)]
     Program,
+
+    /// # ProgramCode
+    /// ProgramCode returns the law program code.
+    #[returns(Binary)]
+    ProgramCode,
 }
 
 /// # ProgramResponse

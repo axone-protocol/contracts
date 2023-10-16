@@ -398,6 +398,50 @@ mod tests {
         assert_eq!(storage_addr, result.storage_address);
     }
 
+    #[test]
+    fn program_code() {
+        const CONTRACT_ID: &str = "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3";
+        const OBJECT_ID: &str = "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05";
+        const A_PROGRAM: &str = "foo(_) :- true.";
+
+        let mut deps =
+            mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
+        deps.querier.update_wasm(move |query| match query {
+            WasmQuery::Smart { contract_addr, msg } if contract_addr == CONTRACT_ID => {
+                let data = to_binary(&A_PROGRAM).unwrap();
+                let storage_query: StorageQuery = from_binary(msg).unwrap();
+
+                assert!(
+                    matches!(storage_query, StorageQuery::ObjectData { id } if id == OBJECT_ID)
+                );
+
+                SystemResult::Ok(ContractResult::Ok(to_binary(&data).unwrap()))
+            }
+            _ => {
+                panic!("UnsupportedRequest: query_wasm");
+            }
+        });
+
+        PROGRAM
+            .save(
+                deps.as_mut().storage,
+                &LawStone {
+                    broken: false,
+                    law: ObjectRef {
+                        object_id: OBJECT_ID.to_string(),
+                        storage_address: CONTRACT_ID.to_string(),
+                    },
+                },
+            )
+            .unwrap();
+
+        let result = query(deps.as_ref(), mock_env(), QueryMsg::ProgramCode {}).unwrap();
+        let data: Binary = from_binary(&result).unwrap();
+        let program: String = from_binary(&data).unwrap();
+
+        assert_eq!(A_PROGRAM, program);
+    }
+
     fn custom_logic_handler_with_query(
         query: String,
         program: ObjectRef,

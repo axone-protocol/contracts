@@ -56,6 +56,14 @@ If not broken, returns the law program location information.
 |-------|
 |`"program"`|
 
+### QueryMsg::ProgramCode
+
+ProgramCode returns the law program code.
+
+|literal|
+|-------|
+|`"program_code"`|
+
 ## Responses
 
 ### ask
@@ -76,6 +84,16 @@ ProgramResponse carry elements to locate the program in a `okp4-objectarium` con
 |----------|-----------|
 |`object_id`|*(Required.) * **string**. The program object id in the `okp4-objectarium` contract.|
 |`storage_address`|*(Required.) * **string**. The `okp4-objectarium` contract address on which the law program is stored.|
+
+### program_code
+
+Binary is a wrapper around Vec&lt;u8&gt; to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.
+
+This is only needed as serde-json-{core,wasm} has a horrible encoding for Vec&lt;u8&gt;. See also &lt;https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md&gt;.
+
+|type|
+|----|
+|**string**.|
 
 ## Definitions
 
@@ -126,4 +144,4 @@ A string containing Base64-encoded data.
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`023b72150b485c6b`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`092608edf6c36d25`)*

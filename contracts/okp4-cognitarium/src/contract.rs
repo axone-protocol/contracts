@@ -390,13 +390,13 @@ mod tests {
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::{DeleteData, InsertData};
     use crate::msg::Node::NamedNode;
-    use crate::msg::QueryMsg::Construct;
     use crate::msg::SimpleWhereCondition::TriplePattern;
     use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
-        ConstructQuery, DescribeQuery, DescribeResponse, Head, Literal, Prefix, Results,
-        SelectItem, SelectQuery, SelectResponse, StoreLimitsInput, StoreLimitsInputBuilder,
-        StoreResponse, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Head, Literal, Prefix,
+        Results, SelectItem, SelectQuery, SelectResponse, StoreLimitsInput,
+        StoreLimitsInputBuilder, StoreResponse, Value, VarOrNamedNode, VarOrNode,
+        VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::state::{
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
@@ -1894,27 +1894,60 @@ mod tests {
     fn proper_construct() {
         let id = "https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
         let cases = vec![(
-            ConstructQuery {
-                prefixes: vec![],
-                construct: vec![msg::TriplePattern {
-                    subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                    predicate: VarOrNode::Variable("p".to_string()),
-                    object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                }],
-                r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                    subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                    predicate: VarOrNode::Node(NamedNode(Full(
-                        "https://ontology.okp4.space/core/hasTopic".to_string(),
-                    ))),
-                    object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                        "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
-                    ))),
-                }))],
+            QueryMsg::Construct {
+                query: ConstructQuery {
+                    prefixes: vec![],
+                    construct: vec![],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTag".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                format: None,
             },
-            0,
+            ConstructResponse {
+                format: DataFormat::Turtle,
+                data: Binary::from(
+                    "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" .\n".to_string().as_bytes().to_vec()),
+            },
+        ),
+        (
+            QueryMsg::Construct {
+                query: ConstructQuery {
+                    prefixes: vec![
+                        Prefix { prefix: "my-ns".to_string(), namespace: "https://my-ns.org/".to_string() },
+                        Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string()}
+                    ],
+                    construct: vec![
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Prefixed("my-ns:instance-1".to_string()))),
+                            predicate: VarOrNode::Node(NamedNode(Full(
+                                "https://my-ns/predicate/tag".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        }
+                    ],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTag".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                format: Some(DataFormat::NTriples),
+            },
+            ConstructResponse {
+                format: DataFormat::NTriples,
+                data: Binary::from(
+                    "<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"Test\" .\n<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"OKP4\" .\n".to_string().as_bytes().to_vec()),
+            },
         )];
 
-        for case in cases {
+        for (q, expected) in cases {
             let mut deps = mock_dependencies();
 
             let info = mock_info("owner", &[]);
@@ -1939,17 +1972,17 @@ mod tests {
             )
             .unwrap();
 
-            let res = query(
-                deps.as_ref(),
-                mock_env(),
-                Construct {
-                    query: case.0,
-                    format: Some(DataFormat::default()),
-                },
-            );
+            let res = query(deps.as_ref(), mock_env(), q);
 
-            assert!(res.is_err());
-            assert_eq!(res.err().unwrap(), StdError::generic_err("Not implemented"));
+            assert!(res.is_ok());
+
+            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+
+            assert_eq!(result.format, expected.format);
+            assert_eq!(
+                String::from_utf8_lossy(&result.data),
+                String::from_utf8_lossy(&expected.data)
+            );
         }
     }
 }

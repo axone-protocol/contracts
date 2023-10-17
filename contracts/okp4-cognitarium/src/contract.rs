@@ -49,15 +49,11 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::msg::{
-        DataFormat, Prefix, SelectItem, SimpleWhereCondition, TriplePattern, WhereClause,
-        WhereCondition,
-    };
+    use crate::msg::{DataFormat, Prefix, TriplePattern, WhereClause};
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{Atom, PrefixMap, TripleReader};
+    use crate::rdf::{PrefixMap, TripleReader};
     use crate::state::HasCachedNamespaces;
     use crate::storer::StoreEngine;
-    use std::collections::HashSet;
     use std::io::BufReader;
 
     pub fn verify_owner(deps: &DepsMut<'_>, info: &MessageInfo) -> Result<(), ContractError> {
@@ -96,24 +92,11 @@ pub mod execute {
         verify_owner(&deps, &info)?;
 
         let patterns: Vec<TriplePattern> = if delete.is_empty() {
-            r#where
-                .iter()
-                .map(|c| match c {
-                    WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => {
-                        Ok(tp.clone())
-                    }
-                })
-                .collect::<Result<_, ContractError>>()?
+            util::as_triple_patterns(&r#where)?
         } else {
             delete
         };
-        let variables = patterns
-            .iter()
-            .flat_map(TriplePattern::variables)
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .map(SelectItem::Variable)
-            .collect();
+        let variables = util::as_select_veriables(&patterns);
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
@@ -123,20 +106,8 @@ pub mod execute {
             variables,
             plan_builder.cached_namespaces().into(),
         )?;
-        let atoms: Vec<Atom> = if response.results.bindings.is_empty() {
-            vec![]
-        } else {
-            response
-                .results
-                .bindings
-                .iter()
-                .flat_map(|row| {
-                    patterns
-                        .iter()
-                        .map(|pattern| pattern.resolve(row, &prefix_map))
-                })
-                .collect::<Result<_, _>>()?
-        };
+        let results = response.results;
+        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
 
         let mut store = StoreEngine::new(deps.storage)?;
         let count = store.delete_all(&atoms)?;
@@ -318,6 +289,56 @@ pub mod query {
         _format: DataFormat,
     ) -> StdResult<SelectResponse> {
         Err(StdError::generic_err("Not implemented"))
+    }
+}
+
+pub mod util {
+    use crate::msg::{Results, SelectItem, SimpleWhereCondition, TriplePattern, WhereCondition};
+    use crate::rdf::Atom;
+    use crate::ContractError;
+    use std::collections::{HashMap, HashSet};
+
+    pub fn as_select_veriables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
+        let variables = patterns
+            .iter()
+            .flat_map(TriplePattern::variables)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(SelectItem::Variable)
+            .collect();
+        variables
+    }
+
+    pub fn as_triple_patterns(
+        r#where: &[WhereCondition],
+    ) -> Result<Vec<TriplePattern>, ContractError> {
+        r#where
+            .iter()
+            .map(|c| match c {
+                WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => Ok(tp.clone()),
+            })
+            .collect::<Result<_, ContractError>>()
+    }
+
+    pub fn as_atoms_result(
+        results: Results,
+        patterns: Vec<TriplePattern>,
+        prefix_map: &HashMap<String, String>,
+    ) -> Result<Vec<Atom>, ContractError> {
+        let atoms: Vec<Atom> = if results.bindings.is_empty() {
+            vec![]
+        } else {
+            results
+                .bindings
+                .iter()
+                .flat_map(|row| {
+                    patterns
+                        .iter()
+                        .map(|pattern| pattern.resolve(row, prefix_map))
+                })
+                .collect::<Result<_, _>>()?
+        };
+        Ok(atoms)
     }
 }
 

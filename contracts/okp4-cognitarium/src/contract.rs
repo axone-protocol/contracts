@@ -139,9 +139,9 @@ pub mod query {
 
     use super::*;
     use crate::msg::{
-        ConstructQuery, DescribeQuery, DescribeResponse, Node, SelectItem, SelectQuery,
-        SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value, VarOrNamedNode,
-        VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectItem,
+        SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value,
+        VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
@@ -284,18 +284,62 @@ pub mod query {
     }
 
     pub fn construct(
-        _deps: Deps<'_>,
-        _query: ConstructQuery,
-        _format: DataFormat,
-    ) -> StdResult<SelectResponse> {
-        Err(StdError::generic_err("Not implemented"))
+        deps: Deps<'_>,
+        query: ConstructQuery,
+        format: DataFormat,
+    ) -> StdResult<ConstructResponse> {
+        let ConstructQuery {
+            construct,
+            prefixes,
+            r#where,
+        } = query;
+        let patterns: Vec<TriplePattern> = if construct.is_empty() {
+            util::as_triple_patterns(&r#where)?
+        } else {
+            construct
+        };
+        let variables = util::as_select_veriables(&patterns);
+        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
+
+        let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
+        let plan = plan_builder.build_plan(&r#where)?;
+
+        let response = QueryEngine::new(deps.storage).select(
+            plan,
+            variables,
+            plan_builder.cached_namespaces().into(),
+        )?;
+        let results = response.results;
+        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
+
+        let out: Vec<u8> = Vec::default();
+        let mut writer = TripleWriter::new(&format, out);
+
+        for atom in &atoms {
+            let triple = atom.into();
+            writer.write(&triple).map_err(|e| {
+                StdError::serialize_err(
+                    "triple",
+                    format!("Error writing triple {}: {}", &triple, e),
+                )
+            })?;
+        }
+
+        let out = writer
+            .finish()
+            .map_err(|e| StdError::serialize_err("triple", format!("Error writing triple: {e}")))?;
+
+        Ok(ConstructResponse {
+            format,
+            data: Binary::from(out),
+        })
     }
 }
 
 pub mod util {
     use crate::msg::{Results, SelectItem, SimpleWhereCondition, TriplePattern, WhereCondition};
     use crate::rdf::Atom;
-    use crate::ContractError;
+    use cosmwasm_std::StdResult;
     use std::collections::{HashMap, HashSet};
 
     pub fn as_select_veriables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
@@ -309,22 +353,20 @@ pub mod util {
         variables
     }
 
-    pub fn as_triple_patterns(
-        r#where: &[WhereCondition],
-    ) -> Result<Vec<TriplePattern>, ContractError> {
+    pub fn as_triple_patterns(r#where: &[WhereCondition]) -> StdResult<Vec<TriplePattern>> {
         r#where
             .iter()
             .map(|c| match c {
                 WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => Ok(tp.clone()),
             })
-            .collect::<Result<_, ContractError>>()
+            .collect::<StdResult<_>>()
     }
 
     pub fn as_atoms_result(
         results: Results,
         patterns: Vec<TriplePattern>,
         prefix_map: &HashMap<String, String>,
-    ) -> Result<Vec<Atom>, ContractError> {
+    ) -> StdResult<Vec<Atom>> {
         let atoms: Vec<Atom> = if results.bindings.is_empty() {
             vec![]
         } else {
@@ -336,7 +378,7 @@ pub mod util {
                         .iter()
                         .map(|pattern| pattern.resolve(row, prefix_map))
                 })
-                .collect::<Result<_, _>>()?
+                .collect::<StdResult<_>>()?
         };
         Ok(atoms)
     }

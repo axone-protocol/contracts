@@ -49,15 +49,11 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::msg::{
-        DataFormat, Prefix, SelectItem, SimpleWhereCondition, TriplePattern, WhereClause,
-        WhereCondition,
-    };
+    use crate::msg::{DataFormat, Prefix, TriplePattern, WhereClause};
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{Atom, PrefixMap, TripleReader};
+    use crate::rdf::{PrefixMap, TripleReader};
     use crate::state::HasCachedNamespaces;
     use crate::storer::StoreEngine;
-    use std::collections::HashSet;
     use std::io::BufReader;
 
     pub fn verify_owner(deps: &DepsMut<'_>, info: &MessageInfo) -> Result<(), ContractError> {
@@ -96,24 +92,11 @@ pub mod execute {
         verify_owner(&deps, &info)?;
 
         let patterns: Vec<TriplePattern> = if delete.is_empty() {
-            r#where
-                .iter()
-                .map(|c| match c {
-                    WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => {
-                        Ok(tp.clone())
-                    }
-                })
-                .collect::<Result<_, ContractError>>()?
+            util::as_triple_patterns(&r#where)?
         } else {
             delete
         };
-        let variables = patterns
-            .iter()
-            .flat_map(TriplePattern::variables)
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .map(SelectItem::Variable)
-            .collect();
+        let variables = util::as_select_veriables(&patterns);
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
@@ -123,20 +106,8 @@ pub mod execute {
             variables,
             plan_builder.cached_namespaces().into(),
         )?;
-        let atoms: Vec<Atom> = if response.results.bindings.is_empty() {
-            vec![]
-        } else {
-            response
-                .results
-                .bindings
-                .iter()
-                .flat_map(|row| {
-                    patterns
-                        .iter()
-                        .map(|pattern| pattern.resolve(row, &prefix_map))
-                })
-                .collect::<Result<_, _>>()?
-        };
+        let results = response.results;
+        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
 
         let mut store = StoreEngine::new(deps.storage)?;
         let count = store.delete_all(&atoms)?;
@@ -168,9 +139,9 @@ pub mod query {
 
     use super::*;
     use crate::msg::{
-        ConstructQuery, DescribeQuery, DescribeResponse, Node, SelectItem, SelectQuery,
-        SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value, VarOrNamedNode,
-        VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectItem,
+        SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value,
+        VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
@@ -313,11 +284,103 @@ pub mod query {
     }
 
     pub fn construct(
-        _deps: Deps<'_>,
-        _query: ConstructQuery,
-        _format: DataFormat,
-    ) -> StdResult<SelectResponse> {
-        Err(StdError::generic_err("Not implemented"))
+        deps: Deps<'_>,
+        query: ConstructQuery,
+        format: DataFormat,
+    ) -> StdResult<ConstructResponse> {
+        let ConstructQuery {
+            construct,
+            prefixes,
+            r#where,
+        } = query;
+        let patterns: Vec<TriplePattern> = if construct.is_empty() {
+            util::as_triple_patterns(&r#where)?
+        } else {
+            construct
+        };
+        let variables = util::as_select_veriables(&patterns);
+        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
+
+        let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
+        let plan = plan_builder.build_plan(&r#where)?;
+
+        let response = QueryEngine::new(deps.storage).select(
+            plan,
+            variables,
+            plan_builder.cached_namespaces().into(),
+        )?;
+        let results = response.results;
+        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
+
+        let out: Vec<u8> = Vec::default();
+        let mut writer = TripleWriter::new(&format, out);
+
+        for atom in &atoms {
+            let triple = atom.into();
+            writer.write(&triple).map_err(|e| {
+                StdError::serialize_err(
+                    "triple",
+                    format!("Error writing triple {}: {}", &triple, e),
+                )
+            })?;
+        }
+
+        let out = writer
+            .finish()
+            .map_err(|e| StdError::serialize_err("triple", format!("Error writing triple: {e}")))?;
+
+        Ok(ConstructResponse {
+            format,
+            data: Binary::from(out),
+        })
+    }
+}
+
+pub mod util {
+    use crate::msg::{Results, SelectItem, SimpleWhereCondition, TriplePattern, WhereCondition};
+    use crate::rdf::Atom;
+    use cosmwasm_std::StdResult;
+    use std::collections::{HashMap, HashSet};
+
+    pub fn as_select_veriables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
+        let variables = patterns
+            .iter()
+            .flat_map(TriplePattern::variables)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(SelectItem::Variable)
+            .collect();
+        variables
+    }
+
+    pub fn as_triple_patterns(r#where: &[WhereCondition]) -> StdResult<Vec<TriplePattern>> {
+        r#where
+            .iter()
+            .map(|c| match c {
+                WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => Ok(tp.clone()),
+            })
+            .collect::<StdResult<_>>()
+    }
+
+    pub fn as_atoms_result(
+        results: Results,
+        patterns: Vec<TriplePattern>,
+        prefix_map: &HashMap<String, String>,
+    ) -> StdResult<Vec<Atom>> {
+        let atoms: Vec<Atom> = if results.bindings.is_empty() {
+            vec![]
+        } else {
+            results
+                .bindings
+                .iter()
+                .flat_map(|row| {
+                    patterns
+                        .iter()
+                        .map(|pattern| pattern.resolve(row, prefix_map))
+                })
+                .collect::<StdResult<_>>()?
+        };
+        Ok(atoms)
     }
 }
 
@@ -327,13 +390,13 @@ mod tests {
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::{DeleteData, InsertData};
     use crate::msg::Node::NamedNode;
-    use crate::msg::QueryMsg::Construct;
     use crate::msg::SimpleWhereCondition::TriplePattern;
     use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
-        ConstructQuery, DescribeQuery, DescribeResponse, Head, Literal, Prefix, Results,
-        SelectItem, SelectQuery, SelectResponse, StoreLimitsInput, StoreLimitsInputBuilder,
-        StoreResponse, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Head, Literal, Prefix,
+        Results, SelectItem, SelectQuery, SelectResponse, StoreLimitsInput,
+        StoreLimitsInputBuilder, StoreResponse, Value, VarOrNamedNode, VarOrNode,
+        VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::state::{
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
@@ -1831,27 +1894,60 @@ mod tests {
     fn proper_construct() {
         let id = "https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
         let cases = vec![(
-            ConstructQuery {
-                prefixes: vec![],
-                construct: vec![msg::TriplePattern {
-                    subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                    predicate: VarOrNode::Variable("p".to_string()),
-                    object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                }],
-                r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                    subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                    predicate: VarOrNode::Node(NamedNode(Full(
-                        "https://ontology.okp4.space/core/hasTopic".to_string(),
-                    ))),
-                    object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                        "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
-                    ))),
-                }))],
+            QueryMsg::Construct {
+                query: ConstructQuery {
+                    prefixes: vec![],
+                    construct: vec![],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTag".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                format: None,
             },
-            0,
+            ConstructResponse {
+                format: DataFormat::Turtle,
+                data: Binary::from(
+                    "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" .\n".to_string().as_bytes().to_vec()),
+            },
+        ),
+        (
+            QueryMsg::Construct {
+                query: ConstructQuery {
+                    prefixes: vec![
+                        Prefix { prefix: "my-ns".to_string(), namespace: "https://my-ns.org/".to_string() },
+                        Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string()}
+                    ],
+                    construct: vec![
+                        msg::TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Prefixed("my-ns:instance-1".to_string()))),
+                            predicate: VarOrNode::Node(NamedNode(Full(
+                                "https://my-ns/predicate/tag".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        }
+                    ],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNode::Node(NamedNode(Full(
+                            "https://ontology.okp4.space/core/hasTag".to_string(),
+                        ))),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                format: Some(DataFormat::NTriples),
+            },
+            ConstructResponse {
+                format: DataFormat::NTriples,
+                data: Binary::from(
+                    "<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"Test\" .\n<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"OKP4\" .\n".to_string().as_bytes().to_vec()),
+            },
         )];
 
-        for case in cases {
+        for (q, expected) in cases {
             let mut deps = mock_dependencies();
 
             let info = mock_info("owner", &[]);
@@ -1876,17 +1972,17 @@ mod tests {
             )
             .unwrap();
 
-            let res = query(
-                deps.as_ref(),
-                mock_env(),
-                Construct {
-                    query: case.0,
-                    format: Some(DataFormat::default()),
-                },
-            );
+            let res = query(deps.as_ref(), mock_env(), q);
 
-            assert!(res.is_err());
-            assert_eq!(res.err().unwrap(), StdError::generic_err("Not implemented"));
+            assert!(res.is_ok());
+
+            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+
+            assert_eq!(result.format, expected.format);
+            assert_eq!(
+                String::from_utf8_lossy(&result.data),
+                String::from_utf8_lossy(&expected.data)
+            );
         }
     }
 }

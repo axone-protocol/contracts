@@ -50,9 +50,9 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::msg::{DataFormat, Prefix, TriplePattern, WhereClause};
-    use crate::querier::{PlanBuilder, QueryEngine};
+    use crate::querier::{PlanBuilder, QueryEngine, TripleFactory};
     use crate::rdf::{PrefixMap, TripleReader};
-    use crate::state::HasCachedNamespaces;
+    use crate::state::{HasCachedNamespaces, Triple};
     use crate::storer::StoreEngine;
     use std::io::BufReader;
 
@@ -96,21 +96,32 @@ pub mod execute {
         } else {
             delete
         };
-        let variables = util::as_select_veriables(&patterns);
+
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(
-            plan,
-            variables,
-            plan_builder.cached_namespaces().into(),
+        let triple_factory = TripleFactory::try_new(
+            deps.storage,
+            &prefix_map,
+            patterns,
+            plan_builder.cached_namespaces(),
         )?;
-        let results = response.results;
-        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
+
+        let triples = QueryEngine::new(deps.storage)
+            .select(
+                plan,
+                triple_factory
+                    .variables()
+                    .into_iter()
+                    .map(SelectItem::Variable)
+                    .collect(),
+            )?
+            .solutions
+            .resolve_triples(triple_factory)?;
 
         let mut store = StoreEngine::new(deps.storage)?;
-        let count = store.delete_all(&atoms)?;
+        let count = store.delete_all(&triples)?;
 
         Ok(Response::new()
             .add_attribute("action", "delete")
@@ -139,9 +150,9 @@ pub mod query {
 
     use super::*;
     use crate::msg::{
-        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Head, Node, SelectItem,
-        SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value,
-        VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Head, Node, Results,
+        SelectItem, SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse,
+        TriplePattern, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine, SelectResults};
     use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
@@ -384,34 +395,30 @@ pub mod util {
         res: SelectResults<'_>,
         ns_cache: Vec<Namespace>,
     ) -> StdResult<SelectResponse> {
-        let mut ns_resolver = ns_cache.into();
+        let mut ns_resolver: NamespaceResolver = ns_cache.into();
+
+        let mut bindings: Vec<BTreeMap<String, Value>> = vec![];
+        for solution in res.solutions {
+            let vars = solution?;
+            let resolved = vars
+                .into_iter()
+                .map(|(name, var)| -> StdResult<(String, Value)> {
+                    Ok((
+                        name.clone(),
+                        var.as_value(&mut |ns_key| {
+                            let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
+                            res.and_then(NamespaceResolver::none_as_error_middleware)
+                                .map(|ns| ns.value)
+                        })?,
+                    ))
+                })
+                .collect::<StdResult<BTreeMap<String, Value>>>()?;
+            bindings.push(resolved);
+        }
 
         Ok(SelectResponse {
             head: Head { vars: res.head },
-            results: Results {
-                bindings: res
-                    .solutions
-                    .map(|res| {
-                        res.and_then(|vars| -> StdResult<BTreeMap<String, Value>> {
-                            vars.iter()
-                                .map(|(name, var)| {
-                                    Ok((
-                                        name,
-                                        var.as_value(&mut |ns_key| {
-                                            let res =
-                                                ns_resolver.resolve_from_key(deps.storage, ns_key);
-                                            res.and_then(
-                                                NamespaceResolver::none_as_error_middleware,
-                                            )
-                                            .map(|ns| ns.value)
-                                        })?,
-                                    ))
-                                })
-                                .collect()
-                        })
-                    })
-                    .collect()?,
-            },
+            results: Results { bindings },
         })
     }
 }

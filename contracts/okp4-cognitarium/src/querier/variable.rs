@@ -1,6 +1,13 @@
-use crate::msg::{Value, IRI};
-use crate::state::{Literal, Object, Predicate, Subject};
-use cosmwasm_std::StdResult;
+use crate::msg;
+use crate::msg::{Value, VarOrNode, VarOrNodeOrLiteral, IRI};
+use crate::querier::mapper::{
+    literal_as_object, node_as_object, node_as_predicate, node_as_subject,
+};
+use crate::state::{Literal, Namespace, NamespaceResolver, Object, Predicate, Subject, Triple};
+use cosmwasm_std::{StdError, StdResult, Storage};
+use cw_storage_plus::Prefixer;
+use either::{Either, Left, Right};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ResolvedVariable {
@@ -137,6 +144,188 @@ impl ResolvedVariables {
 
     pub fn get(&self, index: usize) -> &Option<ResolvedVariable> {
         self.variables.get(index).unwrap_or(&None)
+    }
+}
+
+pub struct TripleFactory {
+    patterns: Vec<TriplePattern>,
+}
+
+impl TripleFactory {
+    pub fn try_new(
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        patterns: Vec<msg::TriplePattern>,
+        ns_cache: Vec<Namespace>,
+    ) -> StdResult<Self> {
+        let mut ns_resolver = ns_cache.into();
+        Ok(Self {
+            patterns: patterns
+                .iter()
+                .map(|p| Self::build_triple_pattern(&mut ns_resolver, storage, prefixes, p))
+                .collect::<StdResult<Vec<TriplePattern>>>()?,
+        })
+    }
+
+    pub fn resolve(&self, vars: &BTreeMap<String, ResolvedVariable>) -> StdResult<Vec<Triple>> {
+        let mut triples = Vec::with_capacity(self.patterns.len());
+        for res in self.patterns.iter().map(|pattern| pattern.resolve(vars)) {
+            if let Some(triple) = res? {
+                triples.push(triple);
+            }
+        }
+
+        Ok(triples)
+    }
+
+    pub fn variables(&self) -> HashSet<String> {
+        self.patterns
+            .iter()
+            .flat_map(TriplePattern::variables)
+            .collect()
+    }
+
+    fn build_triple_pattern(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        pattern: &msg::TriplePattern,
+    ) -> StdResult<TriplePattern> {
+        Ok(TriplePattern {
+            subject: Self::build_subject_pattern(
+                ns_resolver,
+                storage,
+                prefixes,
+                pattern.subject.clone(),
+            )?,
+            predicate: Self::build_predicate_pattern(
+                ns_resolver,
+                storage,
+                prefixes,
+                pattern.predicate.clone(),
+            )?,
+            object: Self::build_object_pattern(
+                ns_resolver,
+                storage,
+                prefixes,
+                pattern.object.clone(),
+            )?,
+        })
+    }
+
+    fn build_subject_pattern(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        value: VarOrNode,
+    ) -> StdResult<Either<Subject, String>> {
+        Ok(match value {
+            VarOrNode::Variable(v) => Right(v),
+            VarOrNode::Node(n) => Left(node_as_subject(ns_resolver, storage, prefixes, n)?),
+        })
+    }
+
+    fn build_predicate_pattern(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        value: VarOrNode,
+    ) -> StdResult<Either<Predicate, String>> {
+        Ok(match value {
+            VarOrNode::Variable(v) => Right(v),
+            VarOrNode::Node(n) => Left(node_as_predicate(ns_resolver, storage, prefixes, n)?),
+        })
+    }
+
+    fn build_object_pattern(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        value: VarOrNodeOrLiteral,
+    ) -> StdResult<Either<Object, String>> {
+        Ok(match value {
+            VarOrNodeOrLiteral::Variable(v) => Right(v),
+            VarOrNodeOrLiteral::Node(n) => Left(node_as_object(ns_resolver, storage, prefixes, n)?),
+            VarOrNodeOrLiteral::Literal(l) => {
+                Left(literal_as_object(ns_resolver, storage, prefixes, l)?)
+            }
+        })
+    }
+}
+
+pub struct TriplePattern {
+    subject: Either<Subject, String>,
+    predicate: Either<Predicate, String>,
+    object: Either<Object, String>,
+}
+
+impl TriplePattern {
+    pub fn resolve(&self, vars: &BTreeMap<String, ResolvedVariable>) -> StdResult<Option<Triple>> {
+        let subject = match Self::resolve_triple_part(
+            &self.subject,
+            ResolvedVariable::as_subject,
+            &vars,
+            "subject",
+        )? {
+            Some(s) => s,
+            None => return Ok(None),
+        };
+
+        let predicate = match Self::resolve_triple_part(
+            &self.predicate,
+            ResolvedVariable::as_predicate,
+            &vars,
+            "predicate",
+        )? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        let object = match Self::resolve_triple_part(
+            &self.object,
+            ResolvedVariable::as_object,
+            &vars,
+            "object",
+        )? {
+            Some(o) => o,
+            None => return Ok(None),
+        };
+
+        Ok(Some(Triple {
+            subject: subject.clone(),
+            predicate: predicate.clone(),
+            object: object.clone(),
+        }))
+    }
+
+    pub fn variables(&self) -> HashSet<String> {
+        [
+            self.subject.clone().right(),
+            self.predicate.clone().right(),
+            self.object.clone().right(),
+        ]
+        .into_iter()
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .collect()
+    }
+
+    fn resolve_triple_part<T, F>(
+        part: &Either<T, String>,
+        from_var: F,
+        vars: &BTreeMap<String, ResolvedVariable>,
+        part_name: &str,
+    ) -> StdResult<Option<T>>
+    where
+        T: Clone,
+        F: Fn(&ResolvedVariable) -> Option<T>,
+    {
+        match part {
+            Left(p) => StdResult::Ok(Some(p.clone())),
+            Right(key) => vars.get(key).map(from_var).ok_or_else(|| {
+                StdError::generic_err(format!("Unbound {:?} variable: {:?}", part_name, key))
+            }),
+        }
     }
 }
 

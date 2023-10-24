@@ -1,6 +1,7 @@
 use crate::msg::{Head, Results, SelectItem, SelectResponse, Value};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
+use crate::querier::TripleFactory;
 use crate::state::{triples, HasCachedNamespaces, Object, Predicate, Subject, Triple};
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use std::collections::{BTreeMap, VecDeque};
@@ -43,7 +44,7 @@ impl<'a> QueryEngine<'a> {
 
         Ok(SelectResults {
             head: bindings.keys().cloned().collect(),
-            solutions: SolutionsIterator::new(self.storage, self.eval_plan(plan), bindings),
+            solutions: SolutionsIterator::new(self.eval_plan(plan), bindings),
         })
     }
 
@@ -366,23 +367,25 @@ impl<'a> Iterator for TriplePatternIterator<'a> {
     }
 }
 
-struct SolutionsIterator<'a> {
-    storage: &'a dyn Storage,
+pub struct SolutionsIterator<'a> {
     iter: ResolvedVariablesIterator<'a>,
     bindings: BTreeMap<String, usize>,
 }
 
 impl<'a> SolutionsIterator<'a> {
-    fn new(
-        storage: &'a dyn Storage,
-        iter: ResolvedVariablesIterator<'a>,
-        bindings: BTreeMap<String, usize>,
-    ) -> Self {
-        Self {
-            storage,
-            iter,
-            bindings,
+    fn new(iter: ResolvedVariablesIterator<'a>, bindings: BTreeMap<String, usize>) -> Self {
+        Self { iter, bindings }
+    }
+
+    pub fn resolve_triples(&mut self, triple_factory: TripleFactory) -> StdResult<Vec<Triple>> {
+        let mut triples = vec![];
+        for solution in self {
+            let vars = solution?;
+            let mut resolved = triple_factory.resolve(&vars)?;
+            triples.append(&mut resolved);
         }
+
+        Ok(triples)
     }
 }
 
@@ -419,7 +422,8 @@ mod test {
     use crate::msg::{DataFormat, StoreLimitsInput, IRI};
     use crate::rdf::TripleReader;
     use crate::state;
-    use crate::state::{Literal, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
+    use crate::state::Object::{Literal, Named};
+    use crate::state::{Node, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
     use crate::storer::StoreEngine;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
@@ -472,7 +476,7 @@ mod test {
         struct TestCase {
             plan: QueryPlan,
             selection: Vec<SelectItem>,
-            expects: StdResult<SelectResponse>,
+            expects: StdResult<(Vec<String>, Vec<BTreeMap<String, ResolvedVariable>>)>,
         }
 
         let cases = vec![
@@ -483,16 +487,12 @@ mod test {
                         predicate: PatternValue::Variable(1),
                         object: PatternValue::Variable(2),
                     },
-                    variables: vec![
-                        "v1".to_string(),
-                        "v2".to_string(),
-                        "v3".to_string(),
-                    ],
+                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
                 },
-                selection: vec![
-                    SelectItem::Variable("v4".to_string()),
-                ],
-                expects: Err(StdError::generic_err("Selected variable not found in query")),
+                selection: vec![SelectItem::Variable("v4".to_string())],
+                expects: Err(StdError::generic_err(
+                    "Selected variable not found in query",
+                )),
             },
             TestCase {
                 plan: QueryPlan {
@@ -507,27 +507,21 @@ mod test {
                         }),
                         object: PatternValue::Variable(0),
                     },
-                    variables: vec![
-                        "registrar".to_string(),
-                    ],
+                    variables: vec!["registrar".to_string()],
                 },
-                selection: vec![
-                    SelectItem::Variable("registrar".to_string()),
-                ],
-                expects: Ok(SelectResponse {
-                    head: Head {
-                        vars: vec![
-                            "registrar".to_string(),
-                        ],
-                    },
-                    results: Results {
-                        bindings: vec![
-                            BTreeMap::from([
-                                ("registrar".to_string(), Value::URI {value: IRI::Full("did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655".to_string())}),
-                            ]),
-                        ],
-                    },
-                }),
+                selection: vec![SelectItem::Variable("registrar".to_string())],
+                expects: Ok((
+                    vec!["registrar".to_string()],
+                    vec![BTreeMap::from([(
+                        "registrar".to_string(),
+                        ResolvedVariable::Object(Named(Node {
+                            namespace: 4,
+                            value:
+                                "0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
+                                    .to_string(),
+                        })),
+                    )])],
+                )),
             },
             TestCase {
                 plan: QueryPlan {
@@ -553,40 +547,97 @@ mod test {
                     SelectItem::Variable("predicate".to_string()),
                     SelectItem::Variable("object".to_string()),
                 ],
-                expects: Ok(SelectResponse {
-                    head: Head {
-                        vars: vec![
-                            "object".to_string(),
-                            "predicate".to_string(),
-                            "subject".to_string(),
-                        ],
-                    },
-                    results: Results {
-                        bindings: vec![
-                            BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/describes".to_string())}),
-                                ("object".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
-                            ]),
-                            BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/hasDescription".to_string())}),
-                                ("object".to_string(), Value::Literal {value: "Un Dataset de test.".to_string(), lang: Some("fr".to_string()), datatype: None }),
-                            ]),
-                            BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/hasTitle".to_string())}),
-                                ("object".to_string(), Value::Literal { value: "test Dataset".to_string(), lang: Some("en".to_string()), datatype: None }),
-                            ]),
-                        ],
-                    },
-                }),
+                expects: Ok((
+                    vec![
+                        "object".to_string(),
+                        "predicate".to_string(),
+                        "subject".to_string(),
+                    ],
+                    vec![
+                        BTreeMap::from([
+                            (
+                                "subject".to_string(),
+                                ResolvedVariable::Subject(Subject::Named(Node {
+                                    namespace: 11,
+                                    value: "d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string(),
+                                })),
+                            ),
+                            (
+                                "predicate".to_string(),
+                                ResolvedVariable::Predicate(Node {
+                                    namespace: 3,
+                                    value: "describes".to_string(),
+                                }),
+                            ),
+                            (
+                                "object".to_string(),
+                                ResolvedVariable::Object(Named(Node {
+                                    namespace: 8,
+                                    value: "0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string(),
+                                })),
+                            ),
+                        ]),
+                        BTreeMap::from([
+                            (
+                                "subject".to_string(),
+                                ResolvedVariable::Subject(Subject::Named(Node {
+                                    namespace: 11,
+                                    value: "d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string(),
+                                })),
+                            ),
+                            (
+                                "predicate".to_string(),
+                                ResolvedVariable::Predicate(Node {
+                                    namespace: 3,
+                                    value: "hasDescription".to_string(),
+                                }),
+                            ),
+                            (
+                                "object".to_string(),
+                                ResolvedVariable::Object(Literal(state::Literal::I18NString {
+                                    value: "Un Dataset de test.".to_string(),
+                                    language: "fr".to_string(),
+                                })),
+                            ),
+                        ]),
+                        BTreeMap::from([
+                            (
+                                "subject".to_string(),
+                                ResolvedVariable::Subject(Subject::Named(Node {
+                                    namespace: 11,
+                                    value: "d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string(),
+                                })),
+                            ),
+                            (
+                                "predicate".to_string(),
+                                ResolvedVariable::Predicate(Node {
+                                    namespace: 3,
+                                    value: "hasTitle".to_string(),
+                                }),
+                            ),
+                            (
+                                "object".to_string(),
+                                ResolvedVariable::Object(Literal(state::Literal::I18NString {
+                                    value: "test Dataset".to_string(),
+                                    language: "en".to_string(),
+                                })),
+                            ),
+                        ]),
+                    ],
+                )),
             },
         ];
 
         for case in cases {
             let engine = QueryEngine::new(&deps.storage);
-            assert_eq!(engine.select(case.plan, case.selection), case.expects);
+            assert_eq!(
+                engine.select(case.plan, case.selection).and_then(|res| Ok((
+                    res.head.clone(),
+                    res.solutions
+                        .collect::<StdResult<Vec<BTreeMap<String, ResolvedVariable>>>>()?
+                ))),
+                case.expects
+            );
         }
     }
 
@@ -663,9 +714,11 @@ mod test {
                                 namespace: 3,
                                 value: "hasPublisher".to_string(),
                             }),
-                            object: PatternValue::Constant(Object::Literal(Literal::Simple {
-                                value: "OKP4".to_string(),
-                            })),
+                            object: PatternValue::Constant(Object::Literal(
+                                state::Literal::Simple {
+                                    value: "OKP4".to_string(),
+                                },
+                            )),
                         }),
                     },
                     variables: vec!["v1".to_string(), "v2".to_string()],

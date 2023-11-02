@@ -137,17 +137,15 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 pub mod query {
-    use std::collections::BTreeMap;
-
     use super::*;
     use crate::msg::{
-        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Head, Node, SelectItem,
-        SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value,
-        VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectQuery,
+        SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, VarOrNamedNode,
+        VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
-    use crate::querier::{PlanBuilder, QueryEngine, SelectResults};
-    use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
-    use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver};
+    use crate::querier::{PlanBuilder, QueryEngine};
+    use crate::rdf::{PrefixMap, TripleWriter};
+    use crate::state::HasCachedNamespaces;
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -182,94 +180,66 @@ pub mod query {
         query: DescribeQuery,
         format: DataFormat,
     ) -> StdResult<DescribeResponse> {
-        fn get_value(
-            index: usize,
-            vars: &[String],
-            bindings: &BTreeMap<String, Value>,
-        ) -> Result<Value, StdError> {
-            vars.get(index)
-                .and_then(|it| bindings.get(it))
-                .cloned()
-                .ok_or_else(|| {
-                    StdError::generic_err(format!(
-                        "Variable index {index} not found (this was unexpected)"
-                    ))
-                })
-        }
-
-        let (s, p, o) = ("_1s".to_owned(), "_2p".to_owned(), "_3o".to_owned());
+        let (p, o) = ("_2p".to_owned(), "_3o".to_owned());
 
         let store = STORE.load(deps.storage)?;
 
         let (select, r#where) = match &query.resource {
             VarOrNamedNode::Variable(var) => {
+                let select = TriplePattern {
+                    subject: VarOrNode::Variable(var.clone()),
+                    predicate: VarOrNode::Variable(format!("{var}{p}")),
+                    object: VarOrNodeOrLiteral::Variable(format!("{var}{o}")),
+                };
+
                 let mut r#where = query.r#where;
                 r#where.push(WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
-                    TriplePattern {
-                        subject: VarOrNode::Variable(var.clone()),
-                        predicate: VarOrNode::Variable(format!("{var}{p}")),
-                        object: VarOrNodeOrLiteral::Variable(format!("{var}{o}")),
-                    },
+                    select.clone(),
                 )));
 
+                (vec![select], r#where)
+            }
+            VarOrNamedNode::NamedNode(iri) => {
+                let select = TriplePattern {
+                    subject: VarOrNode::Node(Node::NamedNode(iri.clone())),
+                    predicate: VarOrNode::Variable(p),
+                    object: VarOrNodeOrLiteral::Variable(o),
+                };
+
                 (
-                    vec![
-                        SelectItem::Variable(var.clone()),
-                        SelectItem::Variable(format!("{var}{p}")),
-                        SelectItem::Variable(format!("{var}{o}")),
-                    ],
-                    r#where,
+                    vec![select.clone()],
+                    vec![WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
+                        select,
+                    ))],
                 )
             }
-            VarOrNamedNode::NamedNode(iri) => (
-                vec![
-                    SelectItem::Variable(p.clone()),
-                    SelectItem::Variable(o.clone()),
-                ],
-                vec![WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
-                    TriplePattern {
-                        subject: VarOrNode::Node(Node::NamedNode(iri.clone())),
-                        predicate: VarOrNode::Variable(p),
-                        object: VarOrNodeOrLiteral::Variable(o),
-                    },
-                ))],
-            ),
         };
         let prefix_map = <PrefixMap>::from(query.prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None)
             .with_limit(store.limits.max_query_limit as usize);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage)
-            .select(plan, select)
+        let atoms = QueryEngine::new(deps.storage)
+            .select(plan, util::as_select_variables(&select))
             .and_then(|res| {
-                util::map_select_solutions(deps, res, plan_builder.cached_namespaces())
+                res.solutions.resolve_atoms(
+                    deps.storage,
+                    &prefix_map,
+                    select,
+                    plan_builder.cached_namespaces(),
+                )
             })?;
-
-        let mut vars = response.head.vars;
-        let mut bindings = response.results.bindings;
-        if let VarOrNamedNode::NamedNode(iri) = &query.resource {
-            vars.insert(0, s.clone());
-            for b in &mut bindings {
-                b.insert(s.clone(), Value::URI { value: iri.clone() });
-            }
-        }
 
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&format, out);
 
-        for r in &bindings {
-            let atom = &Atom {
-                subject: rdf::Subject::try_from((get_value(0, &vars, r)?, &prefix_map))?,
-                property: rdf::Property::try_from((get_value(1, &vars, r)?, &prefix_map))?,
-                value: rdf::Value::try_from((get_value(2, &vars, r)?, &prefix_map))?,
-            };
-            let triple = atom.into();
+        for atom in atoms {
+            let rdf_triple = (&atom).into();
 
-            writer.write(&triple).map_err(|e| {
+            writer.write(&rdf_triple).map_err(|e| {
                 StdError::serialize_err(
                     "triple",
-                    format!("Error writing triple {}: {}", &triple, e),
+                    format!("Error writing triple {}: {}", &rdf_triple, e),
                 )
             })?;
         }
@@ -298,29 +268,31 @@ pub mod query {
         } else {
             construct
         };
-        let variables = util::as_select_veriables(&patterns);
-        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
 
+        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(
-            plan,
-            variables,
-            plan_builder.cached_namespaces().into(),
-        )?;
-        let results = response.results;
-        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
+        let atoms = QueryEngine::new(deps.storage)
+            .select(plan, util::as_select_variables(&patterns))
+            .and_then(|res| {
+                res.solutions.resolve_atoms(
+                    deps.storage,
+                    &prefix_map,
+                    patterns,
+                    plan_builder.cached_namespaces(),
+                )
+            })?;
 
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&format, out);
 
-        for atom in &atoms {
-            let triple = atom.into();
-            writer.write(&triple).map_err(|e| {
+        for atom in atoms {
+            let rdf_triple = (&atom).into();
+            writer.write(&rdf_triple).map_err(|e| {
                 StdError::serialize_err(
                     "triple",
-                    format!("Error writing triple {}: {}", &triple, e),
+                    format!("Error writing triple {}: {}", &rdf_triple, e),
                 )
             })?;
         }

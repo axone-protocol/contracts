@@ -96,21 +96,23 @@ pub mod execute {
         } else {
             delete
         };
-        let variables = util::as_select_veriables(&patterns);
+
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(
-            plan,
-            variables,
-            plan_builder.cached_namespaces().into(),
-        )?;
-        let results = response.results;
-        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
+        let triples = QueryEngine::new(deps.storage)
+            .select(plan, util::as_select_variables(&patterns))?
+            .solutions
+            .resolve_triples(
+                deps.storage,
+                &prefix_map,
+                patterns,
+                plan_builder.cached_namespaces(),
+            )?;
 
         let mut store = StoreEngine::new(deps.storage)?;
-        let count = store.delete_all(&atoms)?;
+        let count = store.delete_all(&triples)?;
 
         Ok(Response::new()
             .add_attribute("action", "delete")

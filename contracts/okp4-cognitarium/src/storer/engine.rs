@@ -4,7 +4,6 @@ use crate::state::{
     triples, Literal, NamespaceBatchService, Node, Object, Store, Subject, Triple, STORE,
 };
 use crate::{rdf, ContractError};
-use blake3::Hash;
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use rio_api::model;
 use rio_api::model::Term;
@@ -53,7 +52,12 @@ impl<'a> StoreEngine<'a> {
             ))?;
         }
 
-        let t_size = Uint128::from(Self::triple_size(t) as u128);
+        let triple = Self::rio_to_triple(t, &mut |ns_str| {
+            self.ns_batch_svc
+                .resolve_or_allocate(self.storage, ns_str)
+                .map(|ns| ns.key)
+        })?;
+        let t_size = Uint128::from(self.triple_size(&triple).map_err(ContractError::Std)? as u128);
         if t_size > self.store.limits.max_triple_byte_size {
             Err(StoreError::TripleByteSize(
                 t_size,
@@ -73,19 +77,12 @@ impl<'a> StoreEngine<'a> {
             ))?;
         }
 
-        let triple = Self::rio_to_triple(t, &mut |ns_str| {
-            self.ns_batch_svc
-                .resolve_or_allocate(self.storage, ns_str)
-                .map(|ns| ns.key)
-        })?;
-        let object_hash: Hash = triple.object.as_hash();
-
         let mut new_ns_refs = Vec::new();
         triples()
             .update(
                 self.storage,
                 (
-                    object_hash.as_bytes(),
+                    triple.object.as_hash().as_bytes(),
                     triple.predicate.key(),
                     triple.subject.key(),
                 ),
@@ -108,35 +105,47 @@ impl<'a> StoreEngine<'a> {
         Ok(())
     }
 
-    pub fn delete_all(&mut self, atoms: &[rdf::Atom]) -> Result<Uint128, ContractError> {
-        for atom in atoms {
-            self.delete_triple(atom)?;
+    pub fn delete_all(&mut self, triples: &[Triple]) -> Result<Uint128, ContractError> {
+        for triple in triples {
+            self.delete_triple(triple)?;
         }
         self.finish()
     }
 
-    fn delete_triple(&mut self, atom: &rdf::Atom) -> Result<(), ContractError> {
-        let triple_model = atom.into();
-        let triple = Self::rio_to_triple(triple_model, &mut |ns_str| {
-            self.ns_batch_svc
-                .free_ref_by_val(self.storage, ns_str)
-                .map(|ns| ns.key)
-        })?;
-        let object_hash: Hash = triple.object.as_hash();
-
-        self.store.stat.triple_count -= Uint128::one();
-        self.store.stat.byte_size -= Uint128::from(Self::triple_size(triple_model) as u128);
-
-        triples()
-            .remove(
+    fn delete_triple(&mut self, triple: &Triple) -> Result<(), ContractError> {
+        let old = triples()
+            .may_load(
                 self.storage,
                 (
-                    object_hash.as_bytes(),
+                    triple.object.as_hash().as_bytes(),
                     triple.predicate.key(),
                     triple.subject.key(),
                 ),
             )
-            .map_err(ContractError::Std)
+            .map_err(ContractError::Std)?;
+
+        if let Some(_) = old {
+            triples().replace(
+                self.storage,
+                (
+                    triple.object.as_hash().as_bytes(),
+                    triple.predicate.key(),
+                    triple.subject.key(),
+                ),
+                None,
+                old.as_ref(),
+            )?;
+            self.store.stat.triple_count -= Uint128::one();
+            let triple_size = self.triple_size(triple).map_err(ContractError::Std)?;
+            self.store.stat.byte_size -= Uint128::from(triple_size as u128);
+
+            for ns_key in triple.namespaces() {
+                self.ns_batch_svc
+                    .free_ref(self.storage, ns_key)
+                    .map_err(ContractError::Std)?;
+            }
+        }
+        Ok(())
     }
 
     /// Flushes the store to the storage.
@@ -229,38 +238,40 @@ impl<'a> StoreEngine<'a> {
         }
     }
 
-    fn triple_size(triple: model::Triple<'_>) -> usize {
-        Self::subject_size(triple.subject)
-            + Self::node_size(triple.predicate)
-            + Self::object_size(triple.object)
+    fn triple_size(&mut self, triple: &Triple) -> StdResult<usize> {
+        Ok(self.subject_size(&triple.subject)?
+            + self.node_size(&triple.predicate)?
+            + self.object_size(&triple.object)?)
     }
 
-    fn subject_size(subject: model::Subject<'_>) -> usize {
+    fn subject_size(&mut self, subject: &Subject) -> StdResult<usize> {
         match subject {
-            model::Subject::NamedNode(n) => Self::node_size(n),
-            model::Subject::BlankNode(n) => n.id.len(),
-            model::Subject::Triple(_) => 0,
+            Subject::Named(n) => self.node_size(&n),
+            Subject::Blank(n) => Ok(n.len()),
         }
     }
 
-    fn node_size(node: model::NamedNode<'_>) -> usize {
-        node.iri.len()
+    fn node_size(&mut self, node: &Node) -> StdResult<usize> {
+        if let Some(ns) = self
+            .ns_batch_svc
+            .resolve_from_key(self.storage, node.namespace)?
+        {
+            return Ok(ns.value.len() + node.value.len());
+        }
+
+        // Should never happen as in its use the namespace should be already cached.
+        Err(StdError::not_found("Namespace"))
     }
 
-    fn object_size(term: Term<'_>) -> usize {
-        match term {
-            Term::NamedNode(n) => Self::node_size(n),
-            Term::BlankNode(n) => n.id.len(),
-            Term::Literal(l) => match l {
-                model::Literal::Simple { value } => value.len(),
-                model::Literal::LanguageTaggedString { value, language } => {
-                    value.len() + language.len()
-                }
-                model::Literal::Typed { value, datatype } => {
-                    value.len() + Self::node_size(datatype)
-                }
+    fn object_size(&mut self, object: &Object) -> StdResult<usize> {
+        Ok(match object {
+            Object::Blank(n) => n.len(),
+            Object::Named(n) => self.node_size(n)?,
+            Object::Literal(l) => match l {
+                Literal::Simple { value } => value.len(),
+                Literal::I18NString { value, language } => value.len() + language.len(),
+                Literal::Typed { value, datatype } => value.len() + self.node_size(datatype)?,
             },
-            Term::Triple(_) => 0,
-        }
+        })
     }
 }

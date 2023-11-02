@@ -124,7 +124,7 @@ impl<'a> StoreEngine<'a> {
             )
             .map_err(ContractError::Std)?;
 
-        if let Some(_) = old {
+        if old.is_some() {
             triples().replace(
                 self.storage,
                 (
@@ -246,7 +246,7 @@ impl<'a> StoreEngine<'a> {
 
     fn subject_size(&mut self, subject: &Subject) -> StdResult<usize> {
         match subject {
-            Subject::Named(n) => self.node_size(&n),
+            Subject::Named(n) => self.node_size(n),
             Subject::Blank(n) => Ok(n.len()),
         }
     }

@@ -233,13 +233,13 @@ pub mod query {
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&format, out);
 
-        for atom in atoms {
-            let rdf_triple = (&atom).into();
+        for atom in &atoms {
+            let triple = atom.into();
 
-            writer.write(&rdf_triple).map_err(|e| {
+            writer.write(&triple).map_err(|e| {
                 StdError::serialize_err(
                     "triple",
-                    format!("Error writing triple {}: {}", &rdf_triple, e),
+                    format!("Error writing triple {}: {}", &triple, e),
                 )
             })?;
         }
@@ -287,12 +287,12 @@ pub mod query {
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&format, out);
 
-        for atom in atoms {
-            let rdf_triple = (&atom).into();
-            writer.write(&rdf_triple).map_err(|e| {
+        for atom in &atoms {
+            let triple = atom.into();
+            writer.write(&triple).map_err(|e| {
                 StdError::serialize_err(
                     "triple",
-                    format!("Error writing triple {}: {}", &rdf_triple, e),
+                    format!("Error writing triple {}: {}", &triple, e),
                 )
             })?;
         }
@@ -352,7 +352,7 @@ pub mod util {
                 .into_iter()
                 .map(|(name, var)| -> StdResult<(String, Value)> {
                     Ok((
-                        name.clone(),
+                        name,
                         var.as_value(&mut |ns_key| {
                             let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
                             res.and_then(NamespaceResolver::none_as_error_middleware)

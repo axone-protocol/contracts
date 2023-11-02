@@ -31,7 +31,7 @@ impl<'a> QueryEngine<'a> {
         &'a self,
         plan: QueryPlan,
         selection: Vec<SelectItem>,
-    ) -> StdResult<SelectResults> {
+    ) -> StdResult<SelectResults<'_>> {
         let bindings = selection
             .iter()
             .map(|item| match item {
@@ -538,7 +538,7 @@ impl TripleTemplate {
         let subject = match Self::resolve_triple_term(
             &self.subject,
             ResolvedVariable::as_subject,
-            &vars,
+            vars,
             "subject",
         )? {
             Some(s) => s,
@@ -548,7 +548,7 @@ impl TripleTemplate {
         let predicate = match Self::resolve_triple_term(
             &self.predicate,
             ResolvedVariable::as_predicate,
-            &vars,
+            vars,
             "predicate",
         )? {
             Some(p) => p,
@@ -558,7 +558,7 @@ impl TripleTemplate {
         let object = match Self::resolve_triple_term(
             &self.object,
             ResolvedVariable::as_object,
-            &vars,
+            vars,
             "object",
         )? {
             Some(o) => o,
@@ -566,9 +566,9 @@ impl TripleTemplate {
         };
 
         Ok(Some(Triple {
-            subject: subject.clone(),
-            predicate: predicate.clone(),
-            object: object.clone(),
+            subject,
+            predicate,
+            object,
         }))
     }
 

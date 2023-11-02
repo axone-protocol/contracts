@@ -315,9 +315,8 @@ pub mod util {
         WhereCondition,
     };
     use crate::querier::SelectResults;
-    use crate::rdf::Atom;
     use crate::state::{Namespace, NamespaceResolver};
-    use std::collections::{BTreeMap, HashMap, HashSet};
+    use std::collections::{BTreeMap, HashSet};
 
     pub fn as_select_variables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
         let variables = patterns
@@ -337,27 +336,6 @@ pub mod util {
                 WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => Ok(tp.clone()),
             })
             .collect::<StdResult<_>>()
-    }
-
-    pub fn as_atoms_result(
-        results: Results,
-        patterns: Vec<TriplePattern>,
-        prefix_map: &HashMap<String, String>,
-    ) -> StdResult<Vec<Atom>> {
-        let atoms: Vec<Atom> = if results.bindings.is_empty() {
-            vec![]
-        } else {
-            results
-                .bindings
-                .iter()
-                .flat_map(|row| {
-                    patterns
-                        .iter()
-                        .map(|pattern| pattern.resolve(row, prefix_map))
-                })
-                .collect::<StdResult<_>>()?
-        };
-        Ok(atoms)
     }
 
     pub fn map_select_solutions(

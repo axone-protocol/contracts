@@ -319,7 +319,7 @@ pub mod util {
     use crate::state::{Namespace, NamespaceResolver};
     use std::collections::{BTreeMap, HashMap, HashSet};
 
-    pub fn as_select_veriables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
+    pub fn as_select_variables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
         let variables = patterns
             .iter()
             .flat_map(TriplePattern::variables)
@@ -365,34 +365,30 @@ pub mod util {
         res: SelectResults<'_>,
         ns_cache: Vec<Namespace>,
     ) -> StdResult<SelectResponse> {
-        let mut ns_resolver = ns_cache.into();
+        let mut ns_resolver: NamespaceResolver = ns_cache.into();
+
+        let mut bindings: Vec<BTreeMap<String, Value>> = vec![];
+        for solution in res.solutions {
+            let vars = solution?;
+            let resolved = vars
+                .into_iter()
+                .map(|(name, var)| -> StdResult<(String, Value)> {
+                    Ok((
+                        name.clone(),
+                        var.as_value(&mut |ns_key| {
+                            let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
+                            res.and_then(NamespaceResolver::none_as_error_middleware)
+                                .map(|ns| ns.value)
+                        })?,
+                    ))
+                })
+                .collect::<StdResult<BTreeMap<String, Value>>>()?;
+            bindings.push(resolved);
+        }
 
         Ok(SelectResponse {
             head: Head { vars: res.head },
-            results: Results {
-                bindings: res
-                    .solutions
-                    .map(|res| {
-                        res.and_then(|vars| -> StdResult<BTreeMap<String, Value>> {
-                            vars.iter()
-                                .map(|(name, var)| {
-                                    Ok((
-                                        name,
-                                        var.as_value(&mut |ns_key| {
-                                            let res =
-                                                ns_resolver.resolve_from_key(deps.storage, ns_key);
-                                            res.and_then(
-                                                NamespaceResolver::none_as_error_middleware,
-                                            )
-                                            .map(|ns| ns.value)
-                                        })?,
-                                    ))
-                                })
-                                .collect()
-                        })
-                    })
-                    .collect()?,
-            },
+            results: Results { bindings },
         })
     }
 }

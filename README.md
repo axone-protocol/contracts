@@ -2,7 +2,6 @@
 
 > [CosmWasm](https://cosmwasm.com) contracts for the [OKP4 network](http://okp4.network).
 
-[![release](https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github)](https://github.com/okp4/contracts/releases)
 [![build](https://img.shields.io/github/actions/workflow/status/okp4/contracts/build.yml?label=build&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/build.yml)
 [![lint](https://img.shields.io/github/actions/workflow/status/okp4/contracts/lint.yml?label=lint&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/lint.yml)
 [![test](https://img.shields.io/github/actions/workflow/status/okp4/contracts/test.yml?label=test&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/test.yml)
@@ -18,56 +17,107 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
 
 ### 🗄️ Storage oriented Smart Contracts
 
+> The class of Smart Contracts which act as reliable repositories, offering secure, efficient, and auditable storage
+> and retrieval of various data types on the blockchain.
+
 <table>
   <tr>
-    <th>contract</th>
-    <th>kind</th>
-    <th>state</th>
-    <th>description</th>
-    <th>status</th>
+    <th rowspan="4">
+      <a href="https://docs.okp4.network/contracts/next/okp4-objectarium"><img align="center" width="350" src="etc/objectarium.webp" alt="objectarium" /></a>
+      <br/><sub><a href="https://docs.okp4.network/contracts/next/okp4-objectarium">→ Tech documentation</a></sub>
+    </th>
   </tr>
   <tr>
     <td>
-      <img src="etc/objectarium.webp" width="150" alt="objectarium" />
-      <br />
-      <a href="contracts/okp4-objectarium/README.md">objectarium</a>
+      <a href="#---mature-stage" target="_blank">
+      <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
+      </a>
+      <a href="https://github.com/okp4/contracts/releases" target="_blank">
+      <img alt="version" src="https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github"/>
+    </a>
     </td>
-    <td><a href="https://en.wikipedia.org/wiki/Object_storage">object</a></td>
-    <td><code>immutable</code></td>
-    <td>Persists unstructured data on-chain.</td>
-    <td><a href="#---mature-stage">🐥</></td>
   </tr>
   <tr>
     <td>
-      <img src="etc/cognitarium.webp" width="150" alt="cognitarium" />
-      <br />
-      <a href="contracts/okp4-cognitarium/README.md">cognitarium</a>
+<p>A Smart Contract which enables the storage of arbitrary unstructured <a href="https://en.wikipedia.org/wiki/Object_storage" target="_blank">Objects</a> in any <a href="https://cosmos.network/">Cosmos blockchains</a>.</p><p>It provides a flexible solution for storing data without imposing strict schemas or predefined structures, accommodating various data formats and types.</p>
     </td>
-    <td><a href="https://en.wikipedia.org/wiki/Triplestore">semantic</a></td>
-    <td><code>mutable</code></td>
-    <td>Persists semantic data on-chain.</td>
-    <td><a href="#---intermediate-stage">🐣</></td>
+  </tr>
+  <tr>
+    <td>
+      <img alt="type: storage" src="https://img.shields.io/badge/type-🗄️%20storage-darkslateblue?style=for-the-badge" />
+      <a href="https://en.wikipedia.org/wiki/Object_storage" target="_blank">
+      <img alt="kind: object" src="https://img.shields.io/badge/kind-🔲%20object-moccasin?style=for-the-badge" />
+      </a>
+      <img alt="state: immutable" src="https://img.shields.io/badge/state-🪨%20immutable-lavender?style=for-the-badge" />
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <th rowspan="4">
+      <a href="https://docs.okp4.network/contracts/next/okp4-cognitarium"><img align="center" width="350" src="etc/cognitarium.webp" alt="cognitarium" /></a>
+      <br/><sub><a href="https://docs.okp4.network/contracts/next/okp4-cognitarium">→ Tech documentation</a></sub>
+    </th>
+  </tr>
+    <tr>
+    <td>
+      <a href="#---intermediate-stage" target="_blank">
+      <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
+      </a>
+      <a href="https://github.com/okp4/contracts/releases" target="_blank">
+      <img alt="version" src="https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github"/>
+    </a>
+    </td>
+  </tr>
+  <tr>
+    <td><p>A Smart Contract which facilitates the storage and querying of semantic data using <a href="https://en.wikipedia.org/wiki/Resource_Description_Framework">RDF (Resource Description Framework)</a>, which represents information as semantic triples.</p><p>In essence, it serves as a repository for knowledge, providing a dedicated space for storing and retrieving semantic information within any <a href="https://cosmos.network/">Cosmos blockchains</a>.</p></td>
+  </tr>
+  <tr>
+    <td>
+      <img alt="type: storage" src="https://img.shields.io/badge/type-🗄️%20storage-darkslateblue?style=for-the-badge" />
+      <a href="https://en.wikipedia.org/wiki/Triplestore" target="_blank">
+      <img alt="kind: semantic" src="https://img.shields.io/badge/kind-🧬%20semantic-moccasin?style=for-the-badge" />
+      </a>
+      <img alt="state: mutable" src="https://img.shields.io/badge/state-✏️%20mutable-lavender?style=for-the-badge" />
+    </td>
   </tr>
 </table>
 
 ### ⚖️ Sovereignty oriented Smart Contracts
 
+> The class of Smart Contracts designed to prioritize the sovereignty of the involved parties by allowing them to define and enforce their own rules and regulations.
+
 <table>
   <tr>
-    <th>contract</th>
-    <th>state</th>
-    <th>description</th>
-    <th>status</th>
+    <th rowspan="4">
+      <a href="https://docs.okp4.network/contracts/next/okp4-law-stone"><img align="center" width="350" src="etc/law-stone.webp" alt="law-stone" /></a>
+      <br/><sub><a href="https://docs.okp4.network/contracts/next/okp4-law-stone">→ Tech documentation</a></sub>
+    </th>
   </tr>
   <tr>
     <td>
-     <img src="etc/law-stone.webp" width="150" alt="law-stone" />
-     <br />
-        <a href="contracts/okp4-law-stone/README.md">law&#8209;stone</a>
+      <a href="#---mature-stage" target="_blank">
+      <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
+      </a>
+      <a href="https://github.com/okp4/contracts/releases" target="_blank">
+      <img alt="version" src="https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github"/>
+    </a>
     </td>
-    <td><code>immutable</code></td>
-    <td>Interprets governances expressed as <a href="https://en.wikipedia.org/wiki/Prolog">Prolog</a> program.</td>
-    <td><a href="#---mature-stage">🐥</></td>
+  </tr>
+  <tr>
+    <td>
+<p>A multifaceted Smart Contract designed to express and evaluate legal content, including but not limited to regulations, agreements, consents and permissions.</p><p>It offers extraordinary adaptability and can be utilized in any blockchain within the <a href="https://cosmos.network/">Cosmos ecosystem</a> that seeks to establish robust and flexible <em>on-chain governance</em> systems.</p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img alt="type: sovereignty" src="https://img.shields.io/badge/type-⚖️%20sovereignty-darkslateblue?style=for-the-badge" />
+      <a href="https://en.wikipedia.org/wiki/Logic_programming" target="_blank">
+      <img alt="kind: logic" src="https://img.shields.io/badge/kind-🧠%20logic-moccasin?style=for-the-badge" />
+      </a>
+      <img alt="state: immutable" src="https://img.shields.io/badge/state-🪨%20immutable-lavender?style=for-the-badge" />
+    </td>
   </tr>
 </table>
 
@@ -77,23 +127,23 @@ The maturity of each contract is indicated by the following emojis.
 
 ### 💥 - Genesis Stage
 
-This stage represents the initial spark or idea that leads to the development of the smart contract.
+This stage represents the initial spark or idea that leads to the development of the Smart Contract.
 
 ### 🥚 - Initial Stage
 
-The smart contract is still in its infancy, with basic functionalities just being implemented. It is still under development, and its evolution may lead to breaking changes. It is not recommended for production use.
+The Smart Contract is still in its infancy, with basic functionalities just being implemented. It is still under development, and its evolution may lead to breaking changes. It is not recommended for production use.
 
 ### 🐣 - Intermediate Stage
 
-The smart contract has undergone a number of tests and improvements, and presents a coherent functional package, but may still lack some advanced features or optimizations. It can be used in production in testnets.
+The Smart Contract has undergone a number of tests and improvements, and presents a coherent functional package, but may still lack some advanced features or optimizations. It can be used in production in testnets.
 
 ### 🐥 - Mature Stage
 
-The smart contract is fully developed and tested. It's considered safe for production use, offering robust features and optimized performance.
+The Smart Contract is fully developed and tested. It's considered safe for production use, offering robust features and optimized performance.
 
 ## 🗂 Directory Structure
 
-The project is structured around a set of Rust workspaces, each defining a smart contract.
+The project is structured around a set of Rust workspaces, each defining a Smart Contract.
 
 ```text
 .
@@ -214,7 +264,7 @@ cargo make chain-deploy-contracts
 This will deploy all the available contracts to the chain. For this, the contracts must be compiled and the wasm files
 must be present in the artifacts directory. See the [Build](#-build) section for more details.
 
-Now, you can interact with the deployed smart contracts and test them out.
+Now, you can interact with the deployed Smart Contracts and test them out.
 
 ### 🎮 Free execution of the CLI command
 
@@ -275,8 +325,8 @@ Then, follow the instructions.
 
 ## 📚 Documentation
 
-The documentation of the smart contracts must be committed to the repository. The documentation is generated from the
-smart contracts' schema.
+The documentation of the Smart Contracts must be committed to the repository. The documentation is generated from the
+Smart Contracts' schema.
 
 To generate the documentation follow the steps below.
 

@@ -29,7 +29,7 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
   </tr>
   <tr>
     <td>
-      <a href="#---mature-stage" target="_blank">
+      <a href="#---mature-stage">
       <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
       </a>
       <a href="https://github.com/okp4/contracts/releases" target="_blank">
@@ -62,7 +62,7 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
   </tr>
     <tr>
     <td>
-      <a href="#---intermediate-stage" target="_blank">
+      <a href="#---intermediate-stage">
       <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
       </a>
       <a href="https://github.com/okp4/contracts/releases" target="_blank">
@@ -97,7 +97,7 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
   </tr>
   <tr>
     <td>
-      <a href="#---mature-stage" target="_blank">
+      <a href="#---mature-stage">
       <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
       </a>
       <a href="https://github.com/okp4/contracts/releases" target="_blank">
@@ -117,6 +117,40 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
       <img alt="kind: logic" src="https://img.shields.io/badge/kind-🧠%20logic-moccasin?style=for-the-badge" />
       </a>
       <img alt="state: immutable" src="https://img.shields.io/badge/state-🪨%20immutable-lavender?style=for-the-badge" />
+    </td>
+  </tr>
+</table>
+
+### 🌐 Resource Management oriented Smart Contracts
+
+> The class of Smart Contracts designed to manage and orchestrate the lifecycle of various resources in the Dataverse.
+
+<table>
+  <tr>
+    <th rowspan="4">
+      <a href="https://docs.okp4.network/contracts/next/okp4-dataverse"><img align="center" width="350" src="etc/dataverse.webp" alt="dataverse" /></a>
+      <br/><sub><a href="https://docs.okp4.network/contracts/next/okp4-dataverse">→ Tech documentation</a></sub>
+    </th>
+  </tr>
+  <tr>
+    <td>
+      <a href="#---genesis-stage">
+      <img alt="status: genesis" src="https://img.shields.io/badge/status-💥-black?style=for-the-badge" />
+      </a>
+      <a href="https://github.com/okp4/contracts/releases" target="_blank">
+      <img alt="version" src="https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github"/>
+    </a>
+    </td>
+  </tr>
+  <tr>
+    <td>
+<p>A Smart Contract responsible for overseeing and managing the <a href="https://docs.okp4.network/whitepaper/solution#the-dataverse">Dataverse</a> within the <a href="https://okp4.network">OKP4 network</a>.</p><p>The Dataverse is an ever-expanding universe that encompasses a wide range of Digital Resources, including datasets, data processing algorithms, ML algorithm, storage resources, computational resources, identity management solutions, orchestration engines, oracles, and many other resources recorded on the blockchain.</p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img alt="type: resource management" src="https://img.shields.io/badge/type-🌐%20resource%20management-darkslateblue?style=for-the-badge" />
+      <img alt="state: mutable" src="https://img.shields.io/badge/state-✏️%20mutable-lavender?style=for-the-badge" />
     </td>
   </tr>
 </table>

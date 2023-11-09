@@ -96,21 +96,23 @@ pub mod execute {
         } else {
             delete
         };
-        let variables = util::as_select_veriables(&patterns);
+
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(
-            plan,
-            variables,
-            plan_builder.cached_namespaces().into(),
-        )?;
-        let results = response.results;
-        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
+        let triples = QueryEngine::new(deps.storage)
+            .select(plan, util::as_select_variables(&patterns))?
+            .solutions
+            .resolve_triples(
+                deps.storage,
+                &prefix_map,
+                patterns,
+                plan_builder.cached_namespaces(),
+            )?;
 
         let mut store = StoreEngine::new(deps.storage)?;
-        let count = store.delete_all(&atoms)?;
+        let count = store.delete_all(&triples)?;
 
         Ok(Response::new()
             .add_attribute("action", "delete")
@@ -135,16 +137,14 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 pub mod query {
-    use std::collections::BTreeMap;
-
     use super::*;
     use crate::msg::{
-        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectItem,
-        SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, Value,
-        VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectQuery,
+        SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, VarOrNamedNode,
+        VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{self, Atom, PrefixMap, TripleWriter};
+    use crate::rdf::{PrefixMap, TripleWriter};
     use crate::state::HasCachedNamespaces;
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
@@ -170,11 +170,9 @@ pub mod query {
             PlanBuilder::new(deps.storage, &prefix_map, None).with_limit(count as usize);
         let plan = plan_builder.build_plan(&query.r#where)?;
 
-        QueryEngine::new(deps.storage).select(
-            plan,
-            query.select,
-            plan_builder.cached_namespaces().into(),
-        )
+        QueryEngine::new(deps.storage)
+            .select(plan, query.select)
+            .and_then(|res| util::map_select_solutions(deps, res, plan_builder.cached_namespaces()))
     }
 
     pub fn describe(
@@ -182,88 +180,60 @@ pub mod query {
         query: DescribeQuery,
         format: DataFormat,
     ) -> StdResult<DescribeResponse> {
-        fn get_value(
-            index: usize,
-            vars: &[String],
-            bindings: &BTreeMap<String, Value>,
-        ) -> Result<Value, StdError> {
-            vars.get(index)
-                .and_then(|it| bindings.get(it))
-                .cloned()
-                .ok_or_else(|| {
-                    StdError::generic_err(format!(
-                        "Variable index {index} not found (this was unexpected)"
-                    ))
-                })
-        }
-
-        let (s, p, o) = ("_1s".to_owned(), "_2p".to_owned(), "_3o".to_owned());
+        let (p, o) = ("_2p".to_owned(), "_3o".to_owned());
 
         let store = STORE.load(deps.storage)?;
 
         let (select, r#where) = match &query.resource {
             VarOrNamedNode::Variable(var) => {
+                let select = TriplePattern {
+                    subject: VarOrNode::Variable(var.clone()),
+                    predicate: VarOrNode::Variable(format!("{var}{p}")),
+                    object: VarOrNodeOrLiteral::Variable(format!("{var}{o}")),
+                };
+
                 let mut r#where = query.r#where;
                 r#where.push(WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
-                    TriplePattern {
-                        subject: VarOrNode::Variable(var.clone()),
-                        predicate: VarOrNode::Variable(format!("{var}{p}")),
-                        object: VarOrNodeOrLiteral::Variable(format!("{var}{o}")),
-                    },
+                    select.clone(),
                 )));
 
+                (vec![select], r#where)
+            }
+            VarOrNamedNode::NamedNode(iri) => {
+                let select = TriplePattern {
+                    subject: VarOrNode::Node(Node::NamedNode(iri.clone())),
+                    predicate: VarOrNode::Variable(p),
+                    object: VarOrNodeOrLiteral::Variable(o),
+                };
+
                 (
-                    vec![
-                        SelectItem::Variable(var.clone()),
-                        SelectItem::Variable(format!("{var}{p}")),
-                        SelectItem::Variable(format!("{var}{o}")),
-                    ],
-                    r#where,
+                    vec![select.clone()],
+                    vec![WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
+                        select,
+                    ))],
                 )
             }
-            VarOrNamedNode::NamedNode(iri) => (
-                vec![
-                    SelectItem::Variable(p.clone()),
-                    SelectItem::Variable(o.clone()),
-                ],
-                vec![WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
-                    TriplePattern {
-                        subject: VarOrNode::Node(Node::NamedNode(iri.clone())),
-                        predicate: VarOrNode::Variable(p),
-                        object: VarOrNodeOrLiteral::Variable(o),
-                    },
-                ))],
-            ),
         };
         let prefix_map = <PrefixMap>::from(query.prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None)
             .with_limit(store.limits.max_query_limit as usize);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(
-            plan,
-            select,
-            plan_builder.cached_namespaces().into(),
-        )?;
-
-        let mut vars = response.head.vars;
-        let mut bindings = response.results.bindings;
-        if let VarOrNamedNode::NamedNode(iri) = &query.resource {
-            vars.insert(0, s.clone());
-            for b in &mut bindings {
-                b.insert(s.clone(), Value::URI { value: iri.clone() });
-            }
-        }
+        let atoms = QueryEngine::new(deps.storage)
+            .select(plan, util::as_select_variables(&select))
+            .and_then(|res| {
+                res.solutions.resolve_atoms(
+                    deps.storage,
+                    &prefix_map,
+                    select,
+                    plan_builder.cached_namespaces(),
+                )
+            })?;
 
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&format, out);
 
-        for r in &bindings {
-            let atom = &Atom {
-                subject: rdf::Subject::try_from((get_value(0, &vars, r)?, &prefix_map))?,
-                property: rdf::Property::try_from((get_value(1, &vars, r)?, &prefix_map))?,
-                value: rdf::Value::try_from((get_value(2, &vars, r)?, &prefix_map))?,
-            };
+        for atom in &atoms {
             let triple = atom.into();
 
             writer.write(&triple).map_err(|e| {
@@ -298,19 +268,21 @@ pub mod query {
         } else {
             construct
         };
-        let variables = util::as_select_veriables(&patterns);
-        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
 
+        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let response = QueryEngine::new(deps.storage).select(
-            plan,
-            variables,
-            plan_builder.cached_namespaces().into(),
-        )?;
-        let results = response.results;
-        let atoms = util::as_atoms_result(results, patterns, &prefix_map)?;
+        let atoms = QueryEngine::new(deps.storage)
+            .select(plan, util::as_select_variables(&patterns))
+            .and_then(|res| {
+                res.solutions.resolve_atoms(
+                    deps.storage,
+                    &prefix_map,
+                    patterns,
+                    plan_builder.cached_namespaces(),
+                )
+            })?;
 
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&format, out);
@@ -337,12 +309,16 @@ pub mod query {
 }
 
 pub mod util {
-    use crate::msg::{Results, SelectItem, SimpleWhereCondition, TriplePattern, WhereCondition};
-    use crate::rdf::Atom;
-    use cosmwasm_std::StdResult;
-    use std::collections::{HashMap, HashSet};
+    use super::*;
+    use crate::msg::{
+        Head, Results, SelectItem, SelectResponse, SimpleWhereCondition, TriplePattern, Value,
+        WhereCondition,
+    };
+    use crate::querier::SelectResults;
+    use crate::state::{Namespace, NamespaceResolver};
+    use std::collections::{BTreeMap, HashSet};
 
-    pub fn as_select_veriables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
+    pub fn as_select_variables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
         let variables = patterns
             .iter()
             .flat_map(TriplePattern::variables)
@@ -362,25 +338,36 @@ pub mod util {
             .collect::<StdResult<_>>()
     }
 
-    pub fn as_atoms_result(
-        results: Results,
-        patterns: Vec<TriplePattern>,
-        prefix_map: &HashMap<String, String>,
-    ) -> StdResult<Vec<Atom>> {
-        let atoms: Vec<Atom> = if results.bindings.is_empty() {
-            vec![]
-        } else {
-            results
-                .bindings
-                .iter()
-                .flat_map(|row| {
-                    patterns
-                        .iter()
-                        .map(|pattern| pattern.resolve(row, prefix_map))
+    pub fn map_select_solutions(
+        deps: Deps<'_>,
+        res: SelectResults<'_>,
+        ns_cache: Vec<Namespace>,
+    ) -> StdResult<SelectResponse> {
+        let mut ns_resolver: NamespaceResolver = ns_cache.into();
+
+        let mut bindings: Vec<BTreeMap<String, Value>> = vec![];
+        for solution in res.solutions {
+            let vars = solution?;
+            let resolved = vars
+                .into_iter()
+                .map(|(name, var)| -> StdResult<(String, Value)> {
+                    Ok((
+                        name,
+                        var.as_value(&mut |ns_key| {
+                            let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
+                            res.and_then(NamespaceResolver::none_as_error_middleware)
+                                .map(|ns| ns.value)
+                        })?,
+                    ))
                 })
-                .collect::<StdResult<_>>()?
-        };
-        Ok(atoms)
+                .collect::<StdResult<BTreeMap<String, Value>>>()?;
+            bindings.push(resolved);
+        }
+
+        Ok(SelectResponse {
+            head: Head { vars: res.head },
+            results: Results { bindings },
+        })
     }
 }
 

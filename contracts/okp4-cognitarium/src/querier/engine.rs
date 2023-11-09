@@ -1,16 +1,25 @@
-use crate::msg::{Head, Results, SelectItem, SelectResponse, Value};
+use crate::msg::{SelectItem, TriplePattern, VarOrNode, VarOrNodeOrLiteral};
+use crate::querier::mapper::{
+    literal_as_object, node_as_object, node_as_predicate, node_as_subject,
+};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
-use crate::state::{
-    triples, HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject, Triple,
-};
+use crate::rdf::Atom;
+use crate::state::{triples, Namespace, NamespaceResolver, Object, Predicate, Subject, Triple};
+use crate::{rdf, state};
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
-use std::collections::{BTreeMap, VecDeque};
+use either::{Either, Left, Right};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
 
 pub struct QueryEngine<'a> {
     storage: &'a dyn Storage,
+}
+
+pub struct SelectResults<'a> {
+    pub head: Vec<String>,
+    pub solutions: SolutionsIterator<'a>,
 }
 
 impl<'a> QueryEngine<'a> {
@@ -22,8 +31,7 @@ impl<'a> QueryEngine<'a> {
         &'a self,
         plan: QueryPlan,
         selection: Vec<SelectItem>,
-        ns_cache: Option<Vec<Namespace>>,
-    ) -> StdResult<SelectResponse> {
+    ) -> StdResult<SelectResults<'_>> {
         let bindings = selection
             .iter()
             .map(|item| match item {
@@ -39,19 +47,9 @@ impl<'a> QueryEngine<'a> {
             })
             .collect::<StdResult<BTreeMap<String, usize>>>()?;
 
-        Ok(SelectResponse {
-            head: Head {
-                vars: bindings.keys().cloned().collect(),
-            },
-            results: Results {
-                bindings: SolutionsIterator::new(
-                    self.storage,
-                    self.eval_plan(plan),
-                    bindings,
-                    ns_cache,
-                )
-                .collect::<StdResult<Vec<BTreeMap<String, Value>>>>()?,
-            },
+        Ok(SelectResults {
+            head: bindings.keys().cloned().collect(),
+            solutions: SolutionsIterator::new(self.eval_plan(plan), bindings),
         })
     }
 
@@ -374,41 +372,47 @@ impl<'a> Iterator for TriplePatternIterator<'a> {
     }
 }
 
-struct SolutionsIterator<'a> {
-    storage: &'a dyn Storage,
-    ns_resolver: NamespaceResolver,
+pub struct SolutionsIterator<'a> {
     iter: ResolvedVariablesIterator<'a>,
     bindings: BTreeMap<String, usize>,
 }
 
 impl<'a> SolutionsIterator<'a> {
-    fn new(
-        storage: &'a dyn Storage,
-        iter: ResolvedVariablesIterator<'a>,
-        bindings: BTreeMap<String, usize>,
-        ns_cache: Option<Vec<Namespace>>,
-    ) -> Self {
-        Self {
-            storage,
-            ns_resolver: ns_cache.map_or_else(NamespaceResolver::new, Into::into),
-            iter,
-            bindings,
-        }
-    }
-}
-
-impl<'a> HasCachedNamespaces for SolutionsIterator<'a> {
-    fn cached_namespaces(&self) -> Vec<Namespace> {
-        self.ns_resolver.cached_namespaces()
+    fn new(iter: ResolvedVariablesIterator<'a>, bindings: BTreeMap<String, usize>) -> Self {
+        Self { iter, bindings }
     }
 
-    fn clear_cache(&mut self) {
-        self.ns_resolver.clear_cache();
+    pub fn resolve_triples(
+        self,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        patterns: Vec<TriplePattern>,
+        ns_cache: Vec<Namespace>,
+    ) -> StdResult<Vec<Triple>> {
+        let mut ns_resolver = ns_cache.into();
+
+        let triples_iter =
+            ResolvedTripleIterator::try_new(&mut ns_resolver, storage, self, prefixes, patterns)?;
+        triples_iter.collect()
+    }
+
+    pub fn resolve_atoms(
+        self,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        patterns: Vec<TriplePattern>,
+        ns_cache: Vec<Namespace>,
+    ) -> StdResult<Vec<Atom>> {
+        let mut ns_resolver = ns_cache.into();
+
+        let atoms_iter =
+            ResolvedAtomIterator::try_new(&mut ns_resolver, storage, self, prefixes, patterns)?;
+        atoms_iter.collect()
     }
 }
 
 impl<'a> Iterator for SolutionsIterator<'a> {
-    type Item = StdResult<BTreeMap<String, Value>>;
+    type Item = StdResult<BTreeMap<String, ResolvedVariable>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let resolved_variables = match self.iter.next() {
@@ -426,34 +430,439 @@ impl<'a> Iterator for SolutionsIterator<'a> {
                         None => Err(StdError::generic_err(
                             "Couldn't find variable in result set",
                         )),
-                        Some(val) => Ok((name, val)),
+                        Some(val) => Ok((name, val.clone())),
                     })
-                    .map(|res| {
-                        res.and_then(|(name, var)| -> StdResult<(String, Value)> {
-                            Ok((
-                                name,
-                                var.as_value(&mut |ns_key| {
-                                    let res =
-                                        self.ns_resolver.resolve_from_key(self.storage, ns_key);
-                                    res.and_then(NamespaceResolver::none_as_error_middleware)
-                                        .map(|ns| ns.value)
-                                })?,
-                            ))
-                        })
-                    })
-                    .collect::<StdResult<BTreeMap<String, Value>>>()
+                    .collect::<StdResult<BTreeMap<String, ResolvedVariable>>>()
             })
             .into()
+    }
+}
+
+pub struct ResolvedTripleIterator<'a> {
+    iter: SolutionsIterator<'a>,
+    templates: Vec<TripleTemplate>,
+    buffer: VecDeque<StdResult<Triple>>,
+}
+
+impl<'a> ResolvedTripleIterator<'a> {
+    pub fn try_new(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        solutions: SolutionsIterator<'a>,
+        prefixes: &HashMap<String, String>,
+        patterns: Vec<TriplePattern>,
+    ) -> StdResult<Self> {
+        Ok(Self {
+            iter: solutions,
+            templates: patterns
+                .iter()
+                .map(|p| TripleTemplate::try_new(ns_resolver, storage, prefixes, p))
+                .collect::<StdResult<Vec<TripleTemplate>>>()?,
+            buffer: VecDeque::new(),
+        })
+    }
+}
+
+impl<'a> Iterator for ResolvedTripleIterator<'a> {
+    type Item = StdResult<Triple>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(val) = self.buffer.pop_front() {
+                return Some(val);
+            }
+
+            let upstream_res = match self.iter.next() {
+                None => None?,
+                Some(res) => res,
+            };
+
+            match upstream_res {
+                Err(err) => {
+                    self.buffer.push_back(Err(err));
+                }
+                Ok(vars) => {
+                    for res in self
+                        .templates
+                        .iter()
+                        .map(|template| template.resolve(&vars))
+                    {
+                        match res {
+                            Ok(Some(triple)) => self.buffer.push_back(Ok(triple)),
+                            Err(err) => self.buffer.push_back(Err(err)),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct TripleTemplate {
+    subject: Either<Subject, String>,
+    predicate: Either<Predicate, String>,
+    object: Either<Object, String>,
+}
+
+impl TripleTemplate {
+    fn try_new(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        pattern: &TriplePattern,
+    ) -> StdResult<TripleTemplate> {
+        Ok(TripleTemplate {
+            subject: Self::build_subject_pattern(
+                ns_resolver,
+                storage,
+                prefixes,
+                pattern.subject.clone(),
+            )?,
+            predicate: Self::build_predicate_pattern(
+                ns_resolver,
+                storage,
+                prefixes,
+                pattern.predicate.clone(),
+            )?,
+            object: Self::build_object_pattern(
+                ns_resolver,
+                storage,
+                prefixes,
+                pattern.object.clone(),
+            )?,
+        })
+    }
+
+    pub fn resolve(&self, vars: &BTreeMap<String, ResolvedVariable>) -> StdResult<Option<Triple>> {
+        let subject = match Self::resolve_triple_term(
+            &self.subject,
+            ResolvedVariable::as_subject,
+            vars,
+            "subject",
+        )? {
+            Some(s) => s,
+            None => return Ok(None),
+        };
+
+        let predicate = match Self::resolve_triple_term(
+            &self.predicate,
+            ResolvedVariable::as_predicate,
+            vars,
+            "predicate",
+        )? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        let object = match Self::resolve_triple_term(
+            &self.object,
+            ResolvedVariable::as_object,
+            vars,
+            "object",
+        )? {
+            Some(o) => o,
+            None => return Ok(None),
+        };
+
+        Ok(Some(Triple {
+            subject,
+            predicate,
+            object,
+        }))
+    }
+
+    fn resolve_triple_term<T, F>(
+        term: &Either<T, String>,
+        from_var: F,
+        vars: &BTreeMap<String, ResolvedVariable>,
+        term_name: &str,
+    ) -> StdResult<Option<T>>
+    where
+        T: Clone,
+        F: Fn(&ResolvedVariable) -> Option<T>,
+    {
+        match term {
+            Left(p) => StdResult::Ok(Some(p.clone())),
+            Right(key) => vars.get(key).map(from_var).ok_or_else(|| {
+                StdError::generic_err(format!("Unbound {:?} variable: {:?}", term_name, key))
+            }),
+        }
+    }
+
+    fn build_subject_pattern(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        value: VarOrNode,
+    ) -> StdResult<Either<Subject, String>> {
+        Ok(match value {
+            VarOrNode::Variable(v) => Right(v),
+            VarOrNode::Node(n) => Left(node_as_subject(ns_resolver, storage, prefixes, n)?),
+        })
+    }
+
+    fn build_predicate_pattern(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        value: VarOrNode,
+    ) -> StdResult<Either<Predicate, String>> {
+        Ok(match value {
+            VarOrNode::Variable(v) => Right(v),
+            VarOrNode::Node(n) => Left(node_as_predicate(ns_resolver, storage, prefixes, n)?),
+        })
+    }
+
+    fn build_object_pattern(
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        prefixes: &HashMap<String, String>,
+        value: VarOrNodeOrLiteral,
+    ) -> StdResult<Either<Object, String>> {
+        Ok(match value {
+            VarOrNodeOrLiteral::Variable(v) => Right(v),
+            VarOrNodeOrLiteral::Node(n) => Left(node_as_object(ns_resolver, storage, prefixes, n)?),
+            VarOrNodeOrLiteral::Literal(l) => {
+                Left(literal_as_object(ns_resolver, storage, prefixes, l)?)
+            }
+        })
+    }
+}
+
+pub struct ResolvedAtomIterator<'a> {
+    ns_resolver: &'a mut NamespaceResolver,
+    storage: &'a dyn Storage,
+    iter: SolutionsIterator<'a>,
+    templates: Vec<AtomTemplate>,
+    buffer: VecDeque<StdResult<Atom>>,
+}
+
+impl<'a> ResolvedAtomIterator<'a> {
+    pub fn try_new(
+        ns_resolver: &'a mut NamespaceResolver,
+        storage: &'a dyn Storage,
+        solutions: SolutionsIterator<'a>,
+        prefixes: &HashMap<String, String>,
+        patterns: Vec<TriplePattern>,
+    ) -> StdResult<Self> {
+        Ok(Self {
+            ns_resolver,
+            storage,
+            iter: solutions,
+            templates: patterns
+                .iter()
+                .map(|p| AtomTemplate::try_new(prefixes, p))
+                .collect::<StdResult<Vec<AtomTemplate>>>()?,
+            buffer: VecDeque::new(),
+        })
+    }
+}
+
+impl<'a> Iterator for ResolvedAtomIterator<'a> {
+    type Item = StdResult<Atom>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(val) = self.buffer.pop_front() {
+                return Some(val);
+            }
+
+            let upstream_res = match self.iter.next() {
+                None => None?,
+                Some(res) => res,
+            };
+
+            match upstream_res {
+                Err(err) => {
+                    self.buffer.push_back(Err(err));
+                }
+                Ok(vars) => {
+                    for res in self
+                        .templates
+                        .iter()
+                        .map(|template| template.resolve(self.ns_resolver, self.storage, &vars))
+                    {
+                        match res {
+                            Ok(Some(atom)) => self.buffer.push_back(Ok(atom)),
+                            Err(err) => self.buffer.push_back(Err(err)),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct AtomTemplate {
+    subject: Either<rdf::Subject, String>,
+    property: Either<rdf::Property, String>,
+    value: Either<rdf::Value, String>,
+}
+
+impl AtomTemplate {
+    pub fn try_new(
+        prefixes: &HashMap<String, String>,
+        pattern: &TriplePattern,
+    ) -> StdResult<AtomTemplate> {
+        Ok(Self {
+            subject: match &pattern.subject {
+                VarOrNode::Variable(key) => Right(key.clone()),
+                VarOrNode::Node(n) => Left((n.clone(), prefixes).try_into()?),
+            },
+            property: match &pattern.predicate {
+                VarOrNode::Variable(key) => Right(key.clone()),
+                VarOrNode::Node(n) => Left((n.clone(), prefixes).try_into()?),
+            },
+            value: match &pattern.object {
+                VarOrNodeOrLiteral::Variable(key) => Right(key.clone()),
+                VarOrNodeOrLiteral::Node(n) => Left((n.clone(), prefixes).try_into()?),
+                VarOrNodeOrLiteral::Literal(l) => Left((l.clone(), prefixes).try_into()?),
+            },
+        })
+    }
+
+    pub fn resolve(
+        &self,
+        ns_resolver: &mut NamespaceResolver,
+        storage: &dyn Storage,
+        vars: &BTreeMap<String, ResolvedVariable>,
+    ) -> StdResult<Option<Atom>> {
+        let resolve_ns_fn = &mut |ns_key| {
+            let res = ns_resolver.resolve_from_key(storage, ns_key);
+            res.and_then(NamespaceResolver::none_as_error_middleware)
+                .map(|ns| ns.value)
+        };
+
+        let subject = match self.resolve_atom_subject(resolve_ns_fn, vars)? {
+            Some(s) => s,
+            None => return Ok(None),
+        };
+
+        let property = match self.resolve_atom_property(resolve_ns_fn, vars)? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        let value = match self.resolve_atom_value(resolve_ns_fn, vars)? {
+            Some(v) => v,
+            None => return Ok(None),
+        };
+
+        Ok(Some(Atom {
+            subject,
+            property,
+            value,
+        }))
+    }
+
+    fn resolve_atom_subject<F>(
+        &self,
+        resolve_ns_fn: &mut F,
+        vars: &BTreeMap<String, ResolvedVariable>,
+    ) -> StdResult<Option<rdf::Subject>>
+    where
+        F: FnMut(u128) -> StdResult<String>,
+    {
+        Self::resolve_atom_term(
+            &self.subject,
+            ResolvedVariable::as_subject,
+            vars,
+            &mut |value| {
+                Ok(match value {
+                    Subject::Named(n) => rdf::Subject::NamedNode(n.as_iri(resolve_ns_fn)?),
+                    Subject::Blank(n) => rdf::Subject::BlankNode(n),
+                })
+            },
+            "subject",
+        )
+    }
+
+    fn resolve_atom_property<F>(
+        &self,
+        resolve_ns_fn: &mut F,
+        vars: &BTreeMap<String, ResolvedVariable>,
+    ) -> StdResult<Option<rdf::Property>>
+    where
+        F: FnMut(u128) -> StdResult<String>,
+    {
+        Self::resolve_atom_term(
+            &self.property,
+            ResolvedVariable::as_predicate,
+            vars,
+            &mut |value| value.as_iri(resolve_ns_fn).map(rdf::Property),
+            "predicate",
+        )
+    }
+
+    fn resolve_atom_value<F>(
+        &self,
+        resolve_ns_fn: &mut F,
+        vars: &BTreeMap<String, ResolvedVariable>,
+    ) -> StdResult<Option<rdf::Value>>
+    where
+        F: FnMut(u128) -> StdResult<String>,
+    {
+        Self::resolve_atom_term(
+            &self.value,
+            ResolvedVariable::as_object,
+            vars,
+            &mut |value| {
+                Ok(match value {
+                    Object::Named(n) => rdf::Value::NamedNode(n.as_iri(resolve_ns_fn)?),
+                    Object::Blank(n) => rdf::Value::BlankNode(n),
+                    Object::Literal(l) => match l {
+                        state::Literal::Simple { value } => rdf::Value::LiteralSimple(value),
+                        state::Literal::I18NString { value, language } => {
+                            rdf::Value::LiteralLang(value, language)
+                        }
+                        state::Literal::Typed { value, datatype } => {
+                            rdf::Value::LiteralDatatype(value, datatype.as_iri(resolve_ns_fn)?)
+                        }
+                    },
+                })
+            },
+            "object",
+        )
+    }
+
+    fn resolve_atom_term<A, T, F, M>(
+        term: &Either<A, String>,
+        from_var: F,
+        vars: &BTreeMap<String, ResolvedVariable>,
+        mapping_fn: &mut M,
+        term_name: &str,
+    ) -> StdResult<Option<A>>
+    where
+        A: Clone,
+        F: Fn(&ResolvedVariable) -> Option<T>,
+        M: FnMut(T) -> StdResult<A>,
+    {
+        match term {
+            Left(v) => Ok(Some(v.clone())),
+            Right(key) => {
+                let var = vars.get(key).ok_or_else(|| {
+                    StdError::generic_err(format!("Unbound {:?} variable: {:?}", term_name, key))
+                })?;
+
+                match from_var(var) {
+                    None => Ok(None),
+                    Some(v) => mapping_fn(v).map(Some),
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::msg::{DataFormat, StoreLimitsInput, IRI};
+    use crate::msg::{DataFormat, StoreLimitsInput};
     use crate::rdf::TripleReader;
     use crate::state;
-    use crate::state::{Literal, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
+    use crate::state::Object::{Literal, Named};
+    use crate::state::{Node, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
     use crate::storer::StoreEngine;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
@@ -506,7 +915,7 @@ mod test {
         struct TestCase {
             plan: QueryPlan,
             selection: Vec<SelectItem>,
-            expects: StdResult<SelectResponse>,
+            expects: StdResult<(Vec<String>, Vec<BTreeMap<String, ResolvedVariable>>)>,
         }
 
         let cases = vec![
@@ -517,16 +926,12 @@ mod test {
                         predicate: PatternValue::Variable(1),
                         object: PatternValue::Variable(2),
                     },
-                    variables: vec![
-                        "v1".to_string(),
-                        "v2".to_string(),
-                        "v3".to_string(),
-                    ],
+                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
                 },
-                selection: vec![
-                    SelectItem::Variable("v4".to_string()),
-                ],
-                expects: Err(StdError::generic_err("Selected variable not found in query")),
+                selection: vec![SelectItem::Variable("v4".to_string())],
+                expects: Err(StdError::generic_err(
+                    "Selected variable not found in query",
+                )),
             },
             TestCase {
                 plan: QueryPlan {
@@ -541,27 +946,21 @@ mod test {
                         }),
                         object: PatternValue::Variable(0),
                     },
-                    variables: vec![
-                        "registrar".to_string(),
-                    ],
+                    variables: vec!["registrar".to_string()],
                 },
-                selection: vec![
-                    SelectItem::Variable("registrar".to_string()),
-                ],
-                expects: Ok(SelectResponse {
-                    head: Head {
-                        vars: vec![
-                            "registrar".to_string(),
-                        ],
-                    },
-                    results: Results {
-                        bindings: vec![
-                            BTreeMap::from([
-                                ("registrar".to_string(), Value::URI {value: IRI::Full("did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655".to_string())}),
-                            ]),
-                        ],
-                    },
-                }),
+                selection: vec![SelectItem::Variable("registrar".to_string())],
+                expects: Ok((
+                    vec!["registrar".to_string()],
+                    vec![BTreeMap::from([(
+                        "registrar".to_string(),
+                        ResolvedVariable::Object(Named(Node {
+                            namespace: 4,
+                            value:
+                                "0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
+                                    .to_string(),
+                        })),
+                    )])],
+                )),
             },
             TestCase {
                 plan: QueryPlan {
@@ -587,40 +986,97 @@ mod test {
                     SelectItem::Variable("predicate".to_string()),
                     SelectItem::Variable("object".to_string()),
                 ],
-                expects: Ok(SelectResponse {
-                    head: Head {
-                        vars: vec![
-                            "object".to_string(),
-                            "predicate".to_string(),
-                            "subject".to_string(),
-                        ],
-                    },
-                    results: Results {
-                        bindings: vec![
-                            BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/describes".to_string())}),
-                                ("object".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string())}),
-                            ]),
-                            BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/hasDescription".to_string())}),
-                                ("object".to_string(), Value::Literal {value: "Un Dataset de test.".to_string(), lang: Some("fr".to_string()), datatype: None }),
-                            ]),
-                            BTreeMap::from([
-                                ("subject".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())}),
-                                ("predicate".to_string(), Value::URI {value: IRI::Full("https://ontology.okp4.space/core/hasTitle".to_string())}),
-                                ("object".to_string(), Value::Literal { value: "test Dataset".to_string(), lang: Some("en".to_string()), datatype: None }),
-                            ]),
-                        ],
-                    },
-                }),
+                expects: Ok((
+                    vec![
+                        "object".to_string(),
+                        "predicate".to_string(),
+                        "subject".to_string(),
+                    ],
+                    vec![
+                        BTreeMap::from([
+                            (
+                                "subject".to_string(),
+                                ResolvedVariable::Subject(Subject::Named(Node {
+                                    namespace: 11,
+                                    value: "d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string(),
+                                })),
+                            ),
+                            (
+                                "predicate".to_string(),
+                                ResolvedVariable::Predicate(Node {
+                                    namespace: 3,
+                                    value: "describes".to_string(),
+                                }),
+                            ),
+                            (
+                                "object".to_string(),
+                                ResolvedVariable::Object(Named(Node {
+                                    namespace: 8,
+                                    value: "0ea1fc7a-dd97-4adc-a10e-169c6597bcde".to_string(),
+                                })),
+                            ),
+                        ]),
+                        BTreeMap::from([
+                            (
+                                "subject".to_string(),
+                                ResolvedVariable::Subject(Subject::Named(Node {
+                                    namespace: 11,
+                                    value: "d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string(),
+                                })),
+                            ),
+                            (
+                                "predicate".to_string(),
+                                ResolvedVariable::Predicate(Node {
+                                    namespace: 3,
+                                    value: "hasDescription".to_string(),
+                                }),
+                            ),
+                            (
+                                "object".to_string(),
+                                ResolvedVariable::Object(Literal(state::Literal::I18NString {
+                                    value: "Un Dataset de test.".to_string(),
+                                    language: "fr".to_string(),
+                                })),
+                            ),
+                        ]),
+                        BTreeMap::from([
+                            (
+                                "subject".to_string(),
+                                ResolvedVariable::Subject(Subject::Named(Node {
+                                    namespace: 11,
+                                    value: "d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string(),
+                                })),
+                            ),
+                            (
+                                "predicate".to_string(),
+                                ResolvedVariable::Predicate(Node {
+                                    namespace: 3,
+                                    value: "hasTitle".to_string(),
+                                }),
+                            ),
+                            (
+                                "object".to_string(),
+                                ResolvedVariable::Object(Literal(state::Literal::I18NString {
+                                    value: "test Dataset".to_string(),
+                                    language: "en".to_string(),
+                                })),
+                            ),
+                        ]),
+                    ],
+                )),
             },
         ];
 
         for case in cases {
             let engine = QueryEngine::new(&deps.storage);
-            assert_eq!(engine.select(case.plan, case.selection, None), case.expects);
+            assert_eq!(
+                engine.select(case.plan, case.selection).and_then(|res| Ok((
+                    res.head.clone(),
+                    res.solutions
+                        .collect::<StdResult<Vec<BTreeMap<String, ResolvedVariable>>>>()?
+                ))),
+                case.expects
+            );
         }
     }
 
@@ -697,9 +1153,11 @@ mod test {
                                 namespace: 3,
                                 value: "hasPublisher".to_string(),
                             }),
-                            object: PatternValue::Constant(Object::Literal(Literal::Simple {
-                                value: "OKP4".to_string(),
-                            })),
+                            object: PatternValue::Constant(Object::Literal(
+                                state::Literal::Simple {
+                                    value: "OKP4".to_string(),
+                                },
+                            )),
                         }),
                     },
                     variables: vec!["v1".to_string(), "v2".to_string()],

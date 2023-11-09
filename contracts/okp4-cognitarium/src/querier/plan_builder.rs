@@ -1,11 +1,11 @@
 use crate::msg::{
-    Literal, Node, SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereClause,
-    WhereCondition, IRI,
+    SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereClause, WhereCondition,
+};
+use crate::querier::mapper::{
+    literal_as_object, node_as_object, node_as_predicate, node_as_subject,
 };
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
-use crate::rdf::expand_uri;
 use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
-use crate::{rdf, state};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
 
@@ -115,24 +115,24 @@ impl<'a> PlanBuilder<'a> {
     fn build_subject_pattern(&mut self, value: VarOrNode) -> StdResult<PatternValue<Subject>> {
         Ok(match value {
             VarOrNode::Variable(v) => PatternValue::Variable(self.resolve_variable(v)),
-            VarOrNode::Node(n) => match n {
-                Node::NamedNode(iri) => {
-                    PatternValue::Constant(Subject::Named(self.build_named_node(iri)?))
-                }
-                Node::BlankNode(blank) => PatternValue::Constant(Subject::Blank(blank)),
-            },
+            VarOrNode::Node(n) => PatternValue::Constant(node_as_subject(
+                &mut self.ns_resolver,
+                self.storage,
+                self.prefixes,
+                n,
+            )?),
         })
     }
 
     fn build_predicate_pattern(&mut self, value: VarOrNode) -> StdResult<PatternValue<Predicate>> {
         Ok(match value {
             VarOrNode::Variable(v) => PatternValue::Variable(self.resolve_variable(v)),
-            VarOrNode::Node(n) => match n {
-                Node::NamedNode(iri) => PatternValue::Constant(self.build_named_node(iri)?),
-                Node::BlankNode(_) => Err(StdError::generic_err(
-                    "Predicate pattern must be a named node",
-                ))?,
-            },
+            VarOrNode::Node(n) => PatternValue::Constant(node_as_predicate(
+                &mut self.ns_resolver,
+                self.storage,
+                self.prefixes,
+                n,
+            )?),
         })
     }
 
@@ -142,39 +142,18 @@ impl<'a> PlanBuilder<'a> {
     ) -> StdResult<PatternValue<Object>> {
         Ok(match value {
             VarOrNodeOrLiteral::Variable(v) => PatternValue::Variable(self.resolve_variable(v)),
-            VarOrNodeOrLiteral::Node(n) => match n {
-                Node::NamedNode(iri) => {
-                    PatternValue::Constant(Object::Named(self.build_named_node(iri)?))
-                }
-                Node::BlankNode(blank) => PatternValue::Constant(Object::Blank(blank)),
-            },
-            VarOrNodeOrLiteral::Literal(l) => PatternValue::Constant(Object::Literal(match l {
-                Literal::Simple(value) => state::Literal::Simple { value },
-                Literal::LanguageTaggedString { value, language } => {
-                    state::Literal::I18NString { value, language }
-                }
-                Literal::TypedValue { value, datatype } => state::Literal::Typed {
-                    value,
-                    datatype: self.build_named_node(datatype)?,
-                },
-            })),
-        })
-    }
-
-    fn build_named_node(&mut self, value: IRI) -> StdResult<state::Node> {
-        match value {
-            IRI::Prefixed(prefixed) => expand_uri(&prefixed, self.prefixes),
-            IRI::Full(full) => Ok(full),
-        }
-        .and_then(|iri| rdf::explode_iri(&iri))
-        .and_then(|(ns_key, v)| {
-            self.ns_resolver
-                .resolve_from_val(self.storage, ns_key)
-                .and_then(NamespaceResolver::none_as_error_middleware)
-                .map(|ns| state::Node {
-                    namespace: ns.key,
-                    value: v,
-                })
+            VarOrNodeOrLiteral::Node(n) => PatternValue::Constant(node_as_object(
+                &mut self.ns_resolver,
+                self.storage,
+                self.prefixes,
+                n,
+            )?),
+            VarOrNodeOrLiteral::Literal(l) => PatternValue::Constant(literal_as_object(
+                &mut self.ns_resolver,
+                self.storage,
+                self.prefixes,
+                l,
+            )?),
         })
     }
 
@@ -201,8 +180,9 @@ impl<'a> HasCachedNamespaces for PlanBuilder<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::msg::Prefix;
+    use crate::msg::{Literal, Node, Prefix, IRI};
     use crate::rdf::PrefixMap;
+    use crate::state;
     use crate::state::{namespaces, Namespace};
     use cosmwasm_std::testing::mock_dependencies;
 
@@ -279,79 +259,6 @@ mod test {
         builder = builder.with_skip(100usize).with_limit(5usize);
         assert_eq!(builder.skip, Some(100usize));
         assert_eq!(builder.limit, Some(5usize));
-    }
-
-    #[test]
-    fn build_named_node() {
-        let cases = vec![
-            (
-                IRI::Full("http://www.w3.org/1999/02/22-rdf-syntax-ns#type".to_string()),
-                Ok(state::Node {
-                    namespace: 0,
-                    value: "type".to_string(),
-                }),
-            ),
-            (
-                IRI::Full("http://not-existing#something".to_string()),
-                Err(StdError::not_found("Namespace")),
-            ),
-            (
-                IRI::Prefixed("okp4:resource".to_string()),
-                Ok(state::Node {
-                    namespace: 1,
-                    value: "resource".to_string(),
-                }),
-            ),
-            (
-                IRI::Prefixed("resource".to_string()),
-                Err(StdError::generic_err("Malformed CURIE: resource")),
-            ),
-            (
-                IRI::Prefixed("okp5:resource".to_string()),
-                Err(StdError::generic_err("Prefix not found: okp5")),
-            ),
-        ];
-
-        let mut deps = mock_dependencies();
-        namespaces()
-            .save(
-                deps.as_mut().storage,
-                "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-                &Namespace {
-                    value: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-                    key: 0u128,
-                    counter: 1u128,
-                },
-            )
-            .unwrap();
-        namespaces()
-            .save(
-                deps.as_mut().storage,
-                "http://okp4.space/".to_string(),
-                &Namespace {
-                    value: "http://okp4.space/".to_string(),
-                    key: 1u128,
-                    counter: 1u128,
-                },
-            )
-            .unwrap();
-
-        let prefixes = &<PrefixMap>::from(vec![
-            Prefix {
-                prefix: "rdf".to_string(),
-                namespace: "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
-            },
-            Prefix {
-                prefix: "okp4".to_string(),
-                namespace: "http://okp4.space/".to_string(),
-            },
-        ])
-        .into_inner();
-        let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
-
-        for case in cases {
-            assert_eq!(builder.build_named_node(case.0), case.1);
-        }
     }
 
     #[test]

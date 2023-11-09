@@ -35,6 +35,7 @@ cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw2.workspace = true
 derive_builder = "0.12.0"
+either = "1.9.0"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"
 rio_xml = "0.8.4"

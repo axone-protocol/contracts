@@ -12,7 +12,7 @@ cw2 = "1.1.1"
 okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
 okp4-objectarium = { path = "contracts/okp4-objectarium" }
 okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
-schemars = "0.8.15"
+schemars = "0.8.16"
 serde = { version = "1.0.192", default-features = false, features = ["derive"] }
 serde-json-wasm = "0.5.1"
 thiserror = { version = "1.0.50" }

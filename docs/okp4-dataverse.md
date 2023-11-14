@@ -2,13 +2,42 @@
 
 ## Overview
 
-The `dataverse` smart contract is responsible for overseeing and managing the dataverse. The Dataverse is an ever-expanding universe that encompasses a wide range of digital resources. These include datasets, data processing algorithms, ML algorithm, storage resources, computational resources, identity management solutions, orchestration engines, oracles, and many other resources recorded on the blockchain.
+The `dataverse` smart contract is responsible for overseeing and managing the Dataverse.
 
-Within the Dataverse, there are defined Zones where specific rules apply. Digital resources recognized within these Zones are the ones compatible with these rules, considering the associated consents. Hence the smart contract also provides mechanisms to manage these Zones, ensuring the implementation of precise governance rules.
+## Dataverse
 
-## Instances
+The Dataverse is an ever-expanding universe that encompasses a wide range of digital resources. These include datasets, data processing algorithms, ML algorithm, storage resources, computational resources, identity management solutions, orchestration engines, oracles, and many other resources recorded on the blockchain.
 
 When the smart contract is instantiated, it creates a Dataverse instance. This instance is separated and isolated from any pre-existing ones, and as many dataverse instances as required can be created.
+
+## Zones
+
+Zones within the Dataverse represent distinct areas or domains where specific governance rules and policies are applied. These Zones are conceptual frameworks created to manage and organize resources under a unified set of regulations and permissions.
+
+Each Zone is defined by its unique identity and set of governing rules, which dictate how resources within it can be accessed, used, and shared. This approach allows for granular control over different segments of the Dataverse, catering to various requirements and use cases. By managing these Zones, the dataverse smart contract ensures that resources are utilized in compliance with the defined policies and consents, thereby maintaining order and integrity within the Dataverse.
+
+## Resources
+
+In the context of the Dataverse, Resources refer to a broad category of digital entities, which include Services and Digital Resources.
+
+- **Digital Resources**: This category extends to various digital entities such as datasets, algorithms, machine learning models, and other digital assets. Like Services, Digital Resources are identified by a URI in conjunction with the Service responsible for their provision.
+
+- **Services**: These are network-accessible functionalities like REST APIs, gRPC services, and other similar offerings. Each Service in the Dataverse is uniquely identified by its Uniform Resource Identifier (URI) and is associated with a specific Registrar responsible for its registration and management.
+
+## Decentralized Identifiers (DID)
+
+Decentralized Identifiers (DID) are a foundational element in the Dataverse, serving as unique, persistent, and globally resolvable identifiers that are fully under the control of the DID subject, which could be an individual, organization, or a any kind of resource (dataset,
+algorithm, nft, ML algorithm).
+
+DIDs play a crucial role in the Dataverse by facilitating a trustable and interoperable identity mechanism. They enable the establishment of a verifiable and self-sovereign identity for resources, services, and entities within the ecosystem.
+
+## Claims
+
+Claims in the Dataverse context are assertions or statements made about a Resource identified by a DID.
+
+Claims play a pivotal role in the governance framework of the Dataverse. By leveraging knowledge derived from verifiable credentials, the governances established by Zones can evaluate the fulfilment of specific rules and compliance. This evaluation is critical in ensuring that the resources within the Dataverse adhere to the established norms, policies, and requirements.
+
+Claims are submitted in the form of [Verifiable Presentations (VPs)](https://www.w3.org/TR/vc-data-model/#presentations), which are aggregations of one or more [Verifiable Credentials (VCs)](https://www.w3.org/TR/vc-data-model/#what-is-a-verifiable-credential).
 
 ## Dependencies
 
@@ -20,7 +49,7 @@ Given its role and status, this smart contract serves as the primary access poin
 
 |parameter|description|
 |----------|-----------|
-|`name`|*(Required.) * **string**. A name to give to the dataverse instantiated.|
+|`name`|*(Required.) * **string**. A unique name to identify the dataverse instance.|
 
 ## ExecuteMsg
 
@@ -30,91 +59,73 @@ This enum provides variants for registering services, datasets, and other operat
 
 ### ExecuteMsg::RegisterService
 
-Registers a new service within the dataverse. Service is a generic concept for any kind of service that can be provided through a network (e.g. a REST API, a gRPC service, etc.).
+Registers a new Service within the dataverse.
 
-Each service is identified and located by its unique URI which defines the entry point of the service.
+The term 'Service' in this context is employed to denote any form of service that is accessible over a network. This encompasses, but is not limited to, services such as REST APIs, gRPC services, and similar network-based services.
 
-#### Examples:
-
-```rust ExecuteMsg::RegisterService { subject:    "https://ontology.okp4.space/dataverse/service/metadata/52549532-887d-409b-a9c0-fb68f9e521d2", identity:   "did:key:z6MkrpCPVDHcsqi3aaqnemLC1aBTUwkfPwTyzc8sFWYwm1PA", identifier: "urn:uuid:803cd033-2eed-4db7-847b-f46715a42a70" } ```
+A fundamental characteristic of each service is its unique Uniform Resource Identifier (URI), which serves as the definitive entry point for accessing the service. This URI is pivotal in the identification and location of the service within the network.
 
 |parameter|description|
 |----------|-----------|
 |`register_service`|*(Required.) * **object**. |
-|`register_service.identifier`|*(Required.) * **string**. The unique URI that identifies and locates the service.<br /><br />The URI serves a dual purpose: 1. **Identification**: It provides a unique identifier for the service, ensuring that each service can be distinctly recognized within the dataverse. 2. **Endpoint**: The URI acts as the access point or endpoint for the service. It specifies where the service can be accessed and how interactions with the service should be initiated.|
-|`register_service.identity`|*(Required.) * **string**. The decentralized identity of the service.|
+|`register_service.identifier`|*(Required.) * **string**. The URI that identifies and locates the service.<br /><br />The URI serves a dual purpose: 1. **Identification**: It provides a unique identifier for the service, ensuring that each service can be distinctly recognized within the dataverse. 2. **Endpoint**: The URI acts as the access point or endpoint for the service. It specifies where the service can be accessed and how interactions with the service should be initiated.|
+|`register_service.identity`|*(Required.) * **string**. The decentralized identity (DID) of the service.<br /><br />Preconditions: - The identity must be unique within the dataverse.|
 |`register_service.registrar`|**string\|null**. The URI of the entity responsible for registering and managing the service in the dataverse (i.e. on the blockchain). It's an optional field, if not provided the service is registered by the entity that invokes the transaction.|
-|`register_service.subject`|*(Required.) * **string**. The unique RDF identifier for the resource representation of the service within the dataverse.|
 
-### ExecuteMsg::RegisterDataset
+### ExecuteMsg::RegisterDigitalResource
 
-Registers a new dataset within the dataverse.
+Registers a new digital resource within the dataverse.
 
-A `Dataset` represents a collection of related data that is organized and presented in a specific format by the provider. This data can be in various forms, such as CSV files, images, videos, and more. It can also refer to data sources like databases and APIs.
+A Digital Resource represents a broad category encompassing various digital entities registerable in the dataverse. This category includes, but is not limited to, datasets, algorithms, machine learning models, and other digital assets.
 
-Each dataset is uniquely identified by its URI, which serves as both the identifier and the access point for the dataset. When accessing a dataset, it's crucial to understand the protocol and methods supported by the dataset's endpoint. For instance, a dataset with an HTTP-based URI might be accessible via GET requests and may require specific headers or parameters for successful retrieval.
-
-#### Examples:
-
-```rust ExecuteMsg::RegisterDataset { subject:     "https://ontology.okp4.space/dataverse/dataset/96a562a9-5feb-4a41-bcf2-cc8610af9f78", identifier:  "ipfs://bafybeicn7i3soqdgr7dwnrwytgq4zxy7a5jpkizrvhm5mv6bgjd32wm3q4", provided_by: "urn:uuid:803cd033-2eed-4db7-847b-f46715a42a70" } ```
+The unique identification of each Digital Resource is achieved through a combination of its Uniform Resource Identifier (URI) and the specific service responsible for its provision. This dual-component identification mechanism guarantees the distinct recognition and operationalization of each Digital Resource within the dataverse environment.
 
 |parameter|description|
 |----------|-----------|
-|`register_dataset`|*(Required.) * **object**. |
-|`register_dataset.identifier`|*(Required.) * **string**. The unique URI that identifies the dataset.|
-|`register_dataset.provided_by`|*(Required.) * **string**. The URI of the service, already registered in the dataverse, that provides the dataset.|
-|`register_dataset.registrar`|**string\|null**. The URI of the entity responsible for registering and managing the dataset in the dataverse (i.e. on the blockchain). It's an optional field, if not provided the dataset is registered by the entity that invokes the transaction.|
-|`register_dataset.subject`|*(Required.) * **string**. The unique RDF identifier for the resource representation of the dataset within the dataverse.|
+|`register_digital_resource`|*(Required.) * **object**. |
+|`register_digital_resource.identifier`|*(Required.) * **string**. The URI that identifies the dataset. This URI makes sense only in the context of the service that provides the dataset.<br /><br />Preconditions: - The URI must be unique within the dataverse.|
+|`register_digital_resource.identity`|*(Required.) * **string**. The decentralized identity (DID) of the Digital Resource.<br /><br />Preconditions: - The identity must be unique within the dataverse.|
+|`register_digital_resource.provided_by`|*(Required.) * **string**. The URI of the service, already registered in the dataverse, that provides the dataset.<br /><br />Preconditions: - The Service must be registered in the dataverse before the dataset can be registered.|
+|`register_digital_resource.registrar`|**string\|null**. The URI of the entity responsible for registering and managing the dataset in the dataverse (i.e. on the blockchain). It's an optional field, if not provided the dataset is registered by the entity that invokes the transaction.|
 
 ### ExecuteMsg::FoundZone
 
 Founds a new zone within the dataverse.
 
-`Zone` is a conceptual framework that is established based on a set of rules, within which recognized digital Resources must conform, considering associated consents.
-
-#### Example
-
-``` ExecuteMsg::FoundZone { subject:    "https://ontology.okp4.space/dataverse/zone/ef347285-e52a-430d-9679-dcb76b962ce7", identifier: "urn:uuid:6d1aaad8-9411-4758-a9f9-ed43358af1fd" } ```
+`Zone` is a conceptual framework that is established based on a set of rules, within which recognized Resources must conform, considering associated consents.
 
 |parameter|description|
 |----------|-----------|
 |`found_zone`|*(Required.) * **object**. |
-|`found_zone.identifier`|*(Required.) * **string**. The unique URI that identifies the zone.|
+|`found_zone.identity`|*(Required.) * **string**. The decentralized identity (DID) of the Zone. This identity must be unique within the dataverse.|
 |`found_zone.registrar`|**string\|null**. The URI of the entity responsible for registering and managing the zone in the dataverse (i.e. on the blockchain). It's an optional field, if not provided the zone is registered by the entity that invokes the transaction.|
-|`found_zone.subject`|*(Required.) * **string**. The unique RDF identifier for the resource representation of the zone within the dataverse.|
 
-### ExecuteMsg::AttachMetadata
+### ExecuteMsg::SubmitClaims
 
-Attaches metadata to a specified resource registered in the dataverse.
+Submits new claims about a resource to the dataverse.
 
-Metadata provides additional information or details about a resource.
+A claim is a statement made by an entity, the issuer (e.g. a person, an organization, or a machine) about a resource (e.g. an entity, a service, or a zone) that the issuer asserts to be true.
 
-|parameter|description|
-|----------|-----------|
-|`attach_metadata`|*(Required.) * **object**. |
-|`attach_metadata.format`|**[RdfFormat](#rdfformat)\|null**. RDF format in which the metadata is represented. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.|
-|`attach_metadata.metadata`|*(Required.) * **[Binary](#binary)**. The serialized metadata intended for attachment. This metadata should adhere to the format specified in the `format` field.|
-|`attach_metadata.subject`|*(Required.) * **string**. The unique RDF identifier of the resource for which the metadata should be attached.|
+The claims are submitted to the dataverse in the form of Verifiable Presentations (VPs), which combine and present credentials. The data in the presentation concerns usually the same subject, but there is no limit to the number of subjects or issuers in the data.
 
-### ExecuteMsg::DetachMetadata
-
-Remove a previously associated metadata (from a specific resource within the dataverse). Once removed the metadata is no longer accessible.
+Preconditions: - The claims must be submitted in the form of Verifiable Presentations (VPs). - The subjects of the Verifiable Credentials must exist in the dataverse before the claims can be submitted. - The identifiers of the Veriable Credentials must be unique within the dataverse. - The claims must be signed by the issuer and the signature must be verifiable.
 
 |parameter|description|
 |----------|-----------|
-|`detach_metadata`|*(Required.) * **object**. |
-|`detach_metadata.subject`|*(Required.) * **string**. The RDF identifier of the metadata to be removed.|
+|`submit_claims`|*(Required.) * **object**. |
+|`submit_claims.format`|**[RdfFormat](#rdfformat)\|null**. RDF format in which the metadata is represented. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.|
+|`submit_claims.metadata`|*(Required.) * **[Binary](#binary)**. The serialized metadata intended for attachment. This metadata should adhere to the format specified in the `format` field.|
 
-### ExecuteMsg::ReviseMetadata
+### ExecuteMsg::RevokeClaims
 
-Revises a previously associated metadata in order to update it or amend it.
+Revoke or withdraw a previously submitted claims.
+
+Preconditions: - The identifier of the claims must exist in the dataverse.
 
 |parameter|description|
 |----------|-----------|
-|`revise_metadata`|*(Required.) * **object**. |
-|`revise_metadata.format`|**[RdfFormat](#rdfformat)\|null**. RDF format in which the metadata is represented. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.|
-|`revise_metadata.metadata`|*(Required.) * **[Binary](#binary)**. The serialized metadata intended for revision. This metadata should adhere to the format specified in the `format` field.|
-|`revise_metadata.subject`|*(Required.) * **string**. The RDF identifier of the metadata to be revised.|
+|`revoke_claims`|*(Required.) * **object**. |
+|`revoke_claims.identifier`|*(Required.) * **string**. The unique identifier of the claims to be revoked.|
 
 ## QueryMsg
 
@@ -203,4 +214,4 @@ Turtle is a textual format for representing RDF triples in a more compact and hu
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`97457018a767e898`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`dcbd7d6ba7b75fcf`)*

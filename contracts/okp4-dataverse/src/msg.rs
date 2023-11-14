@@ -4,7 +4,7 @@ use cosmwasm_std::Binary;
 /// `InstantiateMsg` is used to initialize a new instance of the dataverse.
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// A name to give to the dataverse instantiated.
+    /// A unique name to identify the dataverse instance.
     pub name: String,
 }
 
@@ -14,27 +14,22 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// # RegisterService
-    /// Registers a new service within the dataverse.
-    /// Service is a generic concept for any kind of service that can be provided through a network (e.g. a REST API, a gRPC service, etc.).
+    /// Registers a new Service within the dataverse.
     ///
-    /// Each service is identified and located by its unique URI which defines the entry point
-    /// of the service.
+    /// The term 'Service' in this context is employed to denote any form of service that is accessible over a network.
+    /// This encompasses, but is not limited to, services such as REST APIs, gRPC services, and similar network-based
+    /// services.
     ///
-    /// #### Examples:
-    ///
-    /// ```rust
-    /// ExecuteMsg::RegisterService {
-    ///     subject:    "https://ontology.okp4.space/dataverse/service/metadata/52549532-887d-409b-a9c0-fb68f9e521d2",
-    ///     identity:   "did:key:z6MkrpCPVDHcsqi3aaqnemLC1aBTUwkfPwTyzc8sFWYwm1PA",
-    ///     identifier: "urn:uuid:803cd033-2eed-4db7-847b-f46715a42a70"
-    /// }
-    /// ```
+    /// A fundamental characteristic of each service is its unique Uniform Resource Identifier (URI), which serves as
+    /// the definitive entry point for accessing the service. This URI is pivotal in the identification and location of
+    /// the service within the network.
     RegisterService {
-        /// The unique RDF identifier for the resource representation of the service within the dataverse.
-        subject: Iri,
-        /// The decentralized identity of the service.
+        /// The decentralized identity (DID) of the service.
+        ///
+        /// Preconditions:
+        /// - The identity must be unique within the dataverse.
         identity: Did,
-        /// The unique URI that identifies and locates the service.
+        /// The URI that identifies and locates the service.
         ///
         /// The URI serves a dual purpose:
         /// 1. **Identification**: It provides a unique identifier for the service, ensuring that each service can be distinctly recognized within the dataverse.
@@ -45,31 +40,31 @@ pub enum ExecuteMsg {
         registrar: Option<Did>,
     },
 
-    /// # RegisterDataset
-    /// Registers a new dataset within the dataverse.
+    /// # RegisterDigitalResource
+    /// Registers a new digital resource within the dataverse.
     ///
-    /// A `Dataset` represents a collection of related data that is organized and presented in a specific format by the provider.
-    /// This data can be in various forms, such as CSV files, images, videos, and more. It can also refer to data sources like databases and APIs.
+    /// A Digital Resource represents a broad category encompassing various digital entities registerable in the dataverse.
+    /// This category includes, but is not limited to, datasets, algorithms, machine learning models, and other digital assets.
     ///
-    /// Each dataset is uniquely identified by its URI, which serves as both the identifier and the access point for the dataset.
-    /// When accessing a dataset, it's crucial to understand the protocol and methods supported by the dataset's endpoint. For instance, a dataset
-    /// with an HTTP-based URI might be accessible via GET requests and may require specific headers or parameters for successful retrieval.
-    ///
-    /// #### Examples:
-    ///
-    /// ```rust
-    /// ExecuteMsg::RegisterDataset {
-    ///     subject:     "https://ontology.okp4.space/dataverse/dataset/96a562a9-5feb-4a41-bcf2-cc8610af9f78",
-    ///     identifier:  "ipfs://bafybeicn7i3soqdgr7dwnrwytgq4zxy7a5jpkizrvhm5mv6bgjd32wm3q4",
-    ///     provided_by: "urn:uuid:803cd033-2eed-4db7-847b-f46715a42a70"
-    /// }
-    /// ```
-    RegisterDataset {
-        /// The unique RDF identifier for the resource representation of the dataset within the dataverse.
-        subject: Iri,
-        /// The unique URI that identifies the dataset.
+    /// The unique identification of each Digital Resource is achieved through a combination of its Uniform Resource Identifier (URI)
+    /// and the specific service responsible for its provision. This dual-component identification mechanism guarantees the distinct
+    /// recognition and operationalization of each Digital Resource within the dataverse environment.
+    RegisterDigitalResource {
+        /// The decentralized identity (DID) of the Digital Resource.
+        ///
+        /// Preconditions:
+        /// - The identity must be unique within the dataverse.
+        identity: Did,
+        /// The URI that identifies the dataset.
+        /// This URI makes sense only in the context of the service that provides the dataset.
+        ///
+        /// Preconditions:
+        /// - The URI must be unique within the dataverse.
         identifier: Uri,
         /// The URI of the service, already registered in the dataverse, that provides the dataset.
+        ///
+        /// Preconditions:
+        /// - The Service must be registered in the dataverse before the dataset can be registered.
         provided_by: Uri,
         /// The URI of the entity responsible for registering and managing the dataset in the dataverse (i.e. on the blockchain).
         /// It's an optional field, if not provided the dataset is registered by the entity that invokes the transaction.
@@ -79,61 +74,49 @@ pub enum ExecuteMsg {
     /// # FoundZone
     /// Founds a new zone within the dataverse.
     ///
-    /// `Zone` is a conceptual framework that is established based on a set of rules, within which recognized digital Resources must conform, considering
-    ///  associated consents.
-    ///
-    /// #### Example
-    ///
-    /// ```
-    /// ExecuteMsg::FoundZone {
-    ///     subject:    "https://ontology.okp4.space/dataverse/zone/ef347285-e52a-430d-9679-dcb76b962ce7",
-    ///     identifier: "urn:uuid:6d1aaad8-9411-4758-a9f9-ed43358af1fd"
-    /// }
-    /// ```
+    /// `Zone` is a conceptual framework that is established based on a set of rules, within which
+    /// recognized Resources must conform, considering associated consents.
     FoundZone {
-        /// The unique RDF identifier for the resource representation of the zone within the dataverse.
-        subject: Iri,
-        /// The unique URI that identifies the zone.
-        identifier: Uri,
+        /// The decentralized identity (DID) of the Zone.
+        /// This identity must be unique within the dataverse.
+        identity: Did,
         /// The URI of the entity responsible for registering and managing the zone in the dataverse (i.e. on the blockchain).
         /// It's an optional field, if not provided the zone is registered by the entity that invokes the transaction.
         registrar: Option<Did>,
     },
 
-    /// # AttachMetadata
-    /// Attaches metadata to a specified resource registered in the dataverse.
+    /// # SubmitClaims
+    /// Submits new claims about a resource to the dataverse.
     ///
-    /// Metadata provides additional information or details about a resource.
-    AttachMetadata {
-        /// The unique RDF identifier of the resource for which the metadata should be attached.
-        subject: Iri,
-        /// RDF format in which the metadata is represented.
-        /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
-        format: Option<RdfFormat>,
+    /// A claim is a statement made by an entity, the issuer (e.g. a person, an organization, or a machine) about a resource
+    /// (e.g. an entity, a service, or a zone) that the issuer asserts to be true.
+    ///
+    /// The claims are submitted to the dataverse in the form of Verifiable Presentations (VPs), which combine and present credentials.
+    /// The data in the presentation concerns usually the same subject, but there is no limit to the number of subjects or
+    /// issuers in the data.
+    ///
+    /// Preconditions:
+    /// - The claims must be submitted in the form of Verifiable Presentations (VPs).
+    /// - The subjects of the Verifiable Credentials must exist in the dataverse before the claims can be submitted.
+    /// - The identifiers of the Veriable Credentials must be unique within the dataverse.
+    /// - The claims must be signed by the issuer and the signature must be verifiable.
+    SubmitClaims {
         /// The serialized metadata intended for attachment.
         /// This metadata should adhere to the format specified in the `format` field.
         metadata: Binary,
-    },
-
-    /// # DetachMetadata
-    /// Remove a previously associated metadata (from a specific resource within the dataverse).
-    /// Once removed the metadata is no longer accessible.
-    DetachMetadata {
-        /// The RDF identifier of the metadata to be removed.
-        subject: Iri,
-    },
-
-    /// # ReviseMetadata
-    /// Revises a previously associated metadata in order to update it or amend it.
-    ReviseMetadata {
-        /// The RDF identifier of the metadata to be revised.
-        subject: Iri,
         /// RDF format in which the metadata is represented.
         /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
         format: Option<RdfFormat>,
-        /// The serialized metadata intended for revision.
-        /// This metadata should adhere to the format specified in the `format` field.
-        metadata: Binary,
+    },
+
+    /// # RevokeClaims
+    /// Revoke or withdraw a previously submitted claims.
+    ///
+    /// Preconditions:
+    /// - The identifier of the claims must exist in the dataverse.
+    RevokeClaims {
+        /// The unique identifier of the claims to be revoked.
+        identifier: Uri,
     },
 }
 
@@ -181,10 +164,6 @@ pub enum RdfFormat {
 /// to identify a resource.
 /// see https://en.wikipedia.org/wiki/Uniform_Resource_Identifier.
 type Uri = String;
-
-/// # Iri
-/// `Iri` (Internationalized Resource Identifier) represents a unique identifier used to identify resources.
-type Iri = String;
 
 /// # Did
 /// `Did` represents a Decentralized Identifier (DID), a globally unique identifier.

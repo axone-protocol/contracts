@@ -6,11 +6,9 @@ updates:
       interval: "daily"
     reviewers:
       - amimart
-      - bdeneux
       - ccamel
     assignees:
       - amimart
-      - bdeneux
       - ccamel
   - package-ecosystem: "cargo"
     directory: "/"
@@ -19,9 +17,7 @@ updates:
     open-pull-requests-limit: 5
     reviewers:
       - amimart
-      - bdeneux
       - ccamel
     assignees:
       - amimart
-      - bdeneux
       - ccamel

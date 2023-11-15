@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
     SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
@@ -38,7 +38,7 @@ pub fn instantiate(
 
     let store_program_msg = WasmMsg::Execute {
         contract_addr: msg.storage_address.clone(),
-        msg: to_binary(&store_msg)?,
+        msg: to_json_binary(&store_msg)?,
         funds: vec![],
     };
 
@@ -121,9 +121,9 @@ pub mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Ask { query } => to_binary(&query::ask(deps, query)?),
-        QueryMsg::Program => to_binary(&query::program(deps)?),
-        QueryMsg::ProgramCode => to_binary(&query::program_code(deps)?),
+        QueryMsg::Ask { query } => to_json_binary(&query::ask(deps, query)?),
+        QueryMsg::Program => to_json_binary(&query::program(deps)?),
+        QueryMsg::ProgramCode => to_json_binary(&query::program_code(deps)?),
     }
 }
 
@@ -266,7 +266,7 @@ mod tests {
         mock_dependencies, mock_env, mock_info, MockQuerierCustomHandlerResult,
     };
     use cosmwasm_std::{
-        from_binary, to_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
+        from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
         SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use okp4_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
@@ -295,7 +295,7 @@ mod tests {
                 if *query == exp_query && *program == exp_program =>
             {
                 SystemResult::Ok(
-                    to_binary(&AskResponse {
+                    to_json_binary(&AskResponse {
                         height: 1,
                         gas_used: 1000,
                         answer: Some(Answer {
@@ -327,7 +327,7 @@ mod tests {
     fn proper_initialization() {
         let mut deps =
             mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
-        let program = to_binary("foo(_) :- true.").unwrap();
+        let program = to_json_binary("foo(_) :- true.").unwrap();
 
         let msg = InstantiateMsg {
             program: program.clone(),
@@ -345,7 +345,7 @@ mod tests {
         match &sub_msg.msg {
             CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
                 WasmMsg::Execute { msg, .. } => {
-                    let result: StorageMsg = from_binary(msg).unwrap();
+                    let result: StorageMsg = from_json(msg).unwrap();
                     match result {
                         StorageMsg::StoreObject {
                             data,
@@ -392,7 +392,7 @@ mod tests {
             .unwrap();
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Program {}).unwrap();
-        let result: ProgramResponse = from_binary(&res).unwrap();
+        let result: ProgramResponse = from_json(&res).unwrap();
 
         assert_eq!(object_id, result.object_id);
         assert_eq!(storage_addr, result.storage_address);
@@ -408,14 +408,14 @@ mod tests {
             mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
         deps.querier.update_wasm(move |query| match query {
             WasmQuery::Smart { contract_addr, msg } if contract_addr == CONTRACT_ID => {
-                let data = to_binary(&A_PROGRAM).unwrap();
-                let storage_query: StorageQuery = from_binary(msg).unwrap();
+                let data = to_json_binary(&A_PROGRAM).unwrap();
+                let storage_query: StorageQuery = from_json(msg).unwrap();
 
                 assert!(
                     matches!(storage_query, StorageQuery::ObjectData { id } if id == OBJECT_ID)
                 );
 
-                SystemResult::Ok(ContractResult::Ok(to_binary(&data).unwrap()))
+                SystemResult::Ok(ContractResult::Ok(to_json_binary(&data).unwrap()))
             }
             _ => {
                 panic!("UnsupportedRequest: query_wasm");
@@ -436,8 +436,8 @@ mod tests {
             .unwrap();
 
         let result = query(deps.as_ref(), mock_env(), QueryMsg::ProgramCode {}).unwrap();
-        let data: Binary = from_binary(&result).unwrap();
-        let program: String = from_binary(&data).unwrap();
+        let data: Binary = from_json(&result).unwrap();
+        let program: String = from_json(&data).unwrap();
 
         assert_eq!(A_PROGRAM, program);
     }
@@ -457,7 +457,7 @@ mod tests {
                 program,
                 query: queryy,
             } if *queryy == exp_query && *program == exp_program => SystemResult::Ok(
-                to_binary(&AskResponse {
+                to_json_binary(&AskResponse {
                     height: 1,
                     gas_used: 1000,
                     answer: Some(Answer {
@@ -547,7 +547,7 @@ mod tests {
 
             match res {
                 Ok(result) => {
-                    let result: AskResponse = from_binary(&result).unwrap();
+                    let result: AskResponse = from_json(&result).unwrap();
 
                     assert!(case.3.is_some());
                     assert!(result.answer.is_some());
@@ -696,7 +696,7 @@ mod tests {
                     match &sub_msg.msg {
                         CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
                             WasmMsg::Execute { msg, .. } => {
-                                let result: StorageMsg = from_binary(msg).unwrap();
+                                let result: StorageMsg = from_json(msg).unwrap();
                                 match result {
                                     StorageMsg::PinObject { id } => Some(id),
                                     _ => panic!("should contains only PinObject message(s)"),
@@ -798,16 +798,16 @@ mod tests {
                 WasmQuery::ContractInfo { .. } => {
                     let mut contract_info = ContractInfoResponse::default();
                     contract_info.admin = Some("creator".to_string());
-                    SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+                    SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
                 WasmQuery::Smart { contract_addr, msg } if contract_addr == "okp4-objectarium1" => {
-                    match from_binary(msg) {
+                    match from_json(msg) {
                         Ok(StorageQuery::ObjectPins {
                             id,
                             first: Some(1u32),
                             after: None,
                         }) if id == "program-id" => SystemResult::Ok(ContractResult::Ok(
-                            to_binary(&ObjectPinsResponse {
+                            to_json_binary(&ObjectPinsResponse {
                                 data: vec!["creator".to_string()],
                                 page_info: PageInfo {
                                     has_next_page: case.0 > 1,
@@ -863,14 +863,14 @@ mod tests {
                     }) => {
                         assert_eq!(contract_addr, "okp4-objectarium1".to_string());
                         if case.0 > 1 {
-                            match from_binary(&msg) {
+                            match from_json(&msg) {
                                 Ok(StorageMsg::UnpinObject { id }) => {
                                     assert_eq!(id, "program-id".to_string());
                                 }
                                 _ => panic!("storage message should be a UnpinObject message"),
                             }
                         } else {
-                            match from_binary(&msg) {
+                            match from_json(&msg) {
                                 Ok(StorageMsg::ForgetObject { id }) => {
                                     assert_eq!(id, "program-id".to_string());
                                 }
@@ -892,7 +892,7 @@ mod tests {
                             contract_addr, msg, ..
                         }) => {
                             assert_eq!(contract_addr, dep.storage_address);
-                            match from_binary(&msg) {
+                            match from_json(&msg) {
                                 Ok(StorageMsg::UnpinObject { id }) => {
                                     assert_eq!(id, dep.object_id);
                                 }
@@ -935,10 +935,10 @@ mod tests {
                         true => Some("admin".to_string()),
                         false => None,
                     };
-                    SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+                    SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
                 WasmQuery::Smart { .. } => SystemResult::Ok(ContractResult::Ok(
-                    to_binary(&ObjectPinsResponse {
+                    to_json_binary(&ObjectPinsResponse {
                         data: vec!["creator".to_string()],
                         page_info: PageInfo {
                             has_next_page: false,
@@ -987,7 +987,7 @@ mod tests {
             WasmQuery::ContractInfo { .. } => {
                 let mut contract_info = ContractInfoResponse::default();
                 contract_info.admin = Some("creator".to_string());
-                SystemResult::Ok(ContractResult::Ok(to_binary(&contract_info).unwrap()))
+                SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
             }
             _ => SystemResult::Err(SystemError::Unknown {}),
         });

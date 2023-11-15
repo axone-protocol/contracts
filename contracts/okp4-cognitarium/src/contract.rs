@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -123,12 +123,12 @@ pub mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Store => to_binary(&query::store(deps)?),
-        QueryMsg::Select { query } => to_binary(&query::select(deps, query)?),
+        QueryMsg::Store => to_json_binary(&query::store(deps)?),
+        QueryMsg::Select { query } => to_json_binary(&query::select(deps, query)?),
         QueryMsg::Describe { query, format } => {
-            to_binary(&query::describe(deps, query, format.unwrap_or_default())?)
+            to_json_binary(&query::describe(deps, query, format.unwrap_or_default())?)
         }
-        QueryMsg::Construct { query, format } => to_binary(&query::construct(
+        QueryMsg::Construct { query, format } => to_json_binary(&query::construct(
             deps,
             query,
             format.unwrap_or(DataFormat::default()),
@@ -390,7 +390,7 @@ mod tests {
     };
     use crate::{msg, state};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_binary, Addr, Attribute, Order, Uint128};
+    use cosmwasm_std::{from_json, Addr, Attribute, Order, Uint128};
     use std::collections::BTreeMap;
     use std::fs::File;
     use std::io::Read;
@@ -1118,7 +1118,7 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Store);
         assert!(res.is_ok());
         assert_eq!(
-            from_binary::<StoreResponse>(&res.unwrap()).unwrap(),
+            from_json::<StoreResponse>(&res.unwrap()).unwrap(),
             StoreResponse {
                 owner: "owner".to_string(),
                 limits: msg::StoreLimits {
@@ -1345,7 +1345,7 @@ mod tests {
             let res = query(deps.as_ref(), mock_env(), QueryMsg::Select { query: q });
             assert!(res.is_ok());
 
-            let result = from_binary::<SelectResponse>(&res.unwrap()).unwrap();
+            let result = from_json::<SelectResponse>(&res.unwrap()).unwrap();
             assert_eq!(result, expected);
         }
     }
@@ -1598,7 +1598,7 @@ mod tests {
 
             assert!(res.is_ok());
 
-            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+            let result = from_json::<DescribeResponse>(&res.unwrap()).unwrap();
 
             assert_eq!(result.format, expected.format);
             assert_eq!(
@@ -1668,7 +1668,7 @@ mod tests {
 
             assert!(res.is_ok());
 
-            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+            let result = from_json::<DescribeResponse>(&res.unwrap()).unwrap();
 
             assert_eq!(result.format, expected.format);
             assert_eq!(
@@ -1733,7 +1733,7 @@ mod tests {
 
             assert!(res.is_ok());
 
-            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+            let result = from_json::<DescribeResponse>(&res.unwrap()).unwrap();
 
             assert_eq!(result.format, expected.format);
             assert_eq!(
@@ -1798,7 +1798,7 @@ mod tests {
 
             assert!(res.is_ok());
 
-            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+            let result = from_json::<DescribeResponse>(&res.unwrap()).unwrap();
 
             assert_eq!(result.format, expected.format);
             assert_eq!(
@@ -1867,7 +1867,7 @@ mod tests {
 
             assert!(res.is_ok());
 
-            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+            let result = from_json::<DescribeResponse>(&res.unwrap()).unwrap();
 
             assert_eq!(result.format, expected.format);
             assert_eq!(
@@ -1963,7 +1963,7 @@ mod tests {
 
             assert!(res.is_ok());
 
-            let result = from_binary::<DescribeResponse>(&res.unwrap()).unwrap();
+            let result = from_json::<DescribeResponse>(&res.unwrap()).unwrap();
 
             assert_eq!(result.format, expected.format);
             assert_eq!(

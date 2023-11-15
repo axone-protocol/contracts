@@ -178,13 +178,16 @@ pub mod execute {
             return Ok(res);
         }
 
-        let o = objects().update(deps.storage, id.clone(), |o| -> Result<Object, StdError> {
-            o.map(|mut e: Object| -> Object {
-                e.pin_count += Uint128::one();
-                e
-            })
-            .ok_or_else(|| StdError::not_found(type_name::<Object>()))
-        })?;
+        let object = objects().load(deps.storage, id.clone())?;
+        let mut updated_object = object.clone();
+        updated_object.pin_count += Uint128::one();
+
+        objects().replace(
+            deps.storage,
+            id.clone(),
+            Some(&updated_object),
+            Some(&object),
+        )?;
 
         let bucket = BUCKET.load(deps.storage)?;
 
@@ -192,8 +195,8 @@ pub mod execute {
             BucketLimits {
                 max_object_pins: Some(max),
                 ..
-            } if max < o.pin_count => {
-                Err(BucketError::MaxObjectPinsLimitExceeded(o.pin_count, max).into())
+            } if max < updated_object.pin_count => {
+                Err(BucketError::MaxObjectPinsLimitExceeded(updated_object.pin_count, max).into())
             }
             _ => {
                 pins().save(

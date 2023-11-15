@@ -83,10 +83,10 @@ The unique identification of each Digital Resource is achieved through a combina
 |parameter|description|
 |----------|-----------|
 |`register_digital_resource`|*(Required.) * **object**. |
-|`register_digital_resource.identifier`|*(Required.) * **string**. The URI that identifies the dataset. This URI makes sense only in the context of the service that provides the dataset.<br /><br />Preconditions: - The URI must be unique within the dataverse.|
+|`register_digital_resource.identifier`|*(Required.) * **string**. The URI that identifies the dataset. This URI makes sense only in the context of the service that provides the resource.<br /><br />Preconditions: - The URI must be unique within the dataverse.|
 |`register_digital_resource.identity`|*(Required.) * **string**. The decentralized identity (DID) of the Digital Resource.<br /><br />Preconditions: - The identity must be unique within the dataverse.|
-|`register_digital_resource.provided_by`|*(Required.) * **string**. The URI of the service, already registered in the dataverse, that provides the dataset.<br /><br />Preconditions: - The Service must be registered in the dataverse before the dataset can be registered.|
-|`register_digital_resource.registrar`|**string\|null**. The URI of the entity responsible for registering and managing the dataset in the dataverse (i.e. on the blockchain). It's an optional field, if not provided the dataset is registered by the entity that invokes the transaction.|
+|`register_digital_resource.provided_by`|*(Required.) * **string**. The URI of the service, already registered in the dataverse, that provides the dataset.<br /><br />Preconditions: - The Service must be registered in the dataverse before the resource can be registered.|
+|`register_digital_resource.registrar`|**string\|null**. The URI of the entity responsible for registering and managing the resource in the dataverse (i.e. on the blockchain). It's an optional field, if not provided the dataset is registered by the entity that invokes the transaction.|
 
 ### ExecuteMsg::FoundZone
 
@@ -214,4 +214,4 @@ Turtle is a textual format for representing RDF triples in a more compact and hu
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`dcbd7d6ba7b75fcf`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`7dba583f9d24fda1`)*

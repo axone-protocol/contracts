@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Coin, StdResult, WasmMsg};
+use cosmwasm_std::{to_json_binary, Coin, StdResult, WasmMsg};
 use okp4_logic_bindings::error::CosmwasmUriError;
 use okp4_logic_bindings::uri::CosmwasmUri;
 use okp4_objectarium::msg::QueryMsg::ObjectData;
@@ -24,7 +24,7 @@ impl ObjectRef {
     {
         Ok(WasmMsg::Execute {
             contract_addr: self.storage_address.clone(),
-            msg: to_binary(msg)?,
+            msg: to_json_binary(msg)?,
             funds,
         })
     }
@@ -93,7 +93,7 @@ impl TryFrom<ObjectRef> for CosmwasmUri {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::from_binary;
+    use cosmwasm_std::from_json;
 
     #[test]
     fn uri_to_object() {
@@ -184,7 +184,7 @@ mod tests {
                 } => {
                     assert_eq!(addr, object.storage_address.clone());
                     assert_eq!(f, funds);
-                    let exec_res = from_binary::<ExecuteMsg>(&msg);
+                    let exec_res = from_json::<ExecuteMsg>(&msg);
                     assert!(exec_res.is_ok());
                     assert_eq!(exec_res.unwrap(), case.1)
                 }

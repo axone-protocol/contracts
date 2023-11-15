@@ -1,7 +1,7 @@
 use crate::error::BucketError;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
 use crate::crypto;
@@ -276,16 +276,16 @@ pub mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     Ok(match msg {
-        QueryMsg::Bucket {} => to_binary(&query::bucket(deps)?),
-        QueryMsg::Object { id } => to_binary(&query::object(deps, id)?),
-        QueryMsg::ObjectData { id } => to_binary(&query::data(deps, id)?),
+        QueryMsg::Bucket {} => to_json_binary(&query::bucket(deps)?),
+        QueryMsg::Object { id } => to_json_binary(&query::object(deps, id)?),
+        QueryMsg::ObjectData { id } => to_json_binary(&query::data(deps, id)?),
         QueryMsg::Objects {
             address,
             after,
             first,
-        } => to_binary(&query::fetch_objects(deps, address, after, first)?),
+        } => to_json_binary(&query::fetch_objects(deps, address, after, first)?),
         QueryMsg::ObjectPins { id, after, first } => {
-            to_binary(&query::object_pins(deps, id, after, first)?)
+            to_json_binary(&query::object_pins(deps, id, after, first)?)
         }
     }?)
 }
@@ -424,7 +424,7 @@ mod tests {
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_binary, Attribute, Order, StdError, Uint128};
+    use cosmwasm_std::{from_json, Attribute, Order, StdError, Uint128};
     use std::any::type_name;
 
     fn decode_hex(hex: &str) -> Vec<u8> {
@@ -461,7 +461,7 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
-        let value: BucketResponse = from_binary(&res).unwrap();
+        let value: BucketResponse = from_json(&res).unwrap();
         assert_eq!("foo", value.name);
         assert_eq!(value.config, Default::default());
         assert_eq!(value.limits, Default::default());
@@ -503,7 +503,7 @@ mod tests {
             let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
             let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
-            let value: BucketResponse = from_binary(&res).unwrap();
+            let value: BucketResponse = from_json(&res).unwrap();
 
             assert_eq!("bar", value.name);
             assert_eq!(value.config.hash_algorithm, expected_hash_algorithm);
@@ -536,7 +536,7 @@ mod tests {
 
         // it worked, let's query the state
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
-        let value: BucketResponse = from_binary(&res).unwrap();
+        let value: BucketResponse = from_json(&res).unwrap();
         assert_eq!("bar", value.name);
         assert_eq!(Uint128::new(20000), value.limits.max_total_size.unwrap());
         assert_eq!(Uint128::new(10), value.limits.max_objects.unwrap());
@@ -562,7 +562,7 @@ mod tests {
         instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
-        let value: BucketResponse = from_binary(&res).unwrap();
+        let value: BucketResponse = from_json(&res).unwrap();
         assert_eq!(value.pagination.max_page_size, 50);
         assert_eq!(value.pagination.default_page_size, 30);
     }
@@ -633,7 +633,7 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
-        let value: BucketResponse = from_binary(&res).unwrap();
+        let value: BucketResponse = from_json(&res).unwrap();
         assert_eq!("foobar", value.name);
     }
 
@@ -1139,7 +1139,7 @@ mod tests {
             id: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824".to_string(),
         };
         let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectResponse = from_binary(&result).unwrap();
+        let response: ObjectResponse = from_json(&result).unwrap();
         assert_eq!(
             response.id,
             ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
@@ -1160,7 +1160,7 @@ mod tests {
             id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
         };
         let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectResponse = from_binary(&result).unwrap();
+        let response: ObjectResponse = from_json(&result).unwrap();
         assert_eq!(
             response.id,
             ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")
@@ -1228,7 +1228,7 @@ mod tests {
                 id: "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6".to_string(),
             };
             let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-            assert_eq!(result, to_binary(&data).unwrap());
+            assert_eq!(result, to_json_binary(&data).unwrap());
         }
     }
 
@@ -1852,7 +1852,7 @@ mod tests {
             after: None,
         };
         let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_binary(&result).unwrap();
+        let response: ObjectsResponse = from_json(&result).unwrap();
         assert_eq!(response.data.len(), 0);
         assert_eq!(
             response.page_info,
@@ -1950,7 +1950,7 @@ mod tests {
         for case in cases {
             let msg = case.0;
             let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-            let response: ObjectsResponse = from_binary(&result).unwrap();
+            let response: ObjectsResponse = from_json(&result).unwrap();
             assert_eq!(response.data.len(), case.1);
             assert_eq!(response.page_info, case.2);
         }
@@ -1961,7 +1961,7 @@ mod tests {
             after: None,
         };
         let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_binary(&result).unwrap();
+        let response: ObjectsResponse = from_json(&result).unwrap();
         assert_eq!(
             response.data.first().unwrap(),
             &ObjectResponse {
@@ -2067,7 +2067,7 @@ mod tests {
 
         for case in cases {
             let result = query(deps.as_ref(), mock_env(), case.0).unwrap();
-            let response: ObjectPinsResponse = from_binary(&result).unwrap();
+            let response: ObjectPinsResponse = from_json(&result).unwrap();
             assert_eq!(response.data, case.1);
             assert_eq!(response.page_info, case.2);
         }

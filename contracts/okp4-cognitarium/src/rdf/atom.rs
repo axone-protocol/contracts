@@ -87,8 +87,6 @@ impl<'a> From<&'a Atom> for Triple<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::IRI;
-    use crate::rdf::PrefixMap;
 
     #[test]
     fn proper_display() {

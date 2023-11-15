@@ -56,7 +56,7 @@ pub enum ExecuteMsg {
         /// - The identity must be unique within the dataverse.
         identity: Did,
         /// The URI that identifies the dataset.
-        /// This URI makes sense only in the context of the service that provides the dataset.
+        /// This URI makes sense only in the context of the service that provides the resource.
         ///
         /// Preconditions:
         /// - The URI must be unique within the dataverse.
@@ -64,9 +64,9 @@ pub enum ExecuteMsg {
         /// The URI of the service, already registered in the dataverse, that provides the dataset.
         ///
         /// Preconditions:
-        /// - The Service must be registered in the dataverse before the dataset can be registered.
+        /// - The Service must be registered in the dataverse before the resource can be registered.
         provided_by: Uri,
-        /// The URI of the entity responsible for registering and managing the dataset in the dataverse (i.e. on the blockchain).
+        /// The URI of the entity responsible for registering and managing the resource in the dataverse (i.e. on the blockchain).
         /// It's an optional field, if not provided the dataset is registered by the entity that invokes the transaction.
         registrar: Option<Did>,
     },

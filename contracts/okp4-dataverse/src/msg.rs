@@ -1,11 +1,14 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Uint64};
 
 /// `InstantiateMsg` is used to initialize a new instance of the dataverse.
 #[cw_serde]
 pub struct InstantiateMsg {
     /// A unique name to identify the dataverse instance.
     pub name: String,
+
+    /// The configuration used to instantiate the triple store.
+    pub triplestore_config: TripleStoreConfig,
 }
 
 /// `ExecuteMsg` defines the set of possible actions that can be performed on the dataverse.
@@ -118,6 +121,19 @@ pub enum ExecuteMsg {
         /// The unique identifier of the claims to be revoked.
         identifier: Uri,
     },
+}
+
+/// # TripleStoreConfig
+/// `TripleStoreConfig` represents the configuration related to the management of the triple store.
+#[cw_serde]
+pub struct TripleStoreConfig {
+    /// The code id that will be used to instantiate the triple store contract in which
+    /// to store dataverse semantic data. It must implement the cognitarium interface.
+    pub code_id: Uint64,
+
+    /// Limitations regarding triple store usage.
+    #[serde(default = "okp4_cognitarium::msg::StoreLimitsInput::default")]
+    pub limits: okp4_cognitarium::msg::StoreLimitsInput,
 }
 
 /// # RdfFormat

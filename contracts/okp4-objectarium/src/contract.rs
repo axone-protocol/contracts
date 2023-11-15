@@ -61,8 +61,7 @@ pub mod execute {
     use crate::msg;
     use crate::state::BucketLimits;
     use crate::ContractError::ObjectPinned;
-    use cosmwasm_std::{Order, StdError, Uint128};
-    use std::any::type_name;
+    use cosmwasm_std::{Order, Uint128};
 
     pub fn store_object(
         deps: DepsMut<'_>,
@@ -118,6 +117,7 @@ pub mod execute {
         // store object data
         let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.0);
         let data_path = DATA.key(id.clone());
+
         if data_path.has(deps.storage) {
             return Err(ContractError::Bucket(BucketError::ObjectAlreadyStored));
         }
@@ -178,13 +178,16 @@ pub mod execute {
             return Ok(res);
         }
 
-        let o = objects().update(deps.storage, id.clone(), |o| -> Result<Object, StdError> {
-            o.map(|mut e: Object| -> Object {
-                e.pin_count += Uint128::one();
-                e
-            })
-            .ok_or_else(|| StdError::not_found(type_name::<Object>()))
-        })?;
+        let object = objects().load(deps.storage, id.clone())?;
+        let mut updated_object = object.clone();
+        updated_object.pin_count += Uint128::one();
+
+        objects().replace(
+            deps.storage,
+            id.clone(),
+            Some(&updated_object),
+            Some(&object),
+        )?;
 
         let bucket = BUCKET.load(deps.storage)?;
 
@@ -192,8 +195,8 @@ pub mod execute {
             BucketLimits {
                 max_object_pins: Some(max),
                 ..
-            } if max < o.pin_count => {
-                Err(BucketError::MaxObjectPinsLimitExceeded(o.pin_count, max).into())
+            } if max < updated_object.pin_count => {
+                Err(BucketError::MaxObjectPinsLimitExceeded(updated_object.pin_count, max).into())
             }
             _ => {
                 pins().save(
@@ -413,7 +416,6 @@ impl From<state::HashAlgorithm> for crypto::HashAlgorithm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::Hash;
     use crate::error::BucketError;
     use crate::msg::{
         BucketConfig, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm, HashAlgorithm,
@@ -424,6 +426,24 @@ mod tests {
     use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::{from_binary, Attribute, Order, StdError, Uint128};
     use std::any::type_name;
+
+    fn decode_hex(hex: &str) -> Vec<u8> {
+        base16ct::lower::decode_vec(hex).unwrap()
+    }
+
+    fn with_namespace(key: &[u8]) -> Vec<u8> {
+        let namespace = decode_hex("00064f424a454354");
+        let mut v = Vec::with_capacity(namespace.len() + key.len());
+        v.extend(namespace);
+        v.extend_from_slice(key);
+        v
+    }
+
+    fn not_found_object_info<T>(hex: &str) -> String {
+        let type_name = type_name::<T>();
+        let key = with_namespace(&decode_hex(hex));
+        format!("type: {type_name}; key: {:02X?}", key)
+    }
 
     #[test]
     fn proper_initialization() {
@@ -617,10 +637,6 @@ mod tests {
         assert_eq!("foobar", value.name);
     }
 
-    fn decode_hash(hash: String) -> Hash {
-        base16ct::lower::decode_vec(hash).unwrap().into()
-    }
-
     #[test]
     fn store_object_without_limits() {
         let obj1_content = &general_purpose::STANDARD.encode("hello");
@@ -762,15 +778,15 @@ mod tests {
                 assert_eq!(
                     Binary::from_base64(content).unwrap(),
                     Binary::from(
-                        DATA.load(&deps.storage, decode_hash(expected_hash.clone()))
+                        DATA.load(&deps.storage, decode_hex(&expected_hash).into())
                             .unwrap()
                     ),
                 );
 
                 let created = objects()
-                    .load(&deps.storage, decode_hash(expected_hash.clone()))
+                    .load(&deps.storage, decode_hex(&expected_hash).into())
                     .unwrap();
-                assert_eq!(created.id, decode_hash(expected_hash.to_string()));
+                assert_eq!(created.id, decode_hex(&expected_hash).into());
                 assert_eq!(created.owner, info.sender.clone());
                 assert_eq!(created.size.u128(), *expected_size);
                 assert_eq!(
@@ -785,7 +801,7 @@ mod tests {
                 assert_eq!(
                     pins().has(
                         &deps.storage,
-                        (decode_hash(expected_hash.to_string()), info.clone().sender),
+                        (decode_hex(&expected_hash).into(), info.clone().sender),
                     ),
                     *pin,
                 );
@@ -1422,7 +1438,9 @@ mod tests {
                 senders: vec![mock_info("bob", &[])],
                 expected_count: 0,
                 expected_error: Some(ContractError::Std(StdError::not_found(
-                    type_name::<Object>(),
+                    not_found_object_info::<Object>(
+                        "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
+                    ),
                 ))),
                 expected_object_pin_count: vec![(
                     ObjectId::from(
@@ -1520,7 +1538,7 @@ mod tests {
                     for (object_id, count) in case.expected_object_pin_count {
                         assert_eq!(
                             objects()
-                                .load(&deps.storage, decode_hash(object_id))
+                                .load(&deps.storage, decode_hex(&object_id).into())
                                 .unwrap()
                                 .pin_count,
                             count
@@ -1689,7 +1707,9 @@ mod tests {
                 unpin_senders: vec![mock_info("martin", &[])],
                 expected_count: 1,
                 expected_error: Some(ContractError::Std(StdError::not_found(
-                    type_name::<Object>(),
+                    not_found_object_info::<Object>(
+                        "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
+                    ),
                 ))),
                 expected_object_pin_count: vec![(
                     ObjectId::from(
@@ -1801,7 +1821,7 @@ mod tests {
                     for (object_id, count) in case.expected_object_pin_count {
                         assert_eq!(
                             objects()
-                                .load(&deps.storage, decode_hash(object_id))
+                                .load(&deps.storage, decode_hex(&object_id).into())
                                 .unwrap()
                                 .pin_count,
                             count
@@ -2073,7 +2093,9 @@ mod tests {
                     after: None,
                     first: None,
                 },
-                ContractError::Std(StdError::not_found(type_name::<Object>())),
+                ContractError::Std(StdError::not_found(not_found_object_info::<Object>(
+                    "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
+                ))),
             ),
             (
                 QueryMsg::ObjectPins {
@@ -2195,7 +2217,9 @@ mod tests {
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
                 expected_error: Some(ContractError::Std(StdError::not_found(
-                    type_name::<Object>(),
+                    not_found_object_info::<Object>(
+                        "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
+                    ),
                 ))),
             },
             TC {
@@ -2296,9 +2320,9 @@ mod tests {
                     for object_id in case.forget_objects {
                         assert_eq!(
                             objects()
-                                .load(&deps.storage, decode_hash(object_id))
+                                .load(&deps.storage, decode_hex(object_id.as_str()).into())
                                 .unwrap_err(),
-                            StdError::not_found(type_name::<Object>())
+                            StdError::not_found(not_found_object_info::<Object>(&object_id))
                         );
                     }
                 }

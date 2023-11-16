@@ -50,6 +50,9 @@ Given its role and status, this smart contract serves as the primary access poin
 |parameter|description|
 |----------|-----------|
 |`name`|*(Required.) * **string**. A unique name to identify the dataverse instance.|
+|`triplestore_config`|*(Required.) * **[TripleStoreConfig](#triplestoreconfig)**. The configuration used to instantiate the triple store.|
+|`triplestore_config.code_id`|**[Uint64](#uint64)**. The code id that will be used to instantiate the triple store contract in which to store dataverse semantic data. It must implement the cognitarium interface.|
+|`triplestore_config.limits`|**[TripleStoreLimitsInput](#triplestorelimitsinput)**. Limitations regarding triple store usage.|
 
 ## ExecuteMsg
 
@@ -83,10 +86,10 @@ The unique identification of each Digital Resource is achieved through a combina
 |parameter|description|
 |----------|-----------|
 |`register_digital_resource`|*(Required.) * **object**. |
-|`register_digital_resource.identifier`|*(Required.) * **string**. The URI that identifies the dataset. This URI makes sense only in the context of the service that provides the resource.<br /><br />Preconditions: - The URI must be unique within the dataverse.|
+|`register_digital_resource.identifier`|*(Required.) * **string**. The URI that identifies the resource. This URI makes sense only in the context of the service that provides the resource.<br /><br />Preconditions: - The URI must be unique within the dataverse.|
 |`register_digital_resource.identity`|*(Required.) * **string**. The decentralized identity (DID) of the Digital Resource.<br /><br />Preconditions: - The identity must be unique within the dataverse.|
-|`register_digital_resource.provided_by`|*(Required.) * **string**. The URI of the service, already registered in the dataverse, that provides the dataset.<br /><br />Preconditions: - The Service must be registered in the dataverse before the resource can be registered.|
-|`register_digital_resource.registrar`|**string\|null**. The URI of the entity responsible for registering and managing the resource in the dataverse (i.e. on the blockchain). It's an optional field, if not provided the dataset is registered by the entity that invokes the transaction.|
+|`register_digital_resource.provided_by`|*(Required.) * **string**. The URI of the service, already registered in the dataverse, that provides the resource.<br /><br />Preconditions: - The Service must be registered in the dataverse before the resource can be registered.|
+|`register_digital_resource.registrar`|**string\|null**. The URI of the entity responsible for registering and managing the resource in the dataverse (i.e. on the blockchain). It's an optional field, if not provided the resource is registered by the entity that invokes the transaction.|
 
 ### ExecuteMsg::FoundZone
 
@@ -202,6 +205,36 @@ RDF/XML is a syntax to express RDF information in XML. See the [official RDF/XML
 |-------|
 |`"rdf_xml"`|
 
+### TripleStoreConfig
+
+`TripleStoreConfig` represents the configuration related to the management of the triple store.
+
+|property|description|
+|----------|-----------|
+|`code_id`|*(Required.) * **[Uint64](#uint64)**. The code id that will be used to instantiate the triple store contract in which to store dataverse semantic data. It must implement the cognitarium interface.|
+|`limits`|*(Required.) * **[TripleStoreLimitsInput](#triplestorelimitsinput)**. Limitations regarding triple store usage.|
+|`limits.max_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`limits.max_insert_data_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`limits.max_insert_data_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`limits.max_query_limit`|**integer\|null**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.|
+|`limits.max_query_variable_count`|**integer\|null**. The maximum number of variables a query can select. Default to 30 if not set.|
+|`limits.max_triple_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`limits.max_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+
+### TripleStoreLimitsInput
+
+Contains requested limitations regarding store usages.
+
+|property|description|
+|----------|-----------|
+|`max_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`max_insert_data_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`max_insert_data_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`max_query_limit`|**integer\|null**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.|
+|`max_query_variable_count`|**integer\|null**. The maximum number of variables a query can select. Default to 30 if not set.|
+|`max_triple_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`max_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+
 ### Turtle
 
 Turtle (Terse RDF Triple Language) Format
@@ -212,6 +245,30 @@ Turtle is a textual format for representing RDF triples in a more compact and hu
 |-------|
 |`"turtle"`|
 
+### Uint128
+
+A string containing a 128-bit integer in decimal representation.
+
+|type|
+|----|
+|**string**.|
+
+### Uint64
+
+A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.
+
+# Examples
+
+Use `from` to create instances of this and `u64` to get the value out:
+
+``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);
+
+let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
+
+|type|
+|----|
+|**string**.|
+
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`7dba583f9d24fda1`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`569cd8a4d521dc5f`)*

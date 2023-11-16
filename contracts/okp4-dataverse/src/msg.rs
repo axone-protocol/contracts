@@ -1,11 +1,14 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Uint128, Uint64};
 
 /// `InstantiateMsg` is used to initialize a new instance of the dataverse.
 #[cw_serde]
 pub struct InstantiateMsg {
     /// A unique name to identify the dataverse instance.
     pub name: String,
+
+    /// The configuration used to instantiate the triple store.
+    pub triplestore_config: TripleStoreConfig,
 }
 
 /// `ExecuteMsg` defines the set of possible actions that can be performed on the dataverse.
@@ -55,19 +58,19 @@ pub enum ExecuteMsg {
         /// Preconditions:
         /// - The identity must be unique within the dataverse.
         identity: Did,
-        /// The URI that identifies the dataset.
+        /// The URI that identifies the resource.
         /// This URI makes sense only in the context of the service that provides the resource.
         ///
         /// Preconditions:
         /// - The URI must be unique within the dataverse.
         identifier: Uri,
-        /// The URI of the service, already registered in the dataverse, that provides the dataset.
+        /// The URI of the service, already registered in the dataverse, that provides the resource.
         ///
         /// Preconditions:
         /// - The Service must be registered in the dataverse before the resource can be registered.
         provided_by: Uri,
         /// The URI of the entity responsible for registering and managing the resource in the dataverse (i.e. on the blockchain).
-        /// It's an optional field, if not provided the dataset is registered by the entity that invokes the transaction.
+        /// It's an optional field, if not provided the resource is registered by the entity that invokes the transaction.
         registrar: Option<Did>,
     },
 
@@ -118,6 +121,80 @@ pub enum ExecuteMsg {
         /// The unique identifier of the claims to be revoked.
         identifier: Uri,
     },
+}
+
+/// # TripleStoreConfig
+/// `TripleStoreConfig` represents the configuration related to the management of the triple store.
+#[cw_serde]
+pub struct TripleStoreConfig {
+    /// The code id that will be used to instantiate the triple store contract in which
+    /// to store dataverse semantic data. It must implement the cognitarium interface.
+    pub code_id: Uint64,
+
+    /// Limitations regarding triple store usage.
+    pub limits: TripleStoreLimitsInput,
+}
+
+/// # TripleStoreLimitsInput
+/// Contains requested limitations regarding store usages.
+#[cw_serde]
+#[derive(Default)]
+pub struct TripleStoreLimitsInput {
+    /// The maximum number of triples the store can contain.
+    /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
+    pub max_triple_count: Option<Uint128>,
+    /// The maximum number of bytes the store can contain.
+    /// The size of a triple is counted as the sum of the size of its subject, predicate and object,
+    /// including the size of data types and language tags if any.
+    /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
+    pub max_byte_size: Option<Uint128>,
+    /// The maximum number of bytes the store can contain for a single triple.
+    /// The size of a triple is counted as the sum of the size of its subject, predicate and object,
+    /// including the size of data types and language tags if any. The limit is used to prevent
+    /// storing very large triples, especially literals.
+    /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
+    pub max_triple_byte_size: Option<Uint128>,
+    /// The maximum limit of a query, i.e. the maximum number of triples returned by a select query.
+    /// Default to 30 if not set.
+    pub max_query_limit: Option<u32>,
+    /// The maximum number of variables a query can select.
+    /// Default to 30 if not set.
+    pub max_query_variable_count: Option<u32>,
+    /// The maximum number of bytes an insert data query can contain.
+    /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
+    pub max_insert_data_byte_size: Option<Uint128>,
+    /// The maximum number of triples an insert data query can contain (after parsing).
+    /// Default to [Uint128::MAX] if not set, which can be considered as no limit.
+    pub max_insert_data_triple_count: Option<Uint128>,
+}
+
+impl From<TripleStoreLimitsInput> for okp4_cognitarium::msg::StoreLimitsInput {
+    fn from(value: TripleStoreLimitsInput) -> Self {
+        let mut limits = okp4_cognitarium::msg::StoreLimitsInput::default();
+        if let Some(max_triple_count) = value.max_triple_count {
+            limits.max_triple_count = max_triple_count;
+        }
+        if let Some(max_byte_size) = value.max_byte_size {
+            limits.max_byte_size = max_byte_size;
+        }
+        if let Some(max_triple_byte_size) = value.max_triple_byte_size {
+            limits.max_triple_byte_size = max_triple_byte_size;
+        }
+        if let Some(max_query_limit) = value.max_query_limit {
+            limits.max_query_limit = max_query_limit;
+        }
+        if let Some(max_query_variable_count) = value.max_query_variable_count {
+            limits.max_query_variable_count = max_query_variable_count;
+        }
+        if let Some(max_insert_data_byte_size) = value.max_insert_data_byte_size {
+            limits.max_insert_data_byte_size = max_insert_data_byte_size;
+        }
+        if let Some(max_insert_data_triple_count) = value.max_insert_data_triple_count {
+            limits.max_insert_data_triple_count = max_insert_data_triple_count;
+        }
+
+        limits
+    }
 }
 
 /// # RdfFormat

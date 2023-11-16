@@ -3,14 +3,19 @@ members = ["contracts/*", "packages/*"]
 
 [workspace.dependencies]
 cosmwasm-schema = "1.5.0"
-cosmwasm-std = "1.5.0"
+cosmwasm-std = { version = "1.5.0", features = ["cosmwasm_1_2"] }
 cosmwasm-storage = "1.4.1"
 cw-multi-test = "0.15.1"
 cw-storage-plus = "1.2.0"
 cw-utils = "1.0.2"
 cw2 = "1.1.1"
+okp4-cognitarium = { path = "contracts/okp4-cognitarium", features = [
+  "library",
+] }
 okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
-okp4-objectarium = { path = "contracts/okp4-objectarium" }
+okp4-objectarium = { path = "contracts/okp4-objectarium", features = [
+  "library",
+] }
 okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
 schemars = "0.8.16"
 serde = { version = "1.0.192", default-features = false, features = ["derive"] }

@@ -29,13 +29,13 @@ pub fn instantiate(
         .query_wasm_code_info(msg.triplestore_config.code_id.u64())?;
     let salt = Binary::from(msg.name.as_bytes());
 
-    let triplestore_address = instantiate2_address(&checksum, &creator, &salt)?;
+    let _triplestore_address = instantiate2_address(&checksum, &creator, &salt)?;
 
     // Necessary stuff for testing purposes, see: https://github.com/CosmWasm/cosmwasm/issues/1648
     let triplestore_address = {
         #[cfg(not(test))]
         {
-            deps.api.addr_humanize(&triplestore_address)?
+            deps.api.addr_humanize(&_triplestore_address)?
         }
         #[cfg(test)]
         cosmwasm_std::Addr::unchecked("predicted address")
@@ -45,12 +45,12 @@ pub fn instantiate(
         deps.storage,
         &Dataverse {
             name: msg.name.clone(),
-            triplestore_address: triplestore_address.to_string(),
+            triplestore_address: triplestore_address.clone(),
         },
     )?;
 
     Ok(Response::new()
-        .add_attribute("triplestore_address", triplestore_address)
+        .add_attribute("triplestore_address", triplestore_address.to_string())
         .add_message(WasmMsg::Instantiate2 {
             admin: Some(env.contract.address.to_string()),
             code_id: msg.triplestore_config.code_id.u64(),
@@ -88,8 +88,8 @@ mod tests {
     use crate::msg::{TripleStoreConfig, TripleStoreLimitsInput};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        Attribute, ContractResult, HexBinary, SubMsg, SystemError, SystemResult, Uint128, Uint64,
-        WasmQuery,
+        Addr, Attribute, ContractResult, HexBinary, SubMsg, SystemError, SystemResult, Uint128,
+        Uint64, WasmQuery,
     };
 
     #[test]
@@ -148,7 +148,7 @@ mod tests {
             DATAVERSE.load(&deps.storage).unwrap(),
             Dataverse {
                 name: "my-dataverse".to_string(),
-                triplestore_address: "predicted address".to_string(),
+                triplestore_address: Addr::unchecked("predicted address"),
             }
         )
     }

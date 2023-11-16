@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    instantiate2_address, to_binary, Binary, CodeInfoResponse, Deps, DepsMut, Env, MessageInfo,
-    Response, StdError, StdResult, WasmMsg,
+    instantiate2_address, to_json_binary, Binary, CodeInfoResponse, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
 
@@ -29,9 +29,9 @@ pub fn instantiate(
         .query_wasm_code_info(msg.triplestore_config.code_id.u64())?;
     let salt = Binary::from(msg.name.as_bytes());
 
-    /// Necessary stuff for testing purposes, see: https://github.com/CosmWasm/cosmwasm/issues/1648
-    #[allow(unused)]
     let triplestore_address = instantiate2_address(&checksum, &creator, &salt)?;
+
+    // Necessary stuff for testing purposes, see: https://github.com/CosmWasm/cosmwasm/issues/1648
     let triplestore_address = {
         #[cfg(not(test))]
         {
@@ -55,7 +55,7 @@ pub fn instantiate(
             admin: Some(env.contract.address.to_string()),
             code_id: msg.triplestore_config.code_id.u64(),
             label: format!("{}_triplestore", msg.name),
-            msg: to_binary(&okp4_cognitarium::msg::InstantiateMsg {
+            msg: to_json_binary(&okp4_cognitarium::msg::InstantiateMsg {
                 limits: msg.triplestore_config.limits.into(),
             })?,
             funds: vec![],
@@ -105,7 +105,7 @@ mod tests {
                     )
                     .unwrap(),
                 );
-                SystemResult::Ok(ContractResult::Ok(to_binary(&resp).unwrap()))
+                SystemResult::Ok(ContractResult::Ok(to_json_binary(&resp).unwrap()))
             }
             _ => SystemResult::Err(SystemError::Unknown {}),
         });
@@ -123,7 +123,8 @@ mod tests {
             },
         };
 
-        let res = instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
+        let env = mock_env();
+        let res = instantiate(deps.as_mut(), env.clone(), mock_info("creator", &[]), msg).unwrap();
 
         assert_eq!(
             res.attributes,
@@ -132,10 +133,10 @@ mod tests {
         assert_eq!(
             res.messages,
             vec![SubMsg::new(WasmMsg::Instantiate2 {
-                admin: Some("cosmos2contract".to_string()),
+                admin: Some(env.contract.address.to_string()),
                 code_id: 17,
                 label: "my-dataverse_triplestore".to_string(),
-                msg: to_binary(&okp4_cognitarium::msg::InstantiateMsg {
+                msg: to_json_binary(&okp4_cognitarium::msg::InstantiateMsg {
                     limits: store_limits.into(),
                 })
                 .unwrap(),

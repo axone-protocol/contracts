@@ -56,7 +56,7 @@ pub fn instantiate(
             code_id: msg.triplestore_config.code_id.u64(),
             label: format!("{}_triplestore", msg.name),
             msg: to_binary(&okp4_cognitarium::msg::InstantiateMsg {
-                limits: msg.triplestore_config.limits,
+                limits: msg.triplestore_config.limits.into(),
             })?,
             funds: vec![],
             salt,
@@ -85,13 +85,12 @@ pub mod query {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::TripleStoreConfig;
+    use crate::msg::{TripleStoreConfig, TripleStoreLimitsInput};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
         Attribute, ContractResult, HexBinary, SubMsg, SystemError, SystemResult, Uint128, Uint64,
         WasmQuery,
     };
-    use okp4_cognitarium::msg::StoreLimitsInputBuilder;
 
     #[test]
     fn proper_instantiate() {
@@ -111,10 +110,10 @@ mod tests {
             _ => SystemResult::Err(SystemError::Unknown {}),
         });
 
-        let store_limits = StoreLimitsInputBuilder::default()
-            .max_byte_size(Uint128::from(50000u128))
-            .build()
-            .unwrap();
+        let store_limits = TripleStoreLimitsInput {
+            max_byte_size: Some(Uint128::from(50000u128)),
+            ..Default::default()
+        };
 
         let msg = InstantiateMsg {
             name: "my-dataverse".to_string(),
@@ -137,7 +136,7 @@ mod tests {
                 code_id: 17,
                 label: "my-dataverse_triplestore".to_string(),
                 msg: to_binary(&okp4_cognitarium::msg::InstantiateMsg {
-                    limits: store_limits,
+                    limits: store_limits.into(),
                 })
                 .unwrap(),
                 funds: vec![],

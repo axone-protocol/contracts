@@ -52,7 +52,7 @@ Given its role and status, this smart contract serves as the primary access poin
 |`name`|*(Required.) * **string**. A unique name to identify the dataverse instance.|
 |`triplestore_config`|*(Required.) * **[TripleStoreConfig](#triplestoreconfig)**. The configuration used to instantiate the triple store.|
 |`triplestore_config.code_id`|**[Uint64](#uint64)**. The code id that will be used to instantiate the triple store contract in which to store dataverse semantic data. It must implement the cognitarium interface.|
-|`triplestore_config.limits`|**[StoreLimitsInput](#storelimitsinput)**. Limitations regarding triple store usage.<br />**Default:** `{"max_byte_size":"340282366920938463463374607431768211455","max_insert_data_byte_size":"340282366920938463463374607431768211455","max_insert_data_triple_count":"340282366920938463463374607431768211455","max_query_limit":30,"max_query_variable_count":30,"max_triple_byte_size":"340282366920938463463374607431768211455","max_triple_count":"340282366920938463463374607431768211455"}`|
+|`triplestore_config.limits`|**[TripleStoreLimitsInput](#triplestorelimitsinput)**. Limitations regarding triple store usage.|
 
 ## ExecuteMsg
 
@@ -205,20 +205,6 @@ RDF/XML is a syntax to express RDF information in XML. See the [official RDF/XML
 |-------|
 |`"rdf_xml"`|
 
-### StoreLimitsInput
-
-Contains requested limitations regarding store usages.
-
-|property|description|
-|----------|-----------|
-|`max_byte_size`|**[Uint128](#uint128)**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`max_insert_data_byte_size`|**[Uint128](#uint128)**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`max_insert_data_triple_count`|**[Uint128](#uint128)**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`max_query_limit`|**integer**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.|
-|`max_query_variable_count`|**integer**. The maximum number of variables a query can select. Default to 30 if not set.|
-|`max_triple_byte_size`|**[Uint128](#uint128)**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`max_triple_count`|**[Uint128](#uint128)**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-
 ### TripleStoreConfig
 
 `TripleStoreConfig` represents the configuration related to the management of the triple store.
@@ -226,14 +212,28 @@ Contains requested limitations regarding store usages.
 |property|description|
 |----------|-----------|
 |`code_id`|*(Required.) * **[Uint64](#uint64)**. The code id that will be used to instantiate the triple store contract in which to store dataverse semantic data. It must implement the cognitarium interface.|
-|`limits`|**[StoreLimitsInput](#storelimitsinput)**. Limitations regarding triple store usage.|
-|`limits.max_byte_size`|**[Uint128](#uint128)**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.<br />**Default:** `"340282366920938463463374607431768211455"`|
-|`limits.max_insert_data_byte_size`|**[Uint128](#uint128)**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.<br />**Default:** `"340282366920938463463374607431768211455"`|
-|`limits.max_insert_data_triple_count`|**[Uint128](#uint128)**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.<br />**Default:** `"340282366920938463463374607431768211455"`|
-|`limits.max_query_limit`|**integer**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.<br />**Default:** `30`|
-|`limits.max_query_variable_count`|**integer**. The maximum number of variables a query can select. Default to 30 if not set.<br />**Default:** `30`|
-|`limits.max_triple_byte_size`|**[Uint128](#uint128)**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit.<br />**Default:** `"340282366920938463463374607431768211455"`|
-|`limits.max_triple_count`|**[Uint128](#uint128)**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.<br />**Default:** `"340282366920938463463374607431768211455"`|
+|`limits`|*(Required.) * **[TripleStoreLimitsInput](#triplestorelimitsinput)**. Limitations regarding triple store usage.|
+|`limits.max_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`limits.max_insert_data_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`limits.max_insert_data_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`limits.max_query_limit`|**integer\|null**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.|
+|`limits.max_query_variable_count`|**integer\|null**. The maximum number of variables a query can select. Default to 30 if not set.|
+|`limits.max_triple_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`limits.max_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+
+### TripleStoreLimitsInput
+
+Contains requested limitations regarding store usages.
+
+|property|description|
+|----------|-----------|
+|`max_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`max_insert_data_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`max_insert_data_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`max_query_limit`|**integer\|null**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.|
+|`max_query_variable_count`|**integer\|null**. The maximum number of variables a query can select. Default to 30 if not set.|
+|`max_triple_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+|`max_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
 
 ### Turtle
 
@@ -271,4 +271,4 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`bee536f5330fd1e5`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`569cd8a4d521dc5f`)*

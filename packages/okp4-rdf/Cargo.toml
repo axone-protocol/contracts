@@ -1,0 +1,11 @@
+[package]
+authors = ["OKP4"]
+edition = "2021"
+name = "okp4-rdf"
+version = "3.0.0"
+
+[dependencies]
+cosmwasm-std.workspace = true
+rio_api.workspace = true
+rio_turtle.workspace = true
+rio_xml.workspace = true

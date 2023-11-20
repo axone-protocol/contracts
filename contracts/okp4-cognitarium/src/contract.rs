@@ -51,9 +51,10 @@ pub mod execute {
     use super::*;
     use crate::msg::{DataFormat, Prefix, TriplePattern, WhereClause};
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{PrefixMap, TripleReader};
+    use crate::rdf::PrefixMap;
     use crate::state::HasCachedNamespaces;
     use crate::storer::StoreEngine;
+    use okp4_rdf::serde::TripleReader;
     use std::io::BufReader;
 
     pub fn verify_owner(deps: &DepsMut<'_>, info: &MessageInfo) -> Result<(), ContractError> {
@@ -73,7 +74,7 @@ pub mod execute {
         verify_owner(&deps, &info)?;
 
         let buf = BufReader::new(data.as_slice());
-        let mut reader = TripleReader::new(&format, buf);
+        let mut reader = TripleReader::new(&(&format).into(), buf);
         let mut storer = StoreEngine::new(deps.storage)?;
         let count = storer.store_all(&mut reader)?;
 
@@ -144,8 +145,9 @@ pub mod query {
         VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{PrefixMap, TripleWriter};
+    use crate::rdf::PrefixMap;
     use crate::state::HasCachedNamespaces;
+    use okp4_rdf::serde::TripleWriter;
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -231,7 +233,7 @@ pub mod query {
             })?;
 
         let out: Vec<u8> = Vec::default();
-        let mut writer = TripleWriter::new(&format, out);
+        let mut writer = TripleWriter::new(&(&format).into(), out);
 
         for atom in &atoms {
             let triple = atom.into();
@@ -285,7 +287,7 @@ pub mod query {
             })?;
 
         let out: Vec<u8> = Vec::default();
-        let mut writer = TripleWriter::new(&format, out);
+        let mut writer = TripleWriter::new(&(&format).into(), out);
 
         for atom in &atoms {
             let triple = atom.into();

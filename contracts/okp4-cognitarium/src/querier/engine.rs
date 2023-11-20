@@ -858,14 +858,14 @@ impl AtomTemplate {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::msg::{DataFormat, StoreLimitsInput};
-    use crate::rdf::TripleReader;
+    use crate::msg::StoreLimitsInput;
     use crate::state;
     use crate::state::Object::{Literal, Named};
     use crate::state::{Node, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
     use crate::storer::StoreEngine;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
+    use okp4_rdf::serde::TripleReader;
     use std::env;
     use std::fs::File;
     use std::io::{BufReader, Read};
@@ -900,7 +900,7 @@ mod test {
         NAMESPACE_KEY_INCREMENT.save(storage, &0u128).unwrap();
         let data = read_test_data("sample.rdf.xml");
         let buf = BufReader::new(data.as_slice());
-        let mut reader = TripleReader::new(&DataFormat::RDFXml, buf);
+        let mut reader = TripleReader::new(&okp4_rdf::serde::DataFormat::RDFXml, buf);
         let mut storer = StoreEngine::new(storage).unwrap();
         let count = storer.store_all(&mut reader).unwrap();
 

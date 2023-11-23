@@ -42,7 +42,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true
-url = "2.4.0"
+url = "2.5.0"
 
 [features]
 # for more explicit tests, cargo test --features=backtraces

@@ -322,9 +322,9 @@ dependencies = [
 
 [[package]]
 name = "cw-utils"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b9f351a4e4d81ef7c890e44d903f8c0bdcdc00f094fd3a181eaf70c0eec7a3a"
+checksum = "1c4a657e5caacc3a0d00ee96ca8618745d050b8f757c709babafb81208d4239c"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -757,7 +757,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 1.2.0",
- "cw-utils 1.0.2",
+ "cw-utils 1.0.3",
  "cw2 1.1.1",
  "itertools 0.12.0",
  "okp4-cognitarium",
@@ -776,7 +776,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 1.2.0",
- "cw-utils 1.0.2",
+ "cw-utils 1.0.3",
  "cw2 1.1.1",
  "itertools 0.12.0",
  "okp4-logic-bindings",

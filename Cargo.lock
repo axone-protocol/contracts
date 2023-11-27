@@ -712,6 +712,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "okp4-cognitarium-client"
+version = "3.0.0"
+dependencies = [
+ "cosmwasm-std",
+ "okp4-cognitarium",
+ "serde",
+]
+
+[[package]]
 name = "okp4-dataverse"
 version = "0.0.1"
 dependencies = [
@@ -724,6 +733,9 @@ dependencies = [
  "cw2",
  "itertools 0.12.1",
  "okp4-cognitarium",
+ "okp4-cognitarium-client",
+ "okp4-rdf",
+ "rio_api",
  "schemars",
  "serde",
  "thiserror",

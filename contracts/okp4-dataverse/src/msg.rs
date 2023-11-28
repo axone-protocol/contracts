@@ -16,93 +16,36 @@ pub struct InstantiateMsg {
 /// This enum provides variants for registering services, datasets, and other operations related to the dataverse.
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// # RegisterService
-    /// Registers a new Service within the dataverse.
-    ///
-    /// The term 'Service' in this context is employed to denote any form of service that is accessible over a network.
-    /// This encompasses, but is not limited to, services such as REST APIs, gRPC services, and similar network-based
-    /// services.
-    ///
-    /// A fundamental characteristic of each service is its unique Uniform Resource Identifier (URI), which serves as
-    /// the definitive entry point for accessing the service. This URI is pivotal in the identification and location of
-    /// the service within the network.
-    RegisterService {
-        /// The decentralized identity (DID) of the service.
-        ///
-        /// Preconditions:
-        /// - The identity must be unique within the dataverse.
-        identity: Did,
-        /// The URI that identifies and locates the service.
-        ///
-        /// The URI serves a dual purpose:
-        /// 1. **Identification**: It provides a unique identifier for the service, ensuring that each service can be distinctly recognized within the dataverse.
-        /// 2. **Endpoint**: The URI acts as the access point or endpoint for the service. It specifies where the service can be accessed and how interactions with the service should be initiated.
-        identifier: Uri,
-        /// The URI of the entity responsible for registering and managing the service in the dataverse (i.e. on the blockchain).
-        /// It's an optional field, if not provided the service is registered by the entity that invokes the transaction.
-        registrar: Option<Did>,
-    },
-
-    /// # RegisterDigitalResource
-    /// Registers a new digital resource within the dataverse.
-    ///
-    /// A Digital Resource represents a broad category encompassing various digital entities registerable in the dataverse.
-    /// This category includes, but is not limited to, datasets, algorithms, machine learning models, and other digital assets.
-    ///
-    /// The unique identification of each Digital Resource is achieved through a combination of its Uniform Resource Identifier (URI)
-    /// and the specific service responsible for its provision. This dual-component identification mechanism guarantees the distinct
-    /// recognition and operationalization of each Digital Resource within the dataverse environment.
-    RegisterDigitalResource {
-        /// The decentralized identity (DID) of the Digital Resource.
-        ///
-        /// Preconditions:
-        /// - The identity must be unique within the dataverse.
-        identity: Did,
-        /// The URI that identifies the resource.
-        /// This URI makes sense only in the context of the service that provides the resource.
-        ///
-        /// Preconditions:
-        /// - The URI must be unique within the dataverse.
-        identifier: Uri,
-        /// The URI of the service, already registered in the dataverse, that provides the resource.
-        ///
-        /// Preconditions:
-        /// - The Service must be registered in the dataverse before the resource can be registered.
-        provided_by: Uri,
-        /// The URI of the entity responsible for registering and managing the resource in the dataverse (i.e. on the blockchain).
-        /// It's an optional field, if not provided the resource is registered by the entity that invokes the transaction.
-        registrar: Option<Did>,
-    },
-
-    /// # FoundZone
-    /// Founds a new zone within the dataverse.
-    ///
-    /// `Zone` is a conceptual framework that is established based on a set of rules, within which
-    /// recognized Resources must conform, considering associated consents.
-    FoundZone {
-        /// The decentralized identity (DID) of the Zone.
-        /// This identity must be unique within the dataverse.
-        identity: Did,
-        /// The URI of the entity responsible for registering and managing the zone in the dataverse (i.e. on the blockchain).
-        /// It's an optional field, if not provided the zone is registered by the entity that invokes the transaction.
-        registrar: Option<Did>,
-    },
-
     /// # SubmitClaims
     /// Submits new claims about a resource to the dataverse.
     ///
-    /// A claim is a statement made by an entity, the issuer (e.g. a person, an organization, or a machine) about a resource
-    /// (e.g. an entity, a service, or a zone) that the issuer asserts to be true.
+    /// The SubmitClaims message is a pivotal component in the dataverse, enabling entities to contribute new claims about various
+    /// resources. A claim represents a statement made by an entity, referred to as the issuer, which could be a person, organization,
+    /// or service. These claims pertain to a diverse range of resources, including digital resources, services, zones, or individuals,
+    /// and are asserted as factual by the issuer.
     ///
-    /// The claims are submitted to the dataverse in the form of Verifiable Presentations (VPs), which combine and present credentials.
-    /// The data in the presentation concerns usually the same subject, but there is no limit to the number of subjects or
-    /// issuers in the data.
+    /// #### Format
     ///
-    /// Preconditions:
-    /// - The claims must be submitted in the form of Verifiable Presentations (VPs).
-    /// - The subjects of the Verifiable Credentials must exist in the dataverse before the claims can be submitted.
-    /// - The identifiers of the Veriable Credentials must be unique within the dataverse.
-    /// - The claims must be signed by the issuer and the signature must be verifiable.
+    /// Claims are injected into the dataverse through Verifiable Presentations (VPs). These presentations effectively amalgamate and
+    /// showcase multiple credentials, thus providing a cohesive and comprehensive view of the assertions being made.
+    ///
+    /// While the data in a VP typically revolves around a common subject, it accommodates an unlimited number of subjects and issuers.
+    /// This flexibility allows for a broad spectrum of claims to be represented.
+    ///
+    /// Primarily, the claims leverage the OKP4 ontology, which facilitates articulating assertions about widely acknowledged resources
+    /// in the dataverse, including digital services, digital resources, zones, governance, and more.
+    ///
+    /// Additionally, other schemas may also be employed to supplement and enhance the validated knowledge contributed to these resources.
+    ///
+    /// #### Preconditions
+    ///
+    /// To maintain integrity and coherence in the dataverse, several preconditions are set for the submission of claims:
+    ///
+    ///   1. **Format Requirement**: Claims must be encapsulated within Verifiable Presentations (VPs).
+    ///
+    ///   2. **Unique Identifier Mandate**: Each Verifiable Credential within the dataverse must possess a unique identifier.
+    ///
+    ///   3. **Issuer Signature**: Claims must bear the issuer's signature. This signature must be verifiable, ensuring authenticity and credibility.
     SubmitClaims {
         /// The serialized metadata intended for attachment.
         /// This metadata should adhere to the format specified in the `format` field.
@@ -115,8 +58,9 @@ pub enum ExecuteMsg {
     /// # RevokeClaims
     /// Revoke or withdraw a previously submitted claims.
     ///
-    /// Preconditions:
-    /// - The identifier of the claims must exist in the dataverse.
+    /// #### Preconditions:
+    ///
+    ///  1. **Identifier Existance**: The identifier of the claims must exist in the dataverse.
     RevokeClaims {
         /// The unique identifier of the claims to be revoked.
         identifier: Uri,
@@ -241,11 +185,6 @@ pub enum RdfFormat {
 /// to identify a resource.
 /// see https://en.wikipedia.org/wiki/Uniform_Resource_Identifier.
 type Uri = String;
-
-/// # Did
-/// `Did` represents a Decentralized Identifier (DID), a globally unique identifier.
-/// see https://www.w3.org/TR/did-core/.
-type Did = Uri;
 
 /// `QueryMsg` defines the set of possible queries that can be made to retrieve information about the dataverse.
 ///

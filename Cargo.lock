@@ -842,10 +842,12 @@ dependencies = [
 name = "okp4-rdf"
 version = "3.0.0"
 dependencies = [
+ "base16ct",
  "cosmwasm-std",
  "rio_api",
  "rio_turtle",
  "rio_xml",
+ "sha2 0.10.8",
 ]
 
 [[package]]

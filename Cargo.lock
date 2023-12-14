@@ -848,6 +848,7 @@ dependencies = [
  "rio_turtle",
  "rio_xml",
  "sha2 0.10.8",
+ "thiserror",
 ]
 
 [[package]]

@@ -11,3 +11,4 @@ rio_api.workspace = true
 rio_turtle.workspace = true
 rio_xml.workspace = true
 sha2 = "0.10.8"
+thiserror.workspace = true

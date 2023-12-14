@@ -4,6 +4,7 @@ use sha2::Digest;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::ops::Index;
+use thiserror::Error;
 
 /// A RDF normalizer allowing to canonicalize RDF data, following the https://www.w3.org/TR/rdf-canon specification.
 #[derive(Eq, PartialEq, Debug)]
@@ -12,6 +13,13 @@ pub struct Normalizer<'a> {
     hash_to_blank_nodes: HashMap<String, Vec<String>>,
     blank_node_to_hash: HashMap<String, String>,
     canonical_issuer: IdentifierIssuer,
+}
+
+#[derive(Error, Debug, Eq, PartialEq)]
+pub enum NormalizationError {
+    /// An unexpected error denotes an error that should never occur.  
+    #[error("An unexpected error occurred: {0}")]
+    Unexpected(String),
 }
 
 impl<'a> Normalizer<'a> {
@@ -36,33 +44,48 @@ impl<'a> Normalizer<'a> {
         }
     }
 
-    pub fn normalize(&'a mut self, dataset: &[Quad<'a>]) -> String {
+    pub fn normalize(&'a mut self, dataset: &[Quad<'a>]) -> Result<String, NormalizationError> {
         self.reset();
         self.track_blank_nodes(dataset);
         self.compute_first_degree_hashes();
-        self.label_unique_nodes();
-        self.compute_n_degree_hashes();
+        self.label_unique_nodes()?;
+        self.compute_n_degree_hashes()?;
 
         let mut canonicalized_dataset = dataset.to_vec();
         for quad in canonicalized_dataset.iter_mut() {
             if let Subject::BlankNode(n) = quad.subject {
                 quad.subject = Subject::BlankNode(BlankNode {
-                    id: self.canonical_issuer.get(n.id).unwrap(),
+                    id: self.canonical_issuer.get(n.id).ok_or_else(|| {
+                        NormalizationError::Unexpected(
+                            "Could not replace subject blank node, canonical identifier not found"
+                                .to_string(),
+                        )
+                    })?,
                 });
             }
             if let Term::BlankNode(n) = quad.object {
                 quad.object = Term::BlankNode(BlankNode {
-                    id: self.canonical_issuer.get(n.id).unwrap(),
+                    id: self.canonical_issuer.get(n.id).ok_or_else(|| {
+                        NormalizationError::Unexpected(
+                            "Could not replace object blank node, canonical identifier not found"
+                                .to_string(),
+                        )
+                    })?,
                 });
             }
             if let Some(GraphName::BlankNode(n)) = quad.graph_name {
                 quad.graph_name = Some(GraphName::BlankNode(BlankNode {
-                    id: self.canonical_issuer.get(n.id).unwrap(),
+                    id: self.canonical_issuer.get(n.id).ok_or_else(|| {
+                        NormalizationError::Unexpected(
+                            "Could not replace graph blank node, canonical identifier not found"
+                                .to_string(),
+                        )
+                    })?,
                 }));
             }
         }
 
-        Self::serialize(&canonicalized_dataset)
+        Ok(Self::serialize(&canonicalized_dataset))
     }
 
     fn reset(&mut self) {
@@ -105,9 +128,8 @@ impl<'a> Normalizer<'a> {
         }
     }
 
-    fn label_unique_nodes(&mut self) {
+    fn label_unique_nodes(&mut self) -> Result<(), NormalizationError> {
         let mut sorted_hash = Vec::with_capacity(self.hash_to_blank_nodes.len());
-
         for hash in self.hash_to_blank_nodes.iter().filter_map(|(key, nodes)| {
             if nodes.len() > 1 {
                 return None;
@@ -122,14 +144,20 @@ impl<'a> Normalizer<'a> {
             self.canonical_issuer.get_or_issue(
                 self.hash_to_blank_nodes
                     .remove(&hash)
-                    .unwrap()
+                    .ok_or_else(|| {
+                        NormalizationError::Unexpected(
+                            "Could not label unique node, hash not found".to_string(),
+                        )
+                    })?
                     .index(0)
                     .clone(),
             );
         }
+
+        Ok(())
     }
 
-    fn compute_n_degree_hashes(&mut self) {
+    fn compute_n_degree_hashes(&mut self) -> Result<(), NormalizationError> {
         let mut sorted_first_degree_hashes: Vec<String> =
             Vec::with_capacity(self.hash_to_blank_nodes.len());
         sorted_first_degree_hashes.extend(self.hash_to_blank_nodes.keys().cloned());
@@ -154,7 +182,7 @@ impl<'a> Normalizer<'a> {
                 );
                 scoped_issuer.get_or_issue(node.clone());
 
-                let (n_degree_hash, _) = self.compute_n_degree_hash(&mut scoped_issuer, node);
+                let (n_degree_hash, _) = self.compute_n_degree_hash(&mut scoped_issuer, node)?;
                 hash_to_node.insert(n_degree_hash.clone(), node.clone());
                 sorted_n_degree_hashes.push(n_degree_hash);
             }
@@ -166,18 +194,23 @@ impl<'a> Normalizer<'a> {
                 }
             }
         }
+
+        Ok(())
     }
 
     fn compute_n_degree_hash(
         &mut self,
         scoped_issuer: &mut IdentifierIssuer,
         node: &String,
-    ) -> (String, IdentifierIssuer) {
+    ) -> Result<(String, IdentifierIssuer), NormalizationError> {
         let mut hashes: HashMap<String, Vec<String>> = HashMap::new();
 
-        // TODO: manage an error if quads not found instead..
-        for quad in self.blank_node_to_quads.get(node).unwrap() {
-            [
+        for quad in self.blank_node_to_quads.get(node).ok_or_else(|| {
+            NormalizationError::Unexpected(
+                "Could not compute n degree hash, quads for node not found".to_string(),
+            )
+        })? {
+            for (related, position) in [
                 match quad.subject {
                     Subject::BlankNode(BlankNode { id }) if id != node => {
                         Some((id, Self::HASH_RELATED_BLANK_NODE_POSITION_S))
@@ -199,15 +232,15 @@ impl<'a> Normalizer<'a> {
             ]
             .iter()
             .flatten()
-            .for_each(|(related, position)| {
+            {
                 let hash =
-                    self.compute_related_blank_node_hash(quad, scoped_issuer, related, position);
+                    self.compute_related_blank_node_hash(quad, scoped_issuer, related, position)?;
 
                 hashes
                     .entry(hash)
                     .and_modify(|v| v.push(related.to_string()))
                     .or_insert(vec![related.to_string()]);
-            });
+            }
         }
 
         let mut sorted_hashes: Vec<&String> = Vec::with_capacity(hashes.len());
@@ -244,7 +277,7 @@ impl<'a> Normalizer<'a> {
                 }
 
                 for related in recursion_list {
-                    let (result, mut issuer) = self.compute_n_degree_hash(&mut issuer, &related);
+                    let (result, mut issuer) = self.compute_n_degree_hash(&mut issuer, &related)?;
                     path.push_str("_:");
                     path.push_str(issuer.get_or_issue(related).as_str());
                     path.push('<');
@@ -268,10 +301,10 @@ impl<'a> Normalizer<'a> {
             hasher.update(chosen_path.as_str());
         }
 
-        (
+        Ok((
             base16ct::lower::encode_string(&hasher.finalize()),
             chosen_issuer,
-        )
+        ))
     }
 
     fn compute_related_blank_node_hash(
@@ -280,7 +313,7 @@ impl<'a> Normalizer<'a> {
         scoped_issuer: &mut IdentifierIssuer,
         node: &str,
         position: &str,
-    ) -> String {
+    ) -> Result<String, NormalizationError> {
         let mut hasher = sha2::Sha256::new();
         hasher.update(position);
         if position != Self::HASH_RELATED_BLANK_NODE_POSITION_G {
@@ -291,18 +324,19 @@ impl<'a> Normalizer<'a> {
 
         hasher.update("_:");
 
-        // TODO: consider to manage the case the node doesn't exists in blank_node_to_hash map and output
-        //  an error. This cannot occur as every blank nodes has a computed first degree hash..
-        if let Some(hash) = self
-            .canonical_issuer
-            .get(node)
-            .or_else(|| scoped_issuer.get(node))
-            .or_else(|| self.blank_node_to_hash.get(node))
-        {
-            hasher.update(hash);
-        }
+        hasher.update(
+            self.canonical_issuer
+                .get(node)
+                .or_else(|| scoped_issuer.get(node))
+                .or_else(|| self.blank_node_to_hash.get(node))
+                .ok_or_else(|| {
+                    NormalizationError::Unexpected(
+                        "Could not compute related node hash, node not found".to_string(),
+                    )
+                })?,
+        );
 
-        base16ct::lower::encode_string(&hasher.finalize())
+        Ok(base16ct::lower::encode_string(&hasher.finalize()))
     }
 
     fn serialize(quads: &[Quad<'_>]) -> String {
@@ -577,7 +611,9 @@ mod test {
 
         for case in cases {
             let mut normalizer = Normalizer::new();
-            assert_eq!(normalizer.normalize(&case.0), case.1);
+            let res = normalizer.normalize(&case.0);
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap(), case.1);
         }
     }
 

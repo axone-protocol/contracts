@@ -464,3 +464,139 @@ impl<T: Clone> Permutable<T> for &[T] {
         PermutationsIter::new(self)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rio_api::model::NamedNode;
+
+    #[test]
+    fn normalize() {
+        let cases = vec![
+            (
+                vec![
+                    Quad {
+                        subject: Subject::NamedNode(NamedNode {
+                            iri: "http://example.com/#p",
+                        }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#q",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e0" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::NamedNode(NamedNode {
+                            iri: "http://example.com/#p",
+                        }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#r",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e1" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e0" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#s",
+                        },
+                        object: Term::NamedNode(NamedNode {
+                            iri: "http://example.com/#u",
+                        }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e1" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#t",
+                        },
+                        object: Term::NamedNode(NamedNode {
+                            iri: "http://example.com/#u",
+                        }),
+                        graph_name: None,
+                    },
+                ],
+                "197dce9a2a3f3c4bb4591910b3762146423c1a4f6901e3789490d1f28fd5e796".to_string(),
+            ),
+            (
+                vec![
+                    Quad {
+                        subject: Subject::NamedNode(NamedNode {
+                            iri: "http://example.com/#p",
+                        }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#q",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e0" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::NamedNode(NamedNode {
+                            iri: "http://example.com/#p",
+                        }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#q",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e1" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e0" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e2" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e1" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e3" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e2" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#r",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e3" }),
+                        graph_name: None,
+                    },
+                ],
+                "a561b3db619593d5d255343fe8e40411fdc35836e8a995ffc84b4d54ad9cfabc".to_string(),
+            ),
+        ];
+
+        for case in cases {
+            let mut normalizer = Normalizer::new();
+            assert_eq!(normalizer.normalize(&case.0), case.1);
+        }
+    }
+
+    #[test]
+    fn permutations() {
+        let cases: Vec<(Vec<i32>, Vec<Vec<i32>>)> = vec![
+            (vec![], vec![vec![]]),
+            (vec![1], vec![vec![1]]),
+            (vec![1, 2], vec![vec![1, 2], vec![2, 1]]),
+            (
+                vec![1, 2, 3],
+                vec![
+                    vec![1, 2, 3],
+                    vec![2, 1, 3],
+                    vec![3, 1, 2],
+                    vec![1, 3, 2],
+                    vec![2, 3, 1],
+                    vec![3, 2, 1],
+                ],
+            ),
+        ];
+
+        for case in cases {
+            let result: Vec<Vec<i32>> = case.0.as_slice().permutations().collect();
+            assert_eq!(result, case.1);
+        }
+    }
+}

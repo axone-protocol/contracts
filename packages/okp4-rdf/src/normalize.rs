@@ -48,17 +48,17 @@ impl<'a> Normalizer<'a> {
             if let Subject::BlankNode(n) = quad.subject {
                 quad.subject = Subject::BlankNode(BlankNode {
                     id: self.canonical_issuer.get(n.id).unwrap(),
-                })
+                });
             }
             if let Term::BlankNode(n) = quad.object {
                 quad.object = Term::BlankNode(BlankNode {
                     id: self.canonical_issuer.get(n.id).unwrap(),
-                })
+                });
             }
             if let Some(GraphName::BlankNode(n)) = quad.graph_name {
                 quad.graph_name = Some(GraphName::BlankNode(BlankNode {
                     id: self.canonical_issuer.get(n.id).unwrap(),
-                }))
+                }));
             }
         }
 
@@ -78,8 +78,8 @@ impl<'a> Normalizer<'a> {
             for node in quad.blank_nodes() {
                 self.blank_node_to_quads
                     .entry(node)
-                    .and_modify(|e| e.push(quad.clone()))
-                    .or_insert(vec![quad.clone()]);
+                    .and_modify(|e| e.push(*quad))
+                    .or_insert(vec![*quad]);
             }
         }
     }
@@ -93,7 +93,7 @@ impl<'a> Normalizer<'a> {
                         return Self::HASH_FIRST_DEGREE_MARKER_SELF;
                     }
                     Self::HASH_FIRST_DEGREE_MARKER_OTHER
-                })
+                });
             });
 
             let hash = Self::serialize(&replacements);
@@ -247,9 +247,9 @@ impl<'a> Normalizer<'a> {
                     let (result, mut issuer) = self.compute_n_degree_hash(&mut issuer, &related);
                     path.push_str("_:");
                     path.push_str(issuer.get_or_issue(related).as_str());
-                    path.push_str("<");
+                    path.push('<');
                     path.push_str(result.as_str());
-                    path.push_str(">");
+                    path.push('>');
 
                     if !chosen_path.is_empty()
                         && path.len() >= chosen_path.len()
@@ -269,7 +269,7 @@ impl<'a> Normalizer<'a> {
         }
 
         (
-            base16ct::lower::encode_string(&hasher.finalize().to_vec()),
+            base16ct::lower::encode_string(&hasher.finalize()),
             chosen_issuer,
         )
     }
@@ -302,7 +302,7 @@ impl<'a> Normalizer<'a> {
             hasher.update(hash);
         }
 
-        base16ct::lower::encode_string(&hasher.finalize().to_vec())
+        base16ct::lower::encode_string(&hasher.finalize())
     }
 
     fn serialize(quads: &[Quad<'_>]) -> String {
@@ -319,6 +319,12 @@ impl<'a> Normalizer<'a> {
         let hash = hasher.finalize().to_vec();
 
         base16ct::lower::encode_string(&hash)
+    }
+}
+
+impl<'a> Default for Normalizer<'a> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -373,13 +379,13 @@ impl WithBlankNodes for Quad<'_> {
         let mut nodes = Vec::new();
 
         if let Subject::BlankNode(n) = self.subject {
-            nodes.push(n.id.to_string())
+            nodes.push(n.id.to_string());
         }
         if let Term::BlankNode(n) = self.object {
-            nodes.push(n.id.to_string())
+            nodes.push(n.id.to_string());
         }
         if let Some(GraphName::BlankNode(n)) = self.graph_name {
-            nodes.push(n.id.to_string())
+            nodes.push(n.id.to_string());
         }
 
         nodes
@@ -390,13 +396,13 @@ impl WithBlankNodes for Quad<'_> {
         F: Fn(&str) -> &str,
     {
         if let Subject::BlankNode(n) = self.subject {
-            self.subject = Subject::BlankNode(BlankNode { id: swap_fn(n.id) })
+            self.subject = Subject::BlankNode(BlankNode { id: swap_fn(n.id) });
         }
         if let Term::BlankNode(n) = self.object {
-            self.object = Term::BlankNode(BlankNode { id: swap_fn(n.id) })
+            self.object = Term::BlankNode(BlankNode { id: swap_fn(n.id) });
         }
         if let Some(GraphName::BlankNode(n)) = self.graph_name {
-            self.graph_name = Some(GraphName::BlankNode(BlankNode { id: swap_fn(n.id) }))
+            self.graph_name = Some(GraphName::BlankNode(BlankNode { id: swap_fn(n.id) }));
         }
     }
 }
@@ -413,7 +419,7 @@ struct PermutationsIter<T: Clone> {
 impl<T: Clone> PermutationsIter<T> {
     pub fn new(src: &[T]) -> Self {
         let mut p = Vec::with_capacity(src.len() + 1);
-        for i in 0..src.len() + 1 {
+        for i in 0..=src.len() {
             p.push(i);
         }
 
@@ -427,7 +433,7 @@ impl<T: Clone> PermutationsIter<T> {
 
     fn permute(&mut self) -> Option<Vec<T>> {
         if self.i >= self.a.len() {
-            None?
+            None?;
         }
 
         (&mut self.p)[self.i] -= 1;

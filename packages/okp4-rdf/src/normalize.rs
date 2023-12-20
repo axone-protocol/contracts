@@ -508,7 +508,7 @@ impl<T: Clone> Permutable<T> for &[T] {
 #[cfg(test)]
 mod test {
     use super::*;
-    use rio_api::model::NamedNode;
+    use rio_api::model::{Literal, NamedNode};
 
     #[test]
     fn normalize() {
@@ -607,12 +607,131 @@ mod test {
                 ],
                 "a561b3db619593d5d255343fe8e40411fdc35836e8a995ffc84b4d54ad9cfabc".to_string(),
             ),
+            (
+                vec![
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e0" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p1",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e1" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e1" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p2",
+                        },
+                        object: Term::Literal(Literal::Simple { value: "Foo" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e2" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p1",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e3" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e3" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p2",
+                        },
+                        object: Term::Literal(Literal::Simple { value: "Foo" }),
+                        graph_name: None,
+                    },
+                ],
+                "f69f0a9035e18f6c3ab7e0a2a98d2594b19fa05ebebe5cb2efdc0f9d756a8136".to_string(),
+            ),
+            (
+                vec![
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e0" }),
+                        predicate: NamedNode {
+                            iri: "http://example.org/vocab#next",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e1" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e0" }),
+                        predicate: NamedNode {
+                            iri: "http://example.org/vocab#prev",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e1" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e1" }),
+                        predicate: NamedNode {
+                            iri: "http://example.org/vocab#next",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e0" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e1" }),
+                        predicate: NamedNode {
+                            iri: "http://example.org/vocab#prev",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e0" }),
+                        graph_name: None,
+                    },
+                ],
+                "63e7fb42c6e41ed4b4465cacefbdd27c618e6ec088fd331c92aea1bbadb9a2f1".to_string(),
+            ),
+            (
+                vec![
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e0" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p1",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e1" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e1" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p2",
+                        },
+                        object: Term::Literal(Literal::Simple { value: "Foo" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e1" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p3",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "g0" }),
+                        graph_name: None,
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e0" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p1",
+                        },
+                        object: Term::BlankNode(BlankNode { id: "e1" }),
+                        graph_name: Some(GraphName::BlankNode(BlankNode { id: "g0" })),
+                    },
+                    Quad {
+                        subject: Subject::BlankNode(BlankNode { id: "e1" }),
+                        predicate: NamedNode {
+                            iri: "http://example.com/#p2",
+                        },
+                        object: Term::Literal(Literal::Simple { value: "Bar" }),
+                        graph_name: Some(GraphName::BlankNode(BlankNode { id: "g0" })),
+                    },
+                ],
+                "94ac982a844fa31a439f98427978be93a1b489988aea0b939cdcc32d6bb4fddc".to_string(),
+            ),
         ];
 
         for case in cases {
             let mut normalizer = Normalizer::new();
             let res = normalizer.normalize(&case.0);
-            assert!(res.is_ok());
+            assert_eq!(res.is_ok(), true);
             assert_eq!(res.unwrap(), case.1);
         }
     }

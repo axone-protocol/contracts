@@ -169,8 +169,8 @@ impl<'a> Normalizer<'a> {
                 _ => continue,
             };
 
-            let mut hash_to_node = HashMap::with_capacity(nodes.len());
-            let mut sorted_n_degree_hashes: Vec<String> = Vec::with_capacity(nodes.len());
+            let mut hash_path_list: Vec<(String, IdentifierIssuer)> =
+                Vec::with_capacity(nodes.len());
 
             for node in &nodes {
                 if self.canonical_issuer.issued(node) {
@@ -182,14 +182,14 @@ impl<'a> Normalizer<'a> {
                 );
                 scoped_issuer.get_or_issue(node.clone());
 
-                let (n_degree_hash, _) = self.compute_n_degree_hash(&mut scoped_issuer, node)?;
-                hash_to_node.insert(n_degree_hash.clone(), node.clone());
-                sorted_n_degree_hashes.push(n_degree_hash);
+                let (n_degree_hash, issuer) =
+                    self.compute_n_degree_hash(&mut scoped_issuer, node)?;
+                hash_path_list.push((n_degree_hash, issuer.clone()));
             }
 
-            sorted_n_degree_hashes.sort();
-            for n_degree_hash in sorted_n_degree_hashes {
-                if let Some(node) = hash_to_node.get(n_degree_hash.as_str()) {
+            hash_path_list.sort_by(|left, right| left.0.cmp(&right.0));
+            for (_, issuer) in hash_path_list {
+                for node in issuer.issue_log {
                     self.canonical_issuer.get_or_issue(node.clone());
                 }
             }
@@ -322,13 +322,12 @@ impl<'a> Normalizer<'a> {
             hasher.update(">");
         }
 
-        hasher.update("_:");
-
         hasher.update(
             self.canonical_issuer
                 .get(node)
                 .or_else(|| scoped_issuer.get(node))
-                .or_else(|| self.blank_node_to_hash.get(node))
+                .map(|s| format!("_:{0}", s))
+                .or_else(|| self.blank_node_to_hash.get(node).cloned())
                 .ok_or_else(|| {
                     NormalizationError::Unexpected(
                         "Could not compute related node hash, node not found".to_string(),
@@ -368,6 +367,7 @@ struct IdentifierIssuer {
     prefix: String,
     counter: u64,
     issued: HashMap<String, String>,
+    issue_log: Vec<String>,
 }
 
 impl IdentifierIssuer {
@@ -376,17 +376,19 @@ impl IdentifierIssuer {
             prefix,
             counter: 0,
             issued: HashMap::new(),
+            issue_log: Vec::new(),
         }
     }
 
     pub fn get_or_issue(&mut self, identifier: String) -> String {
-        match self.issued.entry(identifier) {
+        match self.issued.entry(identifier.clone()) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
-                let identifier = format!("{}{}", self.prefix, self.counter);
+                let generated_id = format!("{}{}", self.prefix, self.counter);
                 self.counter += 1;
 
-                e.insert(identifier).clone()
+                self.issue_log.push(identifier);
+                e.insert(generated_id).clone()
             }
         }
     }

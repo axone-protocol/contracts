@@ -525,7 +525,7 @@ install_crate = { rustup_component_name = "rustfmt" }
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
 
 [tasks.install-llvm-cov]
-install_crate = { crate_name = "cargo-llvm-cov" }
+install_crate = { crate_name = "cargo-llvm-cov", min_version = "0.5.38" }
 
 [tasks.install-cosmwasm-check]
 install_crate = { crate_name = "cosmwasm-check", min_version = "1.2.7" }

@@ -539,7 +539,7 @@ fi
 '''
 
 [tasks.install-cargo-hack]
-install_crate = { crate_name = "cargo-hack" }
+install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
 
 [config]
 default_to_workspace = false

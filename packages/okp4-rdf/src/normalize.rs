@@ -134,7 +134,7 @@ impl<'a> Normalizer<'a> {
             .filter_map(
                 |(hash, nodes)| -> Option<Result<(String, String), NormalizationError>> {
                     if nodes.len() > 1 {
-                        None?
+                        None?;
                     }
                     Some(
                         nodes

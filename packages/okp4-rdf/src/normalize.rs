@@ -2,15 +2,14 @@ use rio_api::model::{BlankNode, GraphName, Quad, Subject, Term};
 use sha2;
 use sha2::Digest;
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::ops::Index;
+use std::collections::{BTreeMap, HashMap};
 use thiserror::Error;
 
 /// A RDF normalizer allowing to canonicalize RDF data, following the https://www.w3.org/TR/rdf-canon specification.
 #[derive(Eq, PartialEq, Debug)]
 pub struct Normalizer<'a> {
     blank_node_to_quads: HashMap<String, Vec<Quad<'a>>>,
-    hash_to_blank_nodes: HashMap<String, Vec<String>>,
+    hash_to_blank_nodes: BTreeMap<String, Vec<String>>,
     blank_node_to_hash: HashMap<String, String>,
     canonical_issuer: IdentifierIssuer,
 }
@@ -36,7 +35,7 @@ impl<'a> Normalizer<'a> {
     pub fn new() -> Self {
         Normalizer {
             blank_node_to_quads: HashMap::new(),
-            hash_to_blank_nodes: HashMap::new(),
+            hash_to_blank_nodes: BTreeMap::new(),
             blank_node_to_hash: HashMap::new(),
             canonical_issuer: IdentifierIssuer::new(
                 Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX.to_string(),
@@ -90,7 +89,7 @@ impl<'a> Normalizer<'a> {
 
     fn reset(&mut self) {
         self.blank_node_to_quads = HashMap::new();
-        self.hash_to_blank_nodes = HashMap::new();
+        self.hash_to_blank_nodes = BTreeMap::new();
         self.blank_node_to_hash = HashMap::new();
         self.canonical_issuer =
             IdentifierIssuer::new(Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX.to_string());
@@ -129,46 +128,43 @@ impl<'a> Normalizer<'a> {
     }
 
     fn label_unique_nodes(&mut self) -> Result<(), NormalizationError> {
-        let mut sorted_hash = Vec::with_capacity(self.hash_to_blank_nodes.len());
-        for hash in self.hash_to_blank_nodes.iter().filter_map(|(key, nodes)| {
-            if nodes.len() > 1 {
-                return None;
-            }
-            Some(key)
-        }) {
-            sorted_hash.push(hash.clone());
-        }
+        let unique_nodes: Result<Vec<(String, String)>, NormalizationError> = self
+            .hash_to_blank_nodes
+            .iter()
+            .filter_map(
+                |(hash, nodes)| -> Option<Result<(String, String), NormalizationError>> {
+                    if nodes.len() > 1 {
+                        None?
+                    }
+                    Some(
+                        nodes
+                            .get(0)
+                            .ok_or_else(|| {
+                                NormalizationError::Unexpected(
+                                    "Could not label unique node, node not found".to_string(),
+                                )
+                            })
+                            .map(|node| (hash.clone(), node.clone())),
+                    )
+                },
+            )
+            .collect();
 
-        sorted_hash.sort();
-        for hash in sorted_hash {
-            self.canonical_issuer.get_or_issue(
-                self.hash_to_blank_nodes
-                    .remove(&hash)
-                    .ok_or_else(|| {
-                        NormalizationError::Unexpected(
-                            "Could not label unique node, hash not found".to_string(),
-                        )
-                    })?
-                    .index(0)
-                    .clone(),
-            );
+        for (hash, node) in unique_nodes? {
+            self.hash_to_blank_nodes.remove(&hash);
+            self.canonical_issuer.get_or_issue(node.clone());
         }
 
         Ok(())
     }
 
     fn compute_n_degree_hashes(&mut self) -> Result<(), NormalizationError> {
-        let mut sorted_first_degree_hashes: Vec<String> =
-            Vec::with_capacity(self.hash_to_blank_nodes.len());
-        sorted_first_degree_hashes.extend(self.hash_to_blank_nodes.keys().cloned());
-        sorted_first_degree_hashes.sort();
-
-        for hash in &sorted_first_degree_hashes {
-            let nodes = match self.hash_to_blank_nodes.get(hash).cloned() {
-                Some(v) => v,
-                _ => continue,
-            };
-
+        for nodes in self
+            .hash_to_blank_nodes
+            .values()
+            .cloned()
+            .collect::<Vec<_>>()
+        {
             let mut hash_path_list: Vec<(String, IdentifierIssuer)> =
                 Vec::with_capacity(nodes.len());
 
@@ -203,7 +199,7 @@ impl<'a> Normalizer<'a> {
         scoped_issuer: &mut IdentifierIssuer,
         node: &String,
     ) -> Result<(String, IdentifierIssuer), NormalizationError> {
-        let mut hashes: HashMap<String, Vec<String>> = HashMap::new();
+        let mut hashes: BTreeMap<String, Vec<String>> = BTreeMap::new();
 
         for quad in self.blank_node_to_quads.get(node).ok_or_else(|| {
             NormalizationError::Unexpected(
@@ -243,19 +239,15 @@ impl<'a> Normalizer<'a> {
             }
         }
 
-        let mut sorted_hashes: Vec<&String> = Vec::with_capacity(hashes.len());
-        sorted_hashes.extend(hashes.keys());
-        sorted_hashes.sort();
-
         let mut hasher = sha2::Sha256::new();
         let mut chosen_issuer =
             IdentifierIssuer::new(Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX.to_string());
         let mut chosen_path = String::new();
 
-        for hash in sorted_hashes {
+        for (hash, related) in hashes {
             hasher.update(hash);
 
-            for p in hashes.index(hash).as_slice().permutations() {
+            for p in related.as_slice().permutations() {
                 let mut issuer = scoped_issuer.clone();
                 let mut path = String::from("_:");
                 let mut recursion_list = Vec::new();
@@ -339,14 +331,13 @@ impl<'a> Normalizer<'a> {
     }
 
     fn serialize(quads: &[Quad<'_>]) -> String {
-        let mut raw_sorted = Vec::with_capacity(quads.len());
+        let mut raw_sorted = BTreeMap::new();
         for quad in quads {
-            raw_sorted.push(format!("{} .\n", quad));
+            raw_sorted.insert(format!("{} .\n", quad), ());
         }
-        raw_sorted.sort();
 
         let mut hasher = sha2::Sha256::new();
-        for raw in raw_sorted {
+        for (raw, _) in raw_sorted {
             hasher.update(raw);
         }
         let hash = hasher.finalize().to_vec();

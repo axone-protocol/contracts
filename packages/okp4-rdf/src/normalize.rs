@@ -435,7 +435,7 @@ impl WithBlankNodes for Quad<'_> {
 }
 
 /// Helper iterator over all the possible permutations of an array.
-/// It internally implements the quickperm algorithm.
+/// It internally implements the quickperm algorithm: https://www.quickperm.org.
 struct PermutationsIter<T: Clone> {
     next: Option<Vec<T>>,
     a: Vec<T>,

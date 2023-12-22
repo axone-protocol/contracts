@@ -1,8 +1,8 @@
 use crate::msg::{Literal, Node, IRI};
-use crate::rdf::expand_uri;
+use crate::state;
 use crate::state::{NamespaceResolver, Object, Predicate, Subject};
-use crate::{rdf, state};
 use cosmwasm_std::{StdError, StdResult, Storage};
+use okp4_rdf::uri::{expand_uri, explode_iri};
 use std::collections::HashMap;
 
 pub fn node_as_subject(
@@ -71,7 +71,7 @@ pub fn iri_as_node(
         IRI::Prefixed(prefixed) => expand_uri(&prefixed, prefixes),
         IRI::Full(full) => Ok(full),
     }
-    .and_then(|iri| rdf::explode_iri(&iri))
+    .and_then(|iri| explode_iri(&iri))
     .and_then(|(ns_key, v)| {
         ns_resolver
             .resolve_from_val(storage, ns_key)

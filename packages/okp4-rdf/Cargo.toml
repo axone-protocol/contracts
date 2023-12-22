@@ -1,0 +1,14 @@
+[package]
+authors = ["OKP4"]
+edition = "2021"
+name = "okp4-rdf"
+version = "3.0.0"
+
+[dependencies]
+base16ct = { version = "0.2.0", features = ["alloc"] }
+cosmwasm-std.workspace = true
+rio_api.workspace = true
+rio_turtle.workspace = true
+rio_xml.workspace = true
+sha2 = "0.10.8"
+thiserror.workspace = true

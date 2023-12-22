@@ -149,6 +149,17 @@ pub enum DataFormat {
     NQuads,
 }
 
+impl From<&DataFormat> for okp4_rdf::serde::DataFormat {
+    fn from(value: &DataFormat) -> Self {
+        match value {
+            DataFormat::RDFXml => Self::RDFXml,
+            DataFormat::Turtle => Self::Turtle,
+            DataFormat::NTriples => Self::NTriples,
+            DataFormat::NQuads => Self::NQuads,
+        }
+    }
+}
+
 /// # StoreLimitsInput
 /// Contains requested limitations regarding store usages.
 #[cw_serde]

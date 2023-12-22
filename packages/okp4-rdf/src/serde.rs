@@ -1,4 +1,3 @@
-use crate::msg::DataFormat;
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Quad, Triple};
 use rio_api::parser::{QuadsParser, TriplesParser};
@@ -30,6 +29,17 @@ pub enum TriplesWriterKind<W: std::io::Write> {
     Turtle(TurtleFormatter<W>),
     RdfXml(io::Result<RdfXmlFormatter<W>>),
     NQuads(NQuadsFormatter<W>),
+}
+
+pub enum DataFormat {
+    /// Represents a [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) format.
+    RDFXml,
+    /// Represents a [Turtle](https://www.w3.org/TR/turtle/) format.
+    Turtle,
+    /// Represents a [N-Triples](https://www.w3.org/TR/n-triples/) format.
+    NTriples,
+    /// Represents a [N-Quads](https://www.w3.org/TR/n-quads/) format.
+    NQuads,
 }
 
 impl<R: BufRead> TripleReader<R> {
@@ -101,7 +111,6 @@ impl<W: io::Write> TripleWriter<W> {
         }
     }
 
-    #[allow(dead_code)]
     pub fn write_all(&mut self, triples: Vec<&Triple<'_>>) -> io::Result<()> {
         for triple in triples {
             self.write(triple)?;

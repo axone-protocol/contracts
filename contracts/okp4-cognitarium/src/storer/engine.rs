@@ -1,10 +1,11 @@
 use crate::error::StoreError;
-use crate::rdf::TripleReader;
 use crate::state::{
     triples, Literal, NamespaceBatchService, Node, Object, Store, Subject, Triple, STORE,
 };
-use crate::{rdf, ContractError};
+use crate::ContractError;
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
+use okp4_rdf::serde::TripleReader;
+use okp4_rdf::uri::explode_iri;
 use rio_api::model;
 use rio_api::model::Term;
 use std::io::BufRead;
@@ -198,7 +199,7 @@ impl<'a> StoreEngine<'a> {
     where
         F: FnMut(String) -> StdResult<u128>,
     {
-        let (ns, v) = rdf::explode_iri(node.iri)?;
+        let (ns, v) = explode_iri(node.iri)?;
         Ok(Node {
             namespace: ns_fn(ns)?,
             value: v,

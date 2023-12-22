@@ -37,51 +37,27 @@ impl<'a> Normalizer<'a> {
             blank_node_to_quads: HashMap::new(),
             hash_to_blank_nodes: BTreeMap::new(),
             blank_node_to_hash: HashMap::new(),
-            canonical_issuer: IdentifierIssuer::new(
-                Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX.to_string(),
-            ),
+            canonical_issuer: IdentifierIssuer::new(Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX),
         }
     }
 
-    pub fn normalize(&'a mut self, dataset: &[Quad<'a>]) -> Result<String, NormalizationError> {
+    pub fn normalize(&mut self, dataset: &[Quad<'a>]) -> Result<String, NormalizationError> {
         self.reset();
         self.track_blank_nodes(dataset);
         self.compute_first_degree_hashes();
         self.label_unique_nodes()?;
         self.compute_n_degree_hashes()?;
 
+        let swap_fn = |n| {
+            self.canonical_issuer.get(n).ok_or_else(|| {
+                NormalizationError::Unexpected(
+                    "Could not replace blank node, canonical identifier not found".to_string(),
+                )
+            })
+        };
         let mut canonicalized_dataset = dataset.to_vec();
         for quad in canonicalized_dataset.iter_mut() {
-            if let Subject::BlankNode(n) = quad.subject {
-                quad.subject = Subject::BlankNode(BlankNode {
-                    id: self.canonical_issuer.get(n.id).ok_or_else(|| {
-                        NormalizationError::Unexpected(
-                            "Could not replace subject blank node, canonical identifier not found"
-                                .to_string(),
-                        )
-                    })?,
-                });
-            }
-            if let Term::BlankNode(n) = quad.object {
-                quad.object = Term::BlankNode(BlankNode {
-                    id: self.canonical_issuer.get(n.id).ok_or_else(|| {
-                        NormalizationError::Unexpected(
-                            "Could not replace object blank node, canonical identifier not found"
-                                .to_string(),
-                        )
-                    })?,
-                });
-            }
-            if let Some(GraphName::BlankNode(n)) = quad.graph_name {
-                quad.graph_name = Some(GraphName::BlankNode(BlankNode {
-                    id: self.canonical_issuer.get(n.id).ok_or_else(|| {
-                        NormalizationError::Unexpected(
-                            "Could not replace graph blank node, canonical identifier not found"
-                                .to_string(),
-                        )
-                    })?,
-                }));
-            }
+            quad.try_swap_blank_nodes(&swap_fn)?;
         }
 
         Ok(Self::serialize(&canonicalized_dataset))
@@ -92,7 +68,7 @@ impl<'a> Normalizer<'a> {
         self.hash_to_blank_nodes = BTreeMap::new();
         self.blank_node_to_hash = HashMap::new();
         self.canonical_issuer =
-            IdentifierIssuer::new(Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX.to_string());
+            IdentifierIssuer::new(Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX);
     }
 
     fn track_blank_nodes(&mut self, dataset: &[Quad<'a>]) {
@@ -109,13 +85,14 @@ impl<'a> Normalizer<'a> {
     fn compute_first_degree_hashes(&mut self) {
         for (target, quads) in &self.blank_node_to_quads {
             let mut replacements = quads.clone();
+            let swap_fn = |n| {
+                if n == target {
+                    return Self::HASH_FIRST_DEGREE_MARKER_SELF;
+                }
+                Self::HASH_FIRST_DEGREE_MARKER_OTHER
+            };
             replacements.iter_mut().for_each(|quad| {
-                quad.swap_blank_nodes(|n| {
-                    if n == target {
-                        return Self::HASH_FIRST_DEGREE_MARKER_SELF;
-                    }
-                    Self::HASH_FIRST_DEGREE_MARKER_OTHER
-                });
+                quad.swap_blank_nodes(&swap_fn);
             });
 
             let hash = Self::serialize(&replacements);
@@ -128,31 +105,25 @@ impl<'a> Normalizer<'a> {
     }
 
     fn label_unique_nodes(&mut self) -> Result<(), NormalizationError> {
-        let unique_nodes: Result<Vec<(String, String)>, NormalizationError> = self
+        let unique_nodes = self
             .hash_to_blank_nodes
             .iter()
-            .filter_map(
-                |(hash, nodes)| -> Option<Result<(String, String), NormalizationError>> {
-                    if nodes.len() > 1 {
-                        None?;
-                    }
-                    Some(
-                        nodes
-                            .get(0)
-                            .ok_or_else(|| {
-                                NormalizationError::Unexpected(
-                                    "Could not label unique node, node not found".to_string(),
-                                )
-                            })
-                            .map(|node| (hash.clone(), node.clone())),
-                    )
-                },
-            )
-            .collect();
+            .filter(|(_, nodes)| nodes.len() <= 1)
+            .map(|(hash, nodes)| {
+                nodes
+                    .get(0)
+                    .ok_or_else(|| {
+                        NormalizationError::Unexpected(
+                            "Could not label unique node, node not found".to_string(),
+                        )
+                    })
+                    .map(|node| (hash.clone(), node.clone()))
+            })
+            .collect::<Result<Vec<_>, NormalizationError>>()?;
 
-        for (hash, node) in unique_nodes? {
+        for (hash, node) in unique_nodes {
             self.hash_to_blank_nodes.remove(&hash);
-            self.canonical_issuer.get_or_issue(node.clone());
+            self.canonical_issuer.get_or_issue(&node);
         }
 
         Ok(())
@@ -173,10 +144,9 @@ impl<'a> Normalizer<'a> {
                     continue;
                 }
 
-                let mut scoped_issuer = IdentifierIssuer::new(
-                    Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX.to_string(),
-                );
-                scoped_issuer.get_or_issue(node.clone());
+                let mut scoped_issuer =
+                    IdentifierIssuer::new(Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX);
+                scoped_issuer.get_or_issue(node);
 
                 let (n_degree_hash, issuer) =
                     self.compute_n_degree_hash(&mut scoped_issuer, node)?;
@@ -186,7 +156,7 @@ impl<'a> Normalizer<'a> {
             hash_path_list.sort_by(|left, right| left.0.cmp(&right.0));
             for (_, issuer) in hash_path_list {
                 for node in issuer.issue_log {
-                    self.canonical_issuer.get_or_issue(node.clone());
+                    self.canonical_issuer.get_or_issue(&node);
                 }
             }
         }
@@ -241,7 +211,7 @@ impl<'a> Normalizer<'a> {
 
         let mut hasher = sha2::Sha256::new();
         let mut chosen_issuer =
-            IdentifierIssuer::new(Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX.to_string());
+            IdentifierIssuer::new(Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX);
         let mut chosen_path = String::new();
 
         for (hash, related) in hashes {
@@ -259,7 +229,7 @@ impl<'a> Normalizer<'a> {
                         if !issuer.issued(&related) {
                             recursion_list.push(related.clone());
                         }
-                        path.push_str(issuer.get_or_issue(related).as_str());
+                        path.push_str(&issuer.get_or_issue(&related));
                     }
                 }
 
@@ -271,9 +241,9 @@ impl<'a> Normalizer<'a> {
                 for related in recursion_list {
                     let (result, mut issuer) = self.compute_n_degree_hash(&mut issuer, &related)?;
                     path.push_str("_:");
-                    path.push_str(issuer.get_or_issue(related).as_str());
+                    path.push_str(&issuer.get_or_issue(&related));
                     path.push('<');
-                    path.push_str(result.as_str());
+                    path.push_str(&result);
                     path.push('>');
 
                     if !chosen_path.is_empty()
@@ -362,30 +332,30 @@ struct IdentifierIssuer {
 }
 
 impl IdentifierIssuer {
-    pub fn new(prefix: String) -> Self {
+    pub fn new(prefix: &str) -> Self {
         Self {
-            prefix,
+            prefix: prefix.to_string(),
             counter: 0,
             issued: HashMap::new(),
             issue_log: Vec::new(),
         }
     }
 
-    pub fn get_or_issue(&mut self, identifier: String) -> String {
-        match self.issued.entry(identifier.clone()) {
+    pub fn get_or_issue(&mut self, identifier: &str) -> String {
+        match self.issued.entry(identifier.to_string()) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
                 let generated_id = format!("{}{}", self.prefix, self.counter);
                 self.counter += 1;
 
-                self.issue_log.push(identifier);
+                self.issue_log.push(identifier.to_string());
                 e.insert(generated_id).clone()
             }
         }
     }
 
-    pub fn get(&self, identifier: &str) -> Option<&String> {
-        self.issued.get(identifier)
+    pub fn get(&self, identifier: &str) -> Option<&str> {
+        self.issued.get(identifier).map(String::as_str)
     }
 
     pub fn issued(&self, identifier: &str) -> bool {
@@ -393,15 +363,19 @@ impl IdentifierIssuer {
     }
 }
 
-trait WithBlankNodes {
+trait WithBlankNodes<'a> {
     fn blank_nodes(&self) -> Vec<String>;
 
-    fn swap_blank_nodes<F>(&mut self, swap_fn: F)
+    fn swap_blank_nodes<F>(&mut self, swap_fn: &'a F)
     where
-        F: Fn(&str) -> &str;
+        F: Fn(&'a str) -> &'a str;
+
+    fn try_swap_blank_nodes<F, E>(&mut self, swap_fn: &'a F) -> Result<(), E>
+    where
+        F: Fn(&'a str) -> Result<&'a str, E>;
 }
 
-impl WithBlankNodes for Quad<'_> {
+impl<'a> WithBlankNodes<'a> for Quad<'a> {
     fn blank_nodes(&self) -> Vec<String> {
         let mut nodes = Vec::new();
 
@@ -418,9 +392,9 @@ impl WithBlankNodes for Quad<'_> {
         nodes
     }
 
-    fn swap_blank_nodes<F>(&mut self, swap_fn: F)
+    fn swap_blank_nodes<F>(&mut self, swap_fn: &'a F)
     where
-        F: Fn(&str) -> &str,
+        F: Fn(&'a str) -> &'a str,
     {
         if let Subject::BlankNode(n) = self.subject {
             self.subject = Subject::BlankNode(BlankNode { id: swap_fn(n.id) });
@@ -431,6 +405,23 @@ impl WithBlankNodes for Quad<'_> {
         if let Some(GraphName::BlankNode(n)) = self.graph_name {
             self.graph_name = Some(GraphName::BlankNode(BlankNode { id: swap_fn(n.id) }));
         }
+    }
+
+    fn try_swap_blank_nodes<F, E>(&mut self, swap_fn: &'a F) -> Result<(), E>
+    where
+        F: Fn(&'a str) -> Result<&'a str, E>,
+    {
+        if let Subject::BlankNode(n) = self.subject {
+            self.subject = Subject::BlankNode(BlankNode { id: swap_fn(n.id)? });
+        }
+        if let Term::BlankNode(n) = self.object {
+            self.object = Term::BlankNode(BlankNode { id: swap_fn(n.id)? });
+        }
+        if let Some(GraphName::BlankNode(n)) = self.graph_name {
+            self.graph_name = Some(GraphName::BlankNode(BlankNode { id: swap_fn(n.id)? }));
+        }
+
+        Ok(())
     }
 }
 

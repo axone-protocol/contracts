@@ -47,12 +47,12 @@ Given its role and status, this smart contract serves as the primary access poin
 
 `InstantiateMsg` is used to initialize a new instance of the dataverse.
 
-|parameter|description|
-|----------|-----------|
-|`name`|*(Required.) * **string**. A unique name to identify the dataverse instance.|
-|`triplestore_config`|*(Required.) * **[TripleStoreConfig](#triplestoreconfig)**. The configuration used to instantiate the triple store.|
-|`triplestore_config.code_id`|**[Uint64](#uint64)**. The code id that will be used to instantiate the triple store contract in which to store dataverse semantic data. It must implement the cognitarium interface.|
-|`triplestore_config.limits`|**[TripleStoreLimitsInput](#triplestorelimitsinput)**. Limitations regarding triple store usage.|
+| parameter                    | description                                                                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                       | _(Required.) _ **string**. A unique name to identify the dataverse instance.                                                                                                          |
+| `triplestore_config`         | _(Required.) _ **[TripleStoreConfig](#triplestoreconfig)**. The configuration used to instantiate the triple store.                                                                   |
+| `triplestore_config.code_id` | **[Uint64](#uint64)**. The code id that will be used to instantiate the triple store contract in which to store dataverse semantic data. It must implement the cognitarium interface. |
+| `triplestore_config.limits`  | **[TripleStoreLimitsInput](#triplestorelimitsinput)**. Limitations regarding triple store usage.                                                                                      |
 
 ## ExecuteMsg
 
@@ -86,11 +86,11 @@ To maintain integrity and coherence in the dataverse, several preconditions are 
 
 3. **Issuer Signature**: Claims must bear the issuer's signature. This signature must be verifiable, ensuring authenticity and credibility.
 
-|parameter|description|
-|----------|-----------|
-|`submit_claims`|*(Required.) * **object**. |
-|`submit_claims.format`|**[RdfFormat](#rdfformat)\|null**. RDF format in which the metadata is represented. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.|
-|`submit_claims.metadata`|*(Required.) * **[Binary](#binary)**. The serialized metadata intended for attachment. This metadata should adhere to the format specified in the `format` field.|
+| parameter                | description                                                                                                                                                                |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `submit_claims`          | _(Required.) _ **object**.                                                                                                                                                 |
+| `submit_claims.format`   | **[RdfFormat](#rdfformat)\|null**. RDF format in which the metadata is represented. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format. |
+| `submit_claims.metadata` | _(Required.) _ **[Binary](#binary)**. The serialized metadata intended for attachment. This metadata should adhere to the format specified in the `format` field.          |
 
 ### ExecuteMsg::RevokeClaims
 
@@ -100,10 +100,10 @@ Revoke or withdraw a previously submitted claims.
 
 1. **Identifier Existance**: The identifier of the claims must exist in the dataverse.
 
-|parameter|description|
-|----------|-----------|
-|`revoke_claims`|*(Required.) * **object**. |
-|`revoke_claims.identifier`|*(Required.) * **string**. The unique identifier of the claims to be revoked.|
+| parameter                  | description                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `revoke_claims`            | _(Required.) _ **object**.                                                    |
+| `revoke_claims.identifier` | _(Required.) _ **string**. The unique identifier of the claims to be revoked. |
 
 ## QueryMsg
 
@@ -115,9 +115,9 @@ This enum provides variants for querying the dataverse's details and other relat
 
 Retrieves information about the current dataverse instance.
 
-|parameter|description|
-|----------|-----------|
-|`dataverse`|*(Required.) * **object**. |
+| parameter   | description                |
+| ----------- | -------------------------- |
+| `dataverse` | _(Required.) _ **object**. |
 
 ## Responses
 
@@ -125,9 +125,9 @@ Retrieves information about the current dataverse instance.
 
 DataverseResponse is the response of the Dataverse query.
 
-|property|description|
-|----------|-----------|
-|`name`|*(Required.) * **string**. The name of the dataverse.|
+| property | description                                           |
+| -------- | ----------------------------------------------------- |
+| `name`   | _(Required.) _ **string**. The name of the dataverse. |
 
 ## Definitions
 
@@ -135,9 +135,9 @@ DataverseResponse is the response of the Dataverse query.
 
 A string containing Base64-encoded data.
 
-|type|
-|----|
-|**string**.|
+| type        |
+| ----------- |
+| **string**. |
 
 ### NQuads
 
@@ -145,9 +145,9 @@ N-Quads Format
 
 N-Quads is an extension of N-Triples to support RDF datasets by adding an optional fourth element to represent the graph name. See the [official N-Quads specification](https://www.w3.org/TR/n-quads/).
 
-|literal|
-|-------|
-|`"n_quads"`|
+| literal     |
+| ----------- |
+| `"n_quads"` |
 
 ### NTriples
 
@@ -155,20 +155,20 @@ N-Triples Format
 
 N-Triples is a line-based, plain text format for encoding an RDF graph. Each line corresponds to a single RDF triple. See the [official N-Triples specification](https://www.w3.org/TR/n-triples/).
 
-|literal|
-|-------|
-|`"n_triples"`|
+| literal       |
+| ------------- |
+| `"n_triples"` |
 
 ### RdfFormat
 
 `RdfFormat` represents the various serialization formats for RDF (Resource Description Framework) data.
 
-|variant|description|
-|-------|-----------|
-|[RdfXml](#rdfxml)|**string**: `rdf_xml`. RDF/XML Format<br /><br />RDF/XML is a syntax to express RDF information in XML. See the [official RDF/XML specification](https://www.w3.org/TR/rdf-syntax-grammar/).|
-|[Turtle](#turtle)|**string**: `turtle`. Turtle (Terse RDF Triple Language) Format<br /><br />Turtle is a textual format for representing RDF triples in a more compact and human-readable way compared to RDF/XML. See the [official Turtle specification](https://www.w3.org/TR/turtle/).|
-|[NTriples](#ntriples)|**string**: `n_triples`. N-Triples Format<br /><br />N-Triples is a line-based, plain text format for encoding an RDF graph. Each line corresponds to a single RDF triple. See the [official N-Triples specification](https://www.w3.org/TR/n-triples/).|
-|[NQuads](#nquads)|**string**: `n_quads`. N-Quads Format<br /><br />N-Quads is an extension of N-Triples to support RDF datasets by adding an optional fourth element to represent the graph name. See the [official N-Quads specification](https://www.w3.org/TR/n-quads/).|
+| variant               | description                                                                                                                                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [RdfXml](#rdfxml)     | **string**: `rdf_xml`. RDF/XML Format<br /><br />RDF/XML is a syntax to express RDF information in XML. See the [official RDF/XML specification](https://www.w3.org/TR/rdf-syntax-grammar/).                                                                             |
+| [Turtle](#turtle)     | **string**: `turtle`. Turtle (Terse RDF Triple Language) Format<br /><br />Turtle is a textual format for representing RDF triples in a more compact and human-readable way compared to RDF/XML. See the [official Turtle specification](https://www.w3.org/TR/turtle/). |
+| [NTriples](#ntriples) | **string**: `n_triples`. N-Triples Format<br /><br />N-Triples is a line-based, plain text format for encoding an RDF graph. Each line corresponds to a single RDF triple. See the [official N-Triples specification](https://www.w3.org/TR/n-triples/).                 |
+| [NQuads](#nquads)     | **string**: `n_quads`. N-Quads Format<br /><br />N-Quads is an extension of N-Triples to support RDF datasets by adding an optional fourth element to represent the graph name. See the [official N-Quads specification](https://www.w3.org/TR/n-quads/).                |
 
 ### RdfXml
 
@@ -176,39 +176,39 @@ RDF/XML Format
 
 RDF/XML is a syntax to express RDF information in XML. See the [official RDF/XML specification](https://www.w3.org/TR/rdf-syntax-grammar/).
 
-|literal|
-|-------|
-|`"rdf_xml"`|
+| literal     |
+| ----------- |
+| `"rdf_xml"` |
 
 ### TripleStoreConfig
 
 `TripleStoreConfig` represents the configuration related to the management of the triple store.
 
-|property|description|
-|----------|-----------|
-|`code_id`|*(Required.) * **[Uint64](#uint64)**. The code id that will be used to instantiate the triple store contract in which to store dataverse semantic data. It must implement the cognitarium interface.|
-|`limits`|*(Required.) * **[TripleStoreLimitsInput](#triplestorelimitsinput)**. Limitations regarding triple store usage.|
-|`limits.max_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`limits.max_insert_data_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`limits.max_insert_data_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`limits.max_query_limit`|**integer\|null**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.|
-|`limits.max_query_variable_count`|**integer\|null**. The maximum number of variables a query can select. Default to 30 if not set.|
-|`limits.max_triple_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`limits.max_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+| property                              | description                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `code_id`                             | _(Required.) _ **[Uint64](#uint64)**. The code id that will be used to instantiate the triple store contract in which to store dataverse semantic data. It must implement the cognitarium interface.                                                                                                                                                                                                                   |
+| `limits`                              | _(Required.) _ **[TripleStoreLimitsInput](#triplestorelimitsinput)**. Limitations regarding triple store usage.                                                                                                                                                                                                                                                                                                        |
+| `limits.max_byte_size`                | **[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                   |
+| `limits.max_insert_data_byte_size`    | **[Uint128](#uint128)\|null**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                                                                                                                                                                |
+| `limits.max_insert_data_triple_count` | **[Uint128](#uint128)\|null**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                                                                                                                                              |
+| `limits.max_query_limit`              | **integer\|null**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.                                                                                                                                                                                                                                                                              |
+| `limits.max_query_variable_count`     | **integer\|null**. The maximum number of variables a query can select. Default to 30 if not set.                                                                                                                                                                                                                                                                                                                       |
+| `limits.max_triple_byte_size`         | **[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit. |
+| `limits.max_triple_count`             | **[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                                                                                                                                                                         |
 
 ### TripleStoreLimitsInput
 
 Contains requested limitations regarding store usages.
 
-|property|description|
-|----------|-----------|
-|`max_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`max_insert_data_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`max_insert_data_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`max_query_limit`|**integer\|null**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.|
-|`max_query_variable_count`|**integer\|null**. The maximum number of variables a query can select. Default to 30 if not set.|
-|`max_triple_byte_size`|**[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
-|`max_triple_count`|**[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.|
+| property                       | description                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max_byte_size`                | **[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                   |
+| `max_insert_data_byte_size`    | **[Uint128](#uint128)\|null**. The maximum number of bytes an insert data query can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                                                                                                                                                                |
+| `max_insert_data_triple_count` | **[Uint128](#uint128)\|null**. The maximum number of triples an insert data query can contain (after parsing). Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                                                                                                                                              |
+| `max_query_limit`              | **integer\|null**. The maximum limit of a query, i.e. the maximum number of triples returned by a select query. Default to 30 if not set.                                                                                                                                                                                                                                                                              |
+| `max_query_variable_count`     | **integer\|null**. The maximum number of variables a query can select. Default to 30 if not set.                                                                                                                                                                                                                                                                                                                       |
+| `max_triple_byte_size`         | **[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit. |
+| `max_triple_count`             | **[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                                                                                                                                                                         |
 
 ### Turtle
 
@@ -216,17 +216,17 @@ Turtle (Terse RDF Triple Language) Format
 
 Turtle is a textual format for representing RDF triples in a more compact and human-readable way compared to RDF/XML. See the [official Turtle specification](https://www.w3.org/TR/turtle/).
 
-|literal|
-|-------|
-|`"turtle"`|
+| literal    |
+| ---------- |
+| `"turtle"` |
 
 ### Uint128
 
 A string containing a 128-bit integer in decimal representation.
 
-|type|
-|----|
-|**string**.|
+| type        |
+| ----------- |
+| **string**. |
 
 ### Uint64
 
@@ -236,7 +236,7 @@ A thin wrapper around u64 that is using strings for JSON encoding/decoding, such
 
 Use `from` to create instances of this and `u64` to get the value out:
 
-``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);
+````# use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);
 
 let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
@@ -247,3 +247,4 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 ---
 
 *Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`2a5c7ef038c6b263`)*
+````

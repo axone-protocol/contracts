@@ -180,9 +180,13 @@ for SCHEMA in $(ls $SCHEMA_FOLDER); do
 EOF
 
     rm "docs/${to}.tmp"
+
 done
 
 rm -rf $SCHEMA_FOLDER
+
+echo "📐 Formatting documentation..."
+npx --yes prettier@3.1.1 docs/*.md --write
 
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 '''

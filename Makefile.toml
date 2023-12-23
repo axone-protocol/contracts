@@ -87,19 +87,44 @@ echo "🧹 Cleaning documentation folder"
 rm -rf ${DOCS_FOLDER}/*
 '''
 
-[tasks.docs-generate]
-dependencies = ["docs-clean", "schema"]
-description = "Generate documentation"
+[tasks.check-prerequisites]
+description = "Check prerequisites"
 script = '''
-echo "🔎 Checking \`npx\` installed..."
+echo "🔍 Checking prerequisites"
+
+echo "❔ Checking \`npx\` installed..."
 if ! which npx >/dev/null;
 then
    echo "\n❌ npx could not be found"
-   echo "  Consider installing npx to generate documentation.\n"
+   echo "  Consider installing npx.\n"
    echo "＞ \`npm install -g npx\`\n\n"
    exit 1
 fi
+echo "✅ \`npx\` installed"
 
+echo "❔ Checking \`awk\` installed..."
+if ! which awk >/dev/null;
+then
+   echo "\n❌ awk could not be found"
+   echo "  Consider installing awk."
+   exit 1
+fi
+echo "✅ \`perl\` installed"
+
+echo "❔ Checking \`perl\` installed..."
+if ! which perl >/dev/null;
+then
+   echo "\n❌ perl could not be found"
+   echo "  Consider installing perl."
+   exit 1
+fi
+echo "✅ \`perl\` installed"
+'''
+
+[tasks.docs-generate]
+dependencies = ["check-prerequisites", "docs-clean", "schema"]
+description = "Generate documentation"
+script = '''
 echo "🧹 Cleaning old documentation..."
 rm -rf $SCHEMA_FOLDER
 rm -rf $DOCS_FOLDER
@@ -110,17 +135,51 @@ mkdir -p $SCHEMA_FOLDER
 find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
     -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
 
-
 mkdir -p $DOCS_FOLDER
 
 for SCHEMA in $(ls $SCHEMA_FOLDER); do
-    echo "Rendering $SCHEMA..."
-    awk "{sub(\"#/definitions\",\"./${SCHEMA}/#/definitions\")} {print}"  ${SCHEMA_FOLDER}/${SCHEMA} > ${SCHEMA_FOLDER}/${SCHEMA}.tmp
-    mv ${SCHEMA_FOLDER}/${SCHEMA}.tmp ${SCHEMA_FOLDER}/${SCHEMA}
+    from="$SCHEMA"
+    to="${SCHEMA%.json}.md"
+    echo "✍️ Rendering ${SCHEMA_FOLDER}/$from to $to"
 
-    npx --yes @fadroma/schema@1.1.0 ${SCHEMA_FOLDER}/${SCHEMA} > "${SCHEMA%.json}.md"
+    awk "{sub(\"#/definitions\",\"./${from}/#/definitions\")} {print}" ${SCHEMA_FOLDER}/$from > ${SCHEMA_FOLDER}/$from.tmp
+    mv ${SCHEMA_FOLDER}/${from}.tmp ${SCHEMA_FOLDER}/${from}
 
-    mv "${SCHEMA%.json}.md" "docs/${SCHEMA%.json}.md"
+    npx --yes @fadroma/schema@1.1.0 ${SCHEMA_FOLDER}/${from} > "docs/${to}.tmp"
+
+    perl << 'EOF' - "docs/${to}.tmp" > "docs/${to}"
+    use strict;
+    use warnings;
+
+    my $file = shift @ARGV;
+    local $/ = undef;
+
+    open my $fh, '<', $file or die "☠️ Could not open file: $!";
+    my $content = <$fh>;
+    close $fh;
+
+    my $in_code_block = 0;
+    my $in_inline_code = 0;
+    my $escaped_content = '';
+
+    foreach my $char (split //, $content) {
+      if ($char eq '`') {
+          $in_inline_code = !$in_inline_code unless $in_code_block;
+      } elsif ($char eq "\n") {
+          $in_code_block = 0 if ($in_code_block && $content =~ m/^\`\`\`/);
+      } elsif (!$in_code_block && !$in_inline_code && $char =~ /[{]/) {
+          $char = "\\{";
+      } elsif (!$in_code_block && !$in_inline_code && $char =~ /[}]/) {
+          $char = "\\}";
+      }
+      $escaped_content .= $char;
+      $in_code_block = 1 if ($char eq "\n" && $content =~ m/^\`\`\`/);
+    }
+
+    print $escaped_content;
+EOF
+
+    rm "docs/${to}.tmp"
 done
 
 rm -rf $SCHEMA_FOLDER

@@ -18,10 +18,10 @@ To be able to free the underlying resources (i.e. objects in `okp4-objectarium`)
 
 Instantiate message
 
-|parameter|description|
-|----------|-----------|
-|`program`|*(Required.) * **[Binary](#binary)**. The Prolog program carrying law rules and facts.|
-|`storage_address`|*(Required.) * **string**. The `okp4-objectarium` contract address on which to store the law program.|
+| parameter         | description                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------- |
+| `program`         | _(Required.) _ **[Binary](#binary)**. The Prolog program carrying law rules and facts.                |
+| `storage_address` | _(Required.) _ **string**. The `okp4-objectarium` contract address on which to store the law program. |
 
 ## ExecuteMsg
 
@@ -31,9 +31,9 @@ Execute messages
 
 Break the stone making this contract unusable, by clearing all the related resources: - Unpin all the pinned objects on `okp4-objectarium` contracts, if any. - Forget the main program (i.e. or at least unpin it). Only the contract admin is authorized to break it, if any. If already broken, this is a no-op.
 
-|literal|
-|-------|
-|`"break_stone"`|
+| literal         |
+| --------------- |
+| `"break_stone"` |
 
 ## QueryMsg
 
@@ -43,105 +43,95 @@ Query messages
 
 If not broken, ask the logic module the provided query with the law program loaded.
 
-|parameter|description|
-|----------|-----------|
-|`ask`|*(Required.) * **object**. |
-|`ask.query`|*(Required.) * **string**. |
+| parameter   | description                |
+| ----------- | -------------------------- |
+| `ask`       | _(Required.) _ **object**. |
+| `ask.query` | _(Required.) _ **string**. |
 
 ### QueryMsg::Program
 
 If not broken, returns the law program location information.
 
-|literal|
-|-------|
-|`"program"`|
+| literal     |
+| ----------- |
+| `"program"` |
 
 ### QueryMsg::ProgramCode
 
 ProgramCode returns the law program code.
 
-|literal|
-|-------|
-|`"program_code"`|
+| literal          |
+| ---------------- |
+| `"program_code"` |
 
 ## Responses
 
 ### ask
 
-
-
-|property|description|
-|----------|-----------|
-|`answer`|**[Answer](#answer)\|null**. |
-|`gas_used`|*(Required.) * **integer**. |
-|`height`|*(Required.) * **integer**. |
+| property   | description                  |
+| ---------- | ---------------------------- |
+| `answer`   | **[Answer](#answer)\|null**. |
+| `gas_used` | _(Required.) _ **integer**.  |
+| `height`   | _(Required.) _ **integer**.  |
 
 ### program
 
 ProgramResponse carry elements to locate the program in a `okp4-objectarium` contract.
 
-|property|description|
-|----------|-----------|
-|`object_id`|*(Required.) * **string**. The program object id in the `okp4-objectarium` contract.|
-|`storage_address`|*(Required.) * **string**. The `okp4-objectarium` contract address on which the law program is stored.|
+| property          | description                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------ |
+| `object_id`       | _(Required.) _ **string**. The program object id in the `okp4-objectarium` contract.                   |
+| `storage_address` | _(Required.) _ **string**. The `okp4-objectarium` contract address on which the law program is stored. |
 
 ### program_code
 
 Binary is a wrapper around Vec&lt;u8&gt; to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.
 
-This is only needed as serde-json-{core,wasm} has a horrible encoding for Vec&lt;u8&gt;. See also &lt;https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md&gt;.
+This is only needed as serde-json-\{core,wasm\} has a horrible encoding for Vec&lt;u8&gt;. See also &lt;https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md&gt;.
 
-|type|
-|----|
-|**string**.|
+| type        |
+| ----------- |
+| **string**. |
 
 ## Definitions
 
 ### Answer
 
-
-
-|property|description|
-|----------|-----------|
-|`has_more`|*(Required.) * **boolean**. |
-|`results`|*(Required.) * **Array&lt;[Result](#result)&gt;**. |
-|`success`|*(Required.) * **boolean**. |
-|`variables`|*(Required.) * **Array&lt;string&gt;**. |
+| property    | description                                        |
+| ----------- | -------------------------------------------------- |
+| `has_more`  | _(Required.) _ **boolean**.                        |
+| `results`   | _(Required.) _ **Array&lt;[Result](#result)&gt;**. |
+| `success`   | _(Required.) _ **boolean**.                        |
+| `variables` | _(Required.) _ **Array&lt;string&gt;**.            |
 
 ### Binary
 
 A string containing Base64-encoded data.
 
-|type|
-|----|
-|**string**.|
+| type        |
+| ----------- |
+| **string**. |
 
 ### Result
 
-
-
-|property|description|
-|----------|-----------|
-|`substitutions`|*(Required.) * **Array&lt;[Substitution](#substitution)&gt;**. |
+| property        | description                                                    |
+| --------------- | -------------------------------------------------------------- |
+| `substitutions` | _(Required.) _ **Array&lt;[Substitution](#substitution)&gt;**. |
 
 ### Substitution
 
-
-
-|property|description|
-|----------|-----------|
-|`term`|*(Required.) * **object**. |
-|`variable`|*(Required.) * **string**. |
+| property   | description                |
+| ---------- | -------------------------- |
+| `term`     | _(Required.) _ **object**. |
+| `variable` | _(Required.) _ **string**. |
 
 ### Term
 
-
-
-|property|description|
-|----------|-----------|
-|`arguments`|*(Required.) * **Array&lt;[Term](#term)&gt;**. |
-|`name`|*(Required.) * **string**. |
+| property    | description                                    |
+| ----------- | ---------------------------------------------- |
+| `arguments` | _(Required.) _ **Array&lt;[Term](#term)&gt;**. |
+| `name`      | _(Required.) _ **string**.                     |
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`092608edf6c36d25`)*
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`092608edf6c36d25`)_

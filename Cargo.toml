@@ -24,4 +24,4 @@ rio_xml = "0.8.4"
 schemars = "0.8.16"
 serde = { version = "1.0.193", default-features = false, features = ["derive"] }
 serde-json-wasm = "0.5.1"
-thiserror = { version = "1.0.53" }
+thiserror = { version = "1.0.56" }

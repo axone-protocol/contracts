@@ -352,10 +352,10 @@ jobs:
         id: verify-changed-docs-files
         with:
           files: |
-            docs
+            docs/*.md
 
       - name: Run step only when files change.
-        if: contains(steps.verify-changed-docs-files.outputs.changed_files, 'docs')
+        if: steps.verify-changed-docs-files.outputs.files_changed == 'true'
         run: |
           echo "❌ Documentation files has been updated."
           echo "  Changed files : ${{ steps.verify-changed-docs-files.outputs.changed_files }}"

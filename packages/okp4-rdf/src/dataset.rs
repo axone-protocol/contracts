@@ -12,6 +12,10 @@ impl<'a> Dataset<'a> {
         Self { quads }
     }
 
+    pub fn iter(&self) -> Iter<Quad<'a>> {
+        self.quads.iter()
+    }
+
     pub fn match_pattern(
         &'a self,
         s: Option<Subject<'a>>,
@@ -19,7 +23,7 @@ impl<'a> Dataset<'a> {
         o: Option<Term<'a>>,
         g: Option<Option<GraphName<'a>>>,
     ) -> QuadPatternFilter<'a, Iter<'a, Quad<'a>>> {
-        self.quads.iter().match_pattern((s, p, o, g).into())
+        self.iter().match_pattern((s, p, o, g).into())
     }
 
     pub fn skip_pattern(
@@ -29,7 +33,7 @@ impl<'a> Dataset<'a> {
         o: Option<Term<'a>>,
         g: Option<Option<GraphName<'a>>>,
     ) -> QuadPatternFilter<'a, Iter<'a, Quad<'a>>> {
-        self.quads.iter().skip_pattern((s, p, o, g).into())
+        self.iter().skip_pattern((s, p, o, g).into())
     }
 }
 
@@ -38,15 +42,6 @@ impl<'a> From<&'a [Quad<'a>]> for Dataset<'a> {
         Self {
             quads: quads.to_vec(),
         }
-    }
-}
-
-impl<'a> IntoIterator for &'a Dataset<'a> {
-    type Item = &'a Quad<'a>;
-    type IntoIter = Iter<'a, Quad<'a>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.quads.iter()
     }
 }
 

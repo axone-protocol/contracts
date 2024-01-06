@@ -1,4 +1,4 @@
-use crate::did::consts::RDF_TYPE;
+use crate::credential::rdf_markers::RDF_TYPE;
 use crate::ContractError;
 use itertools::Itertools;
 use okp4_rdf::dataset::{Dataset, QuadIterator};

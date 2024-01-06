@@ -1,9 +1,9 @@
-use crate::did::consts::*;
-use crate::did::crypto::Proof;
+use crate::credential::proof::Proof;
+use crate::credential::rdf_markers::*;
 use crate::ContractError;
 use itertools::Itertools;
+use okp4_rdf::dataset::Dataset;
 use okp4_rdf::dataset::QuadIterator;
-use okp4_rdf::dataset::{Dataset, QuadPattern};
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
 
 pub struct VerifiableCredential<'a> {
@@ -35,12 +35,13 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
     fn try_from(dataset: &'a Dataset<'a>) -> Result<Self, Self::Error> {
         let id = Self::extract_identifier(&dataset)?;
 
-        let mut proofs = vec![];
-        let mut unsecured_filter: Vec<QuadPattern<'_>> = vec![];
-        for (proof, graph) in Self::extract_proofs(dataset, id)? {
-            proofs.push(proof);
-            unsecured_filter.push((None, None, None, Some(Some(graph.into()))).into())
-        }
+        let (proofs, proof_graphs): (Vec<Proof<'a>>, Vec<BlankNode<'a>>) =
+            Self::extract_proofs(dataset, id)?.into_iter().unzip();
+
+        let unsecured_filter = proof_graphs
+            .into_iter()
+            .map(|g| (None, None, None, Some(Some(g.into()))).into())
+            .collect();
 
         Ok(Self {
             id: id.iri,
@@ -53,7 +54,7 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
             proof: proofs,
             unsecured_document: Dataset::new(
                 dataset
-                    .into_iter()
+                    .iter()
                     .skip_patterns(unsecured_filter)
                     .map(|quad| *quad)
                     .collect(),

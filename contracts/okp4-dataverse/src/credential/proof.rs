@@ -1,16 +1,17 @@
+use crate::credential::error::InvalidCredentialError;
 use crate::credential::rdf_markers::RDF_TYPE;
-use crate::ContractError;
 use itertools::Itertools;
 use okp4_rdf::dataset::{Dataset, QuadIterator};
 use rio_api::model::Term;
 
+#[allow(dead_code)]
 pub struct Proof<'a> {
     type_: String,
     inner: Dataset<'a>,
 }
 
 impl<'a> TryFrom<Dataset<'a>> for Proof<'a> {
-    type Error = ContractError;
+    type Error = InvalidCredentialError;
 
     fn try_from(dataset: Dataset<'a>) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -18,15 +19,16 @@ impl<'a> TryFrom<Dataset<'a>> for Proof<'a> {
                 .match_pattern(None, Some(RDF_TYPE), None, None)
                 .objects()
                 .exactly_one()
-                .map_err(|_| {
-                    ContractError::InvalidCredential(
-                        "Credential proof can must have only one type".to_string(),
-                    )
+                .map_err(|e| match e.size_hint() {
+                    (_, Some(_)) => InvalidCredentialError::MissingProofType,
+                    _ => InvalidCredentialError::Malformed(
+                        "Proof cannot have more than one type".to_string(),
+                    ),
                 })
                 .and_then(|o| match o {
                     Term::NamedNode(n) => Ok(n.iri.to_string()),
-                    _ => Err(ContractError::InvalidCredential(
-                        "Credential proof type must be a named node".to_string(),
+                    _ => Err(InvalidCredentialError::Malformed(
+                        "Proof type must be a named node".to_string(),
                     )),
                 })?,
             inner: dataset,

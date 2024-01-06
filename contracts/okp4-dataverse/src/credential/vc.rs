@@ -1,11 +1,12 @@
+use crate::credential::error::InvalidCredentialError;
 use crate::credential::proof::Proof;
 use crate::credential::rdf_markers::*;
-use crate::ContractError;
 use itertools::Itertools;
 use okp4_rdf::dataset::Dataset;
 use okp4_rdf::dataset::QuadIterator;
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
 
+#[allow(dead_code)]
 pub struct VerifiableCredential<'a> {
     id: &'a str,
     types: Vec<&'a str>,
@@ -18,11 +19,13 @@ pub struct VerifiableCredential<'a> {
     unsecured_document: Dataset<'a>,
 }
 
+#[allow(dead_code)]
 pub struct Claim<'a> {
     id: &'a str,
     content: Dataset<'a>,
 }
 
+#[allow(dead_code)]
 pub struct Status<'a> {
     id: &'a str,
     type_: &'a str,
@@ -30,13 +33,17 @@ pub struct Status<'a> {
 }
 
 impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
-    type Error = ContractError;
+    type Error = InvalidCredentialError;
 
     fn try_from(dataset: &'a Dataset<'a>) -> Result<Self, Self::Error> {
         let id = Self::extract_identifier(&dataset)?;
 
         let (proofs, proof_graphs): (Vec<Proof<'a>>, Vec<BlankNode<'a>>) =
             Self::extract_proofs(dataset, id)?.into_iter().unzip();
+
+        if proofs.is_empty() {
+            return Err(InvalidCredentialError::MissingProof);
+        }
 
         let unsecured_filter = proof_graphs
             .into_iter()
@@ -64,19 +71,22 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
 }
 
 impl<'a> VerifiableCredential<'a> {
-    fn extract_identifier(dataset: &'a Dataset<'a>) -> Result<NamedNode<'a>, ContractError> {
+    fn extract_identifier(
+        dataset: &'a Dataset<'a>,
+    ) -> Result<NamedNode<'a>, InvalidCredentialError> {
         dataset
             .match_pattern(None, Some(RDF_TYPE), Some(VC_RDF_TYPE), None)
             .subjects()
             .exactly_one()
-            .map_err(|_| {
-                ContractError::InvalidCredential(
-                    "Credential must contains one identifier".to_string(),
-                )
+            .map_err(|e| match e.size_hint() {
+                (_, Some(_)) => InvalidCredentialError::MissingIdentifier,
+                _ => InvalidCredentialError::Malformed(
+                    "Credential cannot have more than one id".to_string(),
+                ),
             })
             .and_then(|s| match s {
                 Subject::NamedNode(n) => Ok(n),
-                _ => Err(ContractError::InvalidCredential(
+                _ => Err(InvalidCredentialError::Malformed(
                     "Credential identifier must be a named node".to_string(),
                 )),
             })
@@ -85,13 +95,13 @@ impl<'a> VerifiableCredential<'a> {
     fn extract_types(
         dataset: &'a Dataset<'a>,
         id: NamedNode<'a>,
-    ) -> Result<Vec<&'a str>, ContractError> {
+    ) -> Result<Vec<&'a str>, InvalidCredentialError> {
         dataset
             .match_pattern(Some(id.into()), Some(RDF_TYPE), None, None)
             .objects()
             .map(|o| match o {
                 Term::NamedNode(n) => Ok(n.iri),
-                _ => Err(ContractError::InvalidCredential(
+                _ => Err(InvalidCredentialError::Malformed(
                     "Credential type must be a named node".to_string(),
                 )),
             })
@@ -101,17 +111,20 @@ impl<'a> VerifiableCredential<'a> {
     fn extract_issuer(
         dataset: &'a Dataset<'a>,
         id: NamedNode<'a>,
-    ) -> Result<NamedNode<'a>, ContractError> {
+    ) -> Result<NamedNode<'a>, InvalidCredentialError> {
         dataset
             .match_pattern(Some(id.into()), Some(VC_RDF_ISSUER), None, None)
             .objects()
             .exactly_one()
-            .map_err(|_| {
-                ContractError::InvalidCredential("Credential must contains one issuer".to_string())
+            .map_err(|e| match e.size_hint() {
+                (_, Some(_)) => InvalidCredentialError::MissingIssuer,
+                _ => InvalidCredentialError::Malformed(
+                    "Credential cannot have more than one issuer".to_string(),
+                ),
             })
             .and_then(|o| match o {
                 Term::NamedNode(n) => Ok(n),
-                _ => Err(ContractError::InvalidCredential(
+                _ => Err(InvalidCredentialError::Malformed(
                     "Credential issuer must be a named node".to_string(),
                 )),
             })
@@ -120,21 +133,22 @@ impl<'a> VerifiableCredential<'a> {
     fn extract_issuance_date(
         dataset: &'a Dataset<'a>,
         id: NamedNode<'a>,
-    ) -> Result<&'a str, ContractError> {
+    ) -> Result<&'a str, InvalidCredentialError> {
         dataset
             .match_pattern(Some(id.into()), Some(VC_RDF_ISSUANCE_DATE), None, None)
             .objects()
             .exactly_one()
-            .map_err(|_| {
-                ContractError::InvalidCredential(
-                    "Credential must contains one issuance date".to_string(),
-                )
+            .map_err(|e| match e.size_hint() {
+                (_, Some(_)) => InvalidCredentialError::MissingIssuanceDate,
+                _ => InvalidCredentialError::Malformed(
+                    "Credential cannot have more than one issuance date".to_string(),
+                ),
             })
             .and_then(|o| match o {
                 Term::Literal(Literal::Typed { value, datatype }) if datatype == RDF_DATE_TYPE => {
                     Ok(value)
                 }
-                _ => Err(ContractError::InvalidCredential(
+                _ => Err(InvalidCredentialError::Malformed(
                     "Credential issuance date must be a date".to_string(),
                 )),
             })
@@ -143,14 +157,14 @@ impl<'a> VerifiableCredential<'a> {
     fn extract_expiration_date(
         dataset: &'a Dataset<'a>,
         id: NamedNode<'a>,
-    ) -> Result<Option<&'a str>, ContractError> {
+    ) -> Result<Option<&'a str>, InvalidCredentialError> {
         dataset
             .match_pattern(Some(id.into()), Some(VC_RDF_EXPIRATION_DATE), None, None)
             .objects()
             .at_most_one()
             .map_err(|_| {
-                ContractError::InvalidCredential(
-                    "Credential may contains one expiration date".to_string(),
+                InvalidCredentialError::Malformed(
+                    "Credential cannot have more than one expiration date".to_string(),
                 )
             })
             .and_then(|o| match o {
@@ -160,7 +174,7 @@ impl<'a> VerifiableCredential<'a> {
                     {
                         Ok(Some(value))
                     }
-                    _ => Err(ContractError::InvalidCredential(
+                    _ => Err(InvalidCredentialError::Malformed(
                         "Credential expiration date must be a date".to_string(),
                     )),
                 },
@@ -171,13 +185,13 @@ impl<'a> VerifiableCredential<'a> {
     fn extract_claims(
         dataset: &'a Dataset<'a>,
         id: NamedNode<'a>,
-    ) -> Result<Vec<Claim<'a>>, ContractError> {
+    ) -> Result<Vec<Claim<'a>>, InvalidCredentialError> {
         dataset
             .match_pattern(Some(id.into()), Some(VC_RDF_CREDENTIAL_SUBJECT), None, None)
             .objects()
             .map(|claim_id| match claim_id {
                 Term::NamedNode(n) => Ok(n),
-                _ => Err(ContractError::InvalidCredential(
+                _ => Err(InvalidCredentialError::Malformed(
                     "Credential claim ids must be named nodes".to_string(),
                 )),
             })
@@ -196,14 +210,14 @@ impl<'a> VerifiableCredential<'a> {
     fn extract_status(
         dataset: &'a Dataset<'a>,
         id: NamedNode<'a>,
-    ) -> Result<Option<Status<'a>>, ContractError> {
+    ) -> Result<Option<Status<'a>>, InvalidCredentialError> {
         dataset
             .match_pattern(Some(id.into()), Some(VC_RDF_CREDENTIAL_STATUS), None, None)
             .objects()
             .at_most_one()
             .map_err(|_| {
-                ContractError::InvalidCredential(
-                    "Credential can contains at most one status".to_string(),
+                InvalidCredentialError::Malformed(
+                    "Credential cannot have more than one expiration date".to_string(),
                 )
             })
             .and_then(|maybe_term| match maybe_term {
@@ -214,7 +228,7 @@ impl<'a> VerifiableCredential<'a> {
                             .iter()
                             .exactly_one()
                             .map_err(|_| {
-                                ContractError::InvalidCredential(
+                                InvalidCredentialError::Malformed(
                                     "Credential status can only have one type".to_string(),
                                 )
                             })?,
@@ -225,7 +239,7 @@ impl<'a> VerifiableCredential<'a> {
                                 .collect(),
                         ),
                     })),
-                    _ => Err(ContractError::InvalidCredential(
+                    _ => Err(InvalidCredentialError::Malformed(
                         "Credential status id must be a named node".to_string(),
                     )),
                 },
@@ -236,14 +250,14 @@ impl<'a> VerifiableCredential<'a> {
     fn extract_proofs(
         dataset: &'a Dataset<'a>,
         id: NamedNode<'a>,
-    ) -> Result<Vec<(Proof<'a>, BlankNode<'a>)>, ContractError> {
+    ) -> Result<Vec<(Proof<'a>, BlankNode<'a>)>, InvalidCredentialError> {
         dataset
             .match_pattern(Some(id.into()), Some(VC_RDF_PROOF), None, None)
             .objects()
             .map(|o| {
                 match o {
                     Term::BlankNode(n) => Ok(n),
-                    _ => Err(ContractError::InvalidCredential(
+                    _ => Err(InvalidCredentialError::Malformed(
                         "Credential proof must be encapsulated in blank node graph names"
                             .to_string(),
                     )),

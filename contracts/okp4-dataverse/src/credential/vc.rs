@@ -1,6 +1,6 @@
 use crate::credential::error::InvalidCredentialError;
 use crate::credential::proof::Proof;
-use crate::credential::rdf_markers::*;
+use crate::credential::rdf_marker::*;
 use itertools::Itertools;
 use okp4_rdf::dataset::Dataset;
 use okp4_rdf::dataset::QuadIterator;

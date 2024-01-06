@@ -1,4 +1,4 @@
 mod error;
 mod proof;
-mod rdf_markers;
+mod rdf_marker;
 mod vc;

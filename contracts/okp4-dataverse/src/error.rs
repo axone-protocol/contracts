@@ -8,4 +8,7 @@ pub enum ContractError {
 
     #[error("{0}")]
     Instantiate2Address(#[from] Instantiate2AddressError),
+
+    #[error("Invalid credential: '{0}'")]
+    InvalidCredential(String),
 }

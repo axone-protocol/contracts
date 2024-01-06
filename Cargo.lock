@@ -818,6 +818,7 @@ version = "3.0.0"
 dependencies = [
  "base16ct",
  "cosmwasm-std",
+ "itertools 0.12.0",
  "rio_api",
  "rio_turtle",
  "rio_xml",

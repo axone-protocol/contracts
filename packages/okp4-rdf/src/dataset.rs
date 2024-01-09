@@ -2,7 +2,7 @@ use itertools::Itertools;
 use rio_api::model::{GraphName, NamedNode, Quad, Subject, Term};
 use std::slice::Iter;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Dataset<'a> {
     quads: Vec<Quad<'a>>,
 }
@@ -34,14 +34,6 @@ impl<'a> Dataset<'a> {
         g: Option<Option<GraphName<'a>>>,
     ) -> QuadPatternFilter<'a, Iter<'a, Quad<'a>>> {
         self.iter().skip_pattern((s, p, o, g).into())
-    }
-}
-
-impl<'a> From<&'a [Quad<'a>]> for Dataset<'a> {
-    fn from(quads: &'a [Quad<'a>]) -> Self {
-        Self {
-            quads: quads.to_vec(),
-        }
     }
 }
 

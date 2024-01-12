@@ -47,7 +47,7 @@ snap = "1"
 thiserror.workspace = true
 
 [dev-dependencies]
-base64 = "0.21.6"
+base64 = "0.21.7"
 cw-multi-test.workspace = true
 
 [features]

@@ -415,6 +415,14 @@ git commit -am "docs: update generated documentation"
 So you want to contribute? Great! ❤️ We appreciate any help you're willing to give. Don't hesitate to open issues and/or
 submit pull requests.
 
+We believe that collaboration is key to the success of the OKP4 project. Join our Community discussions on the [Community Repository](https://github.com/okp4/community) to:
+
+- Engage in conversations with peers and experts.
+- Share your insights and experiences with OKP4.
+- Learn from others and expand your knowledge of the protocol.
+
+The Community Repository serves as a hub for discussions, questions, and knowledge-sharing related to OKP4. We encourage you to actively participate and contribute to the growth of our community.
+
 Please check out OKP4 health files:
 
 - [Contributing](https://github.com/okp4/.github/blob/main/CONTRIBUTING.md)

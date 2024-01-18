@@ -64,7 +64,7 @@ jobs:
         if: steps.changed-rust-cargo.outputs.any_changed == 'true'
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69
+          toolchain: 1.75
           default: true
           override: true
 
@@ -131,7 +131,7 @@ jobs:
         if: steps.changed-rust-files.outputs.any_changed == 'true'
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69
+          toolchain: 1.75
           default: true
           override: true
 
@@ -153,7 +153,7 @@ jobs:
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69
+          toolchain: 1.75
           default: true
           override: true
 
@@ -184,7 +184,7 @@ jobs:
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69
+          toolchain: 1.75
           default: true
           override: true
 
@@ -224,7 +224,7 @@ jobs:
         if: steps.changed-toml-files.outputs.any_changed == 'true'
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69
+          toolchain: 1.75
           default: true
           override: true
 
@@ -263,7 +263,7 @@ jobs:
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69
+          toolchain: 1.75
           default: true
           override: true
 
@@ -299,7 +299,7 @@ jobs:
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69
+          toolchain: 1.75
           default: true
           override: true
 
@@ -334,7 +334,7 @@ jobs:
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69
+          toolchain: 1.75
           default: true
           override: true
 

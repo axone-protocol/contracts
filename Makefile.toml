@@ -279,7 +279,7 @@ docker run --rm \
   -v `pwd`:/app \
   -w /app \
   ${DOCKER_IMAGE_OKP4D} \
-    add-genesis-account validator ${BALANCE_VALIDATOR} \
+    genesis add-genesis-account validator ${BALANCE_VALIDATOR} \
       --keyring-backend test \
       --home ${CHAIN_HOME}
 
@@ -295,7 +295,7 @@ for entry in "${balances[@]}" ; do
       -v `pwd`:/app \
       -w /app \
       ${DOCKER_IMAGE_OKP4D} \
-         add-genesis-account ${name} "${balance}"  \
+         genesis add-genesis-account ${name} "${balance}"  \
           --keyring-backend ${KEYRING_BACKEND} \
           --home ${CHAIN_HOME}
 done
@@ -305,14 +305,14 @@ NODE_ID=$(
     -v `pwd`:/app \
     -w /app \
     ${DOCKER_IMAGE_OKP4D} \
-      tendermint show-node-id \
+      comet show-node-id \
         --home ${CHAIN_HOME}
 )
 docker run --rm \
   -v `pwd`:/app \
   -w /app \
   ${DOCKER_IMAGE_OKP4D} \
-    gentx validator 1000000uknow \
+    genesis gentx validator 1000000uknow \
       --node-id ${NODE_ID} \
       --chain-id=${CHAIN} \
       --keyring-backend test \
@@ -322,7 +322,7 @@ docker run --rm \
   -v `pwd`:/app \
   -w /app \
   ${DOCKER_IMAGE_OKP4D} \
-	  collect-gentxs \
+	  genesis collect-gentxs \
 	    --home ${CHAIN_HOME}
 '''
 
@@ -624,7 +624,7 @@ CHAIN_MONIKER = "local-node"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
 DIR_TARGET = "./target"
 DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
-DOCKER_IMAGE_OKP4D = "okp4/okp4d:5.0.0"
+DOCKER_IMAGE_OKP4D = "okp4/okp4d:6.0.0"
 KEYRING_BACKEND = "test"
 MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
 MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"

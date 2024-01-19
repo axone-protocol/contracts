@@ -111,7 +111,7 @@ impl<'a> Normalizer<'a> {
             .filter(|(_, nodes)| nodes.len() <= 1)
             .map(|(hash, nodes)| {
                 nodes
-                    .get(0)
+                    .first()
                     .ok_or_else(|| {
                         NormalizationError::Unexpected(
                             "Could not label unique node, node not found".to_string(),

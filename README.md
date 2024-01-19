@@ -201,7 +201,7 @@ The project is structured around a set of Rust workspaces, each defining a Smart
 
 Be sure you have the following tools installed:
 
-- [Rust](https://www.rust-lang.org/tools/install) v1.69 or higher
+- [Rust](https://www.rust-lang.org/tools/install) v1.75 or higher
 - [cargo-make](https://github.com/sagiegurari/cargo-make) v0.36.3 or higher
 - [Docker](https://docs.docker.com/get-docker/)
 - [jq](https://stedolan.github.io/jq/download/) v1.6 or higher

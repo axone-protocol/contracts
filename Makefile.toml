@@ -591,7 +591,7 @@ install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help
 install_crate = { crate_name = "cargo-llvm-cov", min_version = "0.5.38" }
 
 [tasks.install-cosmwasm-check]
-install_crate = { crate_name = "cosmwasm-check", min_version = "1.2.7" }
+install_crate = { crate_name = "cosmwasm-check", min_version = "1.5.3" }
 
 [tasks.install-ffizer]
 install_script = '''

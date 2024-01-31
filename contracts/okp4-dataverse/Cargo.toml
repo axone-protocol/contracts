@@ -41,6 +41,8 @@ rio_api.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+rio_turtle.workspace = true
+bs58 = "0.5.0"
 
 [dev-dependencies]
 cw-multi-test.workspace = true

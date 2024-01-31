@@ -7,6 +7,7 @@ use okp4_rdf::dataset::QuadIterator;
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
 
 #[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub struct VerifiableCredential<'a> {
     id: &'a str,
     types: Vec<&'a str>,
@@ -20,12 +21,14 @@ pub struct VerifiableCredential<'a> {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub struct Claim<'a> {
     id: &'a str,
     content: Dataset<'a>,
 }
 
 #[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub struct Status<'a> {
     id: &'a str,
     type_: &'a str,
@@ -263,13 +266,9 @@ impl<'a> VerifiableCredential<'a> {
                     )),
                 }
                 .and_then(|g| {
-                    Proof::try_from(Dataset::new(
-                        dataset
-                            .match_pattern(None, None, None, Some(Some(g.into())))
-                            .map(|quad| *quad)
-                            .collect(),
-                    ))
-                    .map(|p| (p, g))
+                    Proof::try_from((dataset, g.into()))
+                        .map_err(InvalidCredentialError::from)
+                        .map(|p| (p, g))
                 })
             })
             .collect()

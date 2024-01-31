@@ -1,6 +1,6 @@
 # Objectarium
 
-A [CosmWasm](https://cosmwasm.com/) smart contract designed to store arbitrary objects on the blockchain.
+A  [CosmWasm](https://cosmwasm.com/) Smart Contract which enables the storage of arbitrary unstructured [Objects](https://en.wikipedia.org/wiki/Object_storage) in any [Cosmos](https://cosmos.network/) blockchains.
 
 ## Purpose
 

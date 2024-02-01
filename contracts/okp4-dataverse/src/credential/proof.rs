@@ -8,13 +8,11 @@ use itertools::Itertools;
 use okp4_rdf::dataset::{Dataset, QuadIterator};
 use rio_api::model::{GraphName, Literal, Term};
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub enum Proof<'a> {
     Ed25519Signature2020(Ed25519Signature2020Proof<'a>),
 }
 
-#[allow(dead_code)]
 impl<'a> Proof<'a> {
     pub fn suitable(&self, issuer: &str, purpose: ProofPurpose) -> bool {
         match self {
@@ -189,7 +187,6 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Proof<'a> {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct Ed25519Signature2020Proof<'a> {
     verification_method: Ed25519VerificationKey2020<'a>,
@@ -218,7 +215,6 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Ed25519Signature2020Proof
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct Ed25519VerificationKey2020<'a> {
     id: &'a str,
@@ -286,29 +282,10 @@ mod multiformats {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::testutil::testutil;
     use base64::prelude::BASE64_STANDARD;
     use base64::Engine;
-    use okp4_rdf::serde::NQuadsReader;
     use rio_api::model::BlankNode;
-    use std::env;
-    use std::fs::File;
-    use std::io::{BufReader, Read};
-    use std::path::Path;
-
-    fn read_test_data(file: &str) -> Vec<u8> {
-        let mut bytes: Vec<u8> = Vec::new();
-
-        File::open(
-            Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap())
-                .join("testdata")
-                .join(file),
-        )
-        .unwrap()
-        .read_to_end(&mut bytes)
-        .unwrap();
-
-        bytes
-    }
 
     #[test]
     fn proof_from_dataset() {
@@ -365,10 +342,7 @@ mod test {
         ];
 
         for (test_file, expected) in cases {
-            let raw_rdf = read_test_data(test_file);
-            let buffer = BufReader::new(raw_rdf.as_slice());
-            let mut reader = NQuadsReader::new(buffer);
-            let owned_quads = reader.read_all().unwrap();
+            let owned_quads = testutil::read_test_quads(test_file);
             let dataset = Dataset::from(owned_quads.as_slice());
 
             let proof_res =

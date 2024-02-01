@@ -2,11 +2,10 @@ use crate::credential::error::{InvalidCredentialError, InvalidProofError, Verifi
 use crate::credential::proof::{Proof, ProofPurpose};
 use crate::credential::rdf_marker::*;
 use itertools::Itertools;
-use okp4_rdf::dataset::Dataset;
 use okp4_rdf::dataset::QuadIterator;
+use okp4_rdf::dataset::{Dataset, QuadPattern};
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct VerifiableCredential<'a> {
     id: &'a str,
@@ -20,14 +19,12 @@ pub struct VerifiableCredential<'a> {
     unsecured_document: Dataset<'a>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct Claim<'a> {
     id: &'a str,
     content: Dataset<'a>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct Status<'a> {
     id: &'a str,
@@ -48,10 +45,12 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
             return Err(InvalidCredentialError::MissingProof);
         }
 
-        let unsecured_filter = proof_graphs
+        let mut unsecured_filter: Vec<QuadPattern<'_>> = proof_graphs
             .into_iter()
             .map(|g| (None, None, None, Some(Some(g.into()))).into())
             .collect();
+
+        unsecured_filter.push((Some(id.into()), Some(VC_RDF_PROOF), None, None).into());
 
         Ok(Self {
             id: id.iri,
@@ -296,57 +295,39 @@ impl<'a> VerifiableCredential<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use okp4_rdf::serde::NQuadsReader;
-    use rio_api::model::Quad;
+    use crate::testutil::testutil;
 
     #[test]
-    fn mescouilles() {
-        let vc_raw = r#"<did:key:z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu> <https://schema.org/name> "Hometown Theatres, Inc." .
-<did:v1:test:nym:z6MkhYBppZa2aD5xitZg3FbWLYPupRMAEecKFLQvmoYw8yEa> <https://schema.org/owns> _:b2 .
-<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://contexts.vcplayground.org/examples/movie-ticket/vocab#MovieTicketCredential> .
-<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
-<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://schema.org/description> "Admit one: Plan 9 from Outer Space, 3pm showing." .
-<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://schema.org/image> <data:image/png;base64,iVBORw0KGgoA> .
-<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://w3id.org/security#proof> _:b0 .
-<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://www.w3.org/2018/credentials#credentialSubject> <did:v1:test:nym:z6MkhYBppZa2aD5xitZg3FbWLYPupRMAEecKFLQvmoYw8yEa> .
-<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://www.w3.org/2018/credentials#issuanceDate> "2023-11-29T10:07:56.079Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
-<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://www.w3.org/2018/credentials#issuer> <did:key:z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu> .
-_:b1 <http://purl.org/dc/terms/created> "2023-11-29T10:07:56Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> _:b0 .
-_:b1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/security#Ed25519Signature2020> _:b0 .
-_:b1 <https://w3id.org/security#proofPurpose> <https://w3id.org/security#assertionMethod> _:b0 .
-_:b1 <https://w3id.org/security#proofValue> "z5UT4w3v6uSJ3srR3ZFSZBbgjaMRyEUaaGdnZzEb2oc1YTskkpff9qYt2GiTDuU2wqEh3f99YvWubPuqVNWrn9hNx"^^<https://w3id.org/security#multibase> _:b0 .
-_:b1 <https://w3id.org/security#verificationMethod> <did:key:z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu#z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu> _:b0 .
-_:b2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://schema.org/Ticket> .
-_:b2 <https://schema.org/location> _:b3 .
-_:b2 <https://schema.org/startDate> "2022-08-26T19:00:00.000Z" .
-_:b2 <https://schema.org/ticketNumber> "457812" .
-_:b2 <https://schema.org/ticketToken> "urn:1a1e549a-2867" .
-_:b2 <https://schema.org/ticketedSeat> _:b5 .
-_:b3 <https://schema.org/PostalAddress> _:b4 .
-_:b3 <https://schema.org/name> "Hometown Theatres, Inc." .
-_:b4 <https://schema.org/addressLocality> "Your Town" .
-_:b4 <https://schema.org/addressRegion> "VA" .
-_:b4 <https://schema.org/postalCode> "24060" .
-_:b4 <https://schema.org/streetAddress> "123 Main St." .
-_:b5 <https://schema.org/seatNumber> "11" .
-_:b5 <https://schema.org/seatRow> "E" .
-_:b5 <https://schema.org/seatSection> "Theatre 3" ."#;
+    fn proper_vc_from_dataset() {
+        let owned_quads = testutil::read_test_quads("vc-ok-unsecured.nq");
+        let unsecure_dataset = Dataset::from(owned_quads.as_slice());
 
-        let mut reader = NQuadsReader::new(vc_raw.as_bytes());
-        let owned_quads = reader.read_all().unwrap();
-        let quads: Vec<Quad<'_>> = owned_quads.iter().map(Quad::from).collect();
-        let dataset = Dataset::new(quads);
+        let owned_quads = testutil::read_test_quads("vc-ok.nq");
+        let dataset = Dataset::from(owned_quads.as_slice());
 
-        let vc = VerifiableCredential::try_from(&dataset);
-
-        assert!(vc.is_ok());
-        let vc = vc.unwrap();
+        let vc_res = VerifiableCredential::try_from(&dataset);
+        assert!(vc_res.is_ok());
+        let vc = vc_res.unwrap();
+        assert_eq!(vc.id, "http://example.edu/credentials/58473");
         assert_eq!(
-            vc.id,
-            "https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd"
+            vc.types,
+            vec!["https://www.w3.org/2018/credentials#VerifiableCredential"]
         );
-
-        let verif = vc.verify();
-        assert!(verif.is_ok());
+        assert_eq!(
+            vc.issuer,
+            "did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY"
+        );
+        assert_eq!(vc.issuance_date, "2023-05-01T06:09:10Z");
+        assert_eq!(vc.expiration_date, None);
+        assert_eq!(
+            vc.claims,
+            vec![Claim {
+                id: "did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY",
+                content: Dataset::new(vec![]),
+            }]
+        );
+        assert_eq!(vc.status, None);
+        assert_eq!(vc.proof.len(), 1usize);
+        assert_eq!(vc.unsecured_document, unsecure_dataset);
     }
 }

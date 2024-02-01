@@ -767,6 +767,7 @@ dependencies = [
 name = "okp4-dataverse"
 version = "0.0.1"
 dependencies = [
+ "base64",
  "bs58",
  "cosmwasm-crypto",
  "cosmwasm-schema",

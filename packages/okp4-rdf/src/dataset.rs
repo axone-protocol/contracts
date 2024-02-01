@@ -1,3 +1,4 @@
+use crate::owned_model::OwnedQuad;
 use itertools::Itertools;
 use rio_api::model::{GraphName, NamedNode, Quad, Subject, Term};
 use std::slice::Iter;
@@ -10,6 +11,13 @@ pub struct Dataset<'a> {
 impl<'a> AsRef<[Quad<'a>]> for Dataset<'a> {
     fn as_ref(&self) -> &[Quad<'a>] {
         self.quads.as_slice()
+    }
+}
+
+impl<'a> From<&'a [OwnedQuad]> for Dataset<'a> {
+    fn from(value: &'a [OwnedQuad]) -> Self {
+        let quads = value.iter().map(Quad::from).collect();
+        Dataset::new(quads)
     }
 }
 

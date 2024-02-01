@@ -61,10 +61,10 @@ impl<'a> Proof<'a> {
             .objects()
             .exactly_one()
             .map_err(|e| match e.size_hint() {
-                (_, Some(_)) => InvalidProofError::MissingVerificationMethod,
-                _ => InvalidProofError::Malformed(
+                (_, Some(_)) => InvalidProofError::Malformed(
                     "Proof cannot have more than one verification method".to_string(),
                 ),
+                _ => InvalidProofError::MissingVerificationMethod,
             })
             .and_then(|o| match o {
                 Term::NamedNode(n) => Ok(n.iri),
@@ -83,10 +83,10 @@ impl<'a> Proof<'a> {
             .objects()
             .exactly_one()
             .map_err(|e| match e.size_hint() {
-                (_, Some(_)) => InvalidProofError::MissingCreated,
-                _ => InvalidProofError::Malformed(
+                (_, Some(_)) => InvalidProofError::Malformed(
                     "Proof cannot have more than one created date".to_string(),
                 ),
+                _ => InvalidProofError::MissingCreated,
             })
             .and_then(|o| match o {
                 Term::Literal(Literal::Typed { value, datatype }) if datatype == RDF_DATE_TYPE => {
@@ -112,10 +112,10 @@ impl<'a> Proof<'a> {
             .objects()
             .exactly_one()
             .map_err(|e| match e.size_hint() {
-                (_, Some(_)) => InvalidProofError::MissingProofPurpose,
-                _ => InvalidProofError::Malformed(
+                (_, Some(_)) => InvalidProofError::Malformed(
                     "Proof cannot have more than one proof purpose".to_string(),
                 ),
+                _ => InvalidProofError::MissingProofPurpose,
             })
             .and_then(|o| match o {
                 Term::NamedNode(n) => Ok(n.iri),
@@ -139,10 +139,10 @@ impl<'a> Proof<'a> {
             .objects()
             .exactly_one()
             .map_err(|e| match e.size_hint() {
-                (_, Some(_)) => InvalidProofError::MissingProofValue,
-                _ => InvalidProofError::Malformed(
+                (_, Some(_)) => InvalidProofError::Malformed(
                     "Proof cannot have more than one proof value".to_string(),
                 ),
+                _ => InvalidProofError::MissingProofValue,
             })
             .and_then(|o| match o {
                 Term::Literal(Literal::Typed { value, datatype })
@@ -168,10 +168,10 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Proof<'a> {
             .objects()
             .exactly_one()
             .map_err(|e| match e.size_hint() {
-                (_, Some(_)) => InvalidProofError::MissingProofType,
-                _ => {
+                (_, Some(_)) => {
                     InvalidProofError::Malformed("Proof cannot have more than one type".to_string())
                 }
+                _ => InvalidProofError::MissingProofType,
             })
             .and_then(|o| match o {
                 Term::NamedNode(n) => Ok(n.iri),
@@ -280,5 +280,100 @@ mod multiformats {
         }
 
         Ok(key.to_vec())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use base64::prelude::BASE64_STANDARD;
+    use base64::Engine;
+    use okp4_rdf::serde::NQuadsReader;
+    use rio_api::model::BlankNode;
+    use std::env;
+    use std::fs::File;
+    use std::io::{BufReader, Read};
+    use std::path::Path;
+
+    fn read_test_data(file: &str) -> Vec<u8> {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        File::open(
+            Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap())
+                .join("testdata")
+                .join(file),
+        )
+        .unwrap()
+        .read_to_end(&mut bytes)
+        .unwrap();
+
+        bytes
+    }
+
+    #[test]
+    fn proof_from_dataset() {
+        let cases: Vec<(&str, Result<Proof<'_>, InvalidProofError>)> = vec![
+            (
+                "proof-ed255192020-ok.nq",
+                Ok(Proof::Ed25519Signature2020(Ed25519Signature2020Proof {
+                    created: "2023-11-29T10:07:56Z",
+                    verification_method: Ed25519VerificationKey2020 {
+                        id: "did:key:z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu#z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu",
+                        controller: "did:key:z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu",
+                        pub_key: BASE64_STANDARD.decode("qt35Ph/BPVyvU0YhVdJ47m0p6APFYPoC5V5C7s5cdyg=").unwrap(),
+                    },
+                    purpose: ProofPurpose::AssertionMethod,
+                    value: BASE64_STANDARD.decode("371GN4kfgVEWv3/QY9qx1buNm9gYJGWgYOgMSVKOsnoJekPoQV2fjqR+3XMjd3avpQlARFyD/3a0J5tUS4aBCQ==").unwrap(),
+                })),
+            ),
+            (
+                "proof-invalid-pkey.nq",
+                Err(InvalidProofError::InvalidPubKey),
+            ),
+            (
+                "proof-malformed.nq",
+                Err(InvalidProofError::Malformed("Proof type must be a named node".to_string())),
+            ),
+            (
+                "proof-malformed-value.nq",
+                Err(InvalidProofError::MalformedProofValue(multibase::Error::UnknownBase('5'))),
+            ),
+            (
+                "proof-missing-created.nq",
+                Err(InvalidProofError::MissingCreated),
+            ),
+            (
+                "proof-missing-method.nq",
+                Err(InvalidProofError::MissingVerificationMethod),
+            ),
+            (
+                "proof-missing-purpose.nq",
+                Err(InvalidProofError::MissingProofPurpose),
+            ),
+            (
+                "proof-missing-type.nq",
+                Err(InvalidProofError::MissingProofType),
+            ),
+            (
+                "proof-missing-value.nq",
+                Err(InvalidProofError::MissingProofValue),
+            ),
+            (
+                "proof-unsupported.nq",
+                Err(InvalidProofError::Unsupported),
+            ),
+        ];
+
+        for (test_file, expected) in cases {
+            let raw_rdf = read_test_data(test_file);
+            let buffer = BufReader::new(raw_rdf.as_slice());
+            let mut reader = NQuadsReader::new(buffer);
+            let owned_quads = reader.read_all().unwrap();
+            let dataset = Dataset::from(owned_quads.as_slice());
+
+            let proof_res =
+                Proof::try_from((&dataset, GraphName::BlankNode(BlankNode { id: "b0" })));
+            assert_eq!(proof_res, expected)
+        }
     }
 }

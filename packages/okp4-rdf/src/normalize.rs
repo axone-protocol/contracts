@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rio_api::model::{BlankNode, GraphName, Quad, Subject, Term};
 use sha2;
 use sha2::Digest;
@@ -95,7 +96,7 @@ impl<'a> Normalizer<'a> {
                 quad.swap_blank_nodes(&swap_fn);
             });
 
-            let hash = Self::serialize(&replacements);
+            let hash = Self::hash(Self::serialize(&replacements));
             self.hash_to_blank_nodes
                 .entry(hash.clone())
                 .and_modify(|v| v.push(target.clone()))
@@ -300,19 +301,21 @@ impl<'a> Normalizer<'a> {
         Ok(base16ct::lower::encode_string(&hasher.finalize()))
     }
 
+    fn hash(data: String) -> String {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(data);
+        let hash = hasher.finalize().to_vec();
+
+        base16ct::lower::encode_string(&hash)
+    }
+
     fn serialize(quads: &[Quad<'_>]) -> String {
         let mut raw_sorted = BTreeMap::new();
         for quad in quads {
             raw_sorted.insert(format!("{} .\n", quad), ());
         }
 
-        let mut hasher = sha2::Sha256::new();
-        for (raw, _) in raw_sorted {
-            hasher.update(raw);
-        }
-        let hash = hasher.finalize().to_vec();
-
-        base16ct::lower::encode_string(&hash)
+        raw_sorted.iter().map(|(v, _)| v).join("")
     }
 }
 
@@ -716,7 +719,7 @@ mod test {
             let mut normalizer = Normalizer::new();
             let res = normalizer.normalize(&case.0);
             assert_eq!(res.is_ok(), true);
-            assert_eq!(res.unwrap(), case.1);
+            assert_eq!(Normalizer::hash(res.unwrap()), case.1);
         }
     }
 

@@ -1,3 +1,4 @@
+use crate::credential::crypto::{CanonicalizationAlg, CryptoSuite, DigestAlg, SignatureAlg};
 use crate::credential::error::InvalidProofError;
 use crate::credential::rdf_marker::{
     PROOF_RDF_PROOF_PURPOSE, PROOF_RDF_PROOF_VALUE, PROOF_RDF_PROOF_VALUE_TYPE,
@@ -11,7 +12,6 @@ use rio_api::model::{GraphName, Literal, Term};
 #[derive(Debug, PartialEq)]
 pub enum Proof<'a> {
     Ed25519Signature2020(Ed25519Signature2020Proof<'a>),
-    Unsupported,
 }
 
 #[allow(dead_code)]
@@ -21,7 +21,29 @@ impl<'a> Proof<'a> {
             Self::Ed25519Signature2020(proof) => {
                 proof.verification_method.controller == issuer && proof.purpose == purpose
             }
-            Self::Unsupported => false,
+        }
+    }
+
+    pub fn crypto_suite(&self) -> CryptoSuite {
+        match self {
+            Proof::Ed25519Signature2020(_) => (
+                CanonicalizationAlg::Urdna2015,
+                DigestAlg::Sha256,
+                SignatureAlg::Ed25519,
+            )
+                .into(),
+        }
+    }
+
+    pub fn pub_key(&'a self) -> &'a [u8] {
+        match self {
+            Proof::Ed25519Signature2020(p) => &p.verification_method.pub_key,
+        }
+    }
+
+    pub fn value(&'a self) -> &'a [u8] {
+        match self {
+            Proof::Ed25519Signature2020(p) => &p.value,
         }
     }
 
@@ -158,12 +180,12 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Proof<'a> {
                 )),
             })?;
 
-        Ok(match proof_type {
-            "https://w3id.org/security#Ed25519Signature2020" => Self::Ed25519Signature2020(
+        match proof_type {
+            "https://w3id.org/security#Ed25519Signature2020" => Ok(Self::Ed25519Signature2020(
                 Ed25519Signature2020Proof::try_from((dataset, proof_graph))?,
-            ),
-            _ => Self::Unsupported,
-        })
+            )),
+            _ => Err(InvalidProofError::Unsupported),
+        }
     }
 }
 
@@ -184,13 +206,14 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Ed25519Signature2020Proof
     ) -> Result<Self, Self::Error> {
         let v_method = Proof::extract_verification_method(dataset, proof_graph)?;
         let p_purpose = Proof::extract_proof_purpose(dataset, proof_graph)?;
-        let p_value = Proof::extract_proof_value(dataset, proof_graph)?;
+        let (_, p_value) = multibase::decode(Proof::extract_proof_value(dataset, proof_graph)?)
+            .map_err(InvalidProofError::from)?;
 
         Ok(Self {
             verification_method: v_method.try_into()?,
             created: Proof::extract_created(dataset, proof_graph)?,
             purpose: p_purpose.into(),
-            value: p_value.as_bytes().to_vec(),
+            value: p_value,
         })
     }
 }
@@ -207,12 +230,12 @@ impl<'a> TryFrom<&'a str> for Ed25519VerificationKey2020<'a> {
     type Error = InvalidProofError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Ok(match value.split(":").collect::<Vec<_>>()[..] {
-            ["did", "key", content] => match content.split("#").collect::<Vec<_>>()[..] {
-                [controller, key] if controller == key => Self {
+        Ok(match value.split("#").collect::<Vec<_>>()[..] {
+            [controller, key] => match controller.split(":").collect::<Vec<_>>()[..] {
+                ["did", "key", controller_key] if controller_key == key => Self {
                     id: value,
                     controller,
-                    pub_key: multibase::decode_ed25519(key)?,
+                    pub_key: multiformats::decode_ed25519_key(key)?,
                 },
                 _ => Err(InvalidProofError::Malformed(
                     "couldn't parse did key for verification method".to_string(),
@@ -240,15 +263,22 @@ impl<'a> From<&'a str> for ProofPurpose {
     }
 }
 
-mod multibase {
+mod multiformats {
     use crate::credential::error::InvalidProofError;
+    use multibase::Base;
 
-    pub fn decode_ed25519(src: &str) -> Result<Vec<u8>, InvalidProofError> {
-        let res = bs58::decode(src.split_at(1).1).into_vec();
-        let buf = res.map_err(|_| InvalidProofError::InvalidPubKey)?;
-        match buf.split_at(1) {
-            ([0xed], key) => Ok(key.to_vec()),
-            _ => Err(InvalidProofError::InvalidPubKey),
+    pub fn decode_ed25519_key(src: &str) -> Result<Vec<u8>, InvalidProofError> {
+        let (base, data) = multibase::decode(src).map_err(|_| InvalidProofError::InvalidPubKey)?;
+        if base != Base::Base58Btc {
+            Err(InvalidProofError::InvalidPubKey)?
         }
+
+        let (codec, key) =
+            unsigned_varint::decode::u16(&data).map_err(|_| InvalidProofError::InvalidPubKey)?;
+        if codec != 0xed {
+            Err(InvalidProofError::InvalidPubKey)?
+        }
+
+        Ok(key.to_vec())
     }
 }

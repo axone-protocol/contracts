@@ -1,5 +1,5 @@
-use crate::credential::error::InvalidCredentialError;
-use crate::credential::proof::Proof;
+use crate::credential::error::{InvalidCredentialError, InvalidProofError, VerificationError};
+use crate::credential::proof::{Proof, ProofPurpose};
 use crate::credential::rdf_marker::*;
 use itertools::Itertools;
 use okp4_rdf::dataset::Dataset;
@@ -74,6 +74,21 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
 }
 
 impl<'a> VerifiableCredential<'a> {
+    pub fn verify(&self) -> Result<bool, VerificationError> {
+        let proof = self
+            .proof
+            .iter()
+            .find(|p| p.suitable(self.issuer, ProofPurpose::AssertionMethod))
+            .ok_or(VerificationError::NoSuitableProof)?;
+
+        let crypto_suite = proof.crypto_suite();
+        crypto_suite.verify_document(
+            self.unsecured_document.as_ref(),
+            proof.value(),
+            proof.pub_key(),
+        )
+    }
+
     fn extract_identifier(
         dataset: &'a Dataset<'a>,
     ) -> Result<NamedNode<'a>, InvalidCredentialError> {
@@ -257,20 +272,81 @@ impl<'a> VerifiableCredential<'a> {
         dataset
             .match_pattern(Some(id.into()), Some(VC_RDF_PROOF), None, None)
             .objects()
-            .map(|o| {
-                match o {
-                    Term::BlankNode(n) => Ok(n),
-                    _ => Err(InvalidCredentialError::Malformed(
-                        "Credential proof must be encapsulated in blank node graph names"
-                            .to_string(),
-                    )),
+            .map(|o| match o {
+                Term::BlankNode(n) => {
+                    let proof_res = Proof::try_from((dataset, n.into()));
+                    match proof_res {
+                        Err(e) if e == InvalidProofError::Unsupported => None,
+                        _ => Some(
+                            proof_res
+                                .map(|p| (p, n))
+                                .map_err(InvalidCredentialError::from),
+                        ),
+                    }
                 }
-                .and_then(|g| {
-                    Proof::try_from((dataset, g.into()))
-                        .map_err(InvalidCredentialError::from)
-                        .map(|p| (p, g))
-                })
+                _ => Some(Err(InvalidCredentialError::Malformed(
+                    "Credential proof must be encapsulated in blank node graph names".to_string(),
+                ))),
             })
+            .flatten()
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use okp4_rdf::serde::NQuadsReader;
+    use rio_api::model::Quad;
+
+    #[test]
+    fn mescouilles() {
+        let vc_raw = r#"<did:key:z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu> <https://schema.org/name> "Hometown Theatres, Inc." .
+<did:v1:test:nym:z6MkhYBppZa2aD5xitZg3FbWLYPupRMAEecKFLQvmoYw8yEa> <https://schema.org/owns> _:b2 .
+<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://contexts.vcplayground.org/examples/movie-ticket/vocab#MovieTicketCredential> .
+<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://schema.org/description> "Admit one: Plan 9 from Outer Space, 3pm showing." .
+<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://schema.org/image> <data:image/png;base64,iVBORw0KGgoA> .
+<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://w3id.org/security#proof> _:b0 .
+<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://www.w3.org/2018/credentials#credentialSubject> <did:v1:test:nym:z6MkhYBppZa2aD5xitZg3FbWLYPupRMAEecKFLQvmoYw8yEa> .
+<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://www.w3.org/2018/credentials#issuanceDate> "2023-11-29T10:07:56.079Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd> <https://www.w3.org/2018/credentials#issuer> <did:key:z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu> .
+_:b1 <http://purl.org/dc/terms/created> "2023-11-29T10:07:56Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> _:b0 .
+_:b1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/security#Ed25519Signature2020> _:b0 .
+_:b1 <https://w3id.org/security#proofPurpose> <https://w3id.org/security#assertionMethod> _:b0 .
+_:b1 <https://w3id.org/security#proofValue> "z5UT4w3v6uSJ3srR3ZFSZBbgjaMRyEUaaGdnZzEb2oc1YTskkpff9qYt2GiTDuU2wqEh3f99YvWubPuqVNWrn9hNx"^^<https://w3id.org/security#multibase> _:b0 .
+_:b1 <https://w3id.org/security#verificationMethod> <did:key:z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu#z6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu> _:b0 .
+_:b2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://schema.org/Ticket> .
+_:b2 <https://schema.org/location> _:b3 .
+_:b2 <https://schema.org/startDate> "2022-08-26T19:00:00.000Z" .
+_:b2 <https://schema.org/ticketNumber> "457812" .
+_:b2 <https://schema.org/ticketToken> "urn:1a1e549a-2867" .
+_:b2 <https://schema.org/ticketedSeat> _:b5 .
+_:b3 <https://schema.org/PostalAddress> _:b4 .
+_:b3 <https://schema.org/name> "Hometown Theatres, Inc." .
+_:b4 <https://schema.org/addressLocality> "Your Town" .
+_:b4 <https://schema.org/addressRegion> "VA" .
+_:b4 <https://schema.org/postalCode> "24060" .
+_:b4 <https://schema.org/streetAddress> "123 Main St." .
+_:b5 <https://schema.org/seatNumber> "11" .
+_:b5 <https://schema.org/seatRow> "E" .
+_:b5 <https://schema.org/seatSection> "Theatre 3" ."#;
+
+        let mut reader = NQuadsReader::new(vc_raw.as_bytes());
+        let owned_quads = reader.read_all().unwrap();
+        let quads: Vec<Quad<'_>> = owned_quads.iter().map(Quad::from).collect();
+        let dataset = Dataset::new(quads);
+
+        let vc = VerifiableCredential::try_from(&dataset);
+
+        assert!(vc.is_ok());
+        let vc = vc.unwrap();
+        assert_eq!(
+            vc.id,
+            "https://vcplayground.org/credential/RK55U9YAbe28e_lDGcMnd"
+        );
+
+        let verif = vc.verify();
+        assert!(verif.is_ok());
     }
 }

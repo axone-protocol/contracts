@@ -7,6 +7,12 @@ pub struct Dataset<'a> {
     quads: Vec<Quad<'a>>,
 }
 
+impl<'a> AsRef<[Quad<'a>]> for Dataset<'a> {
+    fn as_ref(&self) -> &[Quad<'a>] {
+        self.quads.as_slice()
+    }
+}
+
 impl<'a> Dataset<'a> {
     pub fn new(quads: Vec<Quad<'a>>) -> Self {
         Self { quads }

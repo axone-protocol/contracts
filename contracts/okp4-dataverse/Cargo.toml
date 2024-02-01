@@ -31,6 +31,7 @@ rpath = false
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
+cosmwasm-crypto.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
@@ -43,6 +44,9 @@ serde.workspace = true
 thiserror.workspace = true
 rio_turtle.workspace = true
 bs58 = "0.5.0"
+sha2 = "0.10.8"
+multibase = "0.9.1"
+unsigned-varint = "0.8.0"
 
 [dev-dependencies]
 cw-multi-test.workspace = true

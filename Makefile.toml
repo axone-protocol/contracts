@@ -150,6 +150,7 @@ for SCHEMA in $(ls $SCHEMA_FOLDER); do
     perl << 'EOF' - "docs/${to}.tmp" > "docs/${to}"
     use strict;
     use warnings;
+    use autodie;
 
     my $file = shift @ARGV;
     local $/ = undef;
@@ -161,19 +162,35 @@ for SCHEMA in $(ls $SCHEMA_FOLDER); do
     my $in_code_block = 0;
     my $in_inline_code = 0;
     my $escaped_content = '';
+    my @chars = split //, $content;
 
-    foreach my $char (split //, $content) {
-      if ($char eq '`') {
-          $in_inline_code = !$in_inline_code unless $in_code_block;
-      } elsif ($char eq "\n") {
-          $in_code_block = 0 if ($in_code_block && $content =~ m/^\`\`\`/);
-      } elsif (!$in_code_block && !$in_inline_code && $char =~ /[{]/) {
-          $char = "\\{";
-      } elsif (!$in_code_block && !$in_inline_code && $char =~ /[}]/) {
-          $char = "\\}";
-      }
-      $escaped_content .= $char;
-      $in_code_block = 1 if ($char eq "\n" && $content =~ m/^\`\`\`/);
+    for (my $i = 0; $i < @chars; $i++) {
+        my $char = $chars[$i];
+        my $emitted = '';
+
+        if ($char eq '`') {
+            my $next_char = $chars[$i + 1] // '';
+            my $next_next_char = $chars[$i + 2] // '';
+            if ($next_char eq '`' && $next_next_char eq '`') {
+                $in_code_block = !$in_code_block;
+                $i += 2;
+                $emitted = '```';
+            } elsif (!$in_code_block) {
+                $in_inline_code = !$in_inline_code;
+                $emitted = '`';
+            } else {
+                $emitted = $char;
+            }
+        } elsif ($char eq '\n') {
+          $in_inline_code = 0;
+          $emitted = $char;
+        } elsif (!$in_code_block && !$in_inline_code && ($char eq '{' || $char eq '}')) {
+            $emitted = "\\$char";
+        } else {
+            $emitted = $char;
+        }
+
+        $escaped_content .= $emitted;
     }
 
     print $escaped_content;

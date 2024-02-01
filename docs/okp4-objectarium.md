@@ -1,6 +1,6 @@
 # Objectarium
 
-A [CosmWasm](https://cosmwasm.com/) smart contract designed to store arbitrary objects on the blockchain.
+A [CosmWasm](https://cosmwasm.com/) Smart Contract which enables the storage of arbitrary unstructured [Objects](https://en.wikipedia.org/wiki/Object_storage) in any [Cosmos](https://cosmos.network/) blockchains.
 
 ## Purpose
 
@@ -516,4 +516,4 @@ A string containing a 128-bit integer in decimal representation.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`51f0131cd7a4ebf9`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`e486ab17656d0e03`)_

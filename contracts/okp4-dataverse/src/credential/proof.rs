@@ -220,11 +220,15 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Ed25519Signature2020Proof
             value: p_value,
             options: Dataset::new(
                 dataset
+                    .match_pattern(None, None, None, Some(Some(proof_graph)))
                     .skip_pattern(
-                        None,
-                        Some(PROOF_RDF_PROOF_VALUE),
-                        None,
-                        Some(Some(proof_graph)),
+                        (
+                            None,
+                            Some(PROOF_RDF_PROOF_VALUE),
+                            None,
+                            Some(Some(proof_graph)),
+                        )
+                            .into(),
                     )
                     .map(|quad| *quad)
                     .collect(),

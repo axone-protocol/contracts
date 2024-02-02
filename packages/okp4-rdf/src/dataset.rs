@@ -102,10 +102,6 @@ impl QuadPattern<'_> {
                 .map(|o| o == quad.graph_name)
                 .unwrap_or_else(|| true)
     }
-
-    pub fn skip_pattern<'a>(self, quad: &'a Quad<'a>) -> bool {
-        !self.match_pattern(quad)
-    }
 }
 
 pub trait QuadIterator<'a>: Iterator<Item = &'a Quad<'a>> {
@@ -214,7 +210,8 @@ where
             QuadPatternFilterKind::Skip => self
                 .patterns
                 .iter()
-                .fold(true, |v, p| v || p.skip_pattern(quad)),
+                .find(|p| p.match_pattern(quad))
+                .is_none(),
         })
     }
 }

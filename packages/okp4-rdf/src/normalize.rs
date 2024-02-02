@@ -315,7 +315,7 @@ impl<'a> Normalizer<'a> {
             raw_sorted.insert(format!("{} .\n", quad), ());
         }
 
-        raw_sorted.iter().map(|(v, _)| v).join("")
+        raw_sorted.keys().join("")
     }
 }
 

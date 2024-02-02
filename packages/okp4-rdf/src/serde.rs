@@ -98,7 +98,7 @@ impl<R: BufRead> NQuadsReader<R> {
         }
     }
 
-    pub fn read_all<'a>(&mut self) -> Result<Vec<OwnedQuad>, NQuadsReadError> {
+    pub fn read_all(&mut self) -> Result<Vec<OwnedQuad>, NQuadsReadError> {
         let mut quads = vec![];
 
         self.parser

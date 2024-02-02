@@ -31,10 +31,7 @@ impl<'a> From<&'a OwnedQuad> for Quad<'a> {
                 iri: value.predicate.as_str(),
             },
             object: (&value.object).into(),
-            graph_name: match &value.graph_name {
-                None => None,
-                Some(g) => Some(g.into()),
-            },
+            graph_name: value.graph_name.as_ref().map(GraphName::from),
         }
     }
 }

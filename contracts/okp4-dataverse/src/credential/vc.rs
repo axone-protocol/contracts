@@ -36,7 +36,7 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
     type Error = InvalidCredentialError;
 
     fn try_from(dataset: &'a Dataset<'a>) -> Result<Self, Self::Error> {
-        let id = Self::extract_identifier(&dataset)?;
+        let id = Self::extract_identifier(dataset)?;
 
         let (proofs, proof_graphs): (Vec<Proof<'a>>, Vec<BlankNode<'a>>) =
             Self::extract_proofs(dataset, id)?.into_iter().unzip();
@@ -55,9 +55,9 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
         Ok(Self {
             id: id.iri,
             types: Self::extract_types(dataset, id)?,
-            issuer: Self::extract_issuer(&dataset, id)?.iri,
-            issuance_date: Self::extract_issuance_date(&dataset, id)?,
-            expiration_date: Self::extract_expiration_date(&dataset, id)?,
+            issuer: Self::extract_issuer(dataset, id)?.iri,
+            issuance_date: Self::extract_issuance_date(dataset, id)?,
+            expiration_date: Self::extract_expiration_date(dataset, id)?,
             claims: Self::extract_claims(dataset, id)?,
             status: Self::extract_status(dataset, id)?,
             proof: proofs,
@@ -65,7 +65,7 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
                 dataset
                     .iter()
                     .skip_patterns(unsecured_filter)
-                    .map(|quad| *quad)
+                    .copied()
                     .collect(),
             ),
         })
@@ -218,7 +218,7 @@ impl<'a> VerifiableCredential<'a> {
                 content: Dataset::new(
                     dataset
                         .match_pattern(Some(claim_id.into()), None, None, None)
-                        .map(|quad| *quad)
+                        .copied()
                         .collect(),
                 ),
             })
@@ -253,7 +253,7 @@ impl<'a> VerifiableCredential<'a> {
                         content: Dataset::new(
                             dataset
                                 .match_pattern(Some(n.into()), None, None, None)
-                                .map(|quad| *quad)
+                                .copied()
                                 .collect(),
                         ),
                     })),
@@ -272,11 +272,11 @@ impl<'a> VerifiableCredential<'a> {
         dataset
             .match_pattern(Some(id.into()), Some(VC_RDF_PROOF), None, None)
             .objects()
-            .map(|o| match o {
+            .filter_map(|o| match o {
                 Term::BlankNode(n) => {
                     let proof_res = Proof::try_from((dataset, n.into()));
                     match proof_res {
-                        Err(e) if e == InvalidProofError::Unsupported => None,
+                        Err(InvalidProofError::Unsupported) => None,
                         _ => Some(
                             proof_res
                                 .map(|p| (p, n))
@@ -288,7 +288,6 @@ impl<'a> VerifiableCredential<'a> {
                     "Credential proof must be encapsulated in blank node graph names".to_string(),
                 ))),
             })
-            .flatten()
             .collect()
     }
 }

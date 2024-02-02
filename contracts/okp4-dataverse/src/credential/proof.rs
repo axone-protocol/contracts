@@ -245,8 +245,8 @@ impl<'a> TryFrom<&'a str> for Ed25519VerificationKey2020<'a> {
     type Error = InvalidProofError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Ok(match value.split("#").collect::<Vec<_>>()[..] {
-            [controller, key] => match controller.split(":").collect::<Vec<_>>()[..] {
+        Ok(match value.split('#').collect::<Vec<_>>()[..] {
+            [controller, key] => match controller.split(':').collect::<Vec<_>>()[..] {
                 ["did", "key", controller_key] if controller_key == key => Self {
                     id: value,
                     controller,
@@ -285,13 +285,13 @@ mod multiformats {
     pub fn decode_ed25519_key(src: &str) -> Result<Vec<u8>, InvalidProofError> {
         let (base, data) = multibase::decode(src).map_err(|_| InvalidProofError::InvalidPubKey)?;
         if base != Base::Base58Btc {
-            Err(InvalidProofError::InvalidPubKey)?
+            Err(InvalidProofError::InvalidPubKey)?;
         }
 
         let (codec, key) =
             unsigned_varint::decode::u16(&data).map_err(|_| InvalidProofError::InvalidPubKey)?;
         if codec != 0xed {
-            Err(InvalidProofError::InvalidPubKey)?
+            Err(InvalidProofError::InvalidPubKey)?;
         }
 
         Ok(key.to_vec())

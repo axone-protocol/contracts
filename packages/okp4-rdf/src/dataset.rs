@@ -26,7 +26,7 @@ impl<'a> Dataset<'a> {
         Self { quads }
     }
 
-    pub fn iter(&self) -> Iter<Quad<'a>> {
+    pub fn iter(&self) -> Iter<'_, Quad<'a>> {
         self.quads.iter()
     }
 
@@ -86,21 +86,12 @@ impl<'a>
 
 impl QuadPattern<'_> {
     pub fn match_pattern<'a>(self, quad: &'a Quad<'a>) -> bool {
-        self.subject
-            .map(|s| s == quad.subject)
-            .unwrap_or_else(|| true)
-            && self
-                .predicate
-                .map(|p| p == quad.predicate)
-                .unwrap_or_else(|| true)
-            && self
-                .object
-                .map(|o| o == quad.object)
-                .unwrap_or_else(|| true)
+        self.subject.map_or_else(|| true, |s| s == quad.subject)
+            && self.predicate.map_or_else(|| true, |p| p == quad.predicate)
+            && self.object.map_or_else(|| true, |o| o == quad.object)
             && self
                 .graph_name
-                .map(|o| o == quad.graph_name)
-                .unwrap_or_else(|| true)
+                .map_or_else(|| true, |g| g == quad.graph_name)
     }
 }
 
@@ -203,15 +194,8 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.find(|quad| match self.filter_kind {
-            QuadPatternFilterKind::Match => self
-                .patterns
-                .iter()
-                .fold(true, |v, p| v && p.match_pattern(quad)),
-            QuadPatternFilterKind::Skip => self
-                .patterns
-                .iter()
-                .find(|p| p.match_pattern(quad))
-                .is_none(),
+            QuadPatternFilterKind::Match => self.patterns.iter().all(|p| p.match_pattern(quad)),
+            QuadPatternFilterKind::Skip => !self.patterns.iter().any(|p| p.match_pattern(quad)),
         })
     }
 }

@@ -17,7 +17,7 @@ impl CognitariumClient {
 
     pub fn select<C: CustomQuery>(
         &self,
-        querier: QuerierWrapper<C>,
+        querier: QuerierWrapper<'_, C>,
         query: SelectQuery,
     ) -> StdResult<SelectResponse> {
         self.query_wasm(querier, &QueryMsg::Select { query })
@@ -27,7 +27,7 @@ impl CognitariumClient {
         self.to_wasm_exec_msg(&ExecuteMsg::InsertData { format, data }, vec![])
     }
 
-    fn query_wasm<'a, C, T, U>(&self, querier: QuerierWrapper<'a, C>, msg: &T) -> StdResult<U>
+    fn query_wasm<C, T, U>(&self, querier: QuerierWrapper<'_, C>, msg: &T) -> StdResult<U>
     where
         C: CustomQuery,
         T: Serialize + ?Sized,

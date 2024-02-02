@@ -62,6 +62,9 @@ pub enum VerificationError {
     #[error("Couldn't verify signature: {0}")]
     CryptoError(#[from] CryptoError),
 
+    #[error("Signature verification not satisfied")]
+    WrongSignature,
+
     #[error("Couldn't find a suitable proof")]
     NoSuitableProof,
 }

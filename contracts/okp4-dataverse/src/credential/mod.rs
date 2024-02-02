@@ -1,5 +1,5 @@
 mod crypto;
-mod error;
+pub mod error;
 mod proof;
 mod rdf_marker;
-mod vc;
+pub mod vc;

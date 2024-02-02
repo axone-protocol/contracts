@@ -86,11 +86,11 @@ To maintain integrity and coherence in the dataverse, several preconditions are 
 
 3. **Issuer Signature**: Claims must bear the issuer's signature. This signature must be verifiable, ensuring authenticity and credibility.
 
-| parameter                | description                                                                                                                                                                |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `submit_claims`          | _(Required.) _ **object**.                                                                                                                                                 |
-| `submit_claims.format`   | **[RdfFormat](#rdfformat)\|null**. RDF format in which the metadata is represented. If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format. |
-| `submit_claims.metadata` | _(Required.) _ **[Binary](#binary)**. The serialized metadata intended for attachment. This metadata should adhere to the format specified in the `format` field.          |
+| parameter                | description                                                                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `submit_claims`          | _(Required.) _ **object**.                                                                                                                                                   |
+| `submit_claims.format`   | **[RdfFormat](#rdfformat)\|null**. RDF format in which the metadata is represented. If not provided, the default format is [N-Quads](https://www.w3.org/TR/n-quads/) format. |
+| `submit_claims.metadata` | _(Required.) _ **[Binary](#binary)**. The serialized metadata intended for attachment. This metadata should adhere to the format specified in the `format` field.            |
 
 ### ExecuteMsg::RevokeClaims
 
@@ -149,36 +149,13 @@ N-Quads is an extension of N-Triples to support RDF datasets by adding an option
 | ----------- |
 | `"n_quads"` |
 
-### NTriples
-
-N-Triples Format
-
-N-Triples is a line-based, plain text format for encoding an RDF graph. Each line corresponds to a single RDF triple. See the [official N-Triples specification](https://www.w3.org/TR/n-triples/).
-
-| literal       |
-| ------------- |
-| `"n_triples"` |
-
 ### RdfFormat
 
 `RdfFormat` represents the various serialization formats for RDF (Resource Description Framework) data.
 
-| variant               | description                                                                                                                                                                                                                                                              |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [RdfXml](#rdfxml)     | **string**: `rdf_xml`. RDF/XML Format<br /><br />RDF/XML is a syntax to express RDF information in XML. See the [official RDF/XML specification](https://www.w3.org/TR/rdf-syntax-grammar/).                                                                             |
-| [Turtle](#turtle)     | **string**: `turtle`. Turtle (Terse RDF Triple Language) Format<br /><br />Turtle is a textual format for representing RDF triples in a more compact and human-readable way compared to RDF/XML. See the [official Turtle specification](https://www.w3.org/TR/turtle/). |
-| [NTriples](#ntriples) | **string**: `n_triples`. N-Triples Format<br /><br />N-Triples is a line-based, plain text format for encoding an RDF graph. Each line corresponds to a single RDF triple. See the [official N-Triples specification](https://www.w3.org/TR/n-triples/).                 |
-| [NQuads](#nquads)     | **string**: `n_quads`. N-Quads Format<br /><br />N-Quads is an extension of N-Triples to support RDF datasets by adding an optional fourth element to represent the graph name. See the [official N-Quads specification](https://www.w3.org/TR/n-quads/).                |
-
-### RdfXml
-
-RDF/XML Format
-
-RDF/XML is a syntax to express RDF information in XML. See the [official RDF/XML specification](https://www.w3.org/TR/rdf-syntax-grammar/).
-
-| literal     |
-| ----------- |
-| `"rdf_xml"` |
+| variant           | description                                                                                                                                                                                                                                               |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [NQuads](#nquads) | **string**: `n_quads`. N-Quads Format<br /><br />N-Quads is an extension of N-Triples to support RDF datasets by adding an optional fourth element to represent the graph name. See the [official N-Quads specification](https://www.w3.org/TR/n-quads/). |
 
 ### TripleStoreConfig
 
@@ -210,16 +187,6 @@ Contains requested limitations regarding store usages.
 | `max_triple_byte_size`         | **[Uint128](#uint128)\|null**. The maximum number of bytes the store can contain for a single triple. The size of a triple is counted as the sum of the size of its subject, predicate and object, including the size of data types and language tags if any. The limit is used to prevent storing very large triples, especially literals. Default to [Uint128::MAX] if not set, which can be considered as no limit. |
 | `max_triple_count`             | **[Uint128](#uint128)\|null**. The maximum number of triples the store can contain. Default to [Uint128::MAX] if not set, which can be considered as no limit.                                                                                                                                                                                                                                                         |
 
-### Turtle
-
-Turtle (Terse RDF Triple Language) Format
-
-Turtle is a textual format for representing RDF triples in a more compact and human-readable way compared to RDF/XML. See the [official Turtle specification](https://www.w3.org/TR/turtle/).
-
-| literal    |
-| ---------- |
-| `"turtle"` |
-
 ### Uint128
 
 A string containing a 128-bit integer in decimal representation.
@@ -246,5 +213,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`2a5c7ef038c6b263`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`f38b5aafa47fb333`)*
 ````

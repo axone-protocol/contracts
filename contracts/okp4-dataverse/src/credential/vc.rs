@@ -331,4 +331,14 @@ mod test {
         assert_eq!(vc.proof.len(), 1usize);
         assert_eq!(vc.unsecured_document, unsecure_dataset);
     }
+
+    #[test]
+    fn vc_verify() {
+        let owned_quads = testutil::read_test_quads("vc-ok.nq");
+        let dataset = Dataset::from(owned_quads.as_slice());
+        let vc = VerifiableCredential::try_from(&dataset).unwrap();
+        let verif_res = vc.verify();
+        assert!(verif_res.is_ok());
+        assert!(verif_res.unwrap());
+    }
 }

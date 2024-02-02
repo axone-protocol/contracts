@@ -34,12 +34,16 @@ impl From<(CanonicalizationAlg, DigestAlg, SignatureAlg)> for CryptoSuite {
 impl CryptoSuite {
     pub fn verify_document(
         &self,
-        unsecured_document: &[Quad<'_>],
+        unsecured_doc: &[Quad<'_>],
+        proof_opts: &[Quad<'_>],
         proof_value: &[u8],
         pub_key: &[u8],
     ) -> Result<bool, VerificationError> {
-        let transformed_document = self.canonicalize(unsecured_document)?;
-        let hash = self.hash(transformed_document);
+        let unsecured_doc_canon = self.canonicalize(unsecured_doc)?;
+        let proof_opts_canon = self.canonicalize(proof_opts)?;
+
+        let hash = [self.hash(proof_opts_canon), self.hash(unsecured_doc_canon)].concat();
+
         self.verify(&hash, proof_value, pub_key)
     }
 

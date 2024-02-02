@@ -83,7 +83,8 @@ impl<'a> VerifiableCredential<'a> {
         let crypto_suite = proof.crypto_suite();
         crypto_suite.verify_document(
             self.unsecured_document.as_ref(),
-            proof.value(),
+            proof.options(),
+            proof.signature(),
             proof.pub_key(),
         )
     }

@@ -6,7 +6,7 @@ use crate::credential::rdf_marker::{
 };
 use itertools::Itertools;
 use okp4_rdf::dataset::{Dataset, QuadIterator};
-use rio_api::model::{GraphName, Literal, Term};
+use rio_api::model::{GraphName, Literal, Quad, Term};
 
 #[derive(Debug, PartialEq)]
 pub enum Proof<'a> {
@@ -39,9 +39,15 @@ impl<'a> Proof<'a> {
         }
     }
 
-    pub fn value(&'a self) -> &'a [u8] {
+    pub fn signature(&'a self) -> &'a [u8] {
         match self {
             Proof::Ed25519Signature2020(p) => &p.value,
+        }
+    }
+
+    pub fn options(&'a self) -> &'a [Quad<'a>] {
+        match self {
+            Proof::Ed25519Signature2020(p) => p.options.as_ref(),
         }
     }
 
@@ -193,6 +199,7 @@ pub struct Ed25519Signature2020Proof<'a> {
     created: &'a str,
     purpose: ProofPurpose,
     value: Vec<u8>,
+    options: Dataset<'a>,
 }
 
 impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Ed25519Signature2020Proof<'a> {
@@ -211,6 +218,17 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Ed25519Signature2020Proof
             created: Proof::extract_created(dataset, proof_graph)?,
             purpose: p_purpose.into(),
             value: p_value,
+            options: Dataset::new(
+                dataset
+                    .skip_pattern(
+                        None,
+                        Some(PROOF_RDF_PROOF_VALUE),
+                        None,
+                        Some(Some(proof_graph)),
+                    )
+                    .map(|quad| *quad)
+                    .collect(),
+            ),
         })
     }
 }
@@ -289,6 +307,9 @@ mod test {
 
     #[test]
     fn proof_from_dataset() {
+        let quads = testutil::read_test_quads("proof-ed255192020-options.nq");
+        let proof_ok_options = Dataset::from(quads.as_slice());
+
         let cases: Vec<(&str, Result<Proof<'_>, InvalidProofError>)> = vec![
             (
                 "proof-ed255192020-ok.nq",
@@ -301,6 +322,7 @@ mod test {
                     },
                     purpose: ProofPurpose::AssertionMethod,
                     value: BASE64_STANDARD.decode("371GN4kfgVEWv3/QY9qx1buNm9gYJGWgYOgMSVKOsnoJekPoQV2fjqR+3XMjd3avpQlARFyD/3a0J5tUS4aBCQ==").unwrap(),
+                    options: proof_ok_options,
                 })),
             ),
             (

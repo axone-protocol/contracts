@@ -1,4 +1,3 @@
-use cosmwasm_crypto::CryptoError;
 use okp4_rdf::normalize::NormalizationError;
 use thiserror::Error;
 
@@ -60,10 +59,7 @@ pub enum VerificationError {
     RdfCanonError(#[from] NormalizationError),
 
     #[error("Couldn't verify signature: {0}")]
-    CryptoError(#[from] CryptoError),
-
-    #[error("Signature verification not satisfied")]
-    WrongSignature,
+    SignatureError(#[from] ed25519_compact::Error),
 
     #[error("Couldn't find a suitable proof")]
     NoSuitableProof,

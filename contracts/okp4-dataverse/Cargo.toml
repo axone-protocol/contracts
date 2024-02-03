@@ -29,13 +29,15 @@ rpath = false
 
 [dependencies]
 bs58 = "0.5.0"
-cosmwasm-crypto.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
+ed25519-compact = { version = "2.0.6", default-features = false, features = [
+  "std",
+] }
 itertools = "0.12.1"
 multibase = "0.9.1"
 okp4-cognitarium.workspace = true

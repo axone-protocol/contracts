@@ -1,4 +1,5 @@
 use crate::credential::error::VerificationError;
+use ed25519_compact::{PublicKey, Signature};
 use okp4_rdf::normalize::Normalizer;
 use rio_api::model::Quad;
 use sha2::Digest;
@@ -38,7 +39,7 @@ impl CryptoSuite {
         proof_opts: &[Quad<'_>],
         proof_value: &[u8],
         pub_key: &[u8],
-    ) -> Result<bool, VerificationError> {
+    ) -> Result<(), VerificationError> {
         let unsecured_doc_canon = self.canonicalize(unsecured_doc)?;
         let proof_opts_canon = self.canonicalize(proof_opts)?;
 
@@ -71,13 +72,19 @@ impl CryptoSuite {
 
     fn verify(
         &self,
-        hash: &[u8],
+        message: &[u8],
         signature: &[u8],
         pub_key: &[u8],
-    ) -> Result<bool, VerificationError> {
+    ) -> Result<(), VerificationError> {
         match self.sign {
-            SignatureAlg::Ed25519 => cosmwasm_crypto::ed25519_verify(hash, signature, pub_key)
-                .map_err(VerificationError::from),
+            SignatureAlg::Ed25519 => {
+                let pub_key = PublicKey::from_slice(pub_key).map_err(VerificationError::from)?;
+                let signature =
+                    Signature::from_slice(signature).map_err(VerificationError::from)?;
+                pub_key
+                    .verify(message, &signature)
+                    .map_err(VerificationError::from)
+            }
         }
     }
 }

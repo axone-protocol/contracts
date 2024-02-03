@@ -73,7 +73,7 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
 }
 
 impl<'a> VerifiableCredential<'a> {
-    pub fn verify(&self) -> Result<bool, VerificationError> {
+    pub fn verify(&self) -> Result<(), VerificationError> {
         let proof = self
             .proof
             .iter()
@@ -338,6 +338,5 @@ mod test {
         let vc = VerifiableCredential::try_from(&dataset).unwrap();
         let verif_res = vc.verify();
         assert!(verif_res.is_ok());
-        assert!(verif_res.unwrap());
     }
 }

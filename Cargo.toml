@@ -2,7 +2,6 @@
 members = ["contracts/*", "packages/*"]
 
 [workspace.dependencies]
-cosmwasm-crypto = "1.5.2"
 cosmwasm-schema = "1.5.2"
 cosmwasm-std = { version = "1.5.2", features = ["cosmwasm_1_4"] }
 cosmwasm-storage = "1.5.2"

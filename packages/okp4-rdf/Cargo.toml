@@ -7,6 +7,7 @@ version = "3.0.0"
 [dependencies]
 base16ct = { version = "0.2.0", features = ["alloc"] }
 cosmwasm-std.workspace = true
+itertools = "0.12.0"
 rio_api.workspace = true
 rio_turtle.workspace = true
 rio_xml.workspace = true

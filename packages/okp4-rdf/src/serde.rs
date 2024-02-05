@@ -1,3 +1,4 @@
+use crate::owned_model::OwnedQuad;
 use rio_api::formatter::TriplesFormatter;
 use rio_api::model::{Quad, Triple};
 use rio_api::parser::{QuadsParser, TriplesParser};
@@ -7,12 +8,26 @@ use rio_turtle::{
 };
 use rio_xml::{RdfXmlError, RdfXmlFormatter, RdfXmlParser};
 use std::io::{self, BufRead};
+use thiserror::Error;
 
 pub struct TripleReader<R: BufRead> {
     parser: TriplesParserKind<R>,
 }
 
-pub struct TripleWriter<W: std::io::Write> {
+pub struct NQuadsReader<R: BufRead> {
+    parser: NQuadsParser<R>,
+}
+
+#[derive(Error, Debug)]
+pub enum NQuadsReadError {
+    #[error("RDF Star notation not supported")]
+    RDFStarUnsupported,
+
+    #[error("Couldn't parse rdf: {0}")]
+    Parse(#[from] TurtleError),
+}
+
+pub struct TripleWriter<W: io::Write> {
     writer: TriplesWriterKind<W>,
 }
 
@@ -24,7 +39,7 @@ pub enum TriplesParserKind<R: BufRead> {
     NQuads(NQuadsParser<R>),
 }
 
-pub enum TriplesWriterKind<W: std::io::Write> {
+pub enum TriplesWriterKind<W: io::Write> {
     NTriples(NTriplesFormatter<W>),
     Turtle(TurtleFormatter<W>),
     RdfXml(io::Result<RdfXmlFormatter<W>>),
@@ -73,6 +88,29 @@ impl<R: BufRead> TripleReader<R> {
                 })
             }
         }
+    }
+}
+
+impl<R: BufRead> NQuadsReader<R> {
+    pub fn new(src: R) -> Self {
+        NQuadsReader {
+            parser: NQuadsParser::new(src),
+        }
+    }
+
+    pub fn read_all(&mut self) -> Result<Vec<OwnedQuad>, NQuadsReadError> {
+        let mut quads = vec![];
+
+        self.parser
+            .parse_all(&mut |quad| -> Result<(), NQuadsReadError> {
+                quads.push(
+                    quad.try_into()
+                        .map_err(|_| NQuadsReadError::RDFStarUnsupported)?,
+                );
+                Ok(())
+            })?;
+
+        Ok(quads)
     }
 }
 

@@ -68,12 +68,35 @@ pub fn execute(
     _deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
-    _msg: ExecuteMsg,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    Err(StdError::generic_err("Not implemented").into())
+    match msg {
+        ExecuteMsg::SubmitClaims {
+            metadata,
+            format: _,
+        } => execute::submit_claims(metadata),
+        _ => Err(StdError::generic_err("Not implemented").into()),
+    }
 }
 
-pub mod execute {}
+pub mod execute {
+    use super::*;
+    use crate::credential::vc::VerifiableCredential;
+    use okp4_rdf::dataset::Dataset;
+    use okp4_rdf::serde::NQuadsReader;
+    use std::io::BufReader;
+
+    pub fn submit_claims(data: Binary) -> Result<Response, ContractError> {
+        let buf = BufReader::new(data.as_slice());
+        let mut reader = NQuadsReader::new(buf);
+        let rdf_quads = reader.read_all()?;
+        let vc_dataset = Dataset::from(rdf_quads.as_slice());
+        let vc = VerifiableCredential::try_from(&vc_dataset)?;
+        vc.verify()?;
+
+        Ok(Response::default())
+    }
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps<'_>, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {

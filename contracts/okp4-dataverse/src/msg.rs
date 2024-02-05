@@ -51,7 +51,7 @@ pub enum ExecuteMsg {
         /// This metadata should adhere to the format specified in the `format` field.
         metadata: Binary,
         /// RDF format in which the metadata is represented.
-        /// If not provided, the default format is [Turtle](https://www.w3.org/TR/turtle/) format.
+        /// If not provided, the default format is [N-Quads](https://www.w3.org/TR/n-quads/) format.
         format: Option<RdfFormat>,
     },
 
@@ -146,37 +146,13 @@ impl From<TripleStoreLimitsInput> for okp4_cognitarium::msg::StoreLimitsInput {
 #[cw_serde]
 #[derive(Default)]
 pub enum RdfFormat {
-    /// # RdfXml
-    /// RDF/XML Format
-    ///
-    /// RDF/XML is a syntax to express RDF information in XML.
-    /// See the [official RDF/XML specification](https://www.w3.org/TR/rdf-syntax-grammar/).
-    #[serde(rename = "rdf_xml")]
-    RdfXml,
-
-    /// # Turtle
-    /// Turtle (Terse RDF Triple Language) Format
-    ///
-    /// Turtle is a textual format for representing RDF triples in a more compact and human-readable way compared to RDF/XML.
-    /// See the [official Turtle specification](https://www.w3.org/TR/turtle/).
-    #[serde(rename = "turtle")]
-    #[default]
-    Turtle,
-
-    /// # NTriples
-    /// N-Triples Format
-    ///
-    /// N-Triples is a line-based, plain text format for encoding an RDF graph. Each line corresponds to a single RDF triple.
-    /// See the [official N-Triples specification](https://www.w3.org/TR/n-triples/).
-    #[serde(rename = "n_triples")]
-    NTriples,
-
     /// # NQuads
     /// N-Quads Format
     ///
     /// N-Quads is an extension of N-Triples to support RDF datasets by adding an optional fourth element to represent the graph name.
     /// See the [official N-Quads specification](https://www.w3.org/TR/n-quads/).
     #[serde(rename = "n_quads")]
+    #[default]
     NQuads,
 }
 

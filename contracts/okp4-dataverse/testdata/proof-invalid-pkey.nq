@@ -1,0 +1,5 @@
+_:b1 <http://purl.org/dc/terms/created> "2023-11-29T10:07:56Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> _:b0 .
+_:b1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/security#Ed25519Signature2020> _:b0 .
+_:b1 <https://w3id.org/security#proofPurpose> <https://w3id.org/security#assertionMethod> _:b0 .
+_:b1 <https://w3id.org/security#proofValue> "z5UT4w3v6uSJ3srR3ZFSZBbgjaMRyEUaaGdnZzEb2oc1YTskkpff9qYt2GiTDuU2wqEh3f99YvWubPuqVNWrn9hNx"^^<https://w3id.org/security#multibase> _:b0 .
+_:b1 <https://w3id.org/security#verificationMethod> <did:key:6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu#6MkqxFfjh6HNFuNSGmqVDJxL4fcdbcBco7CNHBLjEo125wu> _:b0 .

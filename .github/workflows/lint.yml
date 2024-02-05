@@ -348,7 +348,7 @@ jobs:
         run: cargo make docs-generate
 
       - name: Verify changed docs files
-        uses: tj-actions/verify-changed-files@v17
+        uses: tj-actions/verify-changed-files@v18
         id: verify-changed-docs-files
         with:
           files: |

@@ -35,7 +35,7 @@ cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
-ed25519-compact = { version = "2.0.6", default-features = false, features = [
+ed25519-compact = { version = "2.1.1", default-features = false, features = [
   "std",
 ] }
 itertools = "0.12.1"

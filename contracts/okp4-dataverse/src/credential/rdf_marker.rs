@@ -44,3 +44,6 @@ pub const PROOF_RDF_PROOF_VALUE: NamedNode<'_> = NamedNode {
 pub const PROOF_RDF_PROOF_VALUE_TYPE: NamedNode<'_> = NamedNode {
     iri: "https://w3id.org/security#multibase",
 };
+pub const PROOF_RDF_CRYPTOSUITE: NamedNode<'_> = NamedNode {
+    iri: "https://w3id.org/security#cryptosuite",
+};

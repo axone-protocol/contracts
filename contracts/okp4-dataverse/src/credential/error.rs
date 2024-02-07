@@ -39,6 +39,9 @@ pub enum InvalidProofError {
     #[error("Missing proof value")]
     MissingProofValue,
 
+    #[error("Missing proof cryptosuite")]
+    MissingProofCryptosuite,
+
     #[error("Malformed proof value: {0}")]
     MalformedProofValue(#[from] multibase::Error),
 
@@ -59,7 +62,10 @@ pub enum VerificationError {
     RdfCanonError(#[from] NormalizationError),
 
     #[error("Couldn't verify signature: {0}")]
-    SignatureError(#[from] ed25519_compact::Error),
+    SignatureError(#[from] cosmwasm_std::VerificationError),
+
+    #[error("Signature mismatch")]
+    WrongSignature,
 
     #[error("Couldn't find a suitable proof")]
     NoSuitableProof,

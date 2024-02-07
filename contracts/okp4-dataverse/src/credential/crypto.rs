@@ -1,5 +1,5 @@
 use crate::credential::error::VerificationError;
-use ed25519_compact::{PublicKey, Signature};
+use cosmwasm_std::DepsMut;
 use okp4_rdf::normalize::Normalizer;
 use rio_api::model::Quad;
 use sha2::Digest;
@@ -14,6 +14,7 @@ pub enum DigestAlg {
 
 pub enum SignatureAlg {
     Ed25519,
+    Secp256k1,
 }
 
 pub struct CryptoSuite {
@@ -35,6 +36,7 @@ impl From<(CanonicalizationAlg, DigestAlg, SignatureAlg)> for CryptoSuite {
 impl CryptoSuite {
     pub fn verify_document(
         &self,
+        deps: DepsMut<'_>,
         unsecured_doc: &[Quad<'_>],
         proof_opts: &[Quad<'_>],
         proof_value: &[u8],
@@ -45,7 +47,7 @@ impl CryptoSuite {
 
         let hash = [self.hash(proof_opts_canon), self.hash(unsecured_doc_canon)].concat();
 
-        self.verify(&hash, proof_value, pub_key)
+        self.verify(deps, &hash, proof_value, pub_key)
     }
 
     fn canonicalize(&self, unsecured_document: &[Quad<'_>]) -> Result<String, VerificationError> {
@@ -72,19 +74,18 @@ impl CryptoSuite {
 
     fn verify(
         &self,
+        deps: DepsMut<'_>,
         message: &[u8],
         signature: &[u8],
         pub_key: &[u8],
     ) -> Result<(), VerificationError> {
-        match self.sign {
-            SignatureAlg::Ed25519 => {
-                let pub_key = PublicKey::from_slice(pub_key).map_err(VerificationError::from)?;
-                let signature =
-                    Signature::from_slice(signature).map_err(VerificationError::from)?;
-                pub_key
-                    .verify(message, &signature)
-                    .map_err(VerificationError::from)
-            }
+        match match self.sign {
+            SignatureAlg::Ed25519 => deps.api.ed25519_verify(message, signature, pub_key),
+            SignatureAlg::Secp256k1 => deps.api.secp256k1_verify(message, signature, pub_key),
+        } {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(VerificationError::WrongSignature),
+            Err(e) => Err(VerificationError::from(e)),
         }
     }
 }

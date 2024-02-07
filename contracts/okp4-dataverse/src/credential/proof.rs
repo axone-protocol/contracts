@@ -11,15 +11,19 @@ use rio_api::model::{GraphName, Literal, Quad, Term};
 #[derive(Debug, PartialEq)]
 pub enum Proof<'a> {
     Ed25519Signature2020(Ed25519Signature2020Proof<'a>),
+    DataIntegrity(DataIntegrityProof<'a>),
 }
 
 impl<'a> Proof<'a> {
     pub fn suitable(&self, issuer: &str, purpose: ProofPurpose) -> bool {
-        match self {
+        let (controller, proof_purpose) = match self {
             Self::Ed25519Signature2020(proof) => {
-                proof.verification_method.controller == issuer && proof.purpose == purpose
+                (proof.verification_method.controller, proof.purpose)
             }
-        }
+            Proof::DataIntegrity(proof) => (proof.verification_method.controller, proof.purpose),
+        };
+
+        controller == issuer && proof_purpose == purpose
     }
 
     pub fn crypto_suite(&self) -> CryptoSuite {
@@ -28,26 +32,34 @@ impl<'a> Proof<'a> {
                 CanonicalizationAlg::Urdna2015,
                 DigestAlg::Sha256,
                 SignatureAlg::Ed25519,
-            )
-                .into(),
+            ),
+            Proof::DataIntegrity(p) => (
+                CanonicalizationAlg::Urdna2015,
+                DigestAlg::Sha256,
+                p.cryptosuite.into(),
+            ),
         }
+        .into()
     }
 
     pub fn pub_key(&'a self) -> &'a [u8] {
         match self {
             Proof::Ed25519Signature2020(p) => &p.verification_method.pub_key,
+            Proof::DataIntegrity(p) => &p.verification_method.pub_key,
         }
     }
 
     pub fn signature(&'a self) -> &'a [u8] {
         match self {
             Proof::Ed25519Signature2020(p) => &p.value,
+            Proof::DataIntegrity(p) => &p.value,
         }
     }
 
     pub fn options(&'a self) -> &'a [Quad<'a>] {
         match self {
             Proof::Ed25519Signature2020(p) => p.options.as_ref(),
+            Proof::DataIntegrity(p) => p.options.as_ref(),
         }
     }
 
@@ -76,6 +88,20 @@ impl<'a> Proof<'a> {
                     "verification method type must be a named node".to_string(),
                 )),
             })
+    }
+
+    fn parse_verification_method(raw: &'a str) -> Result<(&'a str, &'a str), InvalidProofError> {
+        Ok(match raw.split('#').collect::<Vec<_>>()[..] {
+            [controller, key] => match controller.split(':').collect::<Vec<_>>()[..] {
+                ["did", "key", controller_key] if controller_key == key => (controller, key),
+                _ => Err(InvalidProofError::Malformed(
+                    "couldn't parse did key for verification method".to_string(),
+                ))?,
+            },
+            _ => Err(InvalidProofError::Malformed(
+                "couldn't parse did key for verification method".to_string(),
+            ))?,
+        })
     }
 
     fn extract_created(
@@ -159,6 +185,21 @@ impl<'a> Proof<'a> {
                 )),
             })
     }
+
+    fn extract_proof_options(dataset: &'a Dataset<'a>, proof_graph: GraphName<'a>) -> Dataset<'a> {
+        Dataset::new(
+            dataset
+                .match_pattern(None, None, None, Some(Some(proof_graph)))
+                .skip_pattern((None, Some(PROOF_RDF_PROOF_VALUE), None, None).into())
+                .map(|quad| Quad {
+                    subject: quad.subject,
+                    predicate: quad.predicate,
+                    object: quad.object,
+                    graph_name: None,
+                })
+                .collect(),
+        )
+    }
 }
 
 impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Proof<'a> {
@@ -188,6 +229,9 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Proof<'a> {
             "https://w3id.org/security#Ed25519Signature2020" => Ok(Self::Ed25519Signature2020(
                 Ed25519Signature2020Proof::try_from((dataset, proof_graph))?,
             )),
+            "https://w3id.org/security#DataIntegrityProof" => Ok(Self::DataIntegrity(
+                DataIntegrityProof::try_from((dataset, proof_graph))?,
+            )),
             _ => Err(InvalidProofError::Unsupported),
         }
     }
@@ -200,6 +244,21 @@ pub struct Ed25519Signature2020Proof<'a> {
     purpose: ProofPurpose,
     value: Vec<u8>,
     options: Dataset<'a>,
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum ProofPurpose {
+    AssertionMethod,
+    Unused,
+}
+
+impl<'a> From<&'a str> for ProofPurpose {
+    fn from(value: &'a str) -> Self {
+        match value {
+            "https://w3id.org/security#assertionMethod" => ProofPurpose::AssertionMethod,
+            _ => ProofPurpose::Unused,
+        }
+    }
 }
 
 impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Ed25519Signature2020Proof<'a> {
@@ -218,18 +277,7 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Ed25519Signature2020Proof
             created: Proof::extract_created(dataset, proof_graph)?,
             purpose: p_purpose.into(),
             value: p_value,
-            options: Dataset::new(
-                dataset
-                    .match_pattern(None, None, None, Some(Some(proof_graph)))
-                    .skip_pattern((None, Some(PROOF_RDF_PROOF_VALUE), None, None).into())
-                    .map(|quad| Quad {
-                        subject: quad.subject,
-                        predicate: quad.predicate,
-                        object: quad.object,
-                        graph_name: None,
-                    })
-                    .collect(),
-            ),
+            options: Proof::extract_proof_options(dataset, proof_graph),
         })
     }
 }
@@ -245,36 +293,127 @@ impl<'a> TryFrom<&'a str> for Ed25519VerificationKey2020<'a> {
     type Error = InvalidProofError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Ok(match value.split('#').collect::<Vec<_>>()[..] {
-            [controller, key] => match controller.split(':').collect::<Vec<_>>()[..] {
-                ["did", "key", controller_key] if controller_key == key => Self {
-                    id: value,
-                    controller,
-                    pub_key: multiformats::decode_ed25519_key(key)?,
-                },
-                _ => Err(InvalidProofError::Malformed(
-                    "couldn't parse did key for verification method".to_string(),
-                ))?,
-            },
-            _ => Err(InvalidProofError::Malformed(
-                "couldn't parse did key for verification method".to_string(),
-            ))?,
+        let (controller, key) = Proof::parse_verification_method(value)?;
+        Ok(Self {
+            id: value,
+            controller,
+            pub_key: multiformats::decode_ed25519_key(key)?,
         })
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ProofPurpose {
-    AssertionMethod,
-    Unused,
+pub struct DataIntegrityProof<'a> {
+    cryptosuite: DataIntegrityCryptoSuite,
+    verification_method: Multikey<'a>,
+    created: &'a str,
+    purpose: ProofPurpose,
+    value: Vec<u8>,
+    options: Dataset<'a>,
 }
 
-impl<'a> From<&'a str> for ProofPurpose {
-    fn from(value: &'a str) -> Self {
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum DataIntegrityCryptoSuite {
+    EddsaRdfc2022,
+    EcdsaRdfc2019,
+}
+
+impl From<DataIntegrityCryptoSuite> for SignatureAlg {
+    fn from(value: DataIntegrityCryptoSuite) -> Self {
         match value {
-            "https://w3id.org/security#assertionMethod" => ProofPurpose::AssertionMethod,
-            _ => ProofPurpose::Unused,
+            DataIntegrityCryptoSuite::EddsaRdfc2022 => SignatureAlg::Ed25519,
+            DataIntegrityCryptoSuite::EcdsaRdfc2019 => SignatureAlg::Secp256k1,
         }
+    }
+}
+
+impl<'a> DataIntegrityProof<'a> {
+    fn extract_cryptosuite(
+        dataset: &'a Dataset<'a>,
+        proof_graph: GraphName<'a>,
+    ) -> Result<DataIntegrityCryptoSuite, InvalidProofError> {
+        dataset
+            .match_pattern(
+                None,
+                Some(PROOF_RDF_PROOF_VALUE),
+                None,
+                Some(Some(proof_graph)),
+            )
+            .objects()
+            .exactly_one()
+            .map_err(|e| match e.size_hint() {
+                (_, Some(_)) => InvalidProofError::Malformed(
+                    "Proof cannot have more than one proof cryptosuite".to_string(),
+                ),
+                _ => InvalidProofError::MissingProofCryptosuite,
+            })
+            .and_then(|o| match o {
+                Term::Literal(Literal::Typed { value, datatype })
+                    if datatype.iri == "https://w3id.org/security#cryptosuiteString" =>
+                {
+                    Ok(value)
+                }
+                _ => Err(InvalidProofError::Malformed(
+                    "Proof cryptosuite must be a cryptosuite string".to_string(),
+                )),
+            })
+            .and_then(|suite| {
+                Ok(match suite {
+                    "eddsa-rdfc-2022" => DataIntegrityCryptoSuite::EddsaRdfc2022,
+                    "ecdsa-rdfc-2019" => DataIntegrityCryptoSuite::EcdsaRdfc2019,
+                    _ => Err(InvalidProofError::Malformed(
+                        "Proof cryptosuite unknown or unsupported".to_string(),
+                    ))?,
+                })
+            })
+    }
+}
+
+impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for DataIntegrityProof<'a> {
+    type Error = InvalidProofError;
+
+    fn try_from(
+        (dataset, proof_graph): (&'a Dataset<'a>, GraphName<'a>),
+    ) -> Result<Self, Self::Error> {
+        let cryptosuite = DataIntegrityProof::extract_cryptosuite(dataset, proof_graph)?;
+        let v_method = Proof::extract_verification_method(dataset, proof_graph)?;
+        let p_purpose = Proof::extract_proof_purpose(dataset, proof_graph)?;
+        let (_, p_value) = multibase::decode(Proof::extract_proof_value(dataset, proof_graph)?)
+            .map_err(InvalidProofError::from)?;
+
+        Ok(Self {
+            cryptosuite,
+            verification_method: (v_method, cryptosuite).try_into()?,
+            created: Proof::extract_created(dataset, proof_graph)?,
+            purpose: p_purpose.into(),
+            value: p_value,
+            options: Proof::extract_proof_options(dataset, proof_graph),
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Multikey<'a> {
+    id: &'a str,
+    controller: &'a str,
+    pub_key: Vec<u8>,
+}
+
+impl<'a> TryFrom<(&'a str, DataIntegrityCryptoSuite)> for Multikey<'a> {
+    type Error = InvalidProofError;
+
+    fn try_from(
+        (value, cryptosuite): (&'a str, DataIntegrityCryptoSuite),
+    ) -> Result<Self, Self::Error> {
+        let (controller, key) = Proof::parse_verification_method(value)?;
+        Ok(Self {
+            id: value,
+            controller,
+            pub_key: match cryptosuite {
+                DataIntegrityCryptoSuite::EddsaRdfc2022 => multiformats::decode_ed25519_key(key),
+                DataIntegrityCryptoSuite::EcdsaRdfc2019 => multiformats::decode_secp256k1_key(key),
+            }?,
+        })
     }
 }
 
@@ -291,6 +430,21 @@ mod multiformats {
         let (codec, key) =
             unsigned_varint::decode::u16(&data).map_err(|_| InvalidProofError::InvalidPubKey)?;
         if codec != 0xed {
+            Err(InvalidProofError::InvalidPubKey)?;
+        }
+
+        Ok(key.to_vec())
+    }
+
+    pub fn decode_secp256k1_key(src: &str) -> Result<Vec<u8>, InvalidProofError> {
+        let (base, data) = multibase::decode(src).map_err(|_| InvalidProofError::InvalidPubKey)?;
+        if base != Base::Base58Btc {
+            Err(InvalidProofError::InvalidPubKey)?;
+        }
+
+        let (codec, key) =
+            unsigned_varint::decode::u16(&data).map_err(|_| InvalidProofError::InvalidPubKey)?;
+        if codec != 0xe7 {
             Err(InvalidProofError::InvalidPubKey)?;
         }
 

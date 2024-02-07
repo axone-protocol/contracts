@@ -298,6 +298,7 @@ impl<'a> VerifiableCredential<'a> {
 mod test {
     use super::*;
     use crate::testutil::testutil;
+    use cosmwasm_std::testing::mock_dependencies;
 
     #[test]
     fn proper_vc_from_dataset() {
@@ -335,10 +336,11 @@ mod test {
 
     #[test]
     fn vc_verify() {
+        let mut deps = mock_dependencies();
         let owned_quads = testutil::read_test_quads("vc-ok.nq");
         let dataset = Dataset::from(owned_quads.as_slice());
         let vc = VerifiableCredential::try_from(&dataset).unwrap();
-        let verif_res = vc.verify();
+        let verif_res = vc.verify(deps.as_mut());
         assert!(verif_res.is_ok());
     }
 }

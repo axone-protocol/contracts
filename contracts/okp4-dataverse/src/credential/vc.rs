@@ -1,6 +1,7 @@
 use crate::credential::error::{InvalidCredentialError, InvalidProofError, VerificationError};
 use crate::credential::proof::{Proof, ProofPurpose};
 use crate::credential::rdf_marker::*;
+use cosmwasm_std::DepsMut;
 use itertools::Itertools;
 use okp4_rdf::dataset::QuadIterator;
 use okp4_rdf::dataset::{Dataset, QuadPattern};
@@ -73,7 +74,7 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
 }
 
 impl<'a> VerifiableCredential<'a> {
-    pub fn verify(&self) -> Result<(), VerificationError> {
+    pub fn verify(&self, deps: DepsMut<'_>) -> Result<(), VerificationError> {
         let proof = self
             .proof
             .iter()
@@ -82,6 +83,7 @@ impl<'a> VerifiableCredential<'a> {
 
         let crypto_suite = proof.crypto_suite();
         crypto_suite.verify_document(
+            deps,
             self.unsecured_document.as_ref(),
             proof.options(),
             proof.signature(),

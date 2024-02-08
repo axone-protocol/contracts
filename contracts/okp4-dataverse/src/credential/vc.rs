@@ -302,10 +302,10 @@ mod test {
 
     #[test]
     fn proper_vc_from_dataset() {
-        let owned_quads = testutil::read_test_quads("vc-ok-unsecured.nq");
+        let owned_quads = testutil::read_test_quads("vc-eddsa-2020-ok-unsecured.nq");
         let unsecure_dataset = Dataset::from(owned_quads.as_slice());
 
-        let owned_quads = testutil::read_test_quads("vc-ok.nq");
+        let owned_quads = testutil::read_test_quads("vc-eddsa-2020-ok.nq");
         let dataset = Dataset::from(owned_quads.as_slice());
 
         let vc_res = VerifiableCredential::try_from(&dataset);
@@ -336,11 +336,19 @@ mod test {
 
     #[test]
     fn vc_verify() {
+        let cases = vec![
+            "vc-eddsa-2020-ok.nq",
+            "vc-ecdsa-2019-ok.nq",
+            "vc-di-ed-ok.nq",
+        ];
         let mut deps = mock_dependencies();
-        let owned_quads = testutil::read_test_quads("vc-ok.nq");
-        let dataset = Dataset::from(owned_quads.as_slice());
-        let vc = VerifiableCredential::try_from(&dataset).unwrap();
-        let verif_res = vc.verify(deps.as_mut());
-        assert!(verif_res.is_ok());
+
+        for case in cases {
+            let owned_quads = testutil::read_test_quads(case);
+            let dataset = Dataset::from(owned_quads.as_slice());
+            let vc = VerifiableCredential::try_from(&dataset).unwrap();
+            let verif_res = vc.verify(deps.as_mut());
+            assert!(verif_res.is_ok());
+        }
     }
 }

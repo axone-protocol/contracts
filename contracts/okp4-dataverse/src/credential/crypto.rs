@@ -95,10 +95,8 @@ impl CryptoSuite {
                 hasher.update(signing_input);
                 let signing_input = hasher.finalize().to_vec();
 
-                let res = deps
-                    .api
-                    .secp256k1_verify(&signing_input, &signature, pub_key);
-                res
+                deps.api
+                    .secp256k1_verify(&signing_input, &signature, pub_key)
             }
         } {
             Ok(true) => Ok(()),
@@ -109,7 +107,7 @@ impl CryptoSuite {
 
     fn explode_jws(jws: &[u8]) -> Result<(&[u8], &[u8]), VerificationError> {
         let jws = from_utf8(jws).map_err(|_| VerificationError::InvalidJws)?;
-        let mut parts = jws.split(".");
+        let mut parts = jws.split('.');
         Ok(
             match (parts.next(), parts.next(), parts.next(), parts.next()) {
                 (Some(headers), Some(_), Some(sig), None) => (headers.as_bytes(), sig.as_bytes()),

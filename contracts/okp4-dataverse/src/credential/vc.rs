@@ -1,6 +1,7 @@
 use crate::credential::error::{InvalidCredentialError, InvalidProofError, VerificationError};
 use crate::credential::proof::{Proof, ProofPurpose};
 use crate::credential::rdf_marker::*;
+use cosmwasm_std::DepsMut;
 use itertools::Itertools;
 use okp4_rdf::dataset::QuadIterator;
 use okp4_rdf::dataset::{Dataset, QuadPattern};
@@ -73,7 +74,7 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
 }
 
 impl<'a> VerifiableCredential<'a> {
-    pub fn verify(&self) -> Result<(), VerificationError> {
+    pub fn verify(&self, deps: DepsMut<'_>) -> Result<(), VerificationError> {
         let proof = self
             .proof
             .iter()
@@ -82,6 +83,7 @@ impl<'a> VerifiableCredential<'a> {
 
         let crypto_suite = proof.crypto_suite();
         crypto_suite.verify_document(
+            deps,
             self.unsecured_document.as_ref(),
             proof.options(),
             proof.signature(),
@@ -296,13 +298,14 @@ impl<'a> VerifiableCredential<'a> {
 mod test {
     use super::*;
     use crate::testutil::testutil;
+    use cosmwasm_std::testing::mock_dependencies;
 
     #[test]
     fn proper_vc_from_dataset() {
-        let owned_quads = testutil::read_test_quads("vc-ok-unsecured.nq");
+        let owned_quads = testutil::read_test_quads("vc-eddsa-2020-ok-unsecured.nq");
         let unsecure_dataset = Dataset::from(owned_quads.as_slice());
 
-        let owned_quads = testutil::read_test_quads("vc-ok.nq");
+        let owned_quads = testutil::read_test_quads("vc-eddsa-2020-ok.nq");
         let dataset = Dataset::from(owned_quads.as_slice());
 
         let vc_res = VerifiableCredential::try_from(&dataset);
@@ -333,10 +336,19 @@ mod test {
 
     #[test]
     fn vc_verify() {
-        let owned_quads = testutil::read_test_quads("vc-ok.nq");
-        let dataset = Dataset::from(owned_quads.as_slice());
-        let vc = VerifiableCredential::try_from(&dataset).unwrap();
-        let verif_res = vc.verify();
-        assert!(verif_res.is_ok());
+        let cases = vec![
+            "vc-eddsa-2020-ok.nq",
+            "vc-ecdsa-2019-ok.nq",
+            "vc-di-ed-ok.nq",
+        ];
+        let mut deps = mock_dependencies();
+
+        for case in cases {
+            let owned_quads = testutil::read_test_quads(case);
+            let dataset = Dataset::from(owned_quads.as_slice());
+            let vc = VerifiableCredential::try_from(&dataset).unwrap();
+            let verif_res = vc.verify(deps.as_mut());
+            assert!(verif_res.is_ok());
+        }
     }
 }

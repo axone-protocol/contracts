@@ -321,6 +321,12 @@ jobs:
         with:
           node-version: 16
 
+      - name: Setup jq
+        uses: dcarbone/install-jq-action@v2
+        with:
+          version: 1.7
+          force: true
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:

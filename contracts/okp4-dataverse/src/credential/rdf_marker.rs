@@ -10,9 +10,8 @@ pub const RDF_DATE_TYPE: NamedNode<'_> = NamedNode {
     iri: "http://www.w3.org/2001/XMLSchema#dateTime",
 };
 
-pub const VC_RDF_TYPE: Term<'_> = Term::NamedNode(NamedNode {
-    iri: "https://www.w3.org/2018/credentials#VerifiableCredential",
-});
+pub const IRI_VC_TYPE: &str = "https://www.w3.org/2018/credentials#VerifiableCredential";
+pub const VC_RDF_TYPE: Term<'_> = Term::NamedNode(NamedNode { iri: IRI_VC_TYPE });
 pub const VC_RDF_ISSUER: NamedNode<'_> = NamedNode {
     iri: "https://www.w3.org/2018/credentials#issuer",
 };

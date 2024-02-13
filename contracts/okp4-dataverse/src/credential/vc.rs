@@ -9,21 +9,21 @@ use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
 
 #[derive(Debug, PartialEq)]
 pub struct VerifiableCredential<'a> {
-    id: &'a str,
-    types: Vec<&'a str>,
-    issuer: &'a str,
-    issuance_date: &'a str,
-    expiration_date: Option<&'a str>,
-    claims: Vec<Claim<'a>>,
-    status: Option<Status<'a>>,
-    proof: Vec<Proof<'a>>,
+    pub id: &'a str,
+    pub types: Vec<&'a str>,
+    pub issuer: &'a str,
+    pub issuance_date: &'a str,
+    pub expiration_date: Option<&'a str>,
+    pub claims: Vec<Claim<'a>>,
+    pub status: Option<Status<'a>>,
+    pub proof: Vec<Proof<'a>>,
     unsecured_document: Dataset<'a>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Claim<'a> {
-    id: &'a str,
-    content: Dataset<'a>,
+    pub id: &'a str,
+    pub content: Dataset<'a>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -74,7 +74,7 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
 }
 
 impl<'a> VerifiableCredential<'a> {
-    pub fn verify(&self, deps: DepsMut<'_>) -> Result<(), VerificationError> {
+    pub fn verify(&self, deps: &'_ DepsMut<'_>) -> Result<(), VerificationError> {
         let proof = self
             .proof
             .iter()
@@ -347,7 +347,7 @@ mod test {
             let owned_quads = testutil::read_test_quads(case);
             let dataset = Dataset::from(owned_quads.as_slice());
             let vc = VerifiableCredential::try_from(&dataset).unwrap();
-            let verif_res = vc.verify(deps.as_mut());
+            let verif_res = vc.verify(&deps.as_mut());
             assert!(verif_res.is_ok());
         }
     }

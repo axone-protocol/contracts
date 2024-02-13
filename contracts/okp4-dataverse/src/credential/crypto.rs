@@ -39,7 +39,7 @@ impl From<(CanonicalizationAlg, DigestAlg, SignatureAlg)> for CryptoSuite {
 impl CryptoSuite {
     pub fn verify_document(
         &self,
-        deps: DepsMut<'_>,
+        deps: &'_ DepsMut<'_>,
         unsecured_doc: &[Quad<'_>],
         proof_opts: &[Quad<'_>],
         proof_value: &[u8],
@@ -77,7 +77,7 @@ impl CryptoSuite {
 
     fn verify(
         &self,
-        deps: DepsMut<'_>,
+        deps: &'_ DepsMut<'_>,
         message: &[u8],
         signature: &[u8],
         pub_key: &[u8],

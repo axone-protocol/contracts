@@ -17,6 +17,12 @@ pub enum ContractError {
     #[error("Invalid credential: '{0}'")]
     InvalidCredential(#[from] InvalidCredentialError),
 
-    #[error("Credential verification failed: {0}")]
+    #[error("Credential verification failed: '{0}'")]
     CredentialVerification(#[from] VerificationError),
+
+    #[error("Credential not supported: '{0}'")]
+    UnsupportedCredential(String),
+
+    #[error("Credential already exists: '{0}'")]
+    CredentialAlreadyExists(String),
 }

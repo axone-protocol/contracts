@@ -67,14 +67,14 @@ pub fn instantiate(
 pub fn execute(
     deps: DepsMut<'_>,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::SubmitClaims {
             metadata,
             format: _,
-        } => execute::submit_claims(deps, metadata),
+        } => execute::submit_claims(deps, info, metadata),
         _ => Err(StdError::generic_err("Not implemented").into()),
     }
 }
@@ -82,19 +82,33 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::credential::vc::VerifiableCredential;
+    use crate::registrar::credential::DataverseCredential;
+    use crate::registrar::registry::ClaimRegistrar;
     use okp4_rdf::dataset::Dataset;
     use okp4_rdf::serde::NQuadsReader;
     use std::io::BufReader;
 
-    pub fn submit_claims(deps: DepsMut<'_>, data: Binary) -> Result<Response, ContractError> {
+    pub fn submit_claims(
+        deps: DepsMut<'_>,
+        info: MessageInfo,
+        data: Binary,
+    ) -> Result<Response, ContractError> {
         let buf = BufReader::new(data.as_slice());
         let mut reader = NQuadsReader::new(buf);
         let rdf_quads = reader.read_all()?;
         let vc_dataset = Dataset::from(rdf_quads.as_slice());
         let vc = VerifiableCredential::try_from(&vc_dataset)?;
-        vc.verify(deps)?;
+        vc.verify(&deps)?;
 
-        Ok(Response::default())
+        let credential = DataverseCredential::try_from((info.sender, &vc))?;
+        let registrar = ClaimRegistrar::try_new(deps.storage)?;
+
+        Ok(Response::default()
+            .add_attribute("action", "submit_claims")
+            .add_attribute("credential", credential.id)
+            .add_attribute("subject", credential.subject)
+            .add_attribute("type", credential.r#type)
+            .add_message(registrar.submit_claim(&deps, &credential)?))
     }
 }
 

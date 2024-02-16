@@ -3,7 +3,7 @@ use crate::registrar::credential::DataverseCredential;
 use crate::ContractError;
 use cosmwasm_std::{Binary, StdError};
 use okp4_rdf::serde::{DataFormat, TripleWriter};
-use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term, Triple};
+use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
 
 pub const VC_SUBMITTER_ADDRESS: NamedNode<'_> = NamedNode {
     iri: "dataverse:credential#submitterAddress",
@@ -27,13 +27,9 @@ pub const VC_CLAIM: NamedNode<'_> = NamedNode {
     iri: "dataverse:credential#claim",
 };
 
-impl<'a> TryFrom<&'a DataverseCredential<'a>> for Vec<Triple<'a>> {
-    type Error = ContractError;
-
-    fn try_from(credential: &'a DataverseCredential<'a>) -> Result<Self, Self::Error> {
+impl<'a> From<&'a DataverseCredential<'a>> for Vec<Triple<'a>> {
+    fn from(credential: &'a DataverseCredential<'a>) -> Self {
         let c_subject = Subject::NamedNode(NamedNode { iri: credential.id });
-        //todo: use the canon identifier issuer instead and rename all blank nodes
-        let claim_node = BlankNode { id: "c0" };
 
         let mut triples = vec![
             Triple {
@@ -72,26 +68,9 @@ impl<'a> TryFrom<&'a DataverseCredential<'a>> for Vec<Triple<'a>> {
                     iri: credential.subject,
                 }),
             },
-            Triple {
-                subject: c_subject,
-                predicate: VC_CLAIM,
-                object: Term::BlankNode(claim_node),
-            },
         ];
 
-        triples.extend(credential.claim.iter().map(|q| {
-            let subject = match q.subject {
-                Subject::NamedNode(n) if n.iri == credential.subject => {
-                    Subject::BlankNode(claim_node)
-                }
-                _ => q.subject,
-            };
-            Triple {
-                subject,
-                predicate: q.predicate,
-                object: q.object,
-            }
-        }));
+        triples.extend(credential.claim.as_slice());
 
         if let Some(valid_until) = credential.valid_until {
             triples.push(Triple {
@@ -104,7 +83,7 @@ impl<'a> TryFrom<&'a DataverseCredential<'a>> for Vec<Triple<'a>> {
             });
         }
 
-        Ok(triples)
+        triples
     }
 }
 
@@ -112,7 +91,7 @@ pub fn serialize(
     credential: &DataverseCredential<'_>,
     format: DataFormat,
 ) -> Result<Binary, ContractError> {
-    let triples: Vec<Triple<'_>> = credential.try_into()?;
+    let triples: Vec<Triple<'_>> = credential.into();
     let out: Vec<u8> = Vec::default();
     let mut writer = TripleWriter::new(&format, out);
     for triple in triples {

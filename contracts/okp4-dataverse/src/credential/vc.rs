@@ -217,12 +217,7 @@ impl<'a> VerifiableCredential<'a> {
             })
             .map_ok(|claim_id| Claim {
                 id: claim_id.iri,
-                content: Dataset::new(
-                    dataset
-                        .match_pattern(Some(claim_id.into()), None, None, None)
-                        .copied()
-                        .collect(),
-                ),
+                content: dataset.sub_graph(claim_id.into()),
             })
             .collect()
     }

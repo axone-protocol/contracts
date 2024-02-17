@@ -131,8 +131,10 @@ mod tests {
     };
     use okp4_cognitarium::msg::{
         DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse,
-        SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereCondition, IRI,
+        SimpleWhereCondition, TriplePattern, Value, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        IRI,
     };
+    use std::collections::BTreeMap;
 
     #[test]
     fn proper_instantiate() {
@@ -303,5 +305,125 @@ _:b2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             }
             _ => assert!(false),
         }
+    }
+
+    #[test]
+    fn submit_nonrdf_claims() {
+        let resp = execute(
+            mock_dependencies().as_mut(),
+            mock_env(),
+            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            ExecuteMsg::SubmitClaims {
+                metadata: Binary("notrdf".as_bytes().to_vec()),
+                format: Some(RdfFormat::NQuads),
+            },
+        );
+
+        assert!(resp.is_err());
+        assert!(matches!(resp.err().unwrap(), ContractError::ParseRDF(_)))
+    }
+
+    #[test]
+    fn submit_invalid_claims() {
+        let resp = execute(
+            mock_dependencies().as_mut(),
+            mock_env(),
+            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            ExecuteMsg::SubmitClaims {
+                metadata: Binary(vec![]),
+                format: Some(RdfFormat::NQuads),
+            },
+        );
+
+        assert!(resp.is_err());
+        assert!(matches!(
+            resp.err().unwrap(),
+            ContractError::InvalidCredential(_)
+        ))
+    }
+
+    #[test]
+    fn submit_unverified_claims() {
+        let resp = execute(
+            mock_dependencies().as_mut(),
+            mock_env(),
+            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            ExecuteMsg::SubmitClaims {
+                metadata: Binary(read_test_data("vc-eddsa-2020-ok-unsecured.nq")),
+                format: Some(RdfFormat::NQuads),
+            },
+        );
+
+        assert!(resp.is_err());
+        assert!(matches!(
+            resp.err().unwrap(),
+            ContractError::CredentialVerification(_)
+        ))
+    }
+
+    #[test]
+    fn submit_unsupported_claims() {
+        let resp = execute(
+            mock_dependencies().as_mut(),
+            mock_env(),
+            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            ExecuteMsg::SubmitClaims {
+                metadata: Binary(read_test_data("vc-unsupported-1.nq")),
+                format: Some(RdfFormat::NQuads),
+            },
+        );
+
+        assert!(resp.is_err());
+        assert!(matches!(
+            resp.err().unwrap(),
+            ContractError::UnsupportedCredential(_)
+        ))
+    }
+
+    #[test]
+    fn submit_existing_claims() {
+        let mut deps = mock_dependencies();
+        deps.querier.update_wasm(|query| match query {
+            WasmQuery::Smart { .. } => {
+                let select_resp = SelectResponse {
+                    results: Results {
+                        bindings: vec![BTreeMap::from([(
+                            "p".to_string(),
+                            Value::BlankNode {
+                                value: "".to_string(),
+                            },
+                        )])],
+                    },
+                    head: Head { vars: vec![] },
+                };
+                SystemResult::Ok(ContractResult::Ok(to_json_binary(&select_resp).unwrap()))
+            }
+            _ => SystemResult::Err(SystemError::Unknown {}),
+        });
+
+        DATAVERSE
+            .save(
+                deps.as_mut().storage,
+                &Dataverse {
+                    name: "my-dataverse".to_string(),
+                    triplestore_address: Addr::unchecked("my-dataverse-addr"),
+                },
+            )
+            .unwrap();
+
+        let resp = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            ExecuteMsg::SubmitClaims {
+                metadata: Binary(read_test_data("vc-eddsa-2020-ok.nq")),
+                format: Some(RdfFormat::NQuads),
+            },
+        );
+
+        assert!(resp.is_err());
+        assert!(
+            matches!(resp.err().unwrap(), ContractError::CredentialAlreadyExists(id) if id == "http://example.edu/credentials/3732")
+        );
     }
 }

@@ -122,11 +122,16 @@ pub mod query {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::{TripleStoreConfig, TripleStoreLimitsInput};
+    use crate::msg::{RdfFormat, TripleStoreConfig, TripleStoreLimitsInput};
+    use crate::testutil::testutil::read_test_data;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        Addr, Attribute, ContractResult, HexBinary, SubMsg, SystemError, SystemResult, Uint128,
-        Uint64, WasmQuery,
+        from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError,
+        SystemResult, Uint128, Uint64, WasmQuery,
+    };
+    use okp4_cognitarium::msg::{
+        DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse,
+        SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereCondition, IRI,
     };
 
     #[test]
@@ -188,5 +193,115 @@ mod tests {
                 triplestore_address: Addr::unchecked("predicted address"),
             }
         )
+    }
+
+    #[test]
+    fn proper_submit_claims() {
+        let mut deps = mock_dependencies();
+        deps.querier.update_wasm(|query| match query {
+            WasmQuery::Smart { contract_addr, msg } => {
+                if contract_addr != "my-dataverse-addr" {
+                    return SystemResult::Err(SystemError::NoSuchContract {
+                        addr: contract_addr.to_string(),
+                    });
+                }
+                let query_msg: StdResult<okp4_cognitarium::msg::QueryMsg> = from_json(msg);
+                assert_eq!(
+                    query_msg,
+                    Ok(okp4_cognitarium::msg::QueryMsg::Select {
+                        query: SelectQuery {
+                            prefixes: vec![],
+                            limit: Some(1u32),
+                            select: vec![SelectItem::Variable("p".to_string())],
+                            r#where: vec![WhereCondition::Simple(
+                                SimpleWhereCondition::TriplePattern(TriplePattern {
+                                    subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
+                                        "http://example.edu/credentials/3732".to_string(),
+                                    ))),
+                                    predicate: VarOrNode::Variable("p".to_string()),
+                                    object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                                })
+                            )],
+                        }
+                    })
+                );
+
+                let select_resp = SelectResponse {
+                    results: Results { bindings: vec![] },
+                    head: Head { vars: vec![] },
+                };
+                SystemResult::Ok(ContractResult::Ok(to_json_binary(&select_resp).unwrap()))
+            }
+            _ => SystemResult::Err(SystemError::Unknown {}),
+        });
+
+        DATAVERSE
+            .save(
+                deps.as_mut().storage,
+                &Dataverse {
+                    name: "my-dataverse".to_string(),
+                    triplestore_address: Addr::unchecked("my-dataverse-addr"),
+                },
+            )
+            .unwrap();
+
+        let resp = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            ExecuteMsg::SubmitClaims {
+                metadata: Binary(read_test_data("vc-eddsa-2020-ok.nq")),
+                format: Some(RdfFormat::NQuads),
+            },
+        );
+
+        assert!(resp.is_ok());
+        let resp = resp.unwrap();
+        assert_eq!(resp.messages.len(), 1);
+        assert_eq!(
+            resp.attributes,
+            vec![
+                Attribute::new("action", "submit_claims"),
+                Attribute::new("credential", "http://example.edu/credentials/3732"),
+                Attribute::new(
+                    "subject",
+                    "did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw"
+                ),
+                Attribute::new(
+                    "type",
+                    "https://example.org/examples#UniversityDegreeCredential"
+                ),
+            ]
+        );
+
+        let expected_data = "<http://example.edu/credentials/3732> <dataverse:credential#submitterAddress> <okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf> .
+<http://example.edu/credentials/3732> <dataverse:credential#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
+<http://example.edu/credentials/3732> <dataverse:credential#type> <https://example.org/examples#UniversityDegreeCredential> .
+<http://example.edu/credentials/3732> <dataverse:credential#validFrom> \"2024-02-16T00:00:00Z\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<http://example.edu/credentials/3732> <dataverse:credential#subject> <did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw> .
+_:c0 <https://example.org/examples#degree> _:b2 .
+_:b2 <http://schema.org/name> \"Bachelor of Science and Arts\"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML> .
+_:b2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/examples#BachelorDegree> .
+<http://example.edu/credentials/3732> <dataverse:credential#claim> _:c0 .
+<http://example.edu/credentials/3732> <dataverse:credential#validUntil> \"2026-02-16T00:00:00Z\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n";
+
+        match resp.messages[0].msg.clone() {
+            CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr,
+                msg,
+                funds,
+            }) if contract_addr == "my-dataverse-addr".to_string() && funds == vec![] => {
+                let exec_msg: StdResult<okp4_cognitarium::msg::ExecuteMsg> = from_json(msg);
+                assert!(exec_msg.is_ok());
+                match exec_msg.unwrap() {
+                    okp4_cognitarium::msg::ExecuteMsg::InsertData { format, data } => {
+                        assert_eq!(format, Some(DataFormat::NTriples));
+                        assert_eq!(String::from_utf8(data.0).unwrap(), expected_data);
+                    }
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
     }
 }

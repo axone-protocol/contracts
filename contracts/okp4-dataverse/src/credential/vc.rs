@@ -42,10 +42,6 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
         let (proofs, proof_graphs): (Vec<Proof<'a>>, Vec<BlankNode<'a>>) =
             Self::extract_proofs(dataset, id)?.into_iter().unzip();
 
-        if proofs.is_empty() {
-            return Err(InvalidCredentialError::MissingProof);
-        }
-
         let mut unsecured_filter: Vec<QuadPattern<'_>> = proof_graphs
             .into_iter()
             .map(|g| (None, None, None, Some(Some(g.into()))).into())

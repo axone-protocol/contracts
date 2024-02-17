@@ -95,10 +95,10 @@ impl<'a> VerifiableCredential<'a> {
             .subjects()
             .exactly_one()
             .map_err(|e| match e.size_hint() {
-                (_, Some(_)) => InvalidCredentialError::MissingIdentifier,
-                _ => InvalidCredentialError::Malformed(
+                (_, Some(_)) => InvalidCredentialError::Malformed(
                     "Credential cannot have more than one id".to_string(),
                 ),
+                _ => InvalidCredentialError::MissingIdentifier,
             })
             .and_then(|s| match s {
                 Subject::NamedNode(n) => Ok(n),

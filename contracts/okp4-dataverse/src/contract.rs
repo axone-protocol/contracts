@@ -276,7 +276,7 @@ mod tests {
             ]
         );
 
-        let expected_data = "<http://example.edu/credentials/3732> <dataverse:credential#submitterAddress> <okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf> .
+        let expected_data = "<http://example.edu/credentials/3732> <dataverse:credential#submitterAddress> \"okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf\" .
 <http://example.edu/credentials/3732> <dataverse:credential#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
 <http://example.edu/credentials/3732> <dataverse:credential#type> <https://example.org/examples#UniversityDegreeCredential> .
 <http://example.edu/credentials/3732> <dataverse:credential#validFrom> \"2024-02-16T00:00:00Z\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .

@@ -35,8 +35,8 @@ impl<'a> From<&'a DataverseCredential<'a>> for Vec<Triple<'a>> {
             Triple {
                 subject: c_subject,
                 predicate: VC_SUBMITTER_ADDRESS,
-                object: Term::NamedNode(NamedNode {
-                    iri: credential.submitter_addr.as_str(),
+                object: Term::Literal(Literal::Simple {
+                    value: credential.submitter_addr.as_str(),
                 }),
             },
             Triple {
@@ -124,7 +124,7 @@ mod test {
         ))
         .unwrap();
 
-        let expected = "<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#submitterAddress> <okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf> .
+        let expected = "<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#submitterAddress> \"okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf\" .
 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#issuer> <did:key:zQ3shs7auhJSmVJpiUbQWco6bxxEhSqWnVEPvaBHBRvBKw6Q3> .
 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#type> <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/DigitalServiceDescriptionCredential> .
 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#validFrom> \"2024-01-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .

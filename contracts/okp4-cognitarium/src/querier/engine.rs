@@ -77,6 +77,7 @@ impl<'a> QueryEngine<'a> {
                     object.clone(),
                 ))
             }),
+            QueryNode::Noop { .. } => Rc::new(|_| Box::new(iter::empty())),
             QueryNode::CartesianProductJoin { left, right } => {
                 let left = self.eval_node(*left);
                 let right = self.eval_node(*right);

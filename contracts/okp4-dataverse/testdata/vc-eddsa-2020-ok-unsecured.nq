@@ -1,4 +1,9 @@
-<http://example.edu/credentials/58473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
-<http://example.edu/credentials/58473> <https://www.w3.org/2018/credentials#credentialSubject> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
-<http://example.edu/credentials/58473> <https://www.w3.org/2018/credentials#issuanceDate> "2023-05-01T06:09:10Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
-<http://example.edu/credentials/58473> <https://www.w3.org/2018/credentials#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
+<did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw> <https://example.org/examples#degree> _:b2 .
+<http://example.edu/credentials/3732> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/examples#UniversityDegreeCredential> .
+<http://example.edu/credentials/3732> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<http://example.edu/credentials/3732> <https://www.w3.org/2018/credentials#credentialSubject> <did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw> .
+<http://example.edu/credentials/3732> <https://www.w3.org/2018/credentials#expirationDate> "2026-02-16T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<http://example.edu/credentials/3732> <https://www.w3.org/2018/credentials#issuanceDate> "2024-02-16T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<http://example.edu/credentials/3732> <https://www.w3.org/2018/credentials#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
+_:b2 <http://schema.org/name> "Bachelor of Science and Arts"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML> .
+_:b2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/examples#BachelorDegree> .

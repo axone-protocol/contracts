@@ -68,9 +68,7 @@ The SubmitClaims message is a pivotal component in the dataverse, enabling entit
 
 #### Format
 
-Claims are injected into the dataverse through Verifiable Presentations (VPs). These presentations effectively amalgamate and showcase multiple credentials, thus providing a cohesive and comprehensive view of the assertions being made.
-
-While the data in a VP typically revolves around a common subject, it accommodates an unlimited number of subjects and issuers. This flexibility allows for a broad spectrum of claims to be represented.
+Claims are injected into the dataverse through Verifiable Credentials (VCs).
 
 Primarily, the claims leverage the OKP4 ontology, which facilitates articulating assertions about widely acknowledged resources in the dataverse, including digital services, digital resources, zones, governance, and more.
 
@@ -80,11 +78,21 @@ Additionally, other schemas may also be employed to supplement and enhance the v
 
 To maintain integrity and coherence in the dataverse, several preconditions are set for the submission of claims:
 
-1. **Format Requirement**: Claims must be encapsulated within Verifiable Presentations (VPs).
+1. **Format Requirement**: Claims must be encapsulated within Verifiable Credentials (VCs).
 
 2. **Unique Identifier Mandate**: Each Verifiable Credential within the dataverse must possess a unique identifier.
 
 3. **Issuer Signature**: Claims must bear the issuer's signature. This signature must be verifiable, ensuring authenticity and credibility.
+
+4. **Content**: The actual implementation supports the submission of a single Verifiable Credential, containing a single claim.
+
+#### Supported cryptographic proofs
+
+- `Ed25519Signature2020`
+
+- `EcdsaSecp256k1Signature2019`
+
+- `DataIntegrity` with the following cryptosuites: `eddsa-2022`, `eddsa-rdfc-2022`.
 
 | parameter                | description                                                                                                                                                                  |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -213,5 +221,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`f38b5aafa47fb333`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`30443a4cdcde9c27`)*
 ````

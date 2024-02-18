@@ -779,6 +779,7 @@ dependencies = [
  "itertools 0.12.1",
  "multibase",
  "okp4-cognitarium",
+ "okp4-cognitarium-client",
  "okp4-rdf",
  "rio_api",
  "rio_turtle",

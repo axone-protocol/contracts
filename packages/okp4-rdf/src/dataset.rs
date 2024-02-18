@@ -1,6 +1,7 @@
 use crate::owned_model::OwnedQuad;
 use itertools::Itertools;
 use rio_api::model::{GraphName, NamedNode, Quad, Subject, Term};
+use std::collections::HashSet;
 use std::slice::Iter;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -48,6 +49,39 @@ impl<'a> Dataset<'a> {
         g: Option<Option<GraphName<'a>>>,
     ) -> QuadPatternFilter<'a, Iter<'a, Quad<'a>>> {
         self.iter().skip_pattern((s, p, o, g).into())
+    }
+
+    pub fn sub_graph(&'a self, subject: Subject<'a>) -> Dataset<'a> {
+        Self::new(Self::sub_graph_from_quads(self.as_ref(), HashSet::new(), subject).0)
+    }
+
+    fn sub_graph_from_quads(
+        quads: &'a [Quad<'a>],
+        mut visited: HashSet<Subject<'a>>,
+        subject: Subject<'a>,
+    ) -> (Vec<Quad<'a>>, HashSet<Subject<'a>>) {
+        let mut sub_graph = vec![];
+        for quad in quads
+            .iter()
+            .match_pattern((Some(subject), None, None, None).into())
+        {
+            sub_graph.push(*quad);
+
+            let maybe_node: Option<Subject<'a>> = match quad.object {
+                Term::NamedNode(n) => Some(n.into()),
+                Term::BlankNode(n) => Some(n.into()),
+                _ => None,
+            };
+
+            if let Some(s) = maybe_node.filter(|n| !visited.contains(n)) {
+                visited.insert(subject);
+                let (new_quads, new_visited) = Self::sub_graph_from_quads(quads, visited, s);
+                visited = new_visited;
+                sub_graph.extend(new_quads);
+            }
+        }
+
+        (sub_graph, visited)
     }
 }
 

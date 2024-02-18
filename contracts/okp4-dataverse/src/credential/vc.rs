@@ -9,21 +9,21 @@ use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
 
 #[derive(Debug, PartialEq)]
 pub struct VerifiableCredential<'a> {
-    id: &'a str,
-    types: Vec<&'a str>,
-    issuer: &'a str,
-    issuance_date: &'a str,
-    expiration_date: Option<&'a str>,
-    claims: Vec<Claim<'a>>,
-    status: Option<Status<'a>>,
-    proof: Vec<Proof<'a>>,
+    pub id: &'a str,
+    pub types: Vec<&'a str>,
+    pub issuer: &'a str,
+    pub issuance_date: &'a str,
+    pub expiration_date: Option<&'a str>,
+    pub claims: Vec<Claim<'a>>,
+    pub status: Option<Status<'a>>,
+    pub proof: Vec<Proof<'a>>,
     unsecured_document: Dataset<'a>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Claim<'a> {
-    id: &'a str,
-    content: Dataset<'a>,
+    pub id: &'a str,
+    pub content: Dataset<'a>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -41,10 +41,6 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
 
         let (proofs, proof_graphs): (Vec<Proof<'a>>, Vec<BlankNode<'a>>) =
             Self::extract_proofs(dataset, id)?.into_iter().unzip();
-
-        if proofs.is_empty() {
-            return Err(InvalidCredentialError::MissingProof);
-        }
 
         let mut unsecured_filter: Vec<QuadPattern<'_>> = proof_graphs
             .into_iter()
@@ -74,7 +70,7 @@ impl<'a> TryFrom<&'a Dataset<'a>> for VerifiableCredential<'a> {
 }
 
 impl<'a> VerifiableCredential<'a> {
-    pub fn verify(&self, deps: DepsMut<'_>) -> Result<(), VerificationError> {
+    pub fn verify(&self, deps: &'_ DepsMut<'_>) -> Result<(), VerificationError> {
         let proof = self
             .proof
             .iter()
@@ -99,10 +95,10 @@ impl<'a> VerifiableCredential<'a> {
             .subjects()
             .exactly_one()
             .map_err(|e| match e.size_hint() {
-                (_, Some(_)) => InvalidCredentialError::MissingIdentifier,
-                _ => InvalidCredentialError::Malformed(
+                (_, Some(_)) => InvalidCredentialError::Malformed(
                     "Credential cannot have more than one id".to_string(),
                 ),
+                _ => InvalidCredentialError::MissingIdentifier,
             })
             .and_then(|s| match s {
                 Subject::NamedNode(n) => Ok(n),
@@ -217,12 +213,7 @@ impl<'a> VerifiableCredential<'a> {
             })
             .map_ok(|claim_id| Claim {
                 id: claim_id.iri,
-                content: Dataset::new(
-                    dataset
-                        .match_pattern(Some(claim_id.into()), None, None, None)
-                        .copied()
-                        .collect(),
-                ),
+                content: dataset.sub_graph(claim_id.into()),
             })
             .collect()
     }
@@ -299,6 +290,7 @@ mod test {
     use super::*;
     use crate::testutil::testutil;
     use cosmwasm_std::testing::mock_dependencies;
+    use rio_api::model::Quad;
 
     #[test]
     fn proper_vc_from_dataset() {
@@ -311,22 +303,62 @@ mod test {
         let vc_res = VerifiableCredential::try_from(&dataset);
         assert!(vc_res.is_ok());
         let vc = vc_res.unwrap();
-        assert_eq!(vc.id, "http://example.edu/credentials/58473");
+        assert_eq!(vc.id, "http://example.edu/credentials/3732");
         assert_eq!(
             vc.types,
-            vec!["https://www.w3.org/2018/credentials#VerifiableCredential"]
+            vec![
+                "https://example.org/examples#UniversityDegreeCredential",
+                "https://www.w3.org/2018/credentials#VerifiableCredential"
+            ]
         );
         assert_eq!(
             vc.issuer,
             "did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY"
         );
-        assert_eq!(vc.issuance_date, "2023-05-01T06:09:10Z");
-        assert_eq!(vc.expiration_date, None);
+        assert_eq!(vc.issuance_date, "2024-02-16T00:00:00Z");
+        assert_eq!(vc.expiration_date, Some("2026-02-16T00:00:00Z"));
         assert_eq!(
             vc.claims,
             vec![Claim {
-                id: "did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY",
-                content: Dataset::new(vec![]),
+                id: "did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw",
+                content: Dataset::new(vec![
+                    Quad {
+                        subject: NamedNode {
+                            iri: "did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw"
+                        }
+                        .into(),
+                        predicate: NamedNode {
+                            iri: "https://example.org/examples#degree"
+                        },
+                        object: BlankNode { id: "b2" }.into(),
+                        graph_name: None
+                    },
+                    Quad {
+                        subject: BlankNode { id: "b2" }.into(),
+                        predicate: NamedNode {
+                            iri: "http://schema.org/name"
+                        },
+                        object: Literal::Typed {
+                            value: "Bachelor of Science and Arts",
+                            datatype: NamedNode {
+                                iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML"
+                            }
+                        }
+                        .into(),
+                        graph_name: None
+                    },
+                    Quad {
+                        subject: BlankNode { id: "b2" }.into(),
+                        predicate: NamedNode {
+                            iri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+                        },
+                        object: NamedNode {
+                            iri: "https://example.org/examples#BachelorDegree"
+                        }
+                        .into(),
+                        graph_name: None
+                    }
+                ])
             }]
         );
         assert_eq!(vc.status, None);
@@ -347,7 +379,7 @@ mod test {
             let owned_quads = testutil::read_test_quads(case);
             let dataset = Dataset::from(owned_quads.as_slice());
             let vc = VerifiableCredential::try_from(&dataset).unwrap();
-            let verif_res = vc.verify(deps.as_mut());
+            let verif_res = vc.verify(&deps.as_mut());
             assert!(verif_res.is_ok());
         }
     }

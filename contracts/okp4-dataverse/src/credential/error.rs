@@ -12,9 +12,6 @@ pub enum InvalidCredentialError {
     #[error("Missing issuance date")]
     MissingIssuanceDate,
 
-    #[error("Missing proof, at least a supported one")]
-    MissingProof,
-
     #[error("Invalid proof: {0}")]
     InvalidProof(#[from] InvalidProofError),
 

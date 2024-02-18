@@ -132,6 +132,10 @@ impl NamespaceResolver {
             None => Err(StdError::not_found("Namespace")),
         }
     }
+
+    pub fn is_ns_not_found_error(err: &StdError) -> bool {
+        matches!(err, StdError::NotFound { kind, .. } if kind == "Namespace")
+    }
 }
 
 impl Default for NamespaceResolver {

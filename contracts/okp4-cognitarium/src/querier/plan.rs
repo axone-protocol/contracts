@@ -37,6 +37,11 @@ pub enum QueryNode {
         object: PatternValue<Object>,
     },
 
+    /// Results in no solutions, this special node is used when we know before plan execution that a node
+    /// will end up with no possible solutions. For example, using a triple pattern filtering with a constant
+    /// named node containing a non-existing namespace.
+    Noop { bound_variables: Vec<usize> },
+
     /// Join two nodes by applying the cartesian product of the nodes variables.
     ///
     /// This should be used when the nodes doesn't have variables in common, and can be seen as a
@@ -76,6 +81,9 @@ impl QueryNode {
                 subject.lookup_bound_variable(callback);
                 predicate.lookup_bound_variable(callback);
                 object.lookup_bound_variable(callback);
+            }
+            QueryNode::Noop { bound_variables } => {
+                bound_variables.iter().for_each(|v| callback(*v));
             }
             QueryNode::CartesianProductJoin { left, right }
             | QueryNode::ForLoopJoin { left, right } => {

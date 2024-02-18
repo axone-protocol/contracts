@@ -105,10 +105,43 @@ impl<'a> PlanBuilder<'a> {
     }
 
     fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {
-        Ok(QueryNode::TriplePattern {
-            subject: self.build_subject_pattern(pattern.subject.clone())?,
-            predicate: self.build_predicate_pattern(pattern.predicate.clone())?,
-            object: self.build_object_pattern(pattern.object.clone())?,
+        let subject_res = self.build_subject_pattern(pattern.subject.clone());
+        let predicate_res = self.build_predicate_pattern(pattern.predicate.clone());
+        let object_res = self.build_object_pattern(pattern.object.clone());
+
+        let mut bound_variables: Vec<usize> = vec![];
+        let maybe_subject = match subject_res {
+            Ok(value) => {
+                value.lookup_bound_variable(&mut |v| bound_variables.push(v));
+                Some(value)
+            }
+            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
+            _ => Some(subject_res?),
+        };
+        let maybe_predicate = match predicate_res {
+            Ok(value) => {
+                value.lookup_bound_variable(&mut |v| bound_variables.push(v));
+                Some(value)
+            }
+            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
+            _ => Some(predicate_res?),
+        };
+        let maybe_object = match object_res {
+            Ok(value) => {
+                value.lookup_bound_variable(&mut |v| bound_variables.push(v));
+                Some(value)
+            }
+            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
+            _ => Some(object_res?),
+        };
+
+        Ok(match (maybe_subject, maybe_predicate, maybe_object) {
+            (Some(subject), Some(predicate), Some(object)) => QueryNode::TriplePattern {
+                subject,
+                predicate,
+                object,
+            },
+            _ => QueryNode::Noop { bound_variables },
         })
     }
 
@@ -376,7 +409,9 @@ mod test {
                     predicate: VarOrNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
-                Err(StdError::not_found("Namespace")),
+                Ok(QueryNode::Noop {
+                    bound_variables: vec![1usize, 2usize],
+                }),
             ),
             (
                 TriplePattern {
@@ -386,7 +421,9 @@ mod test {
                     ))),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
-                Err(StdError::not_found("Namespace")),
+                Ok(QueryNode::Noop {
+                    bound_variables: vec![0usize, 2usize],
+                }),
             ),
             (
                 TriplePattern {
@@ -396,7 +433,9 @@ mod test {
                         "notexisting#outch".to_string(),
                     ))),
                 },
-                Err(StdError::not_found("Namespace")),
+                Ok(QueryNode::Noop {
+                    bound_variables: vec![0usize, 1usize],
+                }),
             ),
         ];
 
@@ -451,7 +490,12 @@ mod test {
                     predicate: VarOrNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
-                Err(StdError::not_found("Namespace")),
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::Noop {
+                        bound_variables: vec![0usize, 1usize],
+                    },
+                    variables: vec!["predicate".to_string(), "object".to_string()],
+                }),
             ),
             (
                 None,

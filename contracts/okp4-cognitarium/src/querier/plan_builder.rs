@@ -110,30 +110,12 @@ impl<'a> PlanBuilder<'a> {
         let object_res = self.build_object_pattern(pattern.object.clone());
 
         let mut bound_variables: Vec<usize> = vec![];
-        let maybe_subject = match subject_res {
-            Ok(value) => {
-                value.lookup_bound_variable(&mut |v| bound_variables.push(v));
-                Some(value)
-            }
-            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
-            _ => Some(subject_res?),
-        };
-        let maybe_predicate = match predicate_res {
-            Ok(value) => {
-                value.lookup_bound_variable(&mut |v| bound_variables.push(v));
-                Some(value)
-            }
-            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
-            _ => Some(predicate_res?),
-        };
-        let maybe_object = match object_res {
-            Ok(value) => {
-                value.lookup_bound_variable(&mut |v| bound_variables.push(v));
-                Some(value)
-            }
-            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
-            _ => Some(object_res?),
-        };
+        let maybe_subject =
+            Self::recover_ns_not_found_pattern_res(subject_res, &mut bound_variables)?;
+        let maybe_predicate =
+            Self::recover_ns_not_found_pattern_res(predicate_res, &mut bound_variables)?;
+        let maybe_object =
+            Self::recover_ns_not_found_pattern_res(object_res, &mut bound_variables)?;
 
         Ok(match (maybe_subject, maybe_predicate, maybe_object) {
             (Some(subject), Some(predicate), Some(object)) => QueryNode::TriplePattern {
@@ -142,6 +124,20 @@ impl<'a> PlanBuilder<'a> {
                 object,
             },
             _ => QueryNode::Noop { bound_variables },
+        })
+    }
+
+    fn recover_ns_not_found_pattern_res<T>(
+        pattern_res: StdResult<PatternValue<T>>,
+        bound_variables: &mut Vec<usize>,
+    ) -> StdResult<Option<PatternValue<T>>> {
+        Ok(match pattern_res {
+            Ok(value) => {
+                value.lookup_bound_variable(&mut |v| bound_variables.push(v));
+                Some(value)
+            }
+            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
+            _ => Some(pattern_res?),
         })
     }
 

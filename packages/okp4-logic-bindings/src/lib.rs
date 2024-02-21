@@ -3,7 +3,7 @@ mod query;
 mod term_parser;
 pub mod uri;
 
-pub use query::{Answer, AskResponse, LogicCustomQuery, Result, Substitution, Term};
+pub use query::{Answer, AskResponse, LogicCustomQuery, Result, Substitution};
 pub use term_parser::TermValue;
 
 // Exposed for testing only

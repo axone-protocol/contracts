@@ -272,7 +272,7 @@ mod tests {
     use okp4_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
     use okp4_logic_bindings::uri::CosmwasmUri;
     use okp4_logic_bindings::{
-        Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution, Term,
+        Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
     };
     use okp4_objectarium::msg::PageInfo;
     use std::collections::VecDeque;
@@ -300,15 +300,13 @@ mod tests {
                         gas_used: 1000,
                         answer: Some(Answer {
                             success: true,
+                            error: None,
                             has_more: false,
                             variables: vec!["Files".to_string()],
                             results: vec![LogicResult {
                                 substitutions: vec![Substitution {
                                     variable: "Files".to_string(),
-                                    term: Term {
-                                        name: deps_name,
-                                        arguments: vec![],
-                                    },
+                                    expression: deps_name,
                                 }],
                             }],
                         }),
@@ -462,15 +460,13 @@ mod tests {
                     gas_used: 1000,
                     answer: Some(Answer {
                         success: true,
+                        error: None,
                         has_more: false,
                         variables: vec!["Foo".to_string()],
                         results: vec![LogicResult {
                             substitutions: vec![Substitution {
                                 variable: "Foo".to_string(),
-                                term: Term {
-                                    name: "bar".to_string(),
-                                    arguments: vec![],
-                                },
+                                expression: "bar".to_string(),
                             }],
                         }],
                     }),

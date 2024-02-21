@@ -369,6 +369,7 @@ mod test {
     #[test]
     fn vc_verify() {
         let cases = vec![
+            "vc-eddsa-2018-ok.nq",
             "vc-eddsa-2020-ok.nq",
             "vc-ecdsa-2019-ok.nq",
             "vc-di-ed-ok.nq",

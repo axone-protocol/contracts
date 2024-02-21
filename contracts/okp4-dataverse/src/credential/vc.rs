@@ -82,7 +82,7 @@ impl<'a> VerifiableCredential<'a> {
             deps,
             self.unsecured_document.as_ref(),
             proof.options(),
-            proof.signature(),
+            proof.proof_material(),
             proof.pub_key(),
         )
     }

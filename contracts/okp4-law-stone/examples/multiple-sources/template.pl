@@ -1,5 +1,5 @@
 valid_did(DID, Addr) :-
-    did_components(DID, did(Method, Addr, _, _, _)),
+    did_components(DID, did_components(Method, Addr, _, _, _)),
     allow_did_method(Method),
     allow_addr(Addr).
 

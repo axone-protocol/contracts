@@ -23,14 +23,14 @@ Where:
 
 - `{contract_name}`: Only informative, represents the corresponding smart contract name or type (e.g. `okp4-objectarium`);
 - `{contract_address}`: The smart contract to query, concerning the `okp4-law-stone` it must be a `okp4-objectarium` contract;
-- `{contract_query}`: The JSON query to perform on the targeted smart contract, URL encoded. In our case an `ObjectData` query, for example: `%7B%22object_data%22%3A%7B%22id%22%3A%20%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D`;
+- `{contract_query}`: The JSON query to perform on the targeted smart contract, URL encoded. In our case an `ObjectData` query, for example: `%7B%22object_data%22%3A%7B%22id%22%3A%22b118d79b4a368028b34d564448e5f1082e098613434370f3c15d6a2bf9979dfc%22%7D%7D`;
 
 ## Instantiate
 
 First the `template.pl` program must be stored on a `okp4-objectarium` and the `gov.pl` updated with the right URI in the `consult(File).` predicate, the URI should be in the form:
 
 ```bash
-cosmwasm:okp4-objectarium:${STORAGE_ADDRESS}?query=%7B%22object_data%22%3A%7B%22id%22%3A%221a88ca1632c7323c0aa594000cda26ed9f48b36351c29c3d1e35e0a0474e862e%22%7D%7D
+cosmwasm:okp4-objectarium:${STORAGE_ADDRESS}?query=%7B%22object_data%22%3A%7B%22id%22%3A%22b118d79b4a368028b34d564448e5f1082e098613434370f3c15d6a2bf9979dfc%22%7D%7D
 ```
 
 The instantiate will take as parameters the base64 encoded program and the address of a `okp4-objectarium` contract, on which the program will be stored and pinned, the `template.pl` object will also be pinned to ensure all the needed resources stays available:
@@ -41,7 +41,6 @@ okp4d tx wasm instantiate $CODE_ID \
     --from $ADDR \
     --admin $ADMIN_ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     "{\"program\":\"$(cat gov.pl | base64)\", \"storage_address\": \"$STORAGE_ADDR\"}"
 ```
 
@@ -53,7 +52,7 @@ By using the `Ask` query we can provide Prolog predicates to be evaluated agains
 
 ```bash
 okp4d query wasm contract-state smart $CONTRACT_ADDR \
-    "{\"ask\": {\"query\": \"can('change_governance', 'did:key:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').\"}}"
+    "{\"ask\": {\"query\": \"can('change_governance', 'did:example:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').\"}}"
 ```
 
 ## Break
@@ -68,6 +67,5 @@ By breaking the stone, you will not be able to query it anymore.
 okp4d tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     '"break_stone"'
 ```

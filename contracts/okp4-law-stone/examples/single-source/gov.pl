@@ -1,11 +1,11 @@
 admin_addr('okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').
 
 allow_denom('uknow').
-allow_did_method('key').
+allow_did_method('example').
 allow_addr(Addr) :- bech32_address(-('okp4', _), Addr).
 
 valid_did(DID, Addr) :-
-    did_components(DID, did(Method, Addr, _, _, _)),
+    did_components(DID, did_components(Method, Addr, _, _, _)),
     allow_did_method(Method),
     allow_addr(Addr).
 

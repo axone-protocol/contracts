@@ -99,6 +99,7 @@ This is only needed as serde-json-\{core,wasm\} has a horrible encoding for Vec&
 
 | property    | description                                        |
 | ----------- | -------------------------------------------------- |
+| `error`     | **string\|null**.                                  |
 | `has_more`  | _(Required.) _ **boolean**.                        |
 | `results`   | _(Required.) _ **Array&lt;[Result](#result)&gt;**. |
 | `success`   | _(Required.) _ **boolean**.                        |
@@ -120,18 +121,11 @@ A string containing Base64-encoded data.
 
 ### Substitution
 
-| property   | description                |
-| ---------- | -------------------------- |
-| `term`     | _(Required.) _ **object**. |
-| `variable` | _(Required.) _ **string**. |
-
-### Term
-
-| property    | description                                    |
-| ----------- | ---------------------------------------------- |
-| `arguments` | _(Required.) _ **Array&lt;[Term](#term)&gt;**. |
-| `name`      | _(Required.) _ **string**.                     |
+| property     | description                |
+| ------------ | -------------------------- |
+| `expression` | _(Required.) _ **string**. |
+| `variable`   | _(Required.) _ **string**. |
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`175af2aa8dc69420`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`b4af0e49e5a861ed`)_

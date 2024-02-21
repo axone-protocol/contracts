@@ -63,7 +63,6 @@ okp4d tx wasm instantiate $CODE_ID \
     --from $ADDR \
     --admin $ADMIN_ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     '{"bucket":"my-bucket"}'
 ```
 
@@ -75,7 +74,6 @@ We can store an object by providing its data in base64 encoded, we can pin the s
 okp4d tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     "{\"store_object\":{\"data\": \"$(cat my-data | base64)\",\"pin\":true}}"
 ```
 
@@ -87,13 +85,11 @@ With the following commands we can pin and unpin existing objects:
 okp4d tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     "{\"pin_object\":{\"id\": \"$OBJECT_ID\"}}"
 
 okp4d tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     "{\"unpin_object\":{\"id\": \"$OBJECT_ID\"}}"
 ```
 
@@ -103,7 +99,6 @@ And if an object is not pinned, or pinned by the sender of transaction, we can r
 okp4d tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     "{\"forget_object\":{\"id\": \"$OBJECT_ID\"}}"
 ```
 

@@ -11,14 +11,24 @@ use rio_api::model::{GraphName, Literal, NamedNode, Quad, Term};
 
 #[derive(Debug, PartialEq)]
 pub enum Proof<'a> {
+    Ed25519Signature2018(Ed25519Signature2018Proof<'a>),
     Ed25519Signature2020(Ed25519Signature2020Proof<'a>),
     EcdsaSecp256k1Signature2019(EcdsaSecp256k1Signature2019Proof<'a>),
     DataIntegrity(DataIntegrityProof<'a>),
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ProofMaterial<'a> {
+    Signature(&'a [u8]),
+    Jws(&'a str),
+}
+
 impl<'a> Proof<'a> {
     pub fn suitable(&self, issuer: &str, purpose: ProofPurpose) -> bool {
         let (controller, proof_purpose) = match self {
+            Self::Ed25519Signature2018(proof) => {
+                (proof.verification_method.controller, proof.purpose)
+            }
             Self::Ed25519Signature2020(proof) => {
                 (proof.verification_method.controller, proof.purpose)
             }
@@ -33,7 +43,7 @@ impl<'a> Proof<'a> {
 
     pub fn crypto_suite(&self) -> CryptoSuite {
         match self {
-            Proof::Ed25519Signature2020(_) => (
+            Proof::Ed25519Signature2018(_) | Proof::Ed25519Signature2020(_) => (
                 CanonicalizationAlg::Urdna2015,
                 DigestAlg::Sha256,
                 SignatureAlg::Ed25519,
@@ -54,22 +64,25 @@ impl<'a> Proof<'a> {
 
     pub fn pub_key(&'a self) -> &'a [u8] {
         match self {
+            Proof::Ed25519Signature2018(p) => &p.verification_method.pub_key,
             Proof::Ed25519Signature2020(p) => &p.verification_method.pub_key,
             Proof::EcdsaSecp256k1Signature2019(p) => &p.verification_method.pub_key,
             Proof::DataIntegrity(p) => &p.verification_method.pub_key,
         }
     }
 
-    pub fn signature(&'a self) -> &'a [u8] {
+    pub fn proof_material(&'a self) -> ProofMaterial<'a> {
         match self {
-            Proof::Ed25519Signature2020(p) => &p.value,
-            Proof::EcdsaSecp256k1Signature2019(p) => p.jws.as_bytes(),
-            Proof::DataIntegrity(p) => &p.value,
+            Proof::Ed25519Signature2018(p) => ProofMaterial::Jws(p.jws),
+            Proof::Ed25519Signature2020(p) => ProofMaterial::Signature(p.value.as_slice()),
+            Proof::EcdsaSecp256k1Signature2019(p) => ProofMaterial::Jws(p.jws),
+            Proof::DataIntegrity(p) => ProofMaterial::Signature(p.value.as_slice()),
         }
     }
 
     pub fn options(&'a self) -> &'a [Quad<'a>] {
         match self {
+            Proof::Ed25519Signature2018(p) => p.options.as_ref(),
             Proof::Ed25519Signature2020(p) => p.options.as_ref(),
             Proof::EcdsaSecp256k1Signature2019(p) => p.options.as_ref(),
             Proof::DataIntegrity(p) => p.options.as_ref(),
@@ -265,6 +278,9 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Proof<'a> {
             })?;
 
         match proof_type {
+            "https://w3id.org/security#Ed25519Signature2018" => Ok(Self::Ed25519Signature2018(
+                Ed25519Signature2018Proof::try_from((dataset, proof_graph))?,
+            )),
             "https://w3id.org/security#Ed25519Signature2020" => Ok(Self::Ed25519Signature2020(
                 Ed25519Signature2020Proof::try_from((dataset, proof_graph))?,
             )),
@@ -293,6 +309,35 @@ impl<'a> From<&'a str> for ProofPurpose {
             "https://w3id.org/security#assertionMethod" => ProofPurpose::AssertionMethod,
             _ => ProofPurpose::Unused,
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Ed25519Signature2018Proof<'a> {
+    // The verification method format being the same as the 2020 signature proof we reuse it.
+    verification_method: Ed25519VerificationKey2020<'a>,
+    created: &'a str,
+    purpose: ProofPurpose,
+    jws: &'a str,
+    options: Dataset<'a>,
+}
+
+impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Ed25519Signature2018Proof<'a> {
+    type Error = InvalidProofError;
+
+    fn try_from(
+        (dataset, proof_graph): (&'a Dataset<'a>, GraphName<'a>),
+    ) -> Result<Self, Self::Error> {
+        let v_method = Proof::extract_verification_method(dataset, proof_graph)?;
+        let p_purpose = Proof::extract_proof_purpose(dataset, proof_graph)?;
+
+        Ok(Self {
+            verification_method: v_method.try_into()?,
+            created: Proof::extract_created(dataset, proof_graph)?,
+            purpose: p_purpose.into(),
+            jws: Proof::extract_jws(dataset, proof_graph)?,
+            options: Proof::extract_proof_options(dataset, proof_graph, PROOF_RDF_JWS),
+        })
     }
 }
 

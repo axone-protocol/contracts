@@ -47,6 +47,8 @@ pub enum ExecuteMsg {
     ///
     /// #### Supported cryptographic proofs
     ///
+    /// - `Ed25519Signature2018`
+    ///
     /// - `Ed25519Signature2020`
     ///
     /// - `EcdsaSecp256k1Signature2019`

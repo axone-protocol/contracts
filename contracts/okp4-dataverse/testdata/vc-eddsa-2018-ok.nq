@@ -1,0 +1,10 @@
+<http://example.edu/credentials/58473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<http://example.edu/credentials/58473> <https://w3id.org/security#proof> _:b0 .
+<http://example.edu/credentials/58473> <https://www.w3.org/2018/credentials#credentialSubject> <did:key:zQ3shofi77hSewXdJWj5VsdS5spLrY5EZevwWN1t5adqBM8vM> .
+<http://example.edu/credentials/58473> <https://www.w3.org/2018/credentials#issuanceDate> "2023-05-01T06:09:10Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<http://example.edu/credentials/58473> <https://www.w3.org/2018/credentials#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
+_:b1 <http://purl.org/dc/terms/created> "2024-02-21T20:17:42.150598Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> _:b0 .
+_:b1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/security#Ed25519Signature2018> _:b0 .
+_:b1 <https://w3id.org/security#jws> "eyJhbGciOiJFZERTQSIsImNyaXQiOlsiYjY0Il0sImI2NCI6ZmFsc2V9..5YzyqmQp1yPAea1WgKYzXOWTdYiDJO5iZs3bjxnSCzJYZS-ToIIqL4T47Ni7zZpc8S968vPKdCZcQzkoNnIIDw" _:b0 .
+_:b1 <https://w3id.org/security#proofPurpose> <https://w3id.org/security#assertionMethod> _:b0 .
+_:b1 <https://w3id.org/security#verificationMethod> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY#z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> _:b0 .

@@ -1,11 +1,11 @@
 use crate::credential::error::VerificationError;
+use crate::credential::proof::ProofMaterial;
 use base64::prelude::BASE64_URL_SAFE_NO_PAD;
 use base64::Engine;
 use cosmwasm_std::DepsMut;
 use okp4_rdf::normalize::Normalizer;
 use rio_api::model::Quad;
 use sha2::Digest;
-use std::str::from_utf8;
 
 pub enum CanonicalizationAlg {
     Urdna2015,
@@ -42,7 +42,7 @@ impl CryptoSuite {
         deps: &'_ DepsMut<'_>,
         unsecured_doc: &[Quad<'_>],
         proof_opts: &[Quad<'_>],
-        proof_value: &[u8],
+        proof_material: ProofMaterial<'_>,
         pub_key: &[u8],
     ) -> Result<(), VerificationError> {
         let unsecured_doc_canon = self.canonicalize(unsecured_doc)?;
@@ -50,7 +50,28 @@ impl CryptoSuite {
 
         let hash = [self.hash(proof_opts_canon), self.hash(unsecured_doc_canon)].concat();
 
-        self.verify(deps, &hash, proof_value, pub_key)
+        match proof_material {
+            ProofMaterial::Signature(v) => self.verify(deps, &hash, v, pub_key),
+            ProofMaterial::Jws(jws) => {
+                let (headers_b64, signature_b64) = Self::explode_jws(jws)?;
+                let signature = BASE64_URL_SAFE_NO_PAD
+                    .decode(signature_b64)
+                    .map_err(|_| VerificationError::InvalidJws)?;
+
+                let signing_input = [headers_b64, b".", &hash].concat();
+                let signing_input = match self.sign {
+                    SignatureAlg::Ed25519 => signing_input,
+                    SignatureAlg::Secp256k1 => {
+                        let mut hasher = sha2::Sha256::new();
+                        hasher.update(signing_input);
+
+                        hasher.finalize().to_vec()
+                    }
+                };
+
+                self.verify(deps, &signing_input, &signature, pub_key)
+            }
+        }
     }
 
     fn canonicalize(&self, unsecured_document: &[Quad<'_>]) -> Result<String, VerificationError> {
@@ -84,20 +105,7 @@ impl CryptoSuite {
     ) -> Result<(), VerificationError> {
         match match self.sign {
             SignatureAlg::Ed25519 => deps.api.ed25519_verify(message, signature, pub_key),
-            SignatureAlg::Secp256k1 => {
-                let (headers_b64, signature_b64) = Self::explode_jws(signature)?;
-                let signature = BASE64_URL_SAFE_NO_PAD
-                    .decode(signature_b64)
-                    .map_err(|_| VerificationError::InvalidJws)?;
-
-                let signing_input = [headers_b64, b".", message].concat();
-                let mut hasher = sha2::Sha256::new();
-                hasher.update(signing_input);
-                let signing_input = hasher.finalize().to_vec();
-
-                deps.api
-                    .secp256k1_verify(&signing_input, &signature, pub_key)
-            }
+            SignatureAlg::Secp256k1 => deps.api.secp256k1_verify(message, signature, pub_key),
         } {
             Ok(true) => Ok(()),
             Ok(false) => Err(VerificationError::WrongSignature),
@@ -105,8 +113,7 @@ impl CryptoSuite {
         }
     }
 
-    fn explode_jws(jws: &[u8]) -> Result<(&[u8], &[u8]), VerificationError> {
-        let jws = from_utf8(jws).map_err(|_| VerificationError::InvalidJws)?;
+    fn explode_jws(jws: &str) -> Result<(&[u8], &[u8]), VerificationError> {
         let mut parts = jws.split('.');
         Ok(
             match (parts.next(), parts.next(), parts.next(), parts.next()) {

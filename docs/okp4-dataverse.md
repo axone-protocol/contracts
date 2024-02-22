@@ -88,6 +88,8 @@ To maintain integrity and coherence in the dataverse, several preconditions are 
 
 #### Supported cryptographic proofs
 
+- `Ed25519Signature2018`
+
 - `Ed25519Signature2020`
 
 - `EcdsaSecp256k1Signature2019`
@@ -221,5 +223,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`30443a4cdcde9c27`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`cf6cd863236d7567`)*
 ````

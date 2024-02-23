@@ -24,6 +24,7 @@ pub struct AskResponse {
 #[serde(rename_all = "snake_case")]
 pub struct Answer {
     pub success: bool,
+    pub error: Option<String>,
     pub has_more: bool,
     pub variables: Vec<String>,
     pub results: Vec<Result>,
@@ -39,19 +40,12 @@ pub struct Result {
 #[serde(rename_all = "snake_case")]
 pub struct Substitution {
     pub variable: String,
-    pub term: Term,
+    pub expression: String,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
-pub struct Term {
-    pub name: String,
-    pub arguments: Vec<Term>,
-}
-
-impl Term {
-    pub fn parse(self) -> std::result::Result<TermValue, TermParseError> {
-        from_str(self.name.as_str())
+impl Substitution {
+    pub fn parse_expression(self) -> std::result::Result<TermValue, TermParseError> {
+        from_str(self.expression.as_str())
     }
 }
 
@@ -62,11 +56,11 @@ mod tests {
     #[test]
     fn term_parse() {
         assert_eq!(
-            Term {
-                name: "'hello'".to_string(),
-                arguments: vec![],
+            Substitution {
+                variable: "X".to_string(),
+                expression: "'hello'".to_string(),
             }
-            .parse(),
+            .parse_expression(),
             Ok(TermValue::Value("hello".to_string()))
         );
     }

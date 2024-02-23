@@ -8,9 +8,9 @@ The spirit here is to provide a `okp4-law-stone` smart contract instance providi
 
 You'll find in the [gov.pl](gov.pl) Prolog program some predicates defining the rules allowing to perform some typical Dataspaces actions.
 
-The `can(Action, DID)` predicate will allow or not an action for a `did` (i.e. Decentralized Identifier), a `did` being expected to have the form: `did:key:${OKP4_ADDRESS}`. We can describe the action rules as follows:
+The `can(Action, DID)` predicate will allow or not an action for a `did` (i.e. Decentralized Identifier), a `did` being expected to have the form: `did:example:${OKP4_ADDRESS}`. We can describe the action rules as follows:
 
-- `change_governance`: Only the did admin can do it: `did:key:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6`;
+- `change_governance`: Only the did admin can do it: `did:example:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6`;
 - `exec_workflow`: Only a valid DID having a minimum spendable of `1000000uknow`;
 - `create_dataset` Only a valid DID having a minimum spendable of `10000uknow`;
 - `create_service` Only a valid DID having a minimum spendable of `100000uknow`;
@@ -25,7 +25,6 @@ okp4d tx wasm instantiate $CODE_ID \
     --from $ADDR \
     --admin $ADMIN_ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     "{\"program\":\"$(cat gov.pl | base64)\", \"storage_address\": \"$STORAGE_ADDR\"}"
 ```
 
@@ -37,7 +36,7 @@ By using the `Ask` query we can provide Prolog predicates to be evaluated agains
 
 ```bash
 okp4d query wasm contract-state smart $CONTRACT_ADDR \
-    "{\"ask\": {\"query\": \"can('change_governance', 'did:key:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').\"}}"
+    "{\"ask\": {\"query\": \"can('change_governance', 'did:example:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').\"}}"
 ```
 
 ## Break
@@ -52,6 +51,5 @@ By breaking the stone, you will not be able to query it anymore.
 okp4d tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
-    --broadcast-mode block \
     '"break_stone"'
 ```

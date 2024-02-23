@@ -53,8 +53,7 @@ pub fn ask_response_to_objects(
         .flat_map(|r: &okp4_logic_bindings::Result| r.substitutions.clone())
         .filter(|s| s.variable == variable)
         .map(|s: Substitution| {
-            s.term
-                .parse()
+            s.parse_expression()
                 .map_err(|e| ContractError::LogicAskResponse(LogicAskResponseError::Parse(e)))
                 .and_then(term_as_vec)
         })
@@ -72,7 +71,7 @@ pub fn ask_response_to_objects(
 mod tests {
     use super::*;
     use okp4_logic_bindings::error::TermParseError;
-    use okp4_logic_bindings::{Answer, Term};
+    use okp4_logic_bindings::Answer;
 
     #[test]
     fn logic_to_objects() {
@@ -105,15 +104,13 @@ mod tests {
                             results: vec![okp4_logic_bindings::Result {
                                 substitutions: vec![Substitution {
                                     variable: "X".to_string(),
-                                    term: Term {
-                                        name: case.0,
-                                        arguments: vec![],
-                                    }
+                                    expression: case.0,
                                 }]
                             }],
                             has_more: false,
                             success: true,
                             variables: vec![],
+                            error: None,
                         }),
                         height: 1,
                         gas_used: 1,

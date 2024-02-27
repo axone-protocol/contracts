@@ -7,7 +7,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{DataFormat, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Store, NAMESPACE_KEY_INCREMENT, STORE};
+use crate::state::{Store, BLANK_NODE_IDENTIFIER_COUNTER, NAMESPACE_KEY_INCREMENT, STORE};
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
@@ -24,6 +24,7 @@ pub fn instantiate(
 
     STORE.save(deps.storage, &Store::new(info.sender, msg.limits.into()))?;
     NAMESPACE_KEY_INCREMENT.save(deps.storage, &0u128)?;
+    BLANK_NODE_IDENTIFIER_COUNTER.save(deps.storage, &0u128)?;
 
     Ok(Response::default())
 }
@@ -443,6 +444,10 @@ mod tests {
         );
 
         assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 0u128);
+        assert_eq!(
+            BLANK_NODE_IDENTIFIER_COUNTER.load(&deps.storage).unwrap(),
+            0u128
+        );
     }
 
     #[test]

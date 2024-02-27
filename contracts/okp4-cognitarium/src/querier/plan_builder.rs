@@ -1,8 +1,8 @@
 use crate::msg::{
-    Node, SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereClause,
-    WhereCondition,
+    Node, SimpleWhereCondition, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
+    WhereClause, WhereCondition,
 };
-use crate::querier::mapper::{iri_as_node, literal_as_object, node_as_predicate};
+use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
 use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
 use cosmwasm_std::{StdError, StdResult, Storage};
@@ -152,14 +152,17 @@ impl<'a> PlanBuilder<'a> {
         })
     }
 
-    fn build_predicate_pattern(&mut self, value: VarOrNode) -> StdResult<PatternValue<Predicate>> {
+    fn build_predicate_pattern(
+        &mut self,
+        value: VarOrNamedNode,
+    ) -> StdResult<PatternValue<Predicate>> {
         Ok(match value {
-            VarOrNode::Variable(v) => PatternValue::Variable(self.resolve_basic_variable(v)),
-            VarOrNode::Node(n) => PatternValue::Constant(node_as_predicate(
+            VarOrNamedNode::Variable(v) => PatternValue::Variable(self.resolve_basic_variable(v)),
+            VarOrNamedNode::NamedNode(iri) => PatternValue::Constant(iri_as_node(
                 &mut self.ns_resolver,
                 self.storage,
                 self.prefixes,
-                n,
+                iri,
             )?),
         })
     }
@@ -317,7 +320,7 @@ mod test {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable("s".to_string()),
-                    predicate: VarOrNode::Variable("p".to_string()),
+                    predicate: VarOrNamedNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
                 Ok(QueryNode::TriplePattern {
@@ -329,9 +332,9 @@ mod test {
             (
                 TriplePattern {
                     subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
-                    predicate: VarOrNode::Node(Node::NamedNode(IRI::Full(
+                    predicate: VarOrNamedNode::NamedNode(IRI::Full(
                         "http://okp4.space/hasTitle".to_string(),
-                    ))),
+                    )),
                     object: VarOrNodeOrLiteral::Node(Node::BlankNode("2".to_string())),
                 },
                 Ok(QueryNode::TriplePattern {
@@ -348,7 +351,7 @@ mod test {
                     subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
                         "http://okp4.space/123456789".to_string(),
                     ))),
-                    predicate: VarOrNode::Variable("p".to_string()),
+                    predicate: VarOrNamedNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Node(Node::NamedNode(IRI::Full(
                         "http://okp4.space/1234567892".to_string(),
                     ))),
@@ -368,7 +371,7 @@ mod test {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable("p".to_string()),
-                    predicate: VarOrNode::Variable("s".to_string()),
+                    predicate: VarOrNamedNode::Variable("s".to_string()),
                     object: VarOrNodeOrLiteral::Literal(Literal::Simple("simple".to_string())),
                 },
                 Ok(QueryNode::TriplePattern {
@@ -382,7 +385,7 @@ mod test {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable("s".to_string()),
-                    predicate: VarOrNode::Variable("p".to_string()),
+                    predicate: VarOrNamedNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString {
                         value: "tagged".to_string(),
                         language: "en".to_string(),
@@ -400,7 +403,7 @@ mod test {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable("s".to_string()),
-                    predicate: VarOrNode::Variable("p".to_string()),
+                    predicate: VarOrNamedNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Literal(Literal::TypedValue {
                         value: "typed".to_string(),
                         datatype: IRI::Full("http://okp4.space/type".to_string()),
@@ -423,7 +426,7 @@ mod test {
                     subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
                         "notexisting#outch".to_string(),
                     ))),
-                    predicate: VarOrNode::Variable("p".to_string()),
+                    predicate: VarOrNamedNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
                 Ok(QueryNode::Noop {
@@ -433,9 +436,9 @@ mod test {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable("s".to_string()),
-                    predicate: VarOrNode::Node(Node::NamedNode(IRI::Full(
+                    predicate: VarOrNamedNode::NamedNode(IRI::Full(
                         "notexisting#outch".to_string(),
-                    ))),
+                    )),
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
                 Ok(QueryNode::Noop {
@@ -445,7 +448,7 @@ mod test {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable("s".to_string()),
-                    predicate: VarOrNode::Variable("p".to_string()),
+                    predicate: VarOrNamedNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Node(Node::NamedNode(IRI::Full(
                         "notexisting#outch".to_string(),
                     ))),
@@ -489,22 +492,10 @@ mod test {
                 None,
                 None,
                 vec![TriplePattern {
-                    subject: VarOrNode::Variable("subject".to_string()),
-                    predicate: VarOrNode::Node(Node::BlankNode("_".to_string())),
-                    object: VarOrNodeOrLiteral::Variable("object".to_string()),
-                }],
-                Err(StdError::generic_err(
-                    "Predicate pattern must be a named node",
-                )),
-            ),
-            (
-                None,
-                None,
-                vec![TriplePattern {
                     subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
                         "notexisting#outch".to_string(),
                     ))),
-                    predicate: VarOrNode::Variable("predicate".to_string()),
+                    predicate: VarOrNamedNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
                 Ok(QueryPlan {
@@ -522,7 +513,7 @@ mod test {
                 None,
                 vec![TriplePattern {
                     subject: VarOrNode::Variable("subject".to_string()),
-                    predicate: VarOrNode::Variable("predicate".to_string()),
+                    predicate: VarOrNamedNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
                 Ok(QueryPlan {
@@ -543,7 +534,7 @@ mod test {
                 None,
                 vec![TriplePattern {
                     subject: VarOrNode::Variable("subject".to_string()),
-                    predicate: VarOrNode::Variable("predicate".to_string()),
+                    predicate: VarOrNamedNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
                 Ok(QueryPlan {
@@ -567,7 +558,7 @@ mod test {
                 Some(20usize),
                 vec![TriplePattern {
                     subject: VarOrNode::Variable("subject".to_string()),
-                    predicate: VarOrNode::Variable("predicate".to_string()),
+                    predicate: VarOrNamedNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
                 Ok(QueryPlan {
@@ -591,7 +582,7 @@ mod test {
                 Some(50usize),
                 vec![TriplePattern {
                     subject: VarOrNode::Variable("subject".to_string()),
-                    predicate: VarOrNode::Variable("predicate".to_string()),
+                    predicate: VarOrNamedNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
                 Ok(QueryPlan {
@@ -619,17 +610,17 @@ mod test {
                 vec![
                     TriplePattern {
                         subject: VarOrNode::Variable("var1".to_string()),
-                        predicate: VarOrNode::Variable("var2".to_string()),
+                        predicate: VarOrNamedNode::Variable("var2".to_string()),
                         object: VarOrNodeOrLiteral::Variable("var3".to_string()),
                     },
                     TriplePattern {
                         subject: VarOrNode::Variable("var4".to_string()),
-                        predicate: VarOrNode::Variable("var5".to_string()),
+                        predicate: VarOrNamedNode::Variable("var5".to_string()),
                         object: VarOrNodeOrLiteral::Variable("var6".to_string()),
                     },
                     TriplePattern {
                         subject: VarOrNode::Variable("var1".to_string()),
-                        predicate: VarOrNode::Variable("var5".to_string()),
+                        predicate: VarOrNamedNode::Variable("var5".to_string()),
                         object: VarOrNodeOrLiteral::Node(Node::BlankNode("blank".to_string())),
                     },
                 ],
@@ -670,12 +661,12 @@ mod test {
                 vec![
                     TriplePattern {
                         subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
-                        predicate: VarOrNode::Variable("1".to_string()),
+                        predicate: VarOrNamedNode::Variable("1".to_string()),
                         object: VarOrNodeOrLiteral::Node(Node::BlankNode("2".to_string())),
                     },
                     TriplePattern {
                         subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
-                        predicate: VarOrNode::Variable("1".to_string()),
+                        predicate: VarOrNamedNode::Variable("1".to_string()),
                         object: VarOrNodeOrLiteral::Variable("2".to_string()),
                     },
                 ],

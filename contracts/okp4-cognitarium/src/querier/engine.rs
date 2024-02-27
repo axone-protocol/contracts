@@ -1,8 +1,8 @@
 use crate::msg::{
-    Node, SelectItem, TriplePattern, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode,
+    SelectItem, TriplePattern, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode,
     VarOrNodeOrLiteral,
 };
-use crate::querier::mapper::{iri_as_node, literal_as_object, node_as_predicate};
+use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
 use crate::rdf::Atom;

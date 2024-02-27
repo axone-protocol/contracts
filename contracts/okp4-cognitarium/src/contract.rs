@@ -196,7 +196,7 @@ pub mod query {
             VarOrNamedNode::Variable(var) => {
                 let select = TriplePattern {
                     subject: VarOrNode::Variable(var.clone()),
-                    predicate: VarOrNode::Variable(format!("{var}{p}")),
+                    predicate: VarOrNamedNode::Variable(format!("{var}{p}")),
                     object: VarOrNodeOrLiteral::Variable(format!("{var}{o}")),
                 };
 
@@ -210,7 +210,7 @@ pub mod query {
             VarOrNamedNode::NamedNode(iri) => {
                 let select = TriplePattern {
                     subject: VarOrNode::Node(Node::NamedNode(iri.clone())),
-                    predicate: VarOrNode::Variable(p),
+                    predicate: VarOrNamedNode::Variable(p),
                     object: VarOrNodeOrLiteral::Variable(o),
                 };
 

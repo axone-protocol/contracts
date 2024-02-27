@@ -528,7 +528,7 @@ pub struct TriplePattern {
     /// The subject of the triple pattern.
     pub subject: VarOrNode,
     /// The predicate of the triple pattern.
-    pub predicate: VarOrNode,
+    pub predicate: VarOrNamedNode,
     /// The object of the triple pattern.
     pub object: VarOrNodeOrLiteral,
 }

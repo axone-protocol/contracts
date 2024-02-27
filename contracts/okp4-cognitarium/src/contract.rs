@@ -563,6 +563,39 @@ mod tests {
     }
 
     #[test]
+    fn proper_insert_blank_nodes() {
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg::default(),
+        )
+        .unwrap();
+
+        let insert_msg = InsertData {
+            format: None,
+            data: read_test_data("blank-nodes.ttl"),
+        };
+
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), insert_msg.clone());
+        assert!(res.is_ok());
+        assert_eq!(
+            BLANK_NODE_IDENTIFIER_COUNTER.load(&deps.storage).unwrap(),
+            2u128
+        );
+
+        let res = execute(deps.as_mut(), mock_env(), info.clone(), insert_msg);
+        assert!(res.is_ok());
+        assert_eq!(
+            BLANK_NODE_IDENTIFIER_COUNTER.load(&deps.storage).unwrap(),
+            4u128
+        );
+    }
+
+    #[test]
     fn insert_existing_triples() {
         let mut deps = mock_dependencies();
 

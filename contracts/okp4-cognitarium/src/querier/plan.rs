@@ -155,16 +155,14 @@ mod tests {
                         child: Box::new(QueryNode::ForLoopJoin {
                             left: Box::new(QueryNode::CartesianProductJoin {
                                 left: Box::new(QueryNode::TriplePattern {
-                                    subject: PatternValue::Constant(Subject::Blank(
-                                        "_".to_string(),
-                                    )),
-                                    predicate: PatternValue::Variable(4usize),
+                                    subject: PatternValue::BlankVariable(4usize),
+                                    predicate: PatternValue::Variable(5usize),
                                     object: PatternValue::Variable(0usize),
                                 }),
                                 right: Box::new(QueryNode::TriplePattern {
                                     subject: PatternValue::Variable(3usize),
                                     predicate: PatternValue::Variable(1usize),
-                                    object: PatternValue::Constant(Object::Blank("_".to_string())),
+                                    object: PatternValue::BlankVariable(4usize),
                                 }),
                             }),
                             right: Box::new(QueryNode::TriplePattern {
@@ -175,7 +173,7 @@ mod tests {
                         }),
                     }),
                 },
-                BTreeSet::from([0usize, 1usize, 2usize, 3usize, 4usize]),
+                BTreeSet::from([0usize, 1usize, 2usize, 3usize, 4usize, 5usize]),
             ),
         ];
 

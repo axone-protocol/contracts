@@ -664,6 +664,42 @@ mod test {
                     ],
                 }),
             ),
+            (
+                None,
+                None,
+                vec![
+                    TriplePattern {
+                        subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
+                        predicate: VarOrNode::Variable("1".to_string()),
+                        object: VarOrNodeOrLiteral::Node(Node::BlankNode("2".to_string())),
+                    },
+                    TriplePattern {
+                        subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
+                        predicate: VarOrNode::Variable("1".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("2".to_string()),
+                    },
+                ],
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::ForLoopJoin {
+                        left: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::BlankVariable(0usize),
+                            predicate: PatternValue::Variable(1usize),
+                            object: PatternValue::BlankVariable(2usize),
+                        }),
+                        right: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::BlankVariable(0usize),
+                            predicate: PatternValue::Variable(1usize),
+                            object: PatternValue::Variable(3usize),
+                        }),
+                    },
+                    variables: vec![
+                        PlanVariable::BlankNode("1".to_string()),
+                        PlanVariable::Basic("1".to_string()),
+                        PlanVariable::BlankNode("2".to_string()),
+                        PlanVariable::Basic("2".to_string()),
+                    ],
+                }),
+            ),
         ];
 
         let mut deps = mock_dependencies();

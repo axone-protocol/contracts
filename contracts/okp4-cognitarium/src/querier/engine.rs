@@ -1473,6 +1473,22 @@ mod test {
                 )),
             },
             TestCase {
+                subject: PatternValue::BlankVariable(0),
+                predicate: PatternValue::Variable(4),
+                object: PatternValue::BlankVariable(5),
+                expects: Some((
+                    (None, None, None),
+                    (true, true),
+                    (Some(0), Some(4), Some(5)),
+                )),
+            },
+            TestCase {
+                subject: PatternValue::BlankVariable(0),
+                predicate: PatternValue::BlankVariable(4),
+                object: PatternValue::BlankVariable(5),
+                expects: None,
+            },
+            TestCase {
                 subject: PatternValue::Variable(1),
                 predicate: PatternValue::Variable(4),
                 object: PatternValue::Variable(5),

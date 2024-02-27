@@ -132,35 +132,75 @@ mod tests {
 
     #[test]
     fn bound_variables() {
-        let query = QueryNode::Limit {
-            first: 20usize,
-            child: Box::new(QueryNode::Skip {
-                first: 20usize,
-                child: Box::new(QueryNode::ForLoopJoin {
-                    left: Box::new(QueryNode::CartesianProductJoin {
-                        left: Box::new(QueryNode::TriplePattern {
-                            subject: PatternValue::Constant(Subject::Blank("_".to_string())),
-                            predicate: PatternValue::Variable(4usize),
-                            object: PatternValue::Variable(0usize),
-                        }),
-                        right: Box::new(QueryNode::TriplePattern {
-                            subject: PatternValue::Variable(3usize),
-                            predicate: PatternValue::Variable(1usize),
-                            object: PatternValue::Constant(Object::Blank("_".to_string())),
+        let cases = vec![
+            (
+                QueryNode::TriplePattern {
+                    subject: PatternValue::Variable(0usize),
+                    predicate: PatternValue::Variable(1usize),
+                    object: PatternValue::Variable(2usize),
+                },
+                BTreeSet::from([0usize, 1usize, 2usize]),
+            ),
+            (
+                QueryNode::Noop {
+                    bound_variables: vec![0usize, 1usize],
+                },
+                BTreeSet::from([0usize, 1usize]),
+            ),
+            (
+                QueryNode::Limit {
+                    first: 20usize,
+                    child: Box::new(QueryNode::Skip {
+                        first: 20usize,
+                        child: Box::new(QueryNode::ForLoopJoin {
+                            left: Box::new(QueryNode::CartesianProductJoin {
+                                left: Box::new(QueryNode::TriplePattern {
+                                    subject: PatternValue::Constant(Subject::Blank(
+                                        "_".to_string(),
+                                    )),
+                                    predicate: PatternValue::Variable(4usize),
+                                    object: PatternValue::Variable(0usize),
+                                }),
+                                right: Box::new(QueryNode::TriplePattern {
+                                    subject: PatternValue::Variable(3usize),
+                                    predicate: PatternValue::Variable(1usize),
+                                    object: PatternValue::Constant(Object::Blank("_".to_string())),
+                                }),
+                            }),
+                            right: Box::new(QueryNode::TriplePattern {
+                                subject: PatternValue::Variable(0usize),
+                                predicate: PatternValue::Variable(1usize),
+                                object: PatternValue::Variable(2usize),
+                            }),
                         }),
                     }),
-                    right: Box::new(QueryNode::TriplePattern {
-                        subject: PatternValue::Variable(0usize),
-                        predicate: PatternValue::Variable(1usize),
-                        object: PatternValue::Variable(2usize),
-                    }),
-                }),
-            }),
+                },
+                BTreeSet::from([0usize, 1usize, 2usize, 3usize, 4usize]),
+            ),
+        ];
+
+        for case in cases {
+            assert_eq!(case.0.bound_variables(), case.1)
+        }
+    }
+
+    #[test]
+    fn get_var_index() {
+        let plan = QueryPlan {
+            entrypoint: QueryNode::TriplePattern {
+                subject: PatternValue::Variable(0usize),
+                predicate: PatternValue::Variable(1usize),
+                object: PatternValue::BlankVariable(2usize),
+            },
+            variables: vec![
+                PlanVariable::Basic("1".to_string()),
+                PlanVariable::Basic("2".to_string()),
+                PlanVariable::BlankNode("3".to_string()),
+            ],
         };
 
-        assert_eq!(
-            query.bound_variables(),
-            BTreeSet::from([0usize, 1usize, 2usize, 3usize, 4usize])
-        )
+        assert_eq!(plan.get_var_index("1"), Some(0usize));
+        assert_eq!(plan.get_var_index("2"), Some(1usize));
+        assert_eq!(plan.get_var_index("3"), None);
     }
 }

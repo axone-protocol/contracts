@@ -133,7 +133,7 @@ impl ResolvedVariables {
 
     pub fn merge_index(&mut self, index: usize, var: ResolvedVariable) -> Option<()> {
         if let Some(old) = self.get(index) {
-            (*old == var).then(|| ())
+            (*old == var).then_some(())
         } else {
             self.variables[index] = Some(var);
             Some(())

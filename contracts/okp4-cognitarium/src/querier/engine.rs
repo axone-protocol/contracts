@@ -253,16 +253,8 @@ impl<'a> TriplePatternIterator<'a> {
         blank_filters: (bool, bool),
     ) -> Box<dyn Iterator<Item = StdResult<Triple>> + 'a> {
         let post_filter = move |t: &Triple| {
-            let s = !blank_filters.0
-                || match t.subject {
-                    Subject::Blank(_) => true,
-                    _ => false,
-                };
-            let o = !blank_filters.1
-                || match t.object {
-                    Object::Blank(_) => true,
-                    _ => false,
-                };
+            let s = !blank_filters.0 || matches!(t.subject, Subject::Blank(_));
+            let o = !blank_filters.1 || matches!(t.object, Object::Blank(_));
             o && s
         };
 
@@ -420,11 +412,11 @@ impl<'a> Iterator for TriplePatternIterator<'a> {
         let next = self.triple_iter.next()?;
 
         let maybe_next = match next {
-            Ok(triple) => self.map_triple(triple).map(|r| Ok(r)),
+            Ok(triple) => self.map_triple(triple).map(Ok),
             Err(e) => Some(Err(e)),
         };
 
-        if maybe_next == None {
+        if maybe_next.is_none() {
             return self.next();
         }
         maybe_next

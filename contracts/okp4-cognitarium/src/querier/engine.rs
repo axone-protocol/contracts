@@ -219,6 +219,7 @@ struct TriplePatternIterator<'a> {
 }
 
 type TriplePatternFilters = (Option<Subject>, Option<Predicate>, Option<Object>);
+type TriplePatternBlankFilters = (bool, bool);
 type TriplePatternBindings = (Option<usize>, Option<usize>, Option<usize>);
 
 impl<'a> TriplePatternIterator<'a> {
@@ -229,13 +230,13 @@ impl<'a> TriplePatternIterator<'a> {
         predicate: PatternValue<Predicate>,
         object: PatternValue<Object>,
     ) -> Self {
-        if let Some((filters, output_bindings)) =
+        if let Some((filters, blank_filters, output_bindings)) =
             Self::compute_iter_io(&input, subject, predicate, object)
         {
             return Self {
                 input,
                 output_bindings,
-                triple_iter: Self::make_state_iter(storage, filters),
+                triple_iter: Self::make_state_iter(storage, filters, blank_filters),
             };
         }
 
@@ -249,7 +250,22 @@ impl<'a> TriplePatternIterator<'a> {
     fn make_state_iter(
         storage: &'a dyn Storage,
         filters: TriplePatternFilters,
+        blank_filters: (bool, bool),
     ) -> Box<dyn Iterator<Item = StdResult<Triple>> + 'a> {
+        let post_filter = move |t: &Triple| {
+            let s = !blank_filters.0
+                || match t.subject {
+                    Subject::Blank(_) => true,
+                    _ => false,
+                };
+            let o = !blank_filters.1
+                || match t.object {
+                    Object::Blank(_) => true,
+                    _ => false,
+                };
+            o && s
+        };
+
         match filters {
             (Some(s), Some(p), Some(o)) => {
                 let res = triples().load(storage, (o.as_hash().as_bytes(), p.key(), s.key()));
@@ -264,12 +280,20 @@ impl<'a> TriplePatternIterator<'a> {
                     .subject_and_predicate
                     .prefix((s.key(), p.key()))
                     .range(storage, None, None, Order::Ascending)
+                    .filter(move |res| match res {
+                        Ok((_, triple)) => post_filter(triple),
+                        Err(_) => true,
+                    })
                     .map(|res| res.map(|(_, t)| t)),
             ),
             (None, Some(p), Some(o)) => Box::new(
                 triples()
                     .prefix((o.as_hash().as_bytes(), p.key()))
                     .range(storage, None, None, Order::Ascending)
+                    .filter(move |res| match res {
+                        Ok((_, triple)) => post_filter(triple),
+                        Err(_) => true,
+                    })
                     .map(|res| res.map(|(_, t)| t)),
             ),
             (Some(s), None, Some(o)) => Box::new(
@@ -279,7 +303,7 @@ impl<'a> TriplePatternIterator<'a> {
                     .sub_prefix(s.key())
                     .range(storage, None, None, Order::Ascending)
                     .filter(move |res| match res {
-                        Ok((_, triple)) => triple.object == o,
+                        Ok((_, triple)) => triple.object == o && post_filter(triple),
                         Err(_) => true,
                     })
                     .map(|res| res.map(|(_, t)| t)),
@@ -290,13 +314,17 @@ impl<'a> TriplePatternIterator<'a> {
                     .subject_and_predicate
                     .sub_prefix(s.key())
                     .range(storage, None, None, Order::Ascending)
+                    .filter(move |res| match res {
+                        Ok((_, triple)) => post_filter(triple),
+                        Err(_) => true,
+                    })
                     .map(|res| res.map(|(_, t)| t)),
             ),
             (None, Some(p), None) => Box::new(
                 triples()
                     .range(storage, None, None, Order::Ascending)
                     .filter(move |res| match res {
-                        Ok((_, triple)) => triple.predicate == p,
+                        Ok((_, triple)) => triple.predicate == p && post_filter(triple),
                         Err(_) => true,
                     })
                     .map(|res| res.map(|(_, t)| t)),
@@ -305,11 +333,19 @@ impl<'a> TriplePatternIterator<'a> {
                 triples()
                     .sub_prefix(o.as_hash().as_bytes())
                     .range(storage, None, None, Order::Ascending)
+                    .filter(move |res| match res {
+                        Ok((_, triple)) => post_filter(triple),
+                        Err(_) => true,
+                    })
                     .map(|res| res.map(|(_, t)| t)),
             ),
             (None, None, None) => Box::new(
                 triples()
                     .range(storage, None, None, Order::Ascending)
+                    .filter(move |res| match res {
+                        Ok((_, triple)) => post_filter(triple),
+                        Err(_) => true,
+                    })
                     .map(|res| res.map(|(_, t)| t)),
             ),
         }
@@ -320,30 +356,42 @@ impl<'a> TriplePatternIterator<'a> {
         subject: PatternValue<Subject>,
         predicate: PatternValue<Predicate>,
         object: PatternValue<Object>,
-    ) -> Option<(TriplePatternFilters, TriplePatternBindings)> {
-        let (s_filter, s_bind) =
+    ) -> Option<(
+        TriplePatternFilters,
+        TriplePatternBlankFilters,
+        TriplePatternBindings,
+    )> {
+        let (s_filter, sb_filter, s_bind) =
             Self::resolve_pattern_part(subject, ResolvedVariable::as_subject, input)?;
-        let (p_filter, p_bind) =
+        let (p_filter, _, p_bind) =
             Self::resolve_pattern_part(predicate, ResolvedVariable::as_predicate, input)?;
-        let (o_filter, o_bind) =
+        let (o_filter, ob_filter, o_bind) =
             Self::resolve_pattern_part(object, ResolvedVariable::as_object, input)?;
 
-        Some(((s_filter, p_filter, o_filter), (s_bind, p_bind, o_bind)))
+        Some((
+            (s_filter, p_filter, o_filter),
+            (sb_filter, ob_filter),
+            (s_bind, p_bind, o_bind),
+        ))
     }
 
     fn resolve_pattern_part<T, M>(
         pattern_part: PatternValue<T>,
         map_fn: M,
         input: &ResolvedVariables,
-    ) -> Option<(Option<T>, Option<usize>)>
+    ) -> Option<(Option<T>, bool, Option<usize>)>
     where
         M: FnOnce(&ResolvedVariable) -> Option<T>,
     {
         Some(match pattern_part {
-            PatternValue::Constant(s) => (Some(s), None),
+            PatternValue::Constant(s) => (Some(s), false, None),
+            PatternValue::BlankVariable(v) => match input.get(v) {
+                Some(var) => (Some(map_fn(var)?), false, None),
+                None => (None, true, Some(v)),
+            },
             PatternValue::Variable(v) => match input.get(v) {
-                Some(var) => (Some(map_fn(var)?), None),
-                None => (None, Some(v)),
+                Some(var) => (Some(map_fn(var)?), false, None),
+                None => (None, false, Some(v)),
             },
         })
     }
@@ -860,6 +908,7 @@ impl AtomTemplate {
 mod test {
     use super::*;
     use crate::msg::StoreLimitsInput;
+    use crate::querier::plan::PlanVariable;
     use crate::state;
     use crate::state::Object::{Literal, Named};
     use crate::state::{Node, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
@@ -927,7 +976,11 @@ mod test {
                         predicate: PatternValue::Variable(1),
                         object: PatternValue::Variable(2),
                     },
-                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
+                    variables: vec![
+                        PlanVariable::Basic("v1".to_string()),
+                        PlanVariable::Basic("v2".to_string()),
+                        PlanVariable::Basic("v3".to_string()),
+                    ],
                 },
                 selection: vec![SelectItem::Variable("v4".to_string())],
                 expects: Err(StdError::generic_err(
@@ -947,7 +1000,7 @@ mod test {
                         }),
                         object: PatternValue::Variable(0),
                     },
-                    variables: vec!["registrar".to_string()],
+                    variables: vec![PlanVariable::Basic("registrar".to_string())],
                 },
                 selection: vec![SelectItem::Variable("registrar".to_string())],
                 expects: Ok((
@@ -977,9 +1030,9 @@ mod test {
                         first: 3,
                     },
                     variables: vec![
-                        "subject".to_string(),
-                        "predicate".to_string(),
-                        "object".to_string(),
+                        PlanVariable::Basic("subject".to_string()),
+                        PlanVariable::Basic("predicate".to_string()),
+                        PlanVariable::Basic("object".to_string()),
                     ],
                 },
                 selection: vec![
@@ -1099,7 +1152,11 @@ mod test {
                         predicate: PatternValue::Variable(1),
                         object: PatternValue::Variable(2),
                     },
-                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
+                    variables: vec![
+                        PlanVariable::Basic("v1".to_string()),
+                        PlanVariable::Basic("v2".to_string()),
+                        PlanVariable::Basic("v3".to_string()),
+                    ],
                 },
                 expects: 40,
             },
@@ -1113,7 +1170,11 @@ mod test {
                         }),
                         first: 30,
                     },
-                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
+                    variables: vec![
+                        PlanVariable::Basic("v1".to_string()),
+                        PlanVariable::Basic("v2".to_string()),
+                        PlanVariable::Basic("v3".to_string()),
+                    ],
                 },
                 expects: 30,
             },
@@ -1130,7 +1191,11 @@ mod test {
                         }),
                         first: 30,
                     },
-                    variables: vec!["v1".to_string(), "v2".to_string(), "v3".to_string()],
+                    variables: vec![
+                        PlanVariable::Basic("v1".to_string()),
+                        PlanVariable::Basic("v2".to_string()),
+                        PlanVariable::Basic("v3".to_string()),
+                    ],
                 },
                 expects: 20,
             },
@@ -1161,7 +1226,10 @@ mod test {
                             )),
                         }),
                     },
-                    variables: vec!["v1".to_string(), "v2".to_string()],
+                    variables: vec![
+                        PlanVariable::Basic("v1".to_string()),
+                        PlanVariable::Basic("v2".to_string()),
+                    ],
                 },
                 expects: 10,
             },
@@ -1188,7 +1256,10 @@ mod test {
                             object: PatternValue::Variable(1),
                         }),
                     },
-                    variables: vec!["v1".to_string(), "v2".to_string()],
+                    variables: vec![
+                        PlanVariable::Basic("v1".to_string()),
+                        PlanVariable::Basic("v2".to_string()),
+                    ],
                 },
                 expects: 3,
             },
@@ -1363,14 +1434,22 @@ mod test {
             subject: PatternValue<Subject>,
             predicate: PatternValue<Predicate>,
             object: PatternValue<Object>,
-            expects: Option<(TriplePatternFilters, TriplePatternBindings)>,
+            expects: Option<(
+                TriplePatternFilters,
+                TriplePatternBlankFilters,
+                TriplePatternBindings,
+            )>,
         }
         let cases = vec![
             TestCase {
                 subject: PatternValue::Variable(0),
                 predicate: PatternValue::Variable(4),
                 object: PatternValue::Variable(5),
-                expects: Some(((None, None, None), (Some(0), Some(4), Some(5)))),
+                expects: Some((
+                    (None, None, None),
+                    (false, false),
+                    (Some(0), Some(4), Some(5)),
+                )),
             },
             TestCase {
                 subject: PatternValue::Variable(1),
@@ -1378,6 +1457,7 @@ mod test {
                 object: PatternValue::Variable(5),
                 expects: Some((
                     (Some(t_subject.clone()), None, None),
+                    (false, false),
                     (None, Some(4), Some(5)),
                 )),
             },
@@ -1387,6 +1467,7 @@ mod test {
                 object: PatternValue::Variable(5),
                 expects: Some((
                     (Some(t_subject.clone()), Some(t_predicate.clone()), None),
+                    (false, false),
                     (None, None, Some(5)),
                 )),
             },
@@ -1396,6 +1477,7 @@ mod test {
                 object: PatternValue::Variable(3),
                 expects: Some((
                     (Some(t_subject), Some(t_predicate), Some(t_object)),
+                    (false, false),
                     (None, None, None),
                 )),
             },
@@ -1405,6 +1487,7 @@ mod test {
                 object: PatternValue::Variable(5),
                 expects: Some((
                     (Some(Subject::Blank("o".to_string())), None, None),
+                    (false, false),
                     (None, Some(4), Some(5)),
                 )),
             },
@@ -1542,7 +1625,8 @@ mod test {
 
         for case in cases {
             assert_eq!(
-                TriplePatternIterator::make_state_iter(&deps.storage, case.filters).count(),
+                TriplePatternIterator::make_state_iter(&deps.storage, case.filters, (false, false))
+                    .count(),
                 case.expects
             );
         }

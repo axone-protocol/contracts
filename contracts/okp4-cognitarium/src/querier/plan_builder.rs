@@ -1,10 +1,9 @@
 use crate::msg::{
-    SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereClause, WhereCondition,
+    Node, SimpleWhereCondition, TriplePattern, VarOrNode, VarOrNodeOrLiteral, WhereClause,
+    WhereCondition,
 };
-use crate::querier::mapper::{
-    literal_as_object, node_as_object, node_as_predicate, node_as_subject,
-};
-use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
+use crate::querier::mapper::{iri_as_node, literal_as_object, node_as_predicate};
+use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
 use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
@@ -13,7 +12,7 @@ pub struct PlanBuilder<'a> {
     storage: &'a dyn Storage,
     ns_resolver: NamespaceResolver,
     prefixes: &'a HashMap<String, String>,
-    variables: Vec<String>,
+    variables: Vec<PlanVariable>,
     limit: Option<usize>,
     skip: Option<usize>,
 }
@@ -143,19 +142,19 @@ impl<'a> PlanBuilder<'a> {
 
     fn build_subject_pattern(&mut self, value: VarOrNode) -> StdResult<PatternValue<Subject>> {
         Ok(match value {
-            VarOrNode::Variable(v) => PatternValue::Variable(self.resolve_variable(v)),
-            VarOrNode::Node(n) => PatternValue::Constant(node_as_subject(
-                &mut self.ns_resolver,
-                self.storage,
-                self.prefixes,
-                n,
-            )?),
+            VarOrNode::Variable(v) => PatternValue::Variable(self.resolve_basic_variable(v)),
+            VarOrNode::Node(Node::BlankNode(b)) => {
+                PatternValue::BlankVariable(self.resolve_blank_variable(b))
+            }
+            VarOrNode::Node(Node::NamedNode(iri)) => PatternValue::Constant(Subject::Named(
+                iri_as_node(&mut self.ns_resolver, self.storage, self.prefixes, iri)?,
+            )),
         })
     }
 
     fn build_predicate_pattern(&mut self, value: VarOrNode) -> StdResult<PatternValue<Predicate>> {
         Ok(match value {
-            VarOrNode::Variable(v) => PatternValue::Variable(self.resolve_variable(v)),
+            VarOrNode::Variable(v) => PatternValue::Variable(self.resolve_basic_variable(v)),
             VarOrNode::Node(n) => PatternValue::Constant(node_as_predicate(
                 &mut self.ns_resolver,
                 self.storage,
@@ -170,13 +169,20 @@ impl<'a> PlanBuilder<'a> {
         value: VarOrNodeOrLiteral,
     ) -> StdResult<PatternValue<Object>> {
         Ok(match value {
-            VarOrNodeOrLiteral::Variable(v) => PatternValue::Variable(self.resolve_variable(v)),
-            VarOrNodeOrLiteral::Node(n) => PatternValue::Constant(node_as_object(
-                &mut self.ns_resolver,
-                self.storage,
-                self.prefixes,
-                n,
-            )?),
+            VarOrNodeOrLiteral::Variable(v) => {
+                PatternValue::Variable(self.resolve_basic_variable(v))
+            }
+            VarOrNodeOrLiteral::Node(Node::BlankNode(b)) => {
+                PatternValue::BlankVariable(self.resolve_blank_variable(b))
+            }
+            VarOrNodeOrLiteral::Node(Node::NamedNode(iri)) => {
+                PatternValue::Constant(Object::Named(iri_as_node(
+                    &mut self.ns_resolver,
+                    self.storage,
+                    self.prefixes,
+                    iri,
+                )?))
+            }
             VarOrNodeOrLiteral::Literal(l) => PatternValue::Constant(literal_as_object(
                 &mut self.ns_resolver,
                 self.storage,
@@ -186,12 +192,27 @@ impl<'a> PlanBuilder<'a> {
         })
     }
 
-    fn resolve_variable(&mut self, v: String) -> usize {
-        if let Some(index) = self.variables.iter().position(|name| name == &v) {
+    fn resolve_basic_variable(&mut self, v: String) -> usize {
+        if let Some(index) = self.variables.iter().position(|var| match var {
+            PlanVariable::Basic(name) => name == &v,
+            PlanVariable::BlankNode(_) => false,
+        }) {
             return index;
         }
 
-        self.variables.push(v);
+        self.variables.push(PlanVariable::Basic(v));
+        self.variables.len() - 1
+    }
+
+    fn resolve_blank_variable(&mut self, v: String) -> usize {
+        if let Some(index) = self.variables.iter().position(|var| match var {
+            PlanVariable::BlankNode(name) => name == &v,
+            PlanVariable::Basic(_) => false,
+        }) {
+            return index;
+        }
+
+        self.variables.push(PlanVariable::BlankNode(v));
         self.variables.len() - 1
     }
 }
@@ -275,7 +296,7 @@ mod test {
             let builder = PlanBuilder::new(&deps.storage, prefixes, None);
             assert_eq!(builder.skip, None);
             assert_eq!(builder.limit, None);
-            assert_eq!(builder.variables, Vec::<String>::new());
+            assert_eq!(builder.variables, Vec::<PlanVariable>::new());
             assert_eq!(builder.prefixes, &case.1);
         }
 
@@ -307,19 +328,19 @@ mod test {
             ),
             (
                 TriplePattern {
-                    subject: VarOrNode::Node(Node::BlankNode("_".to_string())),
+                    subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
                     predicate: VarOrNode::Node(Node::NamedNode(IRI::Full(
                         "http://okp4.space/hasTitle".to_string(),
                     ))),
-                    object: VarOrNodeOrLiteral::Node(Node::BlankNode("_".to_string())),
+                    object: VarOrNodeOrLiteral::Node(Node::BlankNode("2".to_string())),
                 },
                 Ok(QueryNode::TriplePattern {
-                    subject: PatternValue::Constant(Subject::Blank("_".to_string())),
+                    subject: PatternValue::BlankVariable(0usize),
                     predicate: PatternValue::Constant(state::Node {
                         namespace: 0u128,
                         value: "hasTitle".to_string(),
                     }),
-                    object: PatternValue::Constant(Object::Blank("_".to_string())),
+                    object: PatternValue::BlankVariable(1usize),
                 }),
             ),
             (
@@ -337,7 +358,7 @@ mod test {
                         namespace: 0u128,
                         value: "123456789".to_string(),
                     })),
-                    predicate: PatternValue::Variable(1usize),
+                    predicate: PatternValue::Variable(0usize),
                     object: PatternValue::Constant(Object::Named(state::Node {
                         namespace: 0u128,
                         value: "1234567892".to_string(),
@@ -351,8 +372,8 @@ mod test {
                     object: VarOrNodeOrLiteral::Literal(Literal::Simple("simple".to_string())),
                 },
                 Ok(QueryNode::TriplePattern {
-                    subject: PatternValue::Variable(1usize),
-                    predicate: PatternValue::Variable(0usize),
+                    subject: PatternValue::Variable(0usize),
+                    predicate: PatternValue::Variable(1usize),
                     object: PatternValue::Constant(Object::Literal(state::Literal::Simple {
                         value: "simple".to_string(),
                     })),
@@ -406,7 +427,7 @@ mod test {
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
                 Ok(QueryNode::Noop {
-                    bound_variables: vec![1usize, 2usize],
+                    bound_variables: vec![0usize, 1usize],
                 }),
             ),
             (
@@ -418,7 +439,7 @@ mod test {
                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                 },
                 Ok(QueryNode::Noop {
-                    bound_variables: vec![0usize, 2usize],
+                    bound_variables: vec![0usize, 1usize],
                 }),
             ),
             (
@@ -447,10 +468,10 @@ mod test {
                 },
             )
             .unwrap();
-        let prefixes = &PrefixMap::default().into_inner();
-        let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
-
         for case in cases {
+            let prefixes = &PrefixMap::default().into_inner();
+            let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
+
             assert_eq!(builder.build_triple_pattern(&case.0), case.1);
         }
     }
@@ -490,7 +511,10 @@ mod test {
                     entrypoint: QueryNode::Noop {
                         bound_variables: vec![0usize, 1usize],
                     },
-                    variables: vec!["predicate".to_string(), "object".to_string()],
+                    variables: vec![
+                        PlanVariable::Basic("predicate".to_string()),
+                        PlanVariable::Basic("object".to_string()),
+                    ],
                 }),
             ),
             (
@@ -508,9 +532,9 @@ mod test {
                         object: PatternValue::Variable(2usize),
                     },
                     variables: vec![
-                        "subject".to_string(),
-                        "predicate".to_string(),
-                        "object".to_string(),
+                        PlanVariable::Basic("subject".to_string()),
+                        PlanVariable::Basic("predicate".to_string()),
+                        PlanVariable::Basic("object".to_string()),
                     ],
                 }),
             ),
@@ -532,9 +556,9 @@ mod test {
                         }),
                     },
                     variables: vec![
-                        "subject".to_string(),
-                        "predicate".to_string(),
-                        "object".to_string(),
+                        PlanVariable::Basic("subject".to_string()),
+                        PlanVariable::Basic("predicate".to_string()),
+                        PlanVariable::Basic("object".to_string()),
                     ],
                 }),
             ),
@@ -556,9 +580,9 @@ mod test {
                         }),
                     },
                     variables: vec![
-                        "subject".to_string(),
-                        "predicate".to_string(),
-                        "object".to_string(),
+                        PlanVariable::Basic("subject".to_string()),
+                        PlanVariable::Basic("predicate".to_string()),
+                        PlanVariable::Basic("object".to_string()),
                     ],
                 }),
             ),
@@ -583,9 +607,9 @@ mod test {
                         }),
                     },
                     variables: vec![
-                        "subject".to_string(),
-                        "predicate".to_string(),
-                        "object".to_string(),
+                        PlanVariable::Basic("subject".to_string()),
+                        PlanVariable::Basic("predicate".to_string()),
+                        PlanVariable::Basic("object".to_string()),
                     ],
                 }),
             ),
@@ -626,16 +650,53 @@ mod test {
                         right: Box::new(QueryNode::TriplePattern {
                             subject: PatternValue::Variable(0usize),
                             predicate: PatternValue::Variable(4usize),
-                            object: PatternValue::Constant(Object::Blank("blank".to_string())),
+                            object: PatternValue::BlankVariable(6usize),
                         }),
                     },
                     variables: vec![
-                        "var1".to_string(),
-                        "var2".to_string(),
-                        "var3".to_string(),
-                        "var4".to_string(),
-                        "var5".to_string(),
-                        "var6".to_string(),
+                        PlanVariable::Basic("var1".to_string()),
+                        PlanVariable::Basic("var2".to_string()),
+                        PlanVariable::Basic("var3".to_string()),
+                        PlanVariable::Basic("var4".to_string()),
+                        PlanVariable::Basic("var5".to_string()),
+                        PlanVariable::Basic("var6".to_string()),
+                        PlanVariable::BlankNode("blank".to_string()),
+                    ],
+                }),
+            ),
+            (
+                None,
+                None,
+                vec![
+                    TriplePattern {
+                        subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
+                        predicate: VarOrNode::Variable("1".to_string()),
+                        object: VarOrNodeOrLiteral::Node(Node::BlankNode("2".to_string())),
+                    },
+                    TriplePattern {
+                        subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
+                        predicate: VarOrNode::Variable("1".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("2".to_string()),
+                    },
+                ],
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::ForLoopJoin {
+                        left: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::BlankVariable(0usize),
+                            predicate: PatternValue::Variable(1usize),
+                            object: PatternValue::BlankVariable(2usize),
+                        }),
+                        right: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::BlankVariable(0usize),
+                            predicate: PatternValue::Variable(1usize),
+                            object: PatternValue::Variable(3usize),
+                        }),
+                    },
+                    variables: vec![
+                        PlanVariable::BlankNode("1".to_string()),
+                        PlanVariable::Basic("1".to_string()),
+                        PlanVariable::BlankNode("2".to_string()),
+                        PlanVariable::Basic("2".to_string()),
                     ],
                 }),
             ),

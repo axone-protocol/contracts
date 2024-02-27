@@ -28,6 +28,9 @@
       a owl:NamedIndividual, core:Period ; 
       core:hasStartDate "2022-01-01T00:00:00+00:00"^^xsd:dateTime 
   ] ;
+  core:hasInformations [
+      core:hasInformation "this is a dataset"
+  ] ;
   core:hasTitle "ADMIN EXPRESS COG 2022 COMMUNE"@fr ;
   core:hasTitle "ADMIN EXPRESS COG 2022 CITY"@en ;
   core:hasTitle "ADMIN EXPRESS COG 2022 GEMEINDE"@de ;

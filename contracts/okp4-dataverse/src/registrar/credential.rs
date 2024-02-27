@@ -29,7 +29,7 @@ impl<'a> DataverseCredential<'a> {
                     "credential is expected to have exactly one type".to_string(),
                 )
             })
-            .map(|t| *t)
+            .copied()
     }
 
     fn extract_vc_claim(

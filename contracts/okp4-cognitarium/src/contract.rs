@@ -378,7 +378,7 @@ mod tests {
     use super::*;
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::{DeleteData, InsertData};
-    use crate::msg::Node::NamedNode;
+    use crate::msg::Node::{BlankNode, NamedNode};
     use crate::msg::SimpleWhereCondition::TriplePattern;
     use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
@@ -489,7 +489,7 @@ mod tests {
                 res.unwrap().attributes,
                 vec![
                     Attribute::new("action", "insert"),
-                    Attribute::new("triple_count", "40")
+                    Attribute::new("triple_count", "40"),
                 ]
             );
 
@@ -512,7 +512,7 @@ mod tests {
                 namespaces()
                     .load(
                         &deps.storage,
-                        "https://ontology.okp4.space/dataverse/dataspace/".to_string()
+                        "https://ontology.okp4.space/dataverse/dataspace/".to_string(),
                     )
                     .unwrap(),
                 Namespace {
@@ -529,35 +529,35 @@ mod tests {
                             Object::Named(Node {
                                 namespace: 4u128,
                                 value: "0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
-                                    .to_string()
+                                    .to_string(),
                             }).as_hash()
-                            .as_bytes(),
+                                .as_bytes(),
                             Node {
                                 namespace: 3u128,
-                                value: "hasRegistrar".to_string()
+                                value: "hasRegistrar".to_string(),
                             }
-                            .key(),
+                                .key(),
                             Subject::Named(Node {
                                 namespace: 0u128,
-                                value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string()
+                                value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string(),
                             })
-                            .key()
-                        )
+                                .key()
+                        ),
                     )
                     .unwrap(),
                 Triple {
                     object: Object::Named(Node {
                         namespace: 4u128,
                         value: "0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"
-                            .to_string()
+                            .to_string(),
                     }),
                     predicate: Node {
                         namespace: 3u128,
-                        value: "hasRegistrar".to_string()
+                        value: "hasRegistrar".to_string(),
                     },
                     subject: Subject::Named(Node {
                         namespace: 0u128,
-                        value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string()
+                        value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string(),
                     }),
                 }
             )
@@ -603,7 +603,7 @@ mod tests {
             res.unwrap().attributes,
             vec![
                 Attribute::new("action", "insert"),
-                Attribute::new("triple_count", "0")
+                Attribute::new("triple_count", "0"),
             ]
         );
 
@@ -963,7 +963,7 @@ mod tests {
                 res.unwrap().attributes,
                 vec![
                     Attribute::new("action", "delete"),
-                    Attribute::new("triple_count", case.1.to_string())
+                    Attribute::new("triple_count", case.1.to_string()),
                 ]
             );
 
@@ -1136,7 +1136,7 @@ mod tests {
                     triple_count: 1u128.into(),
                     namespace_count: 2u128.into(),
                     byte_size: 3u128.into(),
-                }
+                },
             }
         );
     }
@@ -1246,7 +1246,7 @@ mod tests {
                                         datatype: None,
                                     }
                                 )
-                            ])
+                            ]),
                         ],
                     },
                 },
@@ -1255,35 +1255,35 @@ mod tests {
                 SelectQuery {
                     prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
                     select: vec![
-                     SelectItem::Variable("a".to_string()),
+                        SelectItem::Variable("a".to_string()),
                     ],
                     r#where: vec![WhereCondition::Simple(TriplePattern(
-                     msg::TriplePattern {
-                         subject: VarOrNode::Variable("a".to_string()),
-                         predicate: VarOrNode::Node(NamedNode(Prefixed(
-                             "core:hasDescription".to_string(),
-                         ))),
-                         object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
-                     },
+                        msg::TriplePattern {
+                            subject: VarOrNode::Variable("a".to_string()),
+                            predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                "core:hasDescription".to_string(),
+                            ))),
+                            object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
+                        },
                     ))],
                     limit: None,
                 },
                 SelectResponse {
-                 head: Head {
-                     vars: vec!["a".to_string()],
-                 },
-                 results: Results {
-                     bindings: vec![
-                         BTreeMap::from([
-                             (
-                                 "a".to_string(),
-                                 Value::URI {
-                                     value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
-                                 }
-                             ),
-                         ])
-                     ],
-                 },
+                    head: Head {
+                        vars: vec!["a".to_string()],
+                    },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
+                                    }
+                                ),
+                            ])
+                        ],
+                    },
                 },
             ),
             (
@@ -1318,7 +1318,7 @@ mod tests {
                         ],
                     },
                 },
-            )
+            ),
         ];
 
         let mut deps = mock_dependencies();
@@ -1339,6 +1339,227 @@ mod tests {
             InsertData {
                 format: Some(DataFormat::RDFXml),
                 data: read_test_data("sample.rdf.xml"),
+            },
+        )
+        .unwrap();
+
+        for (q, expected) in cases {
+            let res = query(deps.as_ref(), mock_env(), QueryMsg::Select { query: q });
+            assert!(res.is_ok());
+
+            let result = from_json::<SelectResponse>(&res.unwrap()).unwrap();
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn proper_select_blank_nodes() {
+        let cases = vec![
+            (
+                SelectQuery {
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
+                    r#where: vec![
+                        WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Variable("a".to_string()),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasTemporalCoverage".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Node(BlankNode("a".to_string())),
+                            },
+                        )),
+                        WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Node(BlankNode("a".to_string())),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasStartDate".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Variable("b".to_string()),
+                            },
+                        ))],
+                    limit: None,
+                },
+                SelectResponse {
+                    head: Head { vars: vec!["a".to_string(), "b".to_string()] },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
+                                    }
+                                ),
+                                (
+                                    "b".to_string(),
+                                    Value::Literal {
+                                        value: "2022-01-01T00:00:00+00:00".to_string(),
+                                        lang: None,
+                                        datatype: Some(Full("http://www.w3.org/2001/XMLSchema#dateTime".to_string())),
+                                    }
+                                )
+                            ])
+                        ],
+                    },
+                },
+            ),
+            (
+                SelectQuery {
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
+                    r#where: vec![
+                        WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Variable("a".to_string()),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasTemporalCoverage".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Variable("blank".to_string()),
+                            },
+                        )),
+                        WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Variable("blank".to_string()),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasStartDate".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Variable("b".to_string()),
+                            },
+                        ))],
+                    limit: None,
+                },
+                SelectResponse {
+                    head: Head { vars: vec!["a".to_string(), "b".to_string()] },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
+                                    }
+                                ),
+                                (
+                                    "b".to_string(),
+                                    Value::Literal {
+                                        value: "2022-01-01T00:00:00+00:00".to_string(),
+                                        lang: None,
+                                        datatype: Some(Full("http://www.w3.org/2001/XMLSchema#dateTime".to_string())),
+                                    }
+                                )
+                            ])
+                        ],
+                    },
+                },
+            ),
+            (
+                SelectQuery {
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
+                    r#where: vec![
+                        WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Variable("a".to_string()),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasTemporalCoverage".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Node(BlankNode("blank1".to_string())),
+                            },
+                        )),
+                        WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Node(BlankNode("blank2".to_string())),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasInformation".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Variable("b".to_string()),
+                            },
+                        ))],
+                    limit: None,
+                },
+                SelectResponse {
+                    head: Head { vars: vec!["a".to_string(), "b".to_string()] },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
+                                    }
+                                ),
+                                (
+                                    "b".to_string(),
+                                    Value::Literal {
+                                        value: "this is a dataset".to_string(),
+                                        lang: None,
+                                        datatype: None,
+                                    }
+                                )
+                            ])
+                        ],
+                    },
+                },
+            ),
+            (
+                SelectQuery {
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
+                    r#where: vec![
+                        WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Variable("a".to_string()),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasTemporalCoverage".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Variable("b".to_string()),
+                            },
+                        ))],
+                    limit: None,
+                },
+                SelectResponse {
+                    head: Head { vars: vec!["a".to_string(), "b".to_string()] },
+                    results: Results {
+                        bindings: vec![
+                            BTreeMap::from([
+                                (
+                                    "a".to_string(),
+                                    Value::URI {
+                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
+                                    }
+                                ),
+                                (
+                                    "b".to_string(),
+                                    Value::BlankNode {
+                                        value: "riog00000001".to_string(),
+                                    }
+                                )
+                            ])
+                        ],
+                    },
+                },
+            ),
+        ];
+
+        let mut deps = mock_dependencies();
+
+        let info = mock_info("owner", &[]);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            InstantiateMsg::default(),
+        )
+        .unwrap();
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            info,
+            InsertData {
+                format: Some(DataFormat::Turtle),
+                data: read_test_data("blank-nodes.ttl"),
             },
         )
         .unwrap();
@@ -1457,19 +1678,19 @@ mod tests {
     #[test]
     fn formats_describe() {
         let cases = vec![
-        (
-            QueryMsg::Describe {
-                query: DescribeQuery {
-                    prefixes: vec![],
-                    resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                    r#where: vec![],
+            (
+                QueryMsg::Describe {
+                    query: DescribeQuery {
+                        prefixes: vec![],
+                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        r#where: vec![],
+                    },
+                    format: Some(DataFormat::Turtle),
                 },
-                format: Some(DataFormat::Turtle),
-            },
-            DescribeResponse {
-                format: DataFormat::Turtle,
-                data: Binary::from(
-                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
+                DescribeResponse {
+                    format: DataFormat::Turtle,
+                    data: Binary::from(
+                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
 \t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;
 \t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
 \t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
@@ -1478,21 +1699,21 @@ mod tests {
 \t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
 \
                 ".to_string().as_bytes().to_vec()),
-            }
-        ),
-        (
-            QueryMsg::Describe {
-                query: DescribeQuery {
-                    prefixes: vec![],
-                    resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                    r#where: vec![],
+                }
+            ),
+            (
+                QueryMsg::Describe {
+                    query: DescribeQuery {
+                        prefixes: vec![],
+                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        r#where: vec![],
+                    },
+                    format: Some(DataFormat::RDFXml),
                 },
-                format: Some(DataFormat::RDFXml),
-            },
-            DescribeResponse {
-                format: DataFormat::RDFXml,
-                data: Binary::from(
-                   "<?xml version=\"1.0\" encoding=\"UTF-8\"?><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\
+                DescribeResponse {
+                    format: DataFormat::RDFXml,
+                    data: Binary::from(
+                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\
 <rdf:Description rdf:about=\"https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473\">\
 <type xmlns=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" rdf:resource=\"https://ontology.okp4.space/metadata/dataspace/GeneralMetadata\"/>\
 <type xmlns=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" rdf:resource=\"http://www.w3.org/2002/07/owl#NamedIndividual\"/>\
@@ -1507,29 +1728,29 @@ mod tests {
 </rdf:RDF>\
 \
                 ".to_string().as_bytes().to_vec()),
-            }
-        ),
-        (
-            QueryMsg::Describe {
-                query: DescribeQuery {
-                    prefixes: vec![],
-                    resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                    r#where: vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Variable("a".to_string()),
-                            predicate: VarOrNode::Node(NamedNode(Full(
-                                "https://ontology.okp4.space/core/hasDescription".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Variable("b".to_string()),
-                        },
-                    ))],
+                }
+            ),
+            (
+                QueryMsg::Describe {
+                    query: DescribeQuery {
+                        prefixes: vec![],
+                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        r#where: vec![WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Variable("a".to_string()),
+                                predicate: VarOrNode::Node(NamedNode(Full(
+                                    "https://ontology.okp4.space/core/hasDescription".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Variable("b".to_string()),
+                            },
+                        ))],
+                    },
+                    format: Some(DataFormat::NTriples),
                 },
-                format: Some(DataFormat::NTriples),
-            },
-            DescribeResponse {
-                format: DataFormat::NTriples,
-                data: Binary::from(
-                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> .
+                DescribeResponse {
+                    format: DataFormat::NTriples,
+                    data: Binary::from(
+                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> .
 <https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
 <https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" .
 <https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"OKP4\" .
@@ -1542,21 +1763,21 @@ mod tests {
 <https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"Un Data Space de test.\"@fr .
 \
                 ".to_string().as_bytes().to_vec()),
-            }
-        ),
-        (
-            QueryMsg::Describe {
-                query: DescribeQuery {
-                    prefixes: vec![],
-                    resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                    r#where: vec![],
+                }
+            ),
+            (
+                QueryMsg::Describe {
+                    query: DescribeQuery {
+                        prefixes: vec![],
+                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        r#where: vec![],
+                    },
+                    format: Some(DataFormat::NQuads),
                 },
-                format: Some(DataFormat::NQuads),
-            },
-            DescribeResponse {
-                format: DataFormat::NQuads,
-                data: Binary::from(
-                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> .
+                DescribeResponse {
+                    format: DataFormat::NQuads,
+                    data: Binary::from(
+                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> .
 <https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
 <https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" .
 <https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"OKP4\" .
@@ -1569,9 +1790,9 @@ mod tests {
 <https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"Un Data Space de test.\"@fr .
 \
                 ".to_string().as_bytes().to_vec()),
-            }
-        ),
-    ];
+                }
+            ),
+        ];
 
         let mut deps = mock_dependencies();
 
@@ -1613,24 +1834,24 @@ mod tests {
     #[test]
     fn prefixes_describe() {
         let cases = vec![
-        (
-            QueryMsg::Describe {
-                query: DescribeQuery {
-                    prefixes: vec![
-                        Prefix {
-                            prefix: "metadata".to_string(),
-                            namespace: "https://ontology.okp4.space/dataverse/dataspace/metadata/".to_string(),
-                        },
-                    ],
-                    resource: VarOrNamedNode::NamedNode(Prefixed("metadata:dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                    r#where: vec![],
+            (
+                QueryMsg::Describe {
+                    query: DescribeQuery {
+                        prefixes: vec![
+                            Prefix {
+                                prefix: "metadata".to_string(),
+                                namespace: "https://ontology.okp4.space/dataverse/dataspace/metadata/".to_string(),
+                            },
+                        ],
+                        resource: VarOrNamedNode::NamedNode(Prefixed("metadata:dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        r#where: vec![],
+                    },
+                    format: Some(DataFormat::Turtle),
                 },
-                format: Some(DataFormat::Turtle),
-            },
-            DescribeResponse {
-                format: DataFormat::Turtle,
-                data: Binary::from(
-                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
+                DescribeResponse {
+                    format: DataFormat::Turtle,
+                    data: Binary::from(
+                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
 \t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;
 \t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
 \t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
@@ -1639,8 +1860,8 @@ mod tests {
 \t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
 \
                 ".to_string().as_bytes().to_vec()),
-            }
-        ),
+                }
+            ),
         ];
 
         let mut deps = mock_dependencies();
@@ -1683,29 +1904,29 @@ mod tests {
     #[test]
     fn variable_describe() {
         let cases = vec![
-        (
-            QueryMsg::Describe {
-                query: DescribeQuery {
-                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
-                    resource: VarOrNamedNode::Variable("a".to_string()),
-                    r#where: vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Variable("a".to_string()),
-                            predicate: VarOrNode::Node(NamedNode(Prefixed(
-                                "core:hasDescription".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
-                        },
-                       ))],
+            (
+                QueryMsg::Describe {
+                    query: DescribeQuery {
+                        prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                        resource: VarOrNamedNode::Variable("a".to_string()),
+                        r#where: vec![WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Variable("a".to_string()),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasDescription".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
+                            },
+                        ))],
+                    },
+                    format: Some(DataFormat::Turtle),
                 },
-                format: Some(DataFormat::Turtle),
-            },
-            DescribeResponse {
-                format: DataFormat::Turtle,
-                data: Binary::from(
-                   "<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"test\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
-            }
-        ),
+                DescribeResponse {
+                    format: DataFormat::Turtle,
+                    data: Binary::from(
+                        "<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"test\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
+                }
+            ),
         ];
 
         let mut deps = mock_dependencies();
@@ -1748,29 +1969,29 @@ mod tests {
     #[test]
     fn variable_mutiple_resources_describe() {
         let cases = vec![
-        (
-            QueryMsg::Describe {
-                query: DescribeQuery {
-                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
-                    resource: VarOrNamedNode::Variable("a".to_string()),
-                    r#where: vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Variable("a".to_string()),
-                            predicate: VarOrNode::Node(NamedNode(Prefixed(
-                                "core:hasPublisher".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Literal(Literal::Simple("OKP4".to_string())),
-                        },
-                       ))],
+            (
+                QueryMsg::Describe {
+                    query: DescribeQuery {
+                        prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                        resource: VarOrNamedNode::Variable("a".to_string()),
+                        r#where: vec![WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Variable("a".to_string()),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasPublisher".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Literal(Literal::Simple("OKP4".to_string())),
+                            },
+                        ))],
+                    },
+                    format: Some(DataFormat::Turtle),
                 },
-                format: Some(DataFormat::Turtle),
-            },
-            DescribeResponse {
-                format: DataFormat::Turtle,
-                data: Binary::from(
-                   "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .\n<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"test\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
-            }
-        ),
+                DescribeResponse {
+                    format: DataFormat::Turtle,
+                    data: Binary::from(
+                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .\n<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"test\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
+                }
+            ),
         ];
 
         let mut deps = mock_dependencies();
@@ -1813,33 +2034,33 @@ mod tests {
     #[test]
     fn blanknode_describe() {
         let cases = vec![
-        (
-            QueryMsg::Describe {
-                query: DescribeQuery {
-                    prefixes: vec![
-                        Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() },
-                        Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string()}
-                    ],
-                    resource: VarOrNamedNode::Variable("x".to_string()),
-                    r#where: vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Prefixed("metadata-dataset:80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string()))),
-                            predicate: VarOrNode::Node(NamedNode(Prefixed(
-                                "core:hasTemporalCoverage".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Variable("x".to_string()),
-                        },
-                       )),
-                       ],
+            (
+                QueryMsg::Describe {
+                    query: DescribeQuery {
+                        prefixes: vec![
+                            Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() },
+                            Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string() },
+                        ],
+                        resource: VarOrNamedNode::Variable("x".to_string()),
+                        r#where: vec![WhereCondition::Simple(TriplePattern(
+                            msg::TriplePattern {
+                                subject: VarOrNode::Node(NamedNode(Prefixed("metadata-dataset:80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string()))),
+                                predicate: VarOrNode::Node(NamedNode(Prefixed(
+                                    "core:hasTemporalCoverage".to_string(),
+                                ))),
+                                object: VarOrNodeOrLiteral::Variable("x".to_string()),
+                            },
+                        )),
+                        ],
+                    },
+                    format: Some(DataFormat::Turtle),
                 },
-                format: Some(DataFormat::Turtle),
-            },
-            DescribeResponse {
-                format: DataFormat::Turtle,
-                data: Binary::from(
-                    "<riog00000001> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> , <https://ontology.okp4.space/core/Period> ;\n\t<https://ontology.okp4.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n".to_string().as_bytes().to_vec()),
-            }
-        ),
+                DescribeResponse {
+                    format: DataFormat::Turtle,
+                    data: Binary::from(
+                        "<riog00000001> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> , <https://ontology.okp4.space/core/Period> ;\n\t<https://ontology.okp4.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n".to_string().as_bytes().to_vec()),
+                }
+            ),
         ];
 
         let mut deps = mock_dependencies();
@@ -1883,58 +2104,58 @@ mod tests {
     fn proper_construct() {
         let id = "https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
         let cases = vec![(
-            QueryMsg::Construct {
-                query: ConstructQuery {
-                    prefixes: vec![],
-                    construct: vec![],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                        predicate: VarOrNode::Node(NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTag".to_string(),
-                        ))),
-                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                    }))],
-                },
-                format: None,
-            },
-            ConstructResponse {
-                format: DataFormat::Turtle,
-                data: Binary::from(
-                    "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" .\n".to_string().as_bytes().to_vec()),
-            },
-        ),
-        (
-            QueryMsg::Construct {
-                query: ConstructQuery {
-                    prefixes: vec![
-                        Prefix { prefix: "my-ns".to_string(), namespace: "https://my-ns.org/".to_string() },
-                        Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string()}
-                    ],
-                    construct: vec![
-                        msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Prefixed("my-ns:instance-1".to_string()))),
-                            predicate: VarOrNode::Node(NamedNode(Full(
-                                "https://my-ns/predicate/tag".to_string(),
-                            ))),
-                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                        }
-                    ],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                        predicate: VarOrNode::Node(NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTag".to_string(),
-                        ))),
-                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                    }))],
-                },
-                format: Some(DataFormat::NTriples),
-            },
-            ConstructResponse {
-                format: DataFormat::NTriples,
-                data: Binary::from(
-                    "<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"Test\" .\n<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"OKP4\" .\n".to_string().as_bytes().to_vec()),
-            },
-        )];
+                             QueryMsg::Construct {
+                                 query: ConstructQuery {
+                                     prefixes: vec![],
+                                     construct: vec![],
+                                     r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                                         subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                                         predicate: VarOrNode::Node(NamedNode(Full(
+                                             "https://ontology.okp4.space/core/hasTag".to_string(),
+                                         ))),
+                                         object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                                     }))],
+                                 },
+                                 format: None,
+                             },
+                             ConstructResponse {
+                                 format: DataFormat::Turtle,
+                                 data: Binary::from(
+                                     "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" .\n".to_string().as_bytes().to_vec()),
+                             },
+                         ),
+                         (
+                             QueryMsg::Construct {
+                                 query: ConstructQuery {
+                                     prefixes: vec![
+                                         Prefix { prefix: "my-ns".to_string(), namespace: "https://my-ns.org/".to_string() },
+                                         Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string() },
+                                     ],
+                                     construct: vec![
+                                         msg::TriplePattern {
+                                             subject: VarOrNode::Node(NamedNode(Prefixed("my-ns:instance-1".to_string()))),
+                                             predicate: VarOrNode::Node(NamedNode(Full(
+                                                 "https://my-ns/predicate/tag".to_string(),
+                                             ))),
+                                             object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                                         }
+                                     ],
+                                     r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                                         subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                                         predicate: VarOrNode::Node(NamedNode(Full(
+                                             "https://ontology.okp4.space/core/hasTag".to_string(),
+                                         ))),
+                                         object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                                     }))],
+                                 },
+                                 format: Some(DataFormat::NTriples),
+                             },
+                             ConstructResponse {
+                                 format: DataFormat::NTriples,
+                                 data: Binary::from(
+                                     "<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"Test\" .\n<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"OKP4\" .\n".to_string().as_bytes().to_vec()),
+                             },
+                         )];
 
         for (q, expected) in cases {
             let mut deps = mock_dependencies();

@@ -10,17 +10,30 @@ pub struct QueryPlan {
 
     /// Contains all the query variables, their index in this array are internally used as
     /// identifiers.
-    pub variables: Vec<String>,
+    pub variables: Vec<PlanVariable>,
+}
+
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub enum PlanVariable {
+    Basic(String),
+    BlankNode(String),
 }
 
 impl QueryPlan {
+    /// Resolve the index corresponding to the variable name, if not attached to a blank node.
     pub fn get_var_index(&self, var_name: &str) -> Option<usize> {
-        self.variables.iter().enumerate().find_map(|(index, it)| {
-            if it == var_name {
-                return Some(index);
-            }
-            None
-        })
+        self.variables
+            .iter()
+            .enumerate()
+            .find_map(|(index, it)| match it {
+                PlanVariable::Basic(name) => {
+                    if name == var_name {
+                        return Some(index);
+                    }
+                    None
+                }
+                PlanVariable::BlankNode(_) => None,
+            })
     }
 }
 
@@ -44,7 +57,7 @@ pub enum QueryNode {
 
     /// Join two nodes by applying the cartesian product of the nodes variables.
     ///
-    /// This should be used when the nodes doesn't have variables in common, and can be seen as a
+    /// This should be used when the nodes don't have variables in common, and can be seen as a
     /// full join of disjoint datasets.  
     CartesianProductJoin { left: Box<Self>, right: Box<Self> },
 
@@ -101,11 +114,13 @@ impl QueryNode {
 pub enum PatternValue<V> {
     Constant(V),
     Variable(usize),
+    /// Special variable that is expected to resolve as a blank node.
+    BlankVariable(usize),
 }
 
 impl<V> PatternValue<V> {
     pub fn lookup_bound_variable(&self, callback: &mut impl FnMut(usize)) {
-        if let PatternValue::Variable(v) = self {
+        if let PatternValue::Variable(v) | PatternValue::BlankVariable(v) = self {
             callback(*v);
         }
     }

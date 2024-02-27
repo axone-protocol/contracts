@@ -395,29 +395,39 @@ impl<'a> TriplePatternIterator<'a> {
             },
         })
     }
+
+    fn map_triple(&self, triple: Triple) -> Option<ResolvedVariables> {
+        let mut vars: ResolvedVariables = self.input.clone();
+
+        if let Some(v) = self.output_bindings.0 {
+            vars.merge_index(v, ResolvedVariable::Subject(triple.subject))?;
+        }
+        if let Some(v) = self.output_bindings.1 {
+            vars.merge_index(v, ResolvedVariable::Predicate(triple.predicate))?;
+        }
+        if let Some(v) = self.output_bindings.2 {
+            vars.merge_index(v, ResolvedVariable::Object(triple.object))?;
+        }
+
+        Some(vars)
+    }
 }
 
 impl<'a> Iterator for TriplePatternIterator<'a> {
     type Item = StdResult<ResolvedVariables>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.triple_iter.next().map(|res| {
-            res.map(|triple| -> ResolvedVariables {
-                let mut vars: ResolvedVariables = self.input.clone();
+        let next = self.triple_iter.next()?;
 
-                if let Some(v) = self.output_bindings.0 {
-                    vars.set(v, ResolvedVariable::Subject(triple.subject));
-                }
-                if let Some(v) = self.output_bindings.1 {
-                    vars.set(v, ResolvedVariable::Predicate(triple.predicate));
-                }
-                if let Some(v) = self.output_bindings.2 {
-                    vars.set(v, ResolvedVariable::Object(triple.object));
-                }
+        let maybe_next = match next {
+            Ok(triple) => self.map_triple(triple).map(|r| Ok(r)),
+            Err(e) => Some(Err(e)),
+        };
 
-                vars
-            })
-        })
+        if maybe_next == None {
+            return self.next();
+        }
+        maybe_next
     }
 }
 
@@ -1018,6 +1028,21 @@ mod test {
             },
             TestCase {
                 plan: QueryPlan {
+                    entrypoint: QueryNode::TriplePattern {
+                        subject: PatternValue::Constant(Subject::Named(state::Node {
+                            namespace: 0,
+                            value: "97ff7e16-c08d-47be-8475-211016c82e33".to_string(),
+                        })),
+                        predicate: PatternValue::Variable(0),
+                        object: PatternValue::Variable(0),
+                    },
+                    variables: vec![PlanVariable::Basic("v".to_string())],
+                },
+                selection: vec![SelectItem::Variable("v".to_string())],
+                expects: Ok((vec!["v".to_string()], vec![])),
+            },
+            TestCase {
+                plan: QueryPlan {
                     entrypoint: QueryNode::Limit {
                         child: Box::new(QueryNode::Skip {
                             child: Box::new(QueryNode::TriplePattern {
@@ -1309,13 +1334,13 @@ mod test {
             let result = ForLoopJoinIterator::new(
                 Box::new(case.left.iter().map(|v| {
                     let mut vars = ResolvedVariables::with_capacity(3);
-                    vars.set(1, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(v.clone())));
                     Ok(vars)
                 })),
                 Rc::new(|input| {
                     Box::new(case.right.iter().map(move |v| {
                         let mut vars = input.clone();
-                        vars.set(2, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                        vars.merge_index(2, ResolvedVariable::Subject(Subject::Blank(v.clone())));
                         Ok(vars)
                     }))
                 }),
@@ -1328,8 +1353,8 @@ mod test {
                 .iter()
                 .map(|(v1, v2)| {
                     let mut vars = ResolvedVariables::with_capacity(3);
-                    vars.set(1, ResolvedVariable::Subject(Subject::Blank(v1.clone())));
-                    vars.set(2, ResolvedVariable::Subject(Subject::Blank(v2.clone())));
+                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(v1.clone())));
+                    vars.merge_index(2, ResolvedVariable::Subject(Subject::Blank(v2.clone())));
                     vars
                 })
                 .collect();
@@ -1383,13 +1408,13 @@ mod test {
                     .iter()
                     .map(|v| {
                         let mut vars = ResolvedVariables::with_capacity(2);
-                        vars.set(0, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                        vars.merge_index(0, ResolvedVariable::Subject(Subject::Blank(v.clone())));
                         vars
                     })
                     .collect(),
                 Box::new(case.left.iter().map(|v| {
                     let mut vars = ResolvedVariables::with_capacity(2);
-                    vars.set(1, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(v.clone())));
                     Ok(vars)
                 })),
                 VecDeque::new(),
@@ -1403,10 +1428,10 @@ mod test {
                 .map(|v| {
                     let mut vars = ResolvedVariables::with_capacity(2);
                     if let Some(val) = v.get(0) {
-                        vars.set(0, ResolvedVariable::Subject(Subject::Blank(val.clone())));
+                        vars.merge_index(0, ResolvedVariable::Subject(Subject::Blank(val.clone())));
                     }
                     if let Some(val) = v.get(1) {
-                        vars.set(1, ResolvedVariable::Subject(Subject::Blank(val.clone())));
+                        vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(val.clone())));
                     }
                     vars
                 })
@@ -1426,9 +1451,9 @@ mod test {
         let t_object = Object::Blank("o".to_string());
 
         let mut variables = ResolvedVariables::with_capacity(6);
-        variables.set(1, ResolvedVariable::Subject(t_subject.clone()));
-        variables.set(2, ResolvedVariable::Predicate(t_predicate.clone()));
-        variables.set(3, ResolvedVariable::Object(t_object.clone()));
+        variables.merge_index(1, ResolvedVariable::Subject(t_subject.clone()));
+        variables.merge_index(2, ResolvedVariable::Predicate(t_predicate.clone()));
+        variables.merge_index(3, ResolvedVariable::Object(t_object.clone()));
 
         struct TestCase {
             subject: PatternValue<Subject>,

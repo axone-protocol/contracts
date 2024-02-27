@@ -131,8 +131,13 @@ impl ResolvedVariables {
         Some(Self { variables: merged })
     }
 
-    pub fn set(&mut self, index: usize, var: ResolvedVariable) {
-        self.variables[index] = Some(var);
+    pub fn merge_index(&mut self, index: usize, var: ResolvedVariable) -> Option<()> {
+        if let Some(old) = self.get(index) {
+            (*old == var).then(|| ())
+        } else {
+            self.variables[index] = Some(var);
+            Some(())
+        }
     }
 
     pub fn get(&self, index: usize) -> &Option<ResolvedVariable> {
@@ -295,21 +300,21 @@ mod tests {
     #[test]
     fn merged_variables() {
         let mut vars1 = ResolvedVariables::with_capacity(3);
-        vars1.set(
+        vars1.merge_index(
             0,
             ResolvedVariable::Object(Object::Blank("foo".to_string())),
         );
-        vars1.set(
+        vars1.merge_index(
             2,
             ResolvedVariable::Object(Object::Blank("bar".to_string())),
         );
 
         let mut vars2 = ResolvedVariables::with_capacity(3);
-        vars2.set(
+        vars2.merge_index(
             1,
             ResolvedVariable::Object(Object::Blank("pop".to_string())),
         );
-        vars2.set(
+        vars2.merge_index(
             2,
             ResolvedVariable::Object(Object::Blank("bar".to_string())),
         );
@@ -321,15 +326,15 @@ mod tests {
         assert_eq!(vars1.get(1), &None);
 
         let mut expected_result = ResolvedVariables::with_capacity(3);
-        expected_result.set(
+        expected_result.merge_index(
             0,
             ResolvedVariable::Object(Object::Blank("foo".to_string())),
         );
-        expected_result.set(
+        expected_result.merge_index(
             1,
             ResolvedVariable::Object(Object::Blank("pop".to_string())),
         );
-        expected_result.set(
+        expected_result.merge_index(
             2,
             ResolvedVariable::Object(Object::Blank("bar".to_string())),
         );
@@ -338,11 +343,11 @@ mod tests {
         assert_eq!(result, Some(expected_result));
 
         let mut vars3 = ResolvedVariables::with_capacity(3);
-        vars3.set(
+        vars3.merge_index(
             1,
             ResolvedVariable::Object(Object::Blank("pop".to_string())),
         );
-        vars3.set(
+        vars3.merge_index(
             2,
             ResolvedVariable::Predicate(Node {
                 namespace: 0,

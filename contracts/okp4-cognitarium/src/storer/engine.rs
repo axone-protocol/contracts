@@ -1,9 +1,11 @@
 use crate::error::StoreError;
 use crate::state::{
-    triples, Literal, NamespaceBatchService, Node, Object, Store, Subject, Triple, STORE,
+    triples, Literal, NamespaceBatchService, Node, Object, Store, Subject, Triple,
+    BLANK_NODE_IDENTIFIER_COUNTER, BLANK_NODE_SIZE, STORE,
 };
 use crate::ContractError;
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
+use okp4_rdf::normalize::IdentifierIssuer;
 use okp4_rdf::serde::TripleReader;
 use okp4_rdf::uri::explode_iri;
 use rio_api::model;
@@ -15,6 +17,7 @@ pub struct StoreEngine<'a> {
     storage: &'a mut dyn Storage,
     store: Store,
     ns_batch_svc: NamespaceBatchService,
+    blank_node_id_issuer: IdentifierIssuer,
     initial_triple_count: Uint128,
     initial_byte_size: Uint128,
 }
@@ -22,11 +25,13 @@ pub struct StoreEngine<'a> {
 impl<'a> StoreEngine<'a> {
     pub fn new(storage: &'a mut dyn Storage) -> StdResult<Self> {
         let store = STORE.load(storage)?;
+        let blank_node_id_counter = BLANK_NODE_IDENTIFIER_COUNTER.load(storage)?;
         let ns_batch_svc = NamespaceBatchService::new(storage)?;
         Ok(Self {
             storage,
             store: store.clone(),
             ns_batch_svc,
+            blank_node_id_issuer: IdentifierIssuer::new("", blank_node_id_counter),
             initial_triple_count: store.stat.triple_count,
             initial_byte_size: store.stat.byte_size,
         })
@@ -53,11 +58,15 @@ impl<'a> StoreEngine<'a> {
             ))?;
         }
 
-        let triple = Self::rio_to_triple(t, &mut |ns_str| {
-            self.ns_batch_svc
-                .resolve_or_allocate(self.storage, ns_str)
-                .map(|ns| ns.key)
-        })?;
+        let triple = Self::rio_to_triple(
+            t,
+            &mut |ns_str| {
+                self.ns_batch_svc
+                    .resolve_or_allocate(self.storage, ns_str)
+                    .map(|ns| ns.key)
+            },
+            &mut self.blank_node_id_issuer,
+        )?;
         let t_size = Uint128::from(self.triple_size(&triple).map_err(ContractError::Std)? as u128);
         if t_size > self.store.limits.max_triple_byte_size {
             Err(StoreError::TripleByteSize(
@@ -159,6 +168,8 @@ impl<'a> StoreEngine<'a> {
             self.store.stat.namespace_count -= Uint128::new(ns_diff.neg() as u128);
         }
 
+        BLANK_NODE_IDENTIFIER_COUNTER.save(self.storage, &self.blank_node_id_issuer.counter)?;
+
         STORE.save(self.storage, &self.store)?;
 
         let count_diff = self
@@ -173,24 +184,34 @@ impl<'a> StoreEngine<'a> {
         Ok(count_diff)
     }
 
-    fn rio_to_triple<F>(triple: model::Triple<'_>, ns_fn: &mut F) -> StdResult<Triple>
+    fn rio_to_triple<F>(
+        triple: model::Triple<'_>,
+        ns_fn: &mut F,
+        id_issuer: &mut IdentifierIssuer,
+    ) -> StdResult<Triple>
     where
         F: FnMut(String) -> StdResult<u128>,
     {
         Ok(Triple {
-            subject: Self::rio_to_subject(triple.subject, ns_fn)?,
+            subject: Self::rio_to_subject(triple.subject, ns_fn, id_issuer)?,
             predicate: Self::rio_to_node(triple.predicate, ns_fn)?,
-            object: Self::rio_to_object(triple.object, ns_fn)?,
+            object: Self::rio_to_object(triple.object, ns_fn, id_issuer)?,
         })
     }
 
-    fn rio_to_subject<F>(subject: model::Subject<'_>, ns_fn: &mut F) -> StdResult<Subject>
+    fn rio_to_subject<F>(
+        subject: model::Subject<'_>,
+        ns_fn: &mut F,
+        id_issuer: &mut IdentifierIssuer,
+    ) -> StdResult<Subject>
     where
         F: FnMut(String) -> StdResult<u128>,
     {
         match subject {
             model::Subject::NamedNode(node) => Self::rio_to_node(node, ns_fn).map(Subject::Named),
-            model::Subject::BlankNode(node) => Ok(Subject::Blank(node.id.to_string())),
+            model::Subject::BlankNode(node) => Ok(Subject::Blank(
+                id_issuer.get_n_or_issue(node.id.to_string()),
+            )),
             model::Subject::Triple(_) => Err(StdError::generic_err("RDF star syntax unsupported")),
         }
     }
@@ -206,12 +227,18 @@ impl<'a> StoreEngine<'a> {
         })
     }
 
-    fn rio_to_object<F>(object: Term<'_>, ns_fn: &mut F) -> StdResult<Object>
+    fn rio_to_object<F>(
+        object: Term<'_>,
+        ns_fn: &mut F,
+        id_issuer: &mut IdentifierIssuer,
+    ) -> StdResult<Object>
     where
         F: FnMut(String) -> StdResult<u128>,
     {
         match object {
-            Term::BlankNode(node) => Ok(Object::Blank(node.id.to_string())),
+            Term::BlankNode(node) => {
+                Ok(Object::Blank(id_issuer.get_n_or_issue(node.id.to_string())))
+            }
             Term::NamedNode(node) => Self::rio_to_node(node, ns_fn).map(Object::Named),
             Term::Literal(literal) => Self::rio_to_literal(literal, ns_fn).map(Object::Literal),
             Term::Triple(_) => Err(StdError::generic_err("RDF star syntax unsupported")),
@@ -248,7 +275,7 @@ impl<'a> StoreEngine<'a> {
     fn subject_size(&mut self, subject: &Subject) -> StdResult<usize> {
         match subject {
             Subject::Named(n) => self.node_size(n),
-            Subject::Blank(n) => Ok(n.len()),
+            Subject::Blank(_) => Ok(BLANK_NODE_SIZE),
         }
     }
 
@@ -266,7 +293,7 @@ impl<'a> StoreEngine<'a> {
 
     fn object_size(&mut self, object: &Object) -> StdResult<usize> {
         Ok(match object {
-            Object::Blank(n) => n.len(),
+            Object::Blank(_) => BLANK_NODE_SIZE,
             Object::Named(n) => self.node_size(n)?,
             Object::Literal(l) => match l {
                 Literal::Simple { value } => value.len(),

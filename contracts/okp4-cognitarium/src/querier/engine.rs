@@ -1,7 +1,5 @@
-use crate::msg::{SelectItem, TriplePattern, VarOrNode, VarOrNodeOrLiteral};
-use crate::querier::mapper::{
-    literal_as_object, node_as_object, node_as_predicate, node_as_subject,
-};
+use crate::msg::{Node, SelectItem, TriplePattern, VarOrNode, VarOrNodeOrLiteral};
+use crate::querier::mapper::{iri_as_node, literal_as_object, node_as_predicate};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
 use crate::rdf::Atom;
@@ -9,6 +7,7 @@ use crate::state::{triples, Namespace, NamespaceResolver, Object, Predicate, Sub
 use crate::{rdf, state};
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use either::{Either, Left, Right};
+use okp4_rdf::normalize::IdentifierIssuer;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
@@ -568,19 +567,19 @@ impl TripleTemplate {
         pattern: &TriplePattern,
     ) -> StdResult<TripleTemplate> {
         Ok(TripleTemplate {
-            subject: Self::build_subject_pattern(
+            subject: Self::build_subject_template(
                 ns_resolver,
                 storage,
                 prefixes,
                 pattern.subject.clone(),
             )?,
-            predicate: Self::build_predicate_pattern(
+            predicate: Self::build_predicate_template(
                 ns_resolver,
                 storage,
                 prefixes,
                 pattern.predicate.clone(),
             )?,
-            object: Self::build_object_pattern(
+            object: Self::build_object_template(
                 ns_resolver,
                 storage,
                 prefixes,
@@ -645,7 +644,7 @@ impl TripleTemplate {
         }
     }
 
-    fn build_subject_pattern(
+    fn build_subject_template(
         ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
@@ -653,11 +652,17 @@ impl TripleTemplate {
     ) -> StdResult<Either<Subject, String>> {
         Ok(match value {
             VarOrNode::Variable(v) => Right(v),
-            VarOrNode::Node(n) => Left(node_as_subject(ns_resolver, storage, prefixes, n)?),
+            VarOrNode::Node(Node::BlankNode(b)) => Right(b),
+            VarOrNode::Node(Node::NamedNode(iri)) => Left(Subject::Named(iri_as_node(
+                ns_resolver,
+                storage,
+                prefixes,
+                iri,
+            )?)),
         })
     }
 
-    fn build_predicate_pattern(
+    fn build_predicate_template(
         ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
@@ -669,7 +674,7 @@ impl TripleTemplate {
         })
     }
 
-    fn build_object_pattern(
+    fn build_object_template(
         ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
@@ -677,7 +682,13 @@ impl TripleTemplate {
     ) -> StdResult<Either<Object, String>> {
         Ok(match value {
             VarOrNodeOrLiteral::Variable(v) => Right(v),
-            VarOrNodeOrLiteral::Node(n) => Left(node_as_object(ns_resolver, storage, prefixes, n)?),
+            VarOrNodeOrLiteral::Node(Node::BlankNode(b)) => Right(b),
+            VarOrNodeOrLiteral::Node(Node::NamedNode(iri)) => Left(Object::Named(iri_as_node(
+                ns_resolver,
+                storage,
+                prefixes,
+                iri,
+            )?)),
             VarOrNodeOrLiteral::Literal(l) => {
                 Left(literal_as_object(ns_resolver, storage, prefixes, l)?)
             }
@@ -687,6 +698,7 @@ impl TripleTemplate {
 
 pub struct ResolvedAtomIterator<'a> {
     ns_resolver: &'a mut NamespaceResolver,
+    id_issuer: IdentifierIssuer,
     storage: &'a dyn Storage,
     iter: SolutionsIterator<'a>,
     templates: Vec<AtomTemplate>,
@@ -703,6 +715,7 @@ impl<'a> ResolvedAtomIterator<'a> {
     ) -> StdResult<Self> {
         Ok(Self {
             ns_resolver,
+            id_issuer: IdentifierIssuer::new("b", 0u128),
             storage,
             iter: solutions,
             templates: patterns
@@ -733,11 +746,9 @@ impl<'a> Iterator for ResolvedAtomIterator<'a> {
                     self.buffer.push_back(Err(err));
                 }
                 Ok(vars) => {
-                    for res in self
-                        .templates
-                        .iter()
-                        .map(|template| template.resolve(self.ns_resolver, self.storage, &vars))
-                    {
+                    for res in self.templates.iter().map(|template| {
+                        template.resolve(self.ns_resolver, &mut self.id_issuer, self.storage, &vars)
+                    }) {
                         match res {
                             Ok(Some(atom)) => self.buffer.push_back(Ok(atom)),
                             Err(err) => self.buffer.push_back(Err(err)),
@@ -781,6 +792,7 @@ impl AtomTemplate {
     pub fn resolve(
         &self,
         ns_resolver: &mut NamespaceResolver,
+        id_issuer: &mut IdentifierIssuer,
         storage: &dyn Storage,
         vars: &BTreeMap<String, ResolvedVariable>,
     ) -> StdResult<Option<Atom>> {
@@ -790,7 +802,7 @@ impl AtomTemplate {
                 .map(|ns| ns.value)
         };
 
-        let subject = match self.resolve_atom_subject(resolve_ns_fn, vars)? {
+        let subject = match self.resolve_atom_subject(resolve_ns_fn, id_issuer, vars)? {
             Some(s) => s,
             None => return Ok(None),
         };
@@ -800,7 +812,7 @@ impl AtomTemplate {
             None => return Ok(None),
         };
 
-        let value = match self.resolve_atom_value(resolve_ns_fn, vars)? {
+        let value = match self.resolve_atom_value(resolve_ns_fn, id_issuer, vars)? {
             Some(v) => v,
             None => return Ok(None),
         };
@@ -815,6 +827,7 @@ impl AtomTemplate {
     fn resolve_atom_subject<F>(
         &self,
         resolve_ns_fn: &mut F,
+        id_issuer: &mut IdentifierIssuer,
         vars: &BTreeMap<String, ResolvedVariable>,
     ) -> StdResult<Option<rdf::Subject>>
     where
@@ -827,7 +840,9 @@ impl AtomTemplate {
             &mut |value| {
                 Ok(match value {
                     Subject::Named(n) => rdf::Subject::NamedNode(n.as_iri(resolve_ns_fn)?),
-                    Subject::Blank(n) => rdf::Subject::BlankNode(n),
+                    Subject::Blank(n) => {
+                        rdf::Subject::BlankNode(id_issuer.get_str_or_issue(n.to_string()))
+                    }
                 })
             },
             "subject",
@@ -854,6 +869,7 @@ impl AtomTemplate {
     fn resolve_atom_value<F>(
         &self,
         resolve_ns_fn: &mut F,
+        id_issuer: &mut IdentifierIssuer,
         vars: &BTreeMap<String, ResolvedVariable>,
     ) -> StdResult<Option<rdf::Value>>
     where
@@ -866,7 +882,9 @@ impl AtomTemplate {
             &mut |value| {
                 Ok(match value {
                     Object::Named(n) => rdf::Value::NamedNode(n.as_iri(resolve_ns_fn)?),
-                    Object::Blank(n) => rdf::Value::BlankNode(n),
+                    Object::Blank(n) => {
+                        rdf::Value::BlankNode(id_issuer.get_str_or_issue(n.to_string()))
+                    }
                     Object::Literal(l) => match l {
                         state::Literal::Simple { value } => rdf::Value::LiteralSimple(value),
                         state::Literal::I18NString { value, language } => {
@@ -917,7 +935,9 @@ mod test {
     use crate::querier::plan::PlanVariable;
     use crate::state;
     use crate::state::Object::{Literal, Named};
-    use crate::state::{Node, Store, StoreStat, NAMESPACE_KEY_INCREMENT, STORE};
+    use crate::state::{
+        Node, Store, StoreStat, BLANK_NODE_IDENTIFIER_COUNTER, NAMESPACE_KEY_INCREMENT, STORE,
+    };
     use crate::storer::StoreEngine;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
@@ -954,6 +974,7 @@ mod test {
             )
             .unwrap();
         NAMESPACE_KEY_INCREMENT.save(storage, &0u128).unwrap();
+        BLANK_NODE_IDENTIFIER_COUNTER.save(storage, &0u128).unwrap();
         let data = read_test_data("sample.rdf.xml");
         let buf = BufReader::new(data.as_slice());
         let mut reader = TripleReader::new(&okp4_rdf::serde::DataFormat::RDFXml, buf);
@@ -1295,33 +1316,30 @@ mod test {
     #[test]
     fn for_loop_join_iter() {
         struct TestCase {
-            left: Vec<String>,
-            right: Vec<String>,
-            expects: Vec<(String, String)>,
+            left: Vec<u128>,
+            right: Vec<u128>,
+            expects: Vec<(u128, u128)>,
         }
 
         let cases = vec![
             TestCase {
                 left: vec![],
-                right: vec!["1".to_string(), "2".to_string()],
+                right: vec![0u128, 1u128],
                 expects: vec![],
             },
             TestCase {
-                left: vec!["A".to_string()],
-                right: vec!["1".to_string(), "2".to_string()],
-                expects: vec![
-                    ("A".to_string(), "1".to_string()),
-                    ("A".to_string(), "2".to_string()),
-                ],
+                left: vec![2u128],
+                right: vec![0u128, 1u128],
+                expects: vec![(2u128, 0u128), (2u128, 1u128)],
             },
             TestCase {
-                left: vec!["A".to_string(), "B".to_string()],
-                right: vec!["1".to_string(), "2".to_string()],
+                left: vec![2u128, 3u128],
+                right: vec![0u128, 1u128],
                 expects: vec![
-                    ("A".to_string(), "1".to_string()),
-                    ("A".to_string(), "2".to_string()),
-                    ("B".to_string(), "1".to_string()),
-                    ("B".to_string(), "2".to_string()),
+                    (2u128, 0u128),
+                    (2u128, 1u128),
+                    (3u128, 0u128),
+                    (3u128, 1u128),
                 ],
             },
         ];
@@ -1330,13 +1348,13 @@ mod test {
             let result = ForLoopJoinIterator::new(
                 Box::new(case.left.iter().map(|v| {
                     let mut vars = ResolvedVariables::with_capacity(3);
-                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(*v)));
                     Ok(vars)
                 })),
                 Rc::new(|input| {
                     Box::new(case.right.iter().map(move |v| {
                         let mut vars = input.clone();
-                        vars.merge_index(2, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                        vars.merge_index(2, ResolvedVariable::Subject(Subject::Blank(*v)));
                         Ok(vars)
                     }))
                 }),
@@ -1349,8 +1367,8 @@ mod test {
                 .iter()
                 .map(|(v1, v2)| {
                     let mut vars = ResolvedVariables::with_capacity(3);
-                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(v1.clone())));
-                    vars.merge_index(2, ResolvedVariable::Subject(Subject::Blank(v2.clone())));
+                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(*v1)));
+                    vars.merge_index(2, ResolvedVariable::Subject(Subject::Blank(*v2)));
                     vars
                 })
                 .collect();
@@ -1362,38 +1380,35 @@ mod test {
     #[test]
     fn cartesian_join_iter() {
         struct TestCase {
-            left: Vec<String>,
-            right: Vec<String>,
-            expects: Vec<Vec<String>>,
+            left: Vec<u128>,
+            right: Vec<u128>,
+            expects: Vec<Vec<u128>>,
         }
 
         let cases = vec![
             TestCase {
                 left: vec![],
-                right: vec!["1".to_string(), "2".to_string()],
+                right: vec![0u128, 1u128],
                 expects: vec![],
             },
             TestCase {
-                left: vec!["1".to_string(), "2".to_string()],
+                left: vec![0u128, 1u128],
                 right: vec![],
                 expects: vec![],
             },
             TestCase {
-                left: vec!["A".to_string()],
-                right: vec!["1".to_string(), "2".to_string()],
-                expects: vec![
-                    vec!["1".to_string(), "A".to_string()],
-                    vec!["2".to_string(), "A".to_string()],
-                ],
+                left: vec![2u128],
+                right: vec![0u128, 1u128],
+                expects: vec![vec![0u128, 2u128], vec![1u128, 2u128]],
             },
             TestCase {
-                left: vec!["A".to_string(), "B".to_string()],
-                right: vec!["1".to_string(), "2".to_string()],
+                left: vec![2u128, 3u128],
+                right: vec![0u128, 1u128],
                 expects: vec![
-                    vec!["1".to_string(), "A".to_string()],
-                    vec!["2".to_string(), "A".to_string()],
-                    vec!["1".to_string(), "B".to_string()],
-                    vec!["2".to_string(), "B".to_string()],
+                    vec![0u128, 2u128],
+                    vec![1u128, 2u128],
+                    vec![0u128, 3u128],
+                    vec![1u128, 3u128],
                 ],
             },
         ];
@@ -1404,13 +1419,13 @@ mod test {
                     .iter()
                     .map(|v| {
                         let mut vars = ResolvedVariables::with_capacity(2);
-                        vars.merge_index(0, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                        vars.merge_index(0, ResolvedVariable::Subject(Subject::Blank(*v)));
                         vars
                     })
                     .collect(),
                 Box::new(case.left.iter().map(|v| {
                     let mut vars = ResolvedVariables::with_capacity(2);
-                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(v.clone())));
+                    vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(*v)));
                     Ok(vars)
                 })),
                 VecDeque::new(),
@@ -1424,10 +1439,10 @@ mod test {
                 .map(|v| {
                     let mut vars = ResolvedVariables::with_capacity(2);
                     if let Some(val) = v.get(0) {
-                        vars.merge_index(0, ResolvedVariable::Subject(Subject::Blank(val.clone())));
+                        vars.merge_index(0, ResolvedVariable::Subject(Subject::Blank(*val)));
                     }
                     if let Some(val) = v.get(1) {
-                        vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(val.clone())));
+                        vars.merge_index(1, ResolvedVariable::Subject(Subject::Blank(*val)));
                     }
                     vars
                 })
@@ -1439,12 +1454,12 @@ mod test {
 
     #[test]
     fn triple_pattern_iter_compute_io() {
-        let t_subject = Subject::Blank("s".to_string());
+        let t_subject = Subject::Blank(0u128);
         let t_predicate = state::Node {
             namespace: 0u128,
             value: "whatever".to_string(),
         };
-        let t_object = Object::Blank("o".to_string());
+        let t_object = Object::Blank(1u128);
 
         let mut variables = ResolvedVariables::with_capacity(6);
         variables.merge_index(1, ResolvedVariable::Subject(t_subject.clone()));
@@ -1523,7 +1538,7 @@ mod test {
                 predicate: PatternValue::Variable(4),
                 object: PatternValue::Variable(5),
                 expects: Some((
-                    (Some(Subject::Blank("o".to_string())), None, None),
+                    (Some(Subject::Blank(1u128)), None, None),
                     (false, false),
                     (None, Some(4), Some(5)),
                 )),

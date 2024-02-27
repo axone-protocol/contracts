@@ -1,21 +1,9 @@
 use crate::msg::{Literal, Node, IRI};
 use crate::state;
-use crate::state::{NamespaceResolver, Object, Predicate, Subject};
+use crate::state::{NamespaceResolver, Object, Predicate};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use okp4_rdf::uri::{expand_uri, explode_iri};
 use std::collections::HashMap;
-
-pub fn node_as_subject(
-    ns_resolver: &mut NamespaceResolver,
-    storage: &dyn Storage,
-    prefixes: &HashMap<String, String>,
-    node: Node,
-) -> StdResult<Subject> {
-    Ok(match node {
-        Node::NamedNode(iri) => Subject::Named(iri_as_node(ns_resolver, storage, prefixes, iri)?),
-        Node::BlankNode(blank) => Subject::Blank(blank),
-    })
-}
 
 pub fn node_as_predicate(
     ns_resolver: &mut NamespaceResolver,
@@ -29,18 +17,6 @@ pub fn node_as_predicate(
             "Predicate pattern must be a named node",
         )),
     }
-}
-
-pub fn node_as_object(
-    ns_resolver: &mut NamespaceResolver,
-    storage: &dyn Storage,
-    prefixes: &HashMap<String, String>,
-    node: Node,
-) -> StdResult<Object> {
-    Ok(match node {
-        Node::NamedNode(iri) => Object::Named(iri_as_node(ns_resolver, storage, prefixes, iri)?),
-        Node::BlankNode(blank) => Object::Blank(blank),
-    })
 }
 
 pub fn literal_as_object(

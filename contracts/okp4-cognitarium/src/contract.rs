@@ -319,6 +319,7 @@ pub mod util {
     };
     use crate::querier::SelectResults;
     use crate::state::{Namespace, NamespaceResolver};
+    use okp4_rdf::normalize::IdentifierIssuer;
     use std::collections::{BTreeMap, HashSet};
 
     pub fn as_select_variables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
@@ -347,6 +348,7 @@ pub mod util {
         ns_cache: Vec<Namespace>,
     ) -> StdResult<SelectResponse> {
         let mut ns_resolver: NamespaceResolver = ns_cache.into();
+        let mut id_issuer = IdentifierIssuer::new("b", 0u128);
 
         let mut bindings: Vec<BTreeMap<String, Value>> = vec![];
         for solution in res.solutions {
@@ -356,11 +358,14 @@ pub mod util {
                 .map(|(name, var)| -> StdResult<(String, Value)> {
                     Ok((
                         name,
-                        var.as_value(&mut |ns_key| {
-                            let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
-                            res.and_then(NamespaceResolver::none_as_error_middleware)
-                                .map(|ns| ns.value)
-                        })?,
+                        var.as_value(
+                            &mut |ns_key| {
+                                let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
+                                res.and_then(NamespaceResolver::none_as_error_middleware)
+                                    .map(|ns| ns.value)
+                            },
+                            &mut id_issuer,
+                        )?,
                     ))
                 })
                 .collect::<StdResult<BTreeMap<String, Value>>>()?;

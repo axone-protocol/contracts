@@ -38,7 +38,10 @@ impl<'a> Normalizer<'a> {
             blank_node_to_quads: HashMap::new(),
             hash_to_blank_nodes: BTreeMap::new(),
             blank_node_to_hash: HashMap::new(),
-            canonical_issuer: IdentifierIssuer::new(Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX),
+            canonical_issuer: IdentifierIssuer::new(
+                Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX,
+                0u128,
+            ),
         }
     }
 
@@ -69,7 +72,7 @@ impl<'a> Normalizer<'a> {
         self.hash_to_blank_nodes = BTreeMap::new();
         self.blank_node_to_hash = HashMap::new();
         self.canonical_issuer =
-            IdentifierIssuer::new(Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX);
+            IdentifierIssuer::new(Self::CANONICAL_BLANK_NODES_IDENTIFIER_PREFIX, 0u128);
     }
 
     fn track_blank_nodes(&mut self, dataset: &[Quad<'a>]) {
@@ -124,7 +127,7 @@ impl<'a> Normalizer<'a> {
 
         for (hash, node) in unique_nodes {
             self.hash_to_blank_nodes.remove(&hash);
-            self.canonical_issuer.get_or_issue(&node);
+            self.canonical_issuer.get_or_issue(node);
         }
 
         Ok(())
@@ -146,8 +149,8 @@ impl<'a> Normalizer<'a> {
                 }
 
                 let mut scoped_issuer =
-                    IdentifierIssuer::new(Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX);
-                scoped_issuer.get_or_issue(node);
+                    IdentifierIssuer::new(Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX, 0u128);
+                scoped_issuer.get_or_issue(node.clone());
 
                 let (n_degree_hash, issuer) =
                     self.compute_n_degree_hash(&mut scoped_issuer, node)?;
@@ -157,7 +160,7 @@ impl<'a> Normalizer<'a> {
             hash_path_list.sort_by(|left, right| left.0.cmp(&right.0));
             for (_, issuer) in hash_path_list {
                 for node in issuer.issue_log {
-                    self.canonical_issuer.get_or_issue(&node);
+                    self.canonical_issuer.get_or_issue(node);
                 }
             }
         }
@@ -212,7 +215,7 @@ impl<'a> Normalizer<'a> {
 
         let mut hasher = sha2::Sha256::new();
         let mut chosen_issuer =
-            IdentifierIssuer::new(Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX);
+            IdentifierIssuer::new(Self::TEMPORARY_BLANK_NODES_IDENTIFIER_PREFIX, 0u128);
         let mut chosen_path = String::new();
 
         for (hash, related) in hashes {
@@ -230,7 +233,7 @@ impl<'a> Normalizer<'a> {
                         if !issuer.issued(&related) {
                             recursion_list.push(related.clone());
                         }
-                        path.push_str(&issuer.get_or_issue(&related));
+                        path.push_str(&issuer.get_str_or_issue(related));
                     }
                 }
 
@@ -242,7 +245,7 @@ impl<'a> Normalizer<'a> {
                 for related in recursion_list {
                     let (result, mut issuer) = self.compute_n_degree_hash(&mut issuer, &related)?;
                     path.push_str("_:");
-                    path.push_str(&issuer.get_or_issue(&related));
+                    path.push_str(&issuer.get_str_or_issue(related));
                     path.push('<');
                     path.push_str(&result);
                     path.push('>');
@@ -327,38 +330,47 @@ impl<'a> Default for Normalizer<'a> {
 
 /// Canonical blank node identifier issuer, specified by: https://www.w3.org/TR/rdf-canon/#issue-identifier.
 #[derive(Clone, Eq, PartialEq, Debug)]
-struct IdentifierIssuer {
+pub struct IdentifierIssuer {
     prefix: String,
-    counter: u64,
-    issued: HashMap<String, String>,
+    pub counter: u128,
+    issued: HashMap<String, (u128, String)>,
     issue_log: Vec<String>,
 }
 
 impl IdentifierIssuer {
-    pub fn new(prefix: &str) -> Self {
+    pub fn new(prefix: &str, counter_offset: u128) -> Self {
         Self {
             prefix: prefix.to_string(),
-            counter: 0,
+            counter: counter_offset,
             issued: HashMap::new(),
             issue_log: Vec::new(),
         }
     }
 
-    pub fn get_or_issue(&mut self, identifier: &str) -> String {
-        match self.issued.entry(identifier.to_string()) {
+    pub fn get_or_issue(&mut self, identifier: String) -> (u128, String) {
+        match self.issued.entry(identifier.clone()) {
             Entry::Occupied(e) => e.get().clone(),
             Entry::Vacant(e) => {
-                let generated_id = format!("{}{}", self.prefix, self.counter);
+                let n = self.counter;
+                let str = format!("{}{}", self.prefix, n);
                 self.counter += 1;
 
-                self.issue_log.push(identifier.to_string());
-                e.insert(generated_id).clone()
+                self.issue_log.push(identifier);
+                e.insert((n, str)).clone()
             }
         }
     }
 
+    pub fn get_n_or_issue(&mut self, identifier: String) -> u128 {
+        self.get_or_issue(identifier).0
+    }
+
+    pub fn get_str_or_issue(&mut self, identifier: String) -> String {
+        self.get_or_issue(identifier).1
+    }
+
     pub fn get(&self, identifier: &str) -> Option<&str> {
-        self.issued.get(identifier).map(String::as_str)
+        self.issued.get(identifier).map(|(_, str)| str.as_str())
     }
 
     pub fn issued(&self, identifier: &str) -> bool {

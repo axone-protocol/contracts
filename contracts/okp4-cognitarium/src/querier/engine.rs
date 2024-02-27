@@ -1,6 +1,5 @@
 use crate::msg::{
-    SelectItem, TriplePattern, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode,
-    VarOrNodeOrLiteral,
+    SelectItem, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode, VarOrNodeOrLiteral,
 };
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
@@ -457,13 +456,13 @@ impl<'a> SolutionsIterator<'a> {
         self,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
-        patterns: Vec<TriplePattern>,
+        templates: Vec<(VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral)>,
         ns_cache: Vec<Namespace>,
     ) -> StdResult<Vec<Atom>> {
         let mut ns_resolver = ns_cache.into();
 
         let atoms_iter =
-            ResolvedAtomIterator::try_new(&mut ns_resolver, storage, self, prefixes, patterns)?;
+            ResolvedAtomIterator::try_new(&mut ns_resolver, storage, self, prefixes, templates)?;
         atoms_iter.collect()
     }
 }
@@ -699,16 +698,16 @@ impl<'a> ResolvedAtomIterator<'a> {
         storage: &'a dyn Storage,
         solutions: SolutionsIterator<'a>,
         prefixes: &HashMap<String, String>,
-        patterns: Vec<TriplePattern>,
+        templates: Vec<(VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral)>,
     ) -> StdResult<Self> {
         Ok(Self {
             ns_resolver,
             id_issuer: IdentifierIssuer::new("b", 0u128),
             storage,
             iter: solutions,
-            templates: patterns
-                .iter()
-                .map(|p| AtomTemplate::try_new(prefixes, p))
+            templates: templates
+                .into_iter()
+                .map(|t| AtomTemplate::try_new(prefixes, t))
                 .collect::<StdResult<Vec<AtomTemplate>>>()?,
             buffer: VecDeque::new(),
         })
@@ -758,18 +757,18 @@ struct AtomTemplate {
 impl AtomTemplate {
     pub fn try_new(
         prefixes: &HashMap<String, String>,
-        pattern: &TriplePattern,
+        (s_tpl, p_tpl, o_tpl): (VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral),
     ) -> StdResult<AtomTemplate> {
         Ok(Self {
-            subject: match &pattern.subject {
+            subject: match s_tpl {
                 VarOrNode::Variable(key) => Right(key.clone()),
                 VarOrNode::Node(n) => Left((n.clone(), prefixes).try_into()?),
             },
-            property: match &pattern.predicate {
-                VarOrNode::Variable(key) => Right(key.clone()),
-                VarOrNode::Node(n) => Left((n.clone(), prefixes).try_into()?),
+            property: match p_tpl {
+                VarOrNamedNode::Variable(key) => Right(key),
+                VarOrNamedNode::NamedNode(iri) => Left((iri, prefixes).try_into()?),
             },
-            value: match &pattern.object {
+            value: match o_tpl {
                 VarOrNodeOrLiteral::Variable(key) => Right(key.clone()),
                 VarOrNodeOrLiteral::Node(n) => Left((n.clone(), prefixes).try_into()?),
                 VarOrNodeOrLiteral::Literal(l) => Left((l.clone(), prefixes).try_into()?),

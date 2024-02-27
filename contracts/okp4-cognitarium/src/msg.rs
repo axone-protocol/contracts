@@ -434,8 +434,7 @@ pub struct ConstructQuery {
     /// The prefixes used in the query.
     pub prefixes: Vec<Prefix>,
     /// The triples to construct.
-    /// If nothing is provided, the patterns from the `where` clause are used for construction.
-    pub construct: Vec<TriplePattern>,
+    pub construct: Vec<TripleConstructTemplate>,
     /// The WHERE clause.
     /// This clause is used to specify the triples to construct using variable bindings.
     pub r#where: WhereClause,
@@ -489,7 +488,10 @@ pub trait HasVariables {
 
     /// Returns the set of variables used in a triple pattern or template as [SelectItem].
     fn as_select_item(&self) -> Vec<SelectItem> {
-        self.variables().iter().map(SelectItem::Variable).collect()
+        self.variables()
+            .into_iter()
+            .map(SelectItem::Variable)
+            .collect()
     }
 }
 
@@ -517,7 +519,33 @@ pub struct TripleDeleteTemplate {
 
 impl HasVariables for TripleDeleteTemplate {
     fn variables(&self) -> Vec<String> {
-        var_util::merge_variables(&[&self.subject, &self.predicate, &self.object])
+        var_util::merge_variables(&[
+            self.subject.variable(),
+            self.predicate.variable(),
+            self.object.variable(),
+        ])
+    }
+}
+
+/// # TripleConstructTemplate
+/// Represents a triple template to be forged for a construct query.
+#[cw_serde]
+pub struct TripleConstructTemplate {
+    /// The subject of the triple pattern.
+    pub subject: VarOrNode,
+    /// The predicate of the triple pattern.
+    pub predicate: VarOrNamedNode,
+    /// The object of the triple pattern.
+    pub object: VarOrNodeOrLiteral,
+}
+
+impl HasVariables for TripleConstructTemplate {
+    fn variables(&self) -> Vec<String> {
+        var_util::merge_variables(&[
+            self.subject.variable(),
+            self.predicate.variable(),
+            self.object.variable(),
+        ])
     }
 }
 
@@ -535,7 +563,11 @@ pub struct TriplePattern {
 
 impl HasVariables for TriplePattern {
     fn variables(&self) -> Vec<String> {
-        var_util::merge_variables(&[&self.subject, &self.predicate, &self.object])
+        var_util::merge_variables(&[
+            self.subject.variable(),
+            self.predicate.variable(),
+            self.object.variable(),
+        ])
     }
 }
 
@@ -544,16 +576,16 @@ trait MaybeVariable {
 }
 
 mod var_util {
-    use crate::msg::MaybeVariable;
     use std::collections::HashSet;
 
-    pub fn merge_variables(maybe_vars: &[impl MaybeVariable]) -> Vec<String> {
+    pub fn merge_variables(maybe_vars: &[Option<&str>]) -> Vec<String> {
         maybe_vars
             .iter()
-            .map(MaybeVariable::variable)
+            .copied()
             .filter_map(|maybe_var| maybe_var)
             .collect::<HashSet<_>>()
             .into_iter()
+            .map(str::to_string)
             .collect()
     }
 }
@@ -689,6 +721,7 @@ pub enum Node {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::msg::Literal::Simple;
     use crate::msg::Node::{BlankNode, NamedNode};
     use crate::msg::IRI::{Full, Prefixed};
@@ -744,7 +777,7 @@ mod tests {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNode::Variable(p.clone()),
+                    predicate: VarOrNamedNode::Variable(p.clone()),
                     object: VarOrNodeOrLiteral::Variable(o.clone()),
                 },
                 vec![s.clone(), p.clone(), o.clone()],
@@ -752,7 +785,7 @@ mod tests {
             (
                 TriplePattern {
                     subject: VarOrNode::Node(NamedNode(Full(node.clone()))),
-                    predicate: VarOrNode::Variable(p.clone()),
+                    predicate: VarOrNamedNode::Variable(p.clone()),
                     object: VarOrNodeOrLiteral::Variable(o.clone()),
                 },
                 vec![p.clone(), o.clone()],
@@ -760,7 +793,7 @@ mod tests {
             (
                 TriplePattern {
                     subject: VarOrNode::Node(NamedNode(Prefixed(prefixed.clone()))),
-                    predicate: VarOrNode::Variable(p.clone()),
+                    predicate: VarOrNamedNode::Variable(p.clone()),
                     object: VarOrNodeOrLiteral::Variable(o.clone()),
                 },
                 vec![p.clone(), o.clone()],
@@ -768,7 +801,7 @@ mod tests {
             (
                 TriplePattern {
                     subject: VarOrNode::Node(BlankNode(node.clone())),
-                    predicate: VarOrNode::Variable(p.clone()),
+                    predicate: VarOrNamedNode::Variable(p.clone()),
                     object: VarOrNodeOrLiteral::Variable(o.clone()),
                 },
                 vec![p.clone(), o.clone()],
@@ -776,7 +809,7 @@ mod tests {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNode::Node(NamedNode(Full(node.clone()))),
+                    predicate: VarOrNamedNode::NamedNode(Full(node.clone())),
                     object: VarOrNodeOrLiteral::Variable(o.clone()),
                 },
                 vec![s.clone(), o],
@@ -784,7 +817,7 @@ mod tests {
             (
                 TriplePattern {
                     subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNode::Variable(p.clone()),
+                    predicate: VarOrNamedNode::Variable(p.clone()),
                     object: VarOrNodeOrLiteral::Literal(Simple(literal.clone())),
                 },
                 vec![s, p],
@@ -792,7 +825,7 @@ mod tests {
             (
                 TriplePattern {
                     subject: VarOrNode::Node(BlankNode(node)),
-                    predicate: VarOrNode::Node(NamedNode(Prefixed(prefixed))),
+                    predicate: VarOrNamedNode::NamedNode(Prefixed(prefixed)),
                     object: VarOrNodeOrLiteral::Literal(Simple(literal)),
                 },
                 vec![],

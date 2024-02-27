@@ -20,20 +20,15 @@ impl TryFrom<(msg::Node, &HashMap<String, String>)> for Subject {
     }
 }
 
-impl TryFrom<(msg::Node, &HashMap<String, String>)> for Property {
+impl TryFrom<(msg::IRI, &HashMap<String, String>)> for Property {
     type Error = StdError;
 
     fn try_from(
-        (node, prefixes): (msg::Node, &HashMap<String, String>),
+        (iri, prefixes): (msg::IRI, &HashMap<String, String>),
     ) -> Result<Self, Self::Error> {
-        match node {
-            msg::Node::NamedNode(msg::IRI::Full(uri)) => Ok(Property(uri)),
-            msg::Node::NamedNode(msg::IRI::Prefixed(curie)) => {
-                Ok(Property(expand_uri(&curie, prefixes)?))
-            }
-            _ => Err(StdError::generic_err(format!(
-                "Unsupported predicate node: {node:?}. Expected URI"
-            ))),
+        match iri {
+            msg::IRI::Full(uri) => Ok(Property(uri)),
+            msg::IRI::Prefixed(curie) => Ok(Property(expand_uri(&curie, prefixes)?)),
         }
     }
 }

@@ -1,4 +1,7 @@
-use crate::msg::{Node, SelectItem, TriplePattern, VarOrNode, VarOrNodeOrLiteral};
+use crate::msg::{
+    Node, SelectItem, TriplePattern, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode,
+    VarOrNodeOrLiteral,
+};
 use crate::querier::mapper::{iri_as_node, literal_as_object, node_as_predicate};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
@@ -440,13 +443,13 @@ impl<'a> SolutionsIterator<'a> {
         self,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
-        patterns: Vec<TriplePattern>,
+        templates: Vec<(VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral)>,
         ns_cache: Vec<Namespace>,
     ) -> StdResult<Vec<Triple>> {
         let mut ns_resolver = ns_cache.into();
 
         let triples_iter =
-            ResolvedTripleIterator::try_new(&mut ns_resolver, storage, self, prefixes, patterns)?;
+            ResolvedTripleIterator::try_new(&mut ns_resolver, storage, self, prefixes, templates)?;
         triples_iter.collect()
     }
 
@@ -504,13 +507,13 @@ impl<'a> ResolvedTripleIterator<'a> {
         storage: &dyn Storage,
         solutions: SolutionsIterator<'a>,
         prefixes: &HashMap<String, String>,
-        patterns: Vec<TriplePattern>,
+        templates: Vec<(VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral)>,
     ) -> StdResult<Self> {
         Ok(Self {
             iter: solutions,
-            templates: patterns
-                .iter()
-                .map(|p| TripleTemplate::try_new(ns_resolver, storage, prefixes, p))
+            templates: templates
+                .into_iter()
+                .map(|t| TripleTemplate::try_new(ns_resolver, storage, prefixes, t))
                 .collect::<StdResult<Vec<TripleTemplate>>>()?,
             buffer: VecDeque::new(),
         })
@@ -564,27 +567,12 @@ impl TripleTemplate {
         ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
-        pattern: &TriplePattern,
+        (s_tpl, p_tpl, o_tpl): (VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral),
     ) -> StdResult<TripleTemplate> {
         Ok(TripleTemplate {
-            subject: Self::build_subject_template(
-                ns_resolver,
-                storage,
-                prefixes,
-                pattern.subject.clone(),
-            )?,
-            predicate: Self::build_predicate_template(
-                ns_resolver,
-                storage,
-                prefixes,
-                pattern.predicate.clone(),
-            )?,
-            object: Self::build_object_template(
-                ns_resolver,
-                storage,
-                prefixes,
-                pattern.object.clone(),
-            )?,
+            subject: Self::build_subject_template(ns_resolver, storage, prefixes, s_tpl)?,
+            predicate: Self::build_predicate_template(ns_resolver, storage, prefixes, p_tpl)?,
+            object: Self::build_object_template(ns_resolver, storage, prefixes, o_tpl)?,
         })
     }
 
@@ -648,12 +636,11 @@ impl TripleTemplate {
         ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
-        value: VarOrNode,
+        value: VarOrNamedNode,
     ) -> StdResult<Either<Subject, String>> {
         Ok(match value {
-            VarOrNode::Variable(v) => Right(v),
-            VarOrNode::Node(Node::BlankNode(b)) => Right(b),
-            VarOrNode::Node(Node::NamedNode(iri)) => Left(Subject::Named(iri_as_node(
+            VarOrNamedNode::Variable(v) => Right(v),
+            VarOrNamedNode::NamedNode(iri) => Left(Subject::Named(iri_as_node(
                 ns_resolver,
                 storage,
                 prefixes,
@@ -666,11 +653,13 @@ impl TripleTemplate {
         ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
-        value: VarOrNode,
+        value: VarOrNamedNode,
     ) -> StdResult<Either<Predicate, String>> {
         Ok(match value {
-            VarOrNode::Variable(v) => Right(v),
-            VarOrNode::Node(n) => Left(node_as_predicate(ns_resolver, storage, prefixes, n)?),
+            VarOrNamedNode::Variable(v) => Right(v),
+            VarOrNamedNode::NamedNode(iri) => {
+                Left(iri_as_node(ns_resolver, storage, prefixes, iri)?)
+            }
         })
     }
 
@@ -678,18 +667,17 @@ impl TripleTemplate {
         ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
         prefixes: &HashMap<String, String>,
-        value: VarOrNodeOrLiteral,
+        value: VarOrNamedNodeOrLiteral,
     ) -> StdResult<Either<Object, String>> {
         Ok(match value {
-            VarOrNodeOrLiteral::Variable(v) => Right(v),
-            VarOrNodeOrLiteral::Node(Node::BlankNode(b)) => Right(b),
-            VarOrNodeOrLiteral::Node(Node::NamedNode(iri)) => Left(Object::Named(iri_as_node(
+            VarOrNamedNodeOrLiteral::Variable(v) => Right(v),
+            VarOrNamedNodeOrLiteral::NamedNode(iri) => Left(Object::Named(iri_as_node(
                 ns_resolver,
                 storage,
                 prefixes,
                 iri,
             )?)),
-            VarOrNodeOrLiteral::Literal(l) => {
+            VarOrNamedNodeOrLiteral::Literal(l) => {
                 Left(literal_as_object(ns_resolver, storage, prefixes, l)?)
             }
         })

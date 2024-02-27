@@ -50,7 +50,9 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::msg::{DataFormat, Prefix, TriplePattern, WhereClause};
+    use crate::msg::{
+        DataFormat, HasVariables, Prefix, TripleDeleteTemplate, TriplePattern, WhereClause,
+    };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::PrefixMap;
     use crate::state::HasCachedNamespaces;
@@ -88,28 +90,31 @@ pub mod execute {
         deps: DepsMut<'_>,
         info: MessageInfo,
         prefixes: Vec<Prefix>,
-        delete: Vec<TriplePattern>,
+        delete: Vec<TripleDeleteTemplate>,
         r#where: WhereClause,
     ) -> Result<Response, ContractError> {
         verify_owner(&deps, &info)?;
 
-        let patterns: Vec<TriplePattern> = if delete.is_empty() {
-            util::as_triple_patterns(&r#where)?
-        } else {
-            delete
-        };
+        if delete.is_empty() {
+            return Ok(Response::new()
+                .add_attribute("action", "delete")
+                .add_attribute("triple_count", 0));
+        }
 
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
 
         let triples = QueryEngine::new(deps.storage)
-            .select(plan, util::as_select_variables(&patterns))?
+            .select(plan, delete.as_select_item())?
             .solutions
             .resolve_triples(
                 deps.storage,
                 &prefix_map,
-                patterns,
+                delete
+                    .into_iter()
+                    .map(|t| (t.subject, t.predicate, t.object))
+                    .collect(),
                 plan_builder.cached_namespaces(),
             )?;
 
@@ -141,9 +146,9 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub mod query {
     use super::*;
     use crate::msg::{
-        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectQuery,
-        SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern, VarOrNamedNode,
-        VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, HasVariables, Node,
+        SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TriplePattern,
+        VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::PrefixMap;
@@ -277,7 +282,7 @@ pub mod query {
         let plan = plan_builder.build_plan(&r#where)?;
 
         let atoms = QueryEngine::new(deps.storage)
-            .select(plan, util::as_select_variables(&patterns))
+            .select(plan, patterns.as_select_item())
             .and_then(|res| {
                 res.solutions.resolve_atoms(
                     deps.storage,
@@ -313,34 +318,11 @@ pub mod query {
 
 pub mod util {
     use super::*;
-    use crate::msg::{
-        Head, Results, SelectItem, SelectResponse, SimpleWhereCondition, TriplePattern, Value,
-        WhereCondition,
-    };
+    use crate::msg::{Head, Results, SelectResponse, Value};
     use crate::querier::SelectResults;
     use crate::state::{Namespace, NamespaceResolver};
     use okp4_rdf::normalize::IdentifierIssuer;
-    use std::collections::{BTreeMap, HashSet};
-
-    pub fn as_select_variables(patterns: &[TriplePattern]) -> Vec<SelectItem> {
-        let variables = patterns
-            .iter()
-            .flat_map(TriplePattern::variables)
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .map(SelectItem::Variable)
-            .collect();
-        variables
-    }
-
-    pub fn as_triple_patterns(r#where: &[WhereCondition]) -> StdResult<Vec<TriplePattern>> {
-        r#where
-            .iter()
-            .map(|c| match c {
-                WhereCondition::Simple(SimpleWhereCondition::TriplePattern(tp)) => Ok(tp.clone()),
-            })
-            .collect::<StdResult<_>>()
-    }
+    use std::collections::BTreeMap;
 
     pub fn map_select_solutions(
         deps: Deps<'_>,

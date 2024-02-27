@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
 use derive_builder::Builder;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 /// Instantiate message
 #[cw_serde]
@@ -67,9 +67,8 @@ pub enum ExecuteMsg {
     DeleteData {
         /// The prefixes used in the operation.
         prefixes: Vec<Prefix>,
-        /// Specifies the specific triple patterns to delete.
-        /// If nothing is provided, the patterns from the `where` clause are used for deletion.
-        delete: Vec<TriplePattern>,
+        /// Specifies the specific triple templates to delete.
+        delete: Vec<TripleDeleteTemplate>,
         /// Defines the patterns that data (RDF triples) should match in order for it to be
         /// considered for deletion.
         r#where: WhereClause,
@@ -484,6 +483,44 @@ pub enum SimpleWhereCondition {
     TriplePattern(TriplePattern),
 }
 
+pub trait HasVariables {
+    /// Returns the set of variables used in a triple pattern or template.
+    fn variables(&self) -> Vec<String>;
+
+    /// Returns the set of variables used in a triple pattern or template as [SelectItem].
+    fn as_select_item(&self) -> Vec<SelectItem> {
+        self.variables().iter().map(SelectItem::Variable).collect()
+    }
+}
+
+impl<T: HasVariables> HasVariables for Vec<T> {
+    fn variables(&self) -> Vec<String> {
+        self.iter()
+            .flat_map(|t| t.variables())
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+/// # TripleDeleteTemplate
+/// Represents a triple template to be deleted.
+#[cw_serde]
+pub struct TripleDeleteTemplate {
+    /// The subject of the triple pattern.
+    pub subject: VarOrNamedNode,
+    /// The predicate of the triple pattern.
+    pub predicate: VarOrNamedNode,
+    /// The object of the triple pattern.
+    pub object: VarOrNamedNodeOrLiteral,
+}
+
+impl HasVariables for TripleDeleteTemplate {
+    fn variables(&self) -> Vec<String> {
+        var_util::merge_variables(&[&self.subject, &self.predicate, &self.object])
+    }
+}
+
 /// # TriplePattern
 /// Represents a triple pattern in a [SimpleWhereCondition].
 #[cw_serde]
@@ -496,24 +533,28 @@ pub struct TriplePattern {
     pub object: VarOrNodeOrLiteral,
 }
 
-impl TriplePattern {
-    /// Returns the variables used in the triple pattern.
-    pub fn variables(&self) -> Vec<String> {
-        let mut variables: Vec<String> = vec![];
+impl HasVariables for TriplePattern {
+    fn variables(&self) -> Vec<String> {
+        var_util::merge_variables(&[&self.subject, &self.predicate, &self.object])
+    }
+}
 
-        if let VarOrNode::Variable(var) = &self.subject {
-            variables.push(var.clone());
-        }
+trait MaybeVariable {
+    fn variable(&self) -> Option<&str>;
+}
 
-        if let VarOrNode::Variable(var) = &self.predicate {
-            variables.push(var.clone());
-        }
+mod var_util {
+    use crate::msg::MaybeVariable;
+    use std::collections::HashSet;
 
-        if let VarOrNodeOrLiteral::Variable(var) = &self.object {
-            variables.push(var.clone());
-        }
-
-        variables
+    pub fn merge_variables(maybe_vars: &[impl MaybeVariable]) -> Vec<String> {
+        maybe_vars
+            .iter()
+            .map(MaybeVariable::variable)
+            .filter_map(|maybe_var| maybe_var)
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect()
     }
 }
 
@@ -529,6 +570,15 @@ pub enum VarOrNode {
     Node(Node),
 }
 
+impl MaybeVariable for VarOrNode {
+    fn variable(&self) -> Option<&str> {
+        match self {
+            Self::Variable(v) => Some(v.as_str()),
+            _ => None,
+        }
+    }
+}
+
 /// # VarOrNamedNode {
 /// Represents either a variable or a named node (IRI).
 #[cw_serde]
@@ -539,6 +589,15 @@ pub enum VarOrNamedNode {
     /// # NamedNode
     /// An RDF [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri).
     NamedNode(IRI),
+}
+
+impl MaybeVariable for VarOrNamedNode {
+    fn variable(&self) -> Option<&str> {
+        match self {
+            Self::Variable(v) => Some(v.as_str()),
+            _ => None,
+        }
+    }
 }
 
 /// # VarOrNodeOrLiteral
@@ -555,6 +614,40 @@ pub enum VarOrNodeOrLiteral {
     /// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal), i.e. a simple literal,
     /// a language-tagged string or a typed value.
     Literal(Literal),
+}
+
+impl MaybeVariable for VarOrNodeOrLiteral {
+    fn variable(&self) -> Option<&str> {
+        match self {
+            Self::Variable(v) => Some(v.as_str()),
+            _ => None,
+        }
+    }
+}
+
+/// # VarOrNamedNodeOrLiteral
+/// Represents either a variable, a named node or a literal.
+#[cw_serde]
+pub enum VarOrNamedNodeOrLiteral {
+    /// # Variable
+    /// A variable.
+    Variable(String),
+    /// # NamedNode
+    /// An RDF [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri).
+    NamedNode(IRI),
+    /// # Literal
+    /// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal), i.e. a simple literal,
+    /// a language-tagged string or a typed value.
+    Literal(Literal),
+}
+
+impl MaybeVariable for VarOrNamedNodeOrLiteral {
+    fn variable(&self) -> Option<&str> {
+        match self {
+            Self::Variable(v) => Some(v.as_str()),
+            _ => None,
+        }
+    }
 }
 
 /// # Literal
@@ -600,7 +693,8 @@ mod tests {
     use crate::msg::Node::{BlankNode, NamedNode};
     use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
-        InstantiateMsg, StoreLimitsInput, TriplePattern, VarOrNode, VarOrNodeOrLiteral,
+        HasVariables, InstantiateMsg, StoreLimitsInput, TriplePattern, VarOrNode,
+        VarOrNodeOrLiteral,
     };
     use cosmwasm_std::Uint128;
     use schemars::_serde_json;

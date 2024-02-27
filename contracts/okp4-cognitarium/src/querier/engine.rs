@@ -355,10 +355,14 @@ impl<'a> TriplePatternIterator<'a> {
     )> {
         let (s_filter, sb_filter, s_bind) =
             Self::resolve_pattern_part(subject, ResolvedVariable::as_subject, input)?;
-        let (p_filter, _, p_bind) =
+        let (p_filter, pb_filter, p_bind) =
             Self::resolve_pattern_part(predicate, ResolvedVariable::as_predicate, input)?;
         let (o_filter, ob_filter, o_bind) =
             Self::resolve_pattern_part(object, ResolvedVariable::as_object, input)?;
+
+        if pb_filter {
+            None?;
+        }
 
         Some((
             (s_filter, p_filter, o_filter),

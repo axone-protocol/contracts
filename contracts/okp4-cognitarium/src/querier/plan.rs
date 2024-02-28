@@ -22,18 +22,16 @@ pub enum PlanVariable {
 impl QueryPlan {
     /// Resolve the index corresponding to the variable name, if not attached to a blank node.
     pub fn get_var_index(&self, var_name: &str) -> Option<usize> {
-        self.variables
-            .iter()
-            .enumerate()
-            .find_map(|(index, it)| match it {
-                PlanVariable::Basic(name) => {
-                    if name == var_name {
-                        return Some(index);
-                    }
-                    None
-                }
-                PlanVariable::BlankNode(_) => None,
-            })
+        self.variables.iter().enumerate().find_map(|(index, it)| {
+            matches!(it, PlanVariable::Basic(name) if name == var_name).then_some(index)
+        })
+    }
+
+    /// Resolve the index corresponding to blank node name.
+    pub fn get_bnode_index(&self, bnode_name: &str) -> Option<usize> {
+        self.variables.iter().enumerate().find_map(|(index, it)| {
+            matches!(it, PlanVariable::BlankNode(name) if name == bnode_name).then_some(index)
+        })
     }
 }
 

@@ -68,6 +68,7 @@ pub enum ExecuteMsg {
         /// The prefixes used in the operation.
         prefixes: Vec<Prefix>,
         /// Specifies the specific triple templates to delete.
+        /// If nothing is provided, the patterns from the `where` clause are used for deletion.
         delete: Vec<TripleDeleteTemplate>,
         /// Defines the patterns that data (RDF triples) should match in order for it to be
         /// considered for deletion.
@@ -434,6 +435,7 @@ pub struct ConstructQuery {
     /// The prefixes used in the query.
     pub prefixes: Vec<Prefix>,
     /// The triples to construct.
+    /// If nothing is provided, the patterns from the `where` clause are used for construction.
     pub construct: Vec<TripleConstructTemplate>,
     /// The WHERE clause.
     /// This clause is used to specify the triples to construct using variable bindings.

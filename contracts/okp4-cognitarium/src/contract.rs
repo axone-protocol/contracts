@@ -50,12 +50,13 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::msg::{DataFormat, HasVariables, Prefix, TripleDeleteTemplate, WhereClause};
+    use crate::msg::{DataFormat, Prefix, TripleDeleteTemplate, WhereClause};
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::PrefixMap;
-    use crate::state::HasCachedNamespaces;
+    use crate::state::{HasCachedNamespaces, Triple};
     use crate::storer::StoreEngine;
     use cosmwasm_std::Uint128;
+    use either::{Left, Right};
     use okp4_rdf::serde::TripleReader;
     use std::io::BufReader;
 
@@ -105,17 +106,18 @@ pub mod execute {
         let plan = plan_builder.build_plan(&r#where)?;
 
         let triples = QueryEngine::new(deps.storage)
-            .select(plan, delete.as_select_item())?
-            .solutions
-            .resolve_triples(
-                deps.storage,
+            .construct_triples(
+                plan,
                 &prefix_map,
-                delete
-                    .into_iter()
-                    .map(|t| (t.subject, t.predicate, t.object))
-                    .collect(),
+                Right(
+                    delete
+                        .into_iter()
+                        .map(|t| (t.subject, t.predicate, t.object))
+                        .collect(),
+                ),
                 plan_builder.cached_namespaces(),
-            )?;
+            )?
+            .collect::<StdResult<Vec<Triple>>>()?;
 
         let mut store = StoreEngine::new(deps.storage)?;
         let count = store.delete_all(&triples)?;

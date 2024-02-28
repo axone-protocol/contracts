@@ -1,5 +1,5 @@
 use crate::msg::{
-    SelectItem, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode, VarOrNodeOrLiteral,
+    Node, SelectItem, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode, VarOrNodeOrLiteral,
 };
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
@@ -73,6 +73,48 @@ impl<'a> QueryEngine<'a> {
             self.eval_plan(plan),
             templates,
         )
+    }
+
+    pub fn construct_triples(
+        &'a self,
+        plan: QueryPlan,
+        prefixes: &HashMap<String, String>,
+        templates: Either<
+            Vec<(VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral)>,
+            Vec<(VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral)>,
+        >,
+        ns_cache: Vec<Namespace>,
+    ) -> StdResult<ResolvedTripleIterator<'_>> {
+        let mut ns_resolver: NamespaceResolver = ns_cache.into();
+
+        let templates = match templates {
+            Left(tpl) => tpl
+                .into_iter()
+                .map(|t| {
+                    TripleTemplate::try_new(
+                        self.storage,
+                        &mut ns_resolver,
+                        &plan,
+                        prefixes,
+                        Left(t),
+                    )
+                })
+                .collect::<StdResult<Vec<TripleTemplate>>>(),
+            Right(tpl) => tpl
+                .into_iter()
+                .map(|t| {
+                    TripleTemplate::try_new(
+                        self.storage,
+                        &mut ns_resolver,
+                        &plan,
+                        prefixes,
+                        Right(t),
+                    )
+                })
+                .collect::<StdResult<Vec<TripleTemplate>>>(),
+        }?;
+
+        ResolvedTripleIterator::try_new(self.eval_plan(plan), templates)
     }
 
     pub fn eval_plan(&'a self, plan: QueryPlan) -> ResolvedVariablesIterator<'_> {
@@ -458,20 +500,6 @@ impl<'a> SolutionsIterator<'a> {
     fn new(iter: ResolvedVariablesIterator<'a>, bindings: BTreeMap<String, usize>) -> Self {
         Self { iter, bindings }
     }
-
-    pub fn resolve_triples(
-        self,
-        storage: &dyn Storage,
-        prefixes: &HashMap<String, String>,
-        templates: Vec<(VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral)>,
-        ns_cache: Vec<Namespace>,
-    ) -> StdResult<Vec<Triple>> {
-        let mut ns_resolver = ns_cache.into();
-
-        let triples_iter =
-            ResolvedTripleIterator::try_new(&mut ns_resolver, storage, self, prefixes, templates)?;
-        triples_iter.collect()
-    }
 }
 
 impl<'a> Iterator for SolutionsIterator<'a> {
@@ -502,25 +530,19 @@ impl<'a> Iterator for SolutionsIterator<'a> {
 }
 
 pub struct ResolvedTripleIterator<'a> {
-    iter: SolutionsIterator<'a>,
+    upstream_iter: ResolvedVariablesIterator<'a>,
     templates: Vec<TripleTemplate>,
     buffer: VecDeque<StdResult<Triple>>,
 }
 
 impl<'a> ResolvedTripleIterator<'a> {
     pub fn try_new(
-        ns_resolver: &mut NamespaceResolver,
-        storage: &dyn Storage,
-        solutions: SolutionsIterator<'a>,
-        prefixes: &HashMap<String, String>,
-        templates: Vec<(VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral)>,
+        upstream_iter: ResolvedVariablesIterator<'a>,
+        templates: Vec<TripleTemplate>,
     ) -> StdResult<Self> {
         Ok(Self {
-            iter: solutions,
-            templates: templates
-                .into_iter()
-                .map(|t| TripleTemplate::try_new(ns_resolver, storage, prefixes, t))
-                .collect::<StdResult<Vec<TripleTemplate>>>()?,
+            upstream_iter,
+            templates,
             buffer: VecDeque::new(),
         })
     }
@@ -535,7 +557,7 @@ impl<'a> Iterator for ResolvedTripleIterator<'a> {
                 return Some(val);
             }
 
-            let upstream_res = match self.iter.next() {
+            let upstream_res = match self.upstream_iter.next() {
                 None => None?,
                 Some(res) => res,
             };
@@ -562,27 +584,36 @@ impl<'a> Iterator for ResolvedTripleIterator<'a> {
     }
 }
 
-struct TripleTemplate {
-    subject: Either<Subject, String>,
-    predicate: Either<Predicate, String>,
-    object: Either<Object, String>,
+pub struct TripleTemplate {
+    subject: Either<Subject, usize>,
+    predicate: Either<Predicate, usize>,
+    object: Either<Object, usize>,
 }
 
 impl TripleTemplate {
     fn try_new(
-        ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
+        ns_resolver: &mut NamespaceResolver,
+        plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
-        (s_tpl, p_tpl, o_tpl): (VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral),
+        template: Either<
+            (VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral),
+            (VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral),
+        >,
     ) -> StdResult<TripleTemplate> {
+        let (s_tpl, p_tpl, o_tpl) = match template {
+            Right((s, p, o)) => (Right(s), p, Right(o)),
+            Left((s, p, o)) => (Left(s), p, Left(o)),
+        };
+
         Ok(TripleTemplate {
-            subject: Self::build_subject_template(ns_resolver, storage, prefixes, s_tpl)?,
-            predicate: Self::build_predicate_template(ns_resolver, storage, prefixes, p_tpl)?,
-            object: Self::build_object_template(ns_resolver, storage, prefixes, o_tpl)?,
+            subject: Self::build_subject_template(storage, ns_resolver, plan, prefixes, s_tpl)?,
+            predicate: Self::build_predicate_template(storage, ns_resolver, plan, prefixes, p_tpl)?,
+            object: Self::build_object_template(storage, ns_resolver, plan, prefixes, o_tpl)?,
         })
     }
 
-    pub fn resolve(&self, vars: &BTreeMap<String, ResolvedVariable>) -> StdResult<Option<Triple>> {
+    pub fn resolve(&self, vars: &ResolvedVariables) -> StdResult<Option<Triple>> {
         let subject = match Self::resolve_triple_term(
             &self.subject,
             ResolvedVariable::as_subject,
@@ -621,9 +652,9 @@ impl TripleTemplate {
     }
 
     fn resolve_triple_term<T, F>(
-        term: &Either<T, String>,
+        term: &Either<T, usize>,
         from_var: F,
-        vars: &BTreeMap<String, ResolvedVariable>,
+        vars: &ResolvedVariables,
         term_name: &str,
     ) -> StdResult<Option<T>>
     where
@@ -632,37 +663,53 @@ impl TripleTemplate {
     {
         match term {
             Left(p) => Ok(Some(p.clone())),
-            Right(key) => vars.get(key).map(from_var).ok_or_else(|| {
+            Right(key) => vars.get(*key).as_ref().map(from_var).ok_or_else(|| {
                 StdError::generic_err(format!("Unbound {:?} variable: {:?}", term_name, key))
             }),
         }
     }
 
     fn build_subject_template(
-        ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
+        ns_resolver: &mut NamespaceResolver,
+        plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
-        value: VarOrNamedNode,
-    ) -> StdResult<Either<Subject, String>> {
+        value: Either<VarOrNode, VarOrNamedNode>,
+    ) -> StdResult<Either<Subject, usize>> {
         Ok(match value {
-            VarOrNamedNode::Variable(v) => Right(v),
-            VarOrNamedNode::NamedNode(iri) => Left(Subject::Named(iri_as_node(
-                ns_resolver,
-                storage,
-                prefixes,
-                iri,
-            )?)),
+            Left(VarOrNode::Variable(v)) | Right(VarOrNamedNode::Variable(v)) => {
+                Right(plan.get_var_index(v.as_str()).ok_or(StdError::generic_err(
+                    "Selected variable not found in query",
+                ))?)
+            }
+            Left(VarOrNode::Node(Node::BlankNode(n))) => Right(
+                plan.get_bnode_index(n.as_str())
+                    .ok_or(StdError::generic_err(
+                        "Selected blank node not found in query",
+                    ))?,
+            ),
+            Left(VarOrNode::Node(Node::NamedNode(iri))) | Right(VarOrNamedNode::NamedNode(iri)) => {
+                Left(Subject::Named(iri_as_node(
+                    ns_resolver,
+                    storage,
+                    prefixes,
+                    iri,
+                )?))
+            }
         })
     }
 
     fn build_predicate_template(
-        ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
+        ns_resolver: &mut NamespaceResolver,
+        plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
         value: VarOrNamedNode,
-    ) -> StdResult<Either<Predicate, String>> {
+    ) -> StdResult<Either<Predicate, usize>> {
         Ok(match value {
-            VarOrNamedNode::Variable(v) => Right(v),
+            VarOrNamedNode::Variable(v) => Right(plan.get_var_index(v.as_str()).ok_or(
+                StdError::generic_err("Selected variable not found in query"),
+            )?),
             VarOrNamedNode::NamedNode(iri) => {
                 Left(iri_as_node(ns_resolver, storage, prefixes, iri)?)
             }
@@ -670,20 +717,32 @@ impl TripleTemplate {
     }
 
     fn build_object_template(
-        ns_resolver: &mut NamespaceResolver,
         storage: &dyn Storage,
+        ns_resolver: &mut NamespaceResolver,
+        plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
-        value: VarOrNamedNodeOrLiteral,
-    ) -> StdResult<Either<Object, String>> {
+        value: Either<VarOrNodeOrLiteral, VarOrNamedNodeOrLiteral>,
+    ) -> StdResult<Either<Object, usize>> {
         Ok(match value {
-            VarOrNamedNodeOrLiteral::Variable(v) => Right(v),
-            VarOrNamedNodeOrLiteral::NamedNode(iri) => Left(Object::Named(iri_as_node(
+            Left(VarOrNodeOrLiteral::Variable(v)) | Right(VarOrNamedNodeOrLiteral::Variable(v)) => {
+                Right(plan.get_var_index(v.as_str()).ok_or(StdError::generic_err(
+                    "Selected variable not found in query",
+                ))?)
+            }
+            Left(VarOrNodeOrLiteral::Node(Node::BlankNode(n))) => Right(
+                plan.get_bnode_index(n.as_str())
+                    .ok_or(StdError::generic_err(
+                        "Selected blank node not found in query",
+                    ))?,
+            ),
+            Left(VarOrNodeOrLiteral::Node(Node::NamedNode(iri)))
+            | Right(VarOrNamedNodeOrLiteral::NamedNode(iri)) => Left(Object::Named(iri_as_node(
                 ns_resolver,
                 storage,
                 prefixes,
                 iri,
             )?)),
-            VarOrNamedNodeOrLiteral::Literal(l) => {
+            Left(VarOrNodeOrLiteral::Literal(l)) | Right(VarOrNamedNodeOrLiteral::Literal(l)) => {
                 Left(literal_as_object(ns_resolver, storage, prefixes, l)?)
             }
         })

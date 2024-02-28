@@ -145,12 +145,12 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub mod query {
     use super::*;
     use crate::msg::{
-        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, HasVariables, Node,
-        SelectQuery, SelectResponse, SimpleWhereCondition, StoreResponse, TripleConstructTemplate,
+        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectQuery,
+        SelectResponse, SimpleWhereCondition, StoreResponse, TripleConstructTemplate,
         TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::PrefixMap;
+    use crate::rdf::{Atom, PrefixMap};
     use crate::state::HasCachedNamespaces;
     use okp4_rdf::normalize::IdentifierIssuer;
     use okp4_rdf::serde::TripleWriter;
@@ -228,18 +228,16 @@ pub mod query {
         let plan = plan_builder.build_plan(&r#where)?;
 
         let atoms = QueryEngine::new(deps.storage)
-            .select(plan, select.as_select_item())
-            .and_then(|res| {
-                res.solutions.resolve_atoms(
-                    deps.storage,
-                    &prefix_map,
-                    select
-                        .into_iter()
-                        .map(|p| (p.subject, p.predicate, p.object))
-                        .collect(),
-                    plan_builder.cached_namespaces(),
-                )
-            })?;
+            .construct_atoms(
+                plan,
+                &prefix_map,
+                select
+                    .into_iter()
+                    .map(|t| (t.subject, t.predicate, t.object))
+                    .collect(),
+                plan_builder.cached_namespaces(),
+            )?
+            .collect::<StdResult<Vec<Atom>>>()?;
 
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&(&format).into(), out);
@@ -317,18 +315,16 @@ pub mod query {
         let plan = plan_builder.build_plan(&r#where)?;
 
         let atoms = QueryEngine::new(deps.storage)
-            .select(plan, construct.as_select_item())
-            .and_then(|res| {
-                res.solutions.resolve_atoms(
-                    deps.storage,
-                    &prefix_map,
-                    construct
-                        .into_iter()
-                        .map(|t| (t.subject, t.predicate, t.object))
-                        .collect(),
-                    plan_builder.cached_namespaces(),
-                )
-            })?;
+            .construct_atoms(
+                plan,
+                &prefix_map,
+                construct
+                    .into_iter()
+                    .map(|t| (t.subject, t.predicate, t.object))
+                    .collect(),
+                plan_builder.cached_namespaces(),
+            )?
+            .collect::<StdResult<Vec<Atom>>>()?;
 
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&(&format).into(), out);

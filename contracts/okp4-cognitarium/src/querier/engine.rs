@@ -66,31 +66,28 @@ impl<'a> QueryEngine<'a> {
             .map(|t| AtomTemplate::try_new(&plan, prefixes, t))
             .collect::<StdResult<Vec<AtomTemplate>>>()?;
 
-        ResolvedAtomIterator::try_new(
+        Ok(ResolvedAtomIterator::new(
             self.storage,
             ns_cache.into(),
             IdentifierIssuer::new("b", 0u128),
             self.eval_plan(plan),
             templates,
-        )
+        ))
     }
 
     pub fn construct_triples(
         &'a self,
         plan: QueryPlan,
         templates: Vec<TripleTemplate>,
-    ) -> StdResult<ResolvedTripleIterator<'_>> {
-        ResolvedTripleIterator::try_new(self.eval_plan(plan), templates)
+    ) -> ResolvedTripleIterator<'_> {
+        ResolvedTripleIterator::new(self.eval_plan(plan), templates)
     }
 
     pub fn make_triple_templates(
         &'a self,
         plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
-        templates: Either<
-            Vec<(VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral)>,
-            Vec<(VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral)>,
-        >,
+        templates: Either<Vec<TripleTemplateWithBlankNode>, Vec<TripleTemplateNoBlankNode>>,
         ns_cache: Vec<Namespace>,
     ) -> StdResult<Vec<TripleTemplate>> {
         let mut ns_resolver: NamespaceResolver = ns_cache.into();
@@ -536,15 +533,15 @@ pub struct ResolvedTripleIterator<'a> {
 }
 
 impl<'a> ResolvedTripleIterator<'a> {
-    pub fn try_new(
+    pub fn new(
         upstream_iter: ResolvedVariablesIterator<'a>,
         templates: Vec<TripleTemplate>,
-    ) -> StdResult<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             upstream_iter,
             templates,
             buffer: VecDeque::new(),
-        })
+        }
     }
 }
 
@@ -590,16 +587,16 @@ pub struct TripleTemplate {
     object: Either<Object, usize>,
 }
 
+pub type TripleTemplateWithBlankNode = (VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral);
+pub type TripleTemplateNoBlankNode = (VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral);
+
 impl TripleTemplate {
     fn try_new(
         storage: &dyn Storage,
         ns_resolver: &mut NamespaceResolver,
         plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
-        template: Either<
-            (VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral),
-            (VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral),
-        >,
+        template: Either<TripleTemplateWithBlankNode, TripleTemplateNoBlankNode>,
     ) -> StdResult<TripleTemplate> {
         let (s_tpl, p_tpl, o_tpl) = match template {
             Right((s, p, o)) => (Right(s), p, Right(o)),
@@ -759,21 +756,21 @@ pub struct ResolvedAtomIterator<'a> {
 }
 
 impl<'a> ResolvedAtomIterator<'a> {
-    pub fn try_new(
+    pub fn new(
         storage: &'a dyn Storage,
         ns_resolver: NamespaceResolver,
         id_issuer: IdentifierIssuer,
         upstream_iter: ResolvedVariablesIterator<'a>,
         templates: Vec<AtomTemplate>,
-    ) -> StdResult<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             storage,
             ns_resolver,
             id_issuer,
             upstream_iter,
             templates,
             buffer: VecDeque::new(),
-        })
+        }
     }
 }
 

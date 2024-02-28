@@ -5,7 +5,7 @@ use crate::msg::{
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
 use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
-use cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_std::{StdResult, Storage};
 use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
@@ -480,7 +480,12 @@ mod test {
                 None,
                 None,
                 vec![],
-                Err(StdError::generic_err("Empty basic graph pattern")),
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::Noop {
+                        bound_variables: vec![],
+                    },
+                    variables: vec![],
+                }),
             ),
             (
                 None,

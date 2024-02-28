@@ -140,7 +140,7 @@ pub mod execute {
                 .collect::<StdResult<Vec<Triple>>>()?
         } else {
             query_engine
-                .construct_triples(plan, delete_templates)?
+                .construct_triples(plan, delete_templates)
                 .collect::<StdResult<Vec<Triple>>>()?
         };
 

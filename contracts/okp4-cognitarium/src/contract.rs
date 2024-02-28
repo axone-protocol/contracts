@@ -50,12 +50,13 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::msg::{DataFormat, Prefix, TripleDeleteTemplate, WhereClause};
+    use crate::msg::{
+        DataFormat, Prefix, SimpleWhereCondition, TripleDeleteTemplate, WhereClause, WhereCondition,
+    };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::PrefixMap;
     use crate::state::{HasCachedNamespaces, Triple};
     use crate::storer::StoreEngine;
-    use cosmwasm_std::Uint128;
     use either::{Left, Right};
     use okp4_rdf::serde::TripleReader;
     use std::io::BufReader;
@@ -95,28 +96,32 @@ pub mod execute {
     ) -> Result<Response, ContractError> {
         verify_owner(&deps, &info)?;
 
-        if delete.is_empty() {
-            return Ok(Response::new()
-                .add_attribute("action", "delete")
-                .add_attribute("triple_count", Uint128::from(0u128)));
-        }
+        let delete = if delete.is_empty() {
+            Left(
+                r#where
+                    .iter()
+                    .map(|c| match c {
+                        WhereCondition::Simple(SimpleWhereCondition::TriplePattern(t)) => {
+                            (t.subject.clone(), t.predicate.clone(), t.object.clone())
+                        }
+                    })
+                    .collect(),
+            )
+        } else {
+            Right(
+                delete
+                    .into_iter()
+                    .map(|t| (t.subject, t.predicate, t.object))
+                    .collect(),
+            )
+        };
 
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
 
         let triples = QueryEngine::new(deps.storage)
-            .construct_triples(
-                plan,
-                &prefix_map,
-                Right(
-                    delete
-                        .into_iter()
-                        .map(|t| (t.subject, t.predicate, t.object))
-                        .collect(),
-                ),
-                plan_builder.cached_namespaces(),
-            )?
+            .construct_triples(plan, &prefix_map, delete, plan_builder.cached_namespaces())?
             .collect::<StdResult<Vec<Triple>>>()?;
 
         let mut store = StoreEngine::new(deps.storage)?;
@@ -957,34 +962,34 @@ mod tests {
                 2,
                 Uint128::from(5272u128),
             ),
-            // (
-            //     DeleteData {
-            //         prefixes: vec![],
-            //         delete: vec![],
-            //         r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-            //             subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-            //             predicate: VarOrNamedNode::Variable("p".to_string()),
-            //             object: VarOrNodeOrLiteral::Variable("o".to_string()),
-            //         }))],
-            //     },
-            //     11,
-            //     2,
-            //     Uint128::from(5272u128),
-            // ),
-            // (
-            //     DeleteData {
-            //         prefixes: vec![],
-            //         delete: vec![],
-            //         r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-            //             subject: VarOrNode::Variable("s".to_string()),
-            //             predicate: VarOrNamedNode::Variable("p".to_string()),
-            //             object: VarOrNodeOrLiteral::Variable("0".to_string()),
-            //         }))],
-            //     },
-            //     40,
-            //     17,
-            //     Uint128::from(0u128),
-            // ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                        predicate: VarOrNamedNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                    }))],
+                },
+                11,
+                2,
+                Uint128::from(5272u128),
+            ),
+            (
+                DeleteData {
+                    prefixes: vec![],
+                    delete: vec![],
+                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        subject: VarOrNode::Variable("s".to_string()),
+                        predicate: VarOrNamedNode::Variable("p".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("0".to_string()),
+                    }))],
+                },
+                40,
+                17,
+                Uint128::from(0u128),
+            ),
         ];
 
         for case in cases {

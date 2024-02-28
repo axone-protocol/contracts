@@ -415,12 +415,12 @@ Example: `json { "prefixes": [ { "prefix": "foaf", "namespace": "http://xmlns.co
 
 Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform this action.
 
-| parameter              | description                                                                                                                                                                 |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `delete_data`          | _(Required.) _ **object**.                                                                                                                                                  |
-| `delete_data.delete`   | _(Required.) _ **Array&lt;[TripleDeleteTemplate](#tripledeletetemplate)&gt;**. Specifies the specific triple templates to delete.                                           |
-| `delete_data.prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the operation.                                                                                      |
-| `delete_data.where`    | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. Defines the patterns that data (RDF triples) should match in order for it to be considered for deletion. |
+| parameter              | description                                                                                                                                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delete_data`          | _(Required.) _ **object**.                                                                                                                                                                                            |
+| `delete_data.delete`   | _(Required.) _ **Array&lt;[TripleDeleteTemplate](#tripledeletetemplate)&gt;**. Specifies the specific triple templates to delete. If nothing is provided, the patterns from the `where` clause are used for deletion. |
+| `delete_data.prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the operation.                                                                                                                                |
+| `delete_data.where`    | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. Defines the patterns that data (RDF triples) should match in order for it to be considered for deletion.                                           |
 
 ## QueryMsg
 
@@ -536,11 +536,11 @@ An RDF [blank node](https://www.w3.org/TR/rdf11-concepts/#dfn-blank-node).
 
 Represents a CONSTRUCT query over the triple store, allowing to retrieve a set of triples serialized in a specific format.
 
-| property    | description                                                                                                                                                           |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `construct` | _(Required.) _ **Array&lt;[TripleConstructTemplate](#tripleconstructtemplate)&gt;**. The triples to construct.                                                        |
-| `prefixes`  | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                                    |
-| `where`     | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. The WHERE clause. This clause is used to specify the triples to construct using variable bindings. |
+| property    | description                                                                                                                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `construct` | _(Required.) _ **Array&lt;[TripleConstructTemplate](#tripleconstructtemplate)&gt;**. The triples to construct. If nothing is provided, the patterns from the `where` clause are used for construction. |
+| `prefixes`  | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                                                                     |
+| `where`     | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. The WHERE clause. This clause is used to specify the triples to construct using variable bindings.                                  |
 
 ### DataFormat
 
@@ -876,4 +876,4 @@ Represents a condition in a [WhereClause].
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-cognitarium.json` (`cd4c70c82335248d`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-cognitarium.json` (`7aa73b0502a6138b`)_

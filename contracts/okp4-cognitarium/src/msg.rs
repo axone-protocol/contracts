@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
 use derive_builder::Builder;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 
 /// Instantiate message
 #[cw_serde]
@@ -484,25 +484,6 @@ pub enum SimpleWhereCondition {
     TriplePattern(TriplePattern),
 }
 
-pub trait HasVariables {
-    /// Returns the set of variables used in a triple pattern or template.
-    fn variables(&self) -> HashSet<String>;
-
-    /// Returns the set of variables used in a triple pattern or template as [SelectItem].
-    fn as_select_item(&self) -> Vec<SelectItem> {
-        self.variables()
-            .into_iter()
-            .map(SelectItem::Variable)
-            .collect()
-    }
-}
-
-impl<T: HasVariables> HasVariables for Vec<T> {
-    fn variables(&self) -> HashSet<String> {
-        self.iter().flat_map(HasVariables::variables).collect()
-    }
-}
-
 /// # TripleDeleteTemplate
 /// Represents a triple template to be deleted.
 #[cw_serde]
@@ -513,16 +494,6 @@ pub struct TripleDeleteTemplate {
     pub predicate: VarOrNamedNode,
     /// The object of the triple pattern.
     pub object: VarOrNamedNodeOrLiteral,
-}
-
-impl HasVariables for TripleDeleteTemplate {
-    fn variables(&self) -> HashSet<String> {
-        var_util::merge_variables(&[
-            self.subject.variable(),
-            self.predicate.variable(),
-            self.object.variable(),
-        ])
-    }
 }
 
 /// # TripleConstructTemplate
@@ -537,16 +508,6 @@ pub struct TripleConstructTemplate {
     pub object: VarOrNodeOrLiteral,
 }
 
-impl HasVariables for TripleConstructTemplate {
-    fn variables(&self) -> HashSet<String> {
-        var_util::merge_variables(&[
-            self.subject.variable(),
-            self.predicate.variable(),
-            self.object.variable(),
-        ])
-    }
-}
-
 /// # TriplePattern
 /// Represents a triple pattern in a [SimpleWhereCondition].
 #[cw_serde]
@@ -557,33 +518,6 @@ pub struct TriplePattern {
     pub predicate: VarOrNamedNode,
     /// The object of the triple pattern.
     pub object: VarOrNodeOrLiteral,
-}
-
-impl HasVariables for TriplePattern {
-    fn variables(&self) -> HashSet<String> {
-        var_util::merge_variables(&[
-            self.subject.variable(),
-            self.predicate.variable(),
-            self.object.variable(),
-        ])
-    }
-}
-
-trait MaybeVariable {
-    fn variable(&self) -> Option<&str>;
-}
-
-mod var_util {
-    use std::collections::HashSet;
-
-    pub fn merge_variables(maybe_vars: &[Option<&str>]) -> HashSet<String> {
-        maybe_vars
-            .iter()
-            .copied()
-            .flatten()
-            .map(str::to_string)
-            .collect()
-    }
 }
 
 /// # VarOrNode
@@ -598,15 +532,6 @@ pub enum VarOrNode {
     Node(Node),
 }
 
-impl MaybeVariable for VarOrNode {
-    fn variable(&self) -> Option<&str> {
-        match self {
-            Self::Variable(v) => Some(v.as_str()),
-            _ => None,
-        }
-    }
-}
-
 /// # VarOrNamedNode {
 /// Represents either a variable or a named node (IRI).
 #[cw_serde]
@@ -617,15 +542,6 @@ pub enum VarOrNamedNode {
     /// # NamedNode
     /// An RDF [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri).
     NamedNode(IRI),
-}
-
-impl MaybeVariable for VarOrNamedNode {
-    fn variable(&self) -> Option<&str> {
-        match self {
-            Self::Variable(v) => Some(v.as_str()),
-            _ => None,
-        }
-    }
 }
 
 /// # VarOrNodeOrLiteral
@@ -644,15 +560,6 @@ pub enum VarOrNodeOrLiteral {
     Literal(Literal),
 }
 
-impl MaybeVariable for VarOrNodeOrLiteral {
-    fn variable(&self) -> Option<&str> {
-        match self {
-            Self::Variable(v) => Some(v.as_str()),
-            _ => None,
-        }
-    }
-}
-
 /// # VarOrNamedNodeOrLiteral
 /// Represents either a variable, a named node or a literal.
 #[cw_serde]
@@ -667,15 +574,6 @@ pub enum VarOrNamedNodeOrLiteral {
     /// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal), i.e. a simple literal,
     /// a language-tagged string or a typed value.
     Literal(Literal),
-}
-
-impl MaybeVariable for VarOrNamedNodeOrLiteral {
-    fn variable(&self) -> Option<&str> {
-        match self {
-            Self::Variable(v) => Some(v.as_str()),
-            _ => None,
-        }
-    }
 }
 
 /// # Literal
@@ -717,14 +615,7 @@ pub enum Node {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::msg::Literal::Simple;
-    use crate::msg::Node::{BlankNode, NamedNode};
-    use crate::msg::IRI::{Full, Prefixed};
-    use crate::msg::{
-        HasVariables, InstantiateMsg, StoreLimitsInput, TriplePattern, VarOrNode,
-        VarOrNodeOrLiteral,
-    };
+    use crate::msg::{InstantiateMsg, StoreLimitsInput};
     use cosmwasm_std::Uint128;
     use schemars::_serde_json;
 
@@ -758,81 +649,5 @@ mod tests {
         assert_eq!(msg.limits.max_triple_byte_size, Uint128::MAX);
         assert_eq!(msg.limits.max_insert_data_byte_size, Uint128::MAX);
         assert_eq!(msg.limits.max_insert_data_triple_count, Uint128::MAX);
-    }
-
-    #[test]
-    fn variables_from_triple_pattern() {
-        let (s, p, o) = ("s".to_string(), "p".to_string(), "o".to_string());
-        let (node, prefixed, literal) = (
-            "node".to_string(),
-            "a:node".to_string(),
-            "literal".to_string(),
-        );
-
-        let cases = vec![
-            (
-                TriplePattern {
-                    subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNamedNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![s.clone(), p.clone(), o.clone()],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Node(NamedNode(Full(node.clone()))),
-                    predicate: VarOrNamedNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![p.clone(), o.clone()],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Node(NamedNode(Prefixed(prefixed.clone()))),
-                    predicate: VarOrNamedNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![p.clone(), o.clone()],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Node(BlankNode(node.clone())),
-                    predicate: VarOrNamedNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![p.clone(), o.clone()],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNamedNode::NamedNode(Full(node.clone())),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![s.clone(), o],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNamedNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Literal(Simple(literal.clone())),
-                },
-                vec![s, p],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Node(BlankNode(node)),
-                    predicate: VarOrNamedNode::NamedNode(Prefixed(prefixed)),
-                    object: VarOrNodeOrLiteral::Literal(Simple(literal)),
-                },
-                vec![],
-            ),
-        ];
-
-        for (triple_pattern, expected) in cases {
-            assert_eq!(
-                triple_pattern.variables(),
-                HashSet::from_iter(expected.into_iter())
-            );
-        }
     }
 }

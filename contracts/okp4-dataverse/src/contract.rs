@@ -131,8 +131,8 @@ mod tests {
     };
     use okp4_cognitarium::msg::{
         DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse,
-        SimpleWhereCondition, TriplePattern, Value, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
-        IRI,
+        SimpleWhereCondition, TriplePattern, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
+        WhereCondition, IRI,
     };
     use std::collections::BTreeMap;
 
@@ -220,7 +220,7 @@ mod tests {
                                     subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
                                         "http://example.edu/credentials/3732".to_string(),
                                     ))),
-                                    predicate: VarOrNode::Variable("p".to_string()),
+                                    predicate: VarOrNamedNode::Variable("p".to_string()),
                                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
                                 })
                             )],

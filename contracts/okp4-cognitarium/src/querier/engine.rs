@@ -624,7 +624,7 @@ impl TripleTemplate {
         F: Fn(&ResolvedVariable) -> Option<T>,
     {
         match term {
-            Left(p) => StdResult::Ok(Some(p.clone())),
+            Left(p) => Ok(Some(p.clone())),
             Right(key) => vars.get(key).map(from_var).ok_or_else(|| {
                 StdError::generic_err(format!("Unbound {:?} variable: {:?}", term_name, key))
             }),
@@ -761,17 +761,17 @@ impl AtomTemplate {
     ) -> StdResult<AtomTemplate> {
         Ok(Self {
             subject: match s_tpl {
-                VarOrNode::Variable(key) => Right(key.clone()),
-                VarOrNode::Node(n) => Left((n.clone(), prefixes).try_into()?),
+                VarOrNode::Variable(key) => Right(key),
+                VarOrNode::Node(n) => Left((n, prefixes).try_into()?),
             },
             property: match p_tpl {
                 VarOrNamedNode::Variable(key) => Right(key),
                 VarOrNamedNode::NamedNode(iri) => Left((iri, prefixes).try_into()?),
             },
             value: match o_tpl {
-                VarOrNodeOrLiteral::Variable(key) => Right(key.clone()),
-                VarOrNodeOrLiteral::Node(n) => Left((n.clone(), prefixes).try_into()?),
-                VarOrNodeOrLiteral::Literal(l) => Left((l.clone(), prefixes).try_into()?),
+                VarOrNodeOrLiteral::Variable(key) => Right(key),
+                VarOrNodeOrLiteral::Node(n) => Left((n, prefixes).try_into()?),
+                VarOrNodeOrLiteral::Literal(l) => Left((l, prefixes).try_into()?),
             },
         })
     }

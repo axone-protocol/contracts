@@ -497,7 +497,7 @@ pub trait HasVariables {
 
 impl<T: HasVariables> HasVariables for Vec<T> {
     fn variables(&self) -> HashSet<String> {
-        self.iter().flat_map(|t| t.variables()).collect()
+        self.iter().flat_map(HasVariables::variables).collect()
     }
 }
 
@@ -578,7 +578,7 @@ mod var_util {
         maybe_vars
             .iter()
             .copied()
-            .filter_map(|maybe_var| maybe_var)
+            .flatten()
             .map(str::to_string)
             .collect()
     }

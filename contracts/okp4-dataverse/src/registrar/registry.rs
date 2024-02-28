@@ -4,8 +4,8 @@ use crate::state::DATAVERSE;
 use crate::ContractError;
 use cosmwasm_std::{DepsMut, StdResult, Storage, WasmMsg};
 use okp4_cognitarium::msg::{
-    DataFormat, Node, SelectItem, SelectQuery, SimpleWhereCondition, TriplePattern, VarOrNode,
-    VarOrNodeOrLiteral, WhereCondition, IRI,
+    DataFormat, Node, SelectItem, SelectQuery, SimpleWhereCondition, TriplePattern, VarOrNamedNode,
+    VarOrNode, VarOrNodeOrLiteral, WhereCondition, IRI,
 };
 use okp4_cognitarium_client::CognitariumClient;
 
@@ -42,7 +42,7 @@ impl ClaimRegistrar {
                         subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
                             credential.id.to_string(),
                         ))),
-                        predicate: VarOrNode::Variable("p".to_string()),
+                        predicate: VarOrNamedNode::Variable("p".to_string()),
                         object: VarOrNodeOrLiteral::Variable("o".to_string()),
                     },
                 ))],

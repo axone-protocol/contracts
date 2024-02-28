@@ -17,7 +17,7 @@ impl ResolvedVariable {
             ResolvedVariable::Predicate(p) => Subject::Named(p.clone()),
             ResolvedVariable::Object(o) => match o {
                 Object::Named(node) => Subject::Named(node.clone()),
-                Object::Blank(node) => Subject::Blank(node.clone()),
+                Object::Blank(node) => Subject::Blank(*node),
                 Object::Literal(_) => None?,
             },
         })
@@ -42,7 +42,7 @@ impl ResolvedVariable {
         Some(match self {
             ResolvedVariable::Subject(s) => match s {
                 Subject::Named(node) => Object::Named(node.clone()),
-                Subject::Blank(node) => Object::Blank(node.clone()),
+                Subject::Blank(node) => Object::Blank(*node),
             },
             ResolvedVariable::Predicate(p) => Object::Named(p.clone()),
             ResolvedVariable::Object(o) => o.clone(),

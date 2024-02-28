@@ -484,7 +484,7 @@ pub enum SimpleWhereCondition {
 
 pub trait HasVariables {
     /// Returns the set of variables used in a triple pattern or template.
-    fn variables(&self) -> Vec<String>;
+    fn variables(&self) -> HashSet<String>;
 
     /// Returns the set of variables used in a triple pattern or template as [SelectItem].
     fn as_select_item(&self) -> Vec<SelectItem> {
@@ -496,12 +496,8 @@ pub trait HasVariables {
 }
 
 impl<T: HasVariables> HasVariables for Vec<T> {
-    fn variables(&self) -> Vec<String> {
-        self.iter()
-            .flat_map(|t| t.variables())
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect()
+    fn variables(&self) -> HashSet<String> {
+        self.iter().flat_map(|t| t.variables()).collect()
     }
 }
 
@@ -518,7 +514,7 @@ pub struct TripleDeleteTemplate {
 }
 
 impl HasVariables for TripleDeleteTemplate {
-    fn variables(&self) -> Vec<String> {
+    fn variables(&self) -> HashSet<String> {
         var_util::merge_variables(&[
             self.subject.variable(),
             self.predicate.variable(),
@@ -540,7 +536,7 @@ pub struct TripleConstructTemplate {
 }
 
 impl HasVariables for TripleConstructTemplate {
-    fn variables(&self) -> Vec<String> {
+    fn variables(&self) -> HashSet<String> {
         var_util::merge_variables(&[
             self.subject.variable(),
             self.predicate.variable(),
@@ -562,7 +558,7 @@ pub struct TriplePattern {
 }
 
 impl HasVariables for TriplePattern {
-    fn variables(&self) -> Vec<String> {
+    fn variables(&self) -> HashSet<String> {
         var_util::merge_variables(&[
             self.subject.variable(),
             self.predicate.variable(),
@@ -578,13 +574,11 @@ trait MaybeVariable {
 mod var_util {
     use std::collections::HashSet;
 
-    pub fn merge_variables(maybe_vars: &[Option<&str>]) -> Vec<String> {
+    pub fn merge_variables(maybe_vars: &[Option<&str>]) -> HashSet<String> {
         maybe_vars
             .iter()
             .copied()
             .filter_map(|maybe_var| maybe_var)
-            .collect::<HashSet<_>>()
-            .into_iter()
             .map(str::to_string)
             .collect()
     }
@@ -833,7 +827,10 @@ mod tests {
         ];
 
         for (triple_pattern, expected) in cases {
-            assert_eq!(triple_pattern.variables(), expected);
+            assert_eq!(
+                triple_pattern.variables(),
+                HashSet::from_iter(expected.into_iter())
+            );
         }
     }
 }

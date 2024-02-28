@@ -78,26 +78,28 @@ impl<'a> QueryEngine<'a> {
     pub fn construct_triples(
         &'a self,
         plan: QueryPlan,
+        templates: Vec<TripleTemplate>,
+    ) -> StdResult<ResolvedTripleIterator<'_>> {
+        ResolvedTripleIterator::try_new(self.eval_plan(plan), templates)
+    }
+
+    pub fn make_triple_templates(
+        &'a self,
+        plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
         templates: Either<
             Vec<(VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral)>,
             Vec<(VarOrNamedNode, VarOrNamedNode, VarOrNamedNodeOrLiteral)>,
         >,
         ns_cache: Vec<Namespace>,
-    ) -> StdResult<ResolvedTripleIterator<'_>> {
+    ) -> StdResult<Vec<TripleTemplate>> {
         let mut ns_resolver: NamespaceResolver = ns_cache.into();
 
-        let templates = match templates {
+        match templates {
             Left(tpl) => tpl
                 .into_iter()
                 .map(|t| {
-                    TripleTemplate::try_new(
-                        self.storage,
-                        &mut ns_resolver,
-                        &plan,
-                        prefixes,
-                        Left(t),
-                    )
+                    TripleTemplate::try_new(self.storage, &mut ns_resolver, plan, prefixes, Left(t))
                 })
                 .collect::<StdResult<Vec<TripleTemplate>>>(),
             Right(tpl) => tpl
@@ -106,15 +108,13 @@ impl<'a> QueryEngine<'a> {
                     TripleTemplate::try_new(
                         self.storage,
                         &mut ns_resolver,
-                        &plan,
+                        plan,
                         prefixes,
                         Right(t),
                     )
                 })
                 .collect::<StdResult<Vec<TripleTemplate>>>(),
-        }?;
-
-        ResolvedTripleIterator::try_new(self.eval_plan(plan), templates)
+        }
     }
 
     pub fn eval_plan(&'a self, plan: QueryPlan) -> ResolvedVariablesIterator<'_> {

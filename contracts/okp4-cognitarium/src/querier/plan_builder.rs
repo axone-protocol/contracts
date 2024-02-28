@@ -53,32 +53,27 @@ impl<'a> PlanBuilder<'a> {
             })
             .collect::<StdResult<Vec<QueryNode>>>()?;
 
-        Self::build_from_bgp(bgp)
-            .map(|mut node| {
-                if let Some(skip) = self.skip {
-                    node = QueryNode::Skip {
-                        child: Box::new(node),
-                        first: skip,
-                    }
-                }
-                node
-            })
-            .map(|mut node| {
-                if let Some(limit) = self.limit {
-                    node = QueryNode::Limit {
-                        child: Box::new(node),
-                        first: limit,
-                    }
-                }
-                node
-            })
-            .map(|node| QueryPlan {
-                entrypoint: node,
-                variables: self.variables.clone(),
-            })
+        let mut node = Self::build_from_bgp(bgp);
+
+        if let Some(skip) = self.skip {
+            node = QueryNode::Skip {
+                child: Box::new(node),
+                first: skip,
+            }
+        }
+        if let Some(limit) = self.limit {
+            node = QueryNode::Limit {
+                child: Box::new(node),
+                first: limit,
+            }
+        }
+        Ok(QueryPlan {
+            entrypoint: node,
+            variables: self.variables.clone(),
+        })
     }
 
-    fn build_from_bgp(bgp: Vec<QueryNode>) -> StdResult<QueryNode> {
+    fn build_from_bgp(bgp: Vec<QueryNode>) -> QueryNode {
         bgp.into_iter()
             .reduce(|left: QueryNode, right: QueryNode| -> QueryNode {
                 if left
@@ -97,10 +92,9 @@ impl<'a> PlanBuilder<'a> {
                     right: Box::new(right),
                 }
             })
-            .map_or_else(
-                || Err(StdError::generic_err("Empty basic graph pattern")),
-                Ok,
-            )
+            .unwrap_or(QueryNode::Noop {
+                bound_variables: vec![],
+            })
     }
 
     fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {

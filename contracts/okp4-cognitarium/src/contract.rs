@@ -53,7 +53,7 @@ pub mod execute {
     use crate::msg::{
         DataFormat, Prefix, SimpleWhereCondition, TripleDeleteTemplate, WhereClause, WhereCondition,
     };
-    use crate::querier::{PlanBuilder, QueryEngine};
+    use crate::querier::{PlanBuilder, QueryEngine, ResolvedVariables};
     use crate::rdf::PrefixMap;
     use crate::state::{HasCachedNamespaces, Triple};
     use crate::storer::StoreEngine;
@@ -120,9 +120,29 @@ pub mod execute {
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let triples = QueryEngine::new(deps.storage)
-            .construct_triples(plan, &prefix_map, delete, plan_builder.cached_namespaces())?
-            .collect::<StdResult<Vec<Triple>>>()?;
+        let query_engine = QueryEngine::new(deps.storage);
+        let delete_templates = query_engine.make_triple_templates(
+            &plan,
+            &prefix_map,
+            delete,
+            plan_builder.cached_namespaces(),
+        )?;
+
+        let triples = if r#where.is_empty() {
+            let empty_vars = ResolvedVariables::with_capacity(0);
+            delete_templates
+                .into_iter()
+                .filter_map(|tpl| match tpl.resolve(&empty_vars) {
+                    Ok(Some(v)) => Some(Ok(v)),
+                    Ok(None) => None,
+                    Err(e) => Some(Err(e)),
+                })
+                .collect::<StdResult<Vec<Triple>>>()?
+        } else {
+            query_engine
+                .construct_triples(plan, delete_templates)?
+                .collect::<StdResult<Vec<Triple>>>()?
+        };
 
         let mut store = StoreEngine::new(deps.storage)?;
         let count = store.delete_all(&triples)?;
@@ -990,6 +1010,31 @@ mod tests {
                 17,
                 Uint128::from(0u128),
             ),
+            (
+                DeleteData {
+                    prefixes: vec![
+                        Prefix {
+                            prefix: "core".to_string(),
+                            namespace: "https://ontology.okp4.space/core/".to_string(),
+                        },
+                        Prefix {
+                            prefix: "thesaurus".to_string(),
+                            namespace: "https://ontology.okp4.space/thesaurus/topic/".to_string(),
+                        },
+                    ],
+                    delete: vec![msg::TripleDeleteTemplate {
+                        subject: VarOrNamedNode::NamedNode(Full(id.to_string())),
+                        predicate: VarOrNamedNode::NamedNode(Prefixed("core:hasTopic".to_string())),
+                        object: VarOrNamedNodeOrLiteral::NamedNode(Prefixed(
+                            "thesaurus:Test".to_string(),
+                        )),
+                    }],
+                    r#where: vec![],
+                },
+                1,
+                0,
+                Uint128::from(6921u128),
+            ),
         ];
 
         for case in cases {
@@ -1099,24 +1144,6 @@ mod tests {
                     }))],
                 },
                 expected: StdError::generic_err("Selected variable not found in query").into(),
-            },
-            TC {
-                command: DeleteData {
-                    prefixes: vec![],
-                    delete: vec![msg::TripleDeleteTemplate {
-                        subject: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
-                        )),
-                        predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTopic".to_string(),
-                        )),
-                        object: VarOrNamedNodeOrLiteral::NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
-                        )),
-                    }],
-                    r#where: vec![],
-                },
-                expected: StdError::generic_err("Empty basic graph pattern").into(),
             },
         ];
 

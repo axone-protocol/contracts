@@ -6,3 +6,4 @@ mod variable;
 
 pub use engine::*;
 pub use plan_builder::*;
+pub use variable::ResolvedVariables;

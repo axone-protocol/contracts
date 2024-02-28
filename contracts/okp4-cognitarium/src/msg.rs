@@ -51,7 +51,7 @@ pub enum ExecuteMsg {
     ///   "where": [
     ///     { "simple": { "triplePattern": {
     ///         "subject": { "variable": "s" },
-    ///         "predicate": { "node": { "namedNode": {"prefixed": "foaf:givenName"} } },
+    ///         "predicate": { "namedNode": {"prefixed": "foaf:givenName"} },
     ///         "object": { "literal": { "simple": "Myrddin" } }
     ///     } } },
     ///     { "simple": { "triplePattern": {

@@ -150,10 +150,9 @@ pub mod query {
         TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
-    use crate::rdf::{Atom, PrefixMap};
+    use crate::rdf::PrefixMap;
     use crate::state::HasCachedNamespaces;
     use okp4_rdf::normalize::IdentifierIssuer;
-    use okp4_rdf::serde::TripleWriter;
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -190,9 +189,7 @@ pub mod query {
     ) -> StdResult<DescribeResponse> {
         let (p, o) = ("_2p".to_owned(), "_3o".to_owned());
 
-        let store = STORE.load(deps.storage)?;
-
-        let (select, r#where) = match &query.resource {
+        let (construct, r#where) = match &query.resource {
             VarOrNamedNode::Variable(var) => {
                 let select = TriplePattern {
                     subject: VarOrNode::Variable(var.clone()),
@@ -222,39 +219,17 @@ pub mod query {
                 )
             }
         };
-        let prefix_map = <PrefixMap>::from(query.prefixes).into_inner();
-        let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None)
-            .with_limit(store.limits.max_query_limit as usize);
-        let plan = plan_builder.build_plan(&r#where)?;
 
-        let atoms = QueryEngine::new(deps.storage)
-            .construct_atoms(
-                plan,
-                &prefix_map,
-                select
-                    .into_iter()
-                    .map(|t| (t.subject, t.predicate, t.object))
-                    .collect(),
-                plan_builder.cached_namespaces(),
-            )?
-            .collect::<StdResult<Vec<Atom>>>()?;
-
-        let out: Vec<u8> = Vec::default();
-        let mut writer = TripleWriter::new(&(&format).into(), out);
-
-        for atom in &atoms {
-            let triple = atom.into();
-
-            writer.write(&triple).map_err(|e| {
-                StdError::serialize_err(
-                    "triple",
-                    format!("Error writing triple {}: {}", &triple, e),
-                )
-            })?;
-        }
-        let out = writer
-            .finish()
-            .map_err(|e| StdError::serialize_err("triple", format!("Error writing triple: {e}")))?;
+        let out = util::construct_atoms(
+            deps.storage,
+            &format,
+            query.prefixes,
+            construct
+                .into_iter()
+                .map(|t| (t.subject, t.predicate, t.object))
+                .collect(),
+            r#where,
+        )?;
 
         Ok(DescribeResponse {
             format,
@@ -310,38 +285,16 @@ pub mod query {
             })
             .collect();
 
-        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
-        let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
-        let plan = plan_builder.build_plan(&r#where)?;
-
-        let atoms = QueryEngine::new(deps.storage)
-            .construct_atoms(
-                plan,
-                &prefix_map,
-                construct
-                    .into_iter()
-                    .map(|t| (t.subject, t.predicate, t.object))
-                    .collect(),
-                plan_builder.cached_namespaces(),
-            )?
-            .collect::<StdResult<Vec<Atom>>>()?;
-
-        let out: Vec<u8> = Vec::default();
-        let mut writer = TripleWriter::new(&(&format).into(), out);
-
-        for atom in &atoms {
-            let triple = atom.into();
-            writer.write(&triple).map_err(|e| {
-                StdError::serialize_err(
-                    "triple",
-                    format!("Error writing triple {}: {}", &triple, e),
-                )
-            })?;
-        }
-
-        let out = writer
-            .finish()
-            .map_err(|e| StdError::serialize_err("triple", format!("Error writing triple: {e}")))?;
+        let out = util::construct_atoms(
+            deps.storage,
+            &format,
+            prefixes,
+            construct
+                .into_iter()
+                .map(|t| (t.subject, t.predicate, t.object))
+                .collect(),
+            r#where,
+        )?;
 
         Ok(ConstructResponse {
             format,
@@ -352,10 +305,16 @@ pub mod query {
 
 pub mod util {
     use super::*;
-    use crate::msg::{Head, Results, SelectResponse, Value};
-    use crate::querier::SelectResults;
-    use crate::state::{Namespace, NamespaceResolver};
+    use crate::msg::{
+        Head, Prefix, Results, SelectResponse, Value, VarOrNamedNode, VarOrNode,
+        VarOrNodeOrLiteral, WhereClause,
+    };
+    use crate::querier::{PlanBuilder, QueryEngine, SelectResults};
+    use crate::rdf::{Atom, PrefixMap};
+    use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver};
+    use cosmwasm_std::Storage;
     use okp4_rdf::normalize::IdentifierIssuer;
+    use okp4_rdf::serde::TripleWriter;
     use std::collections::BTreeMap;
 
     pub fn map_select_solutions(
@@ -392,6 +351,47 @@ pub mod util {
             head: Head { vars: res.head },
             results: Results { bindings },
         })
+    }
+
+    pub fn construct_atoms(
+        storage: &dyn Storage,
+        format: &DataFormat,
+        prefixes: Vec<Prefix>,
+        construct: Vec<(VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral)>,
+        r#where: WhereClause,
+    ) -> StdResult<Vec<u8>> {
+        let store = STORE.load(storage)?;
+
+        let prefix_map = <PrefixMap>::from(prefixes).into_inner();
+        let mut plan_builder = PlanBuilder::new(storage, &prefix_map, None)
+            .with_limit(store.limits.max_query_limit as usize);
+        let plan = plan_builder.build_plan(&r#where)?;
+
+        let atoms = QueryEngine::new(storage)
+            .construct_atoms(
+                plan,
+                &prefix_map,
+                construct,
+                plan_builder.cached_namespaces(),
+            )?
+            .collect::<StdResult<Vec<Atom>>>()?;
+
+        let out: Vec<u8> = Vec::default();
+        let mut writer = TripleWriter::new(&format.into(), out);
+
+        for atom in &atoms {
+            let triple = atom.into();
+
+            writer.write(&triple).map_err(|e| {
+                StdError::serialize_err(
+                    "triple",
+                    format!("Error writing triple {}: {}", &triple, e),
+                )
+            })?;
+        }
+        writer
+            .finish()
+            .map_err(|e| StdError::serialize_err("triple", format!("Error writing triple: {e}")))
     }
 }
 

@@ -51,7 +51,7 @@ pub enum ExecuteMsg {
     ///   "where": [
     ///     { "simple": { "triplePattern": {
     ///         "subject": { "variable": "s" },
-    ///         "predicate": { "node": { "namedNode": {"prefixed": "foaf:givenName"} } },
+    ///         "predicate": { "namedNode": {"prefixed": "foaf:givenName"} },
     ///         "object": { "literal": { "simple": "Myrddin" } }
     ///     } } },
     ///     { "simple": { "triplePattern": {
@@ -67,9 +67,9 @@ pub enum ExecuteMsg {
     DeleteData {
         /// The prefixes used in the operation.
         prefixes: Vec<Prefix>,
-        /// Specifies the specific triple patterns to delete.
+        /// Specifies the specific triple templates to delete.
         /// If nothing is provided, the patterns from the `where` clause are used for deletion.
-        delete: Vec<TriplePattern>,
+        delete: Vec<TripleDeleteTemplate>,
         /// Defines the patterns that data (RDF triples) should match in order for it to be
         /// considered for deletion.
         r#where: WhereClause,
@@ -436,7 +436,7 @@ pub struct ConstructQuery {
     pub prefixes: Vec<Prefix>,
     /// The triples to construct.
     /// If nothing is provided, the patterns from the `where` clause are used for construction.
-    pub construct: Vec<TriplePattern>,
+    pub construct: Vec<TripleConstructTemplate>,
     /// The WHERE clause.
     /// This clause is used to specify the triples to construct using variable bindings.
     pub r#where: WhereClause,
@@ -484,6 +484,30 @@ pub enum SimpleWhereCondition {
     TriplePattern(TriplePattern),
 }
 
+/// # TripleDeleteTemplate
+/// Represents a triple template to be deleted.
+#[cw_serde]
+pub struct TripleDeleteTemplate {
+    /// The subject of the triple pattern.
+    pub subject: VarOrNamedNode,
+    /// The predicate of the triple pattern.
+    pub predicate: VarOrNamedNode,
+    /// The object of the triple pattern.
+    pub object: VarOrNamedNodeOrLiteral,
+}
+
+/// # TripleConstructTemplate
+/// Represents a triple template to be forged for a construct query.
+#[cw_serde]
+pub struct TripleConstructTemplate {
+    /// The subject of the triple pattern.
+    pub subject: VarOrNode,
+    /// The predicate of the triple pattern.
+    pub predicate: VarOrNamedNode,
+    /// The object of the triple pattern.
+    pub object: VarOrNodeOrLiteral,
+}
+
 /// # TriplePattern
 /// Represents a triple pattern in a [SimpleWhereCondition].
 #[cw_serde]
@@ -491,30 +515,9 @@ pub struct TriplePattern {
     /// The subject of the triple pattern.
     pub subject: VarOrNode,
     /// The predicate of the triple pattern.
-    pub predicate: VarOrNode,
+    pub predicate: VarOrNamedNode,
     /// The object of the triple pattern.
     pub object: VarOrNodeOrLiteral,
-}
-
-impl TriplePattern {
-    /// Returns the variables used in the triple pattern.
-    pub fn variables(&self) -> Vec<String> {
-        let mut variables: Vec<String> = vec![];
-
-        if let VarOrNode::Variable(var) = &self.subject {
-            variables.push(var.clone());
-        }
-
-        if let VarOrNode::Variable(var) = &self.predicate {
-            variables.push(var.clone());
-        }
-
-        if let VarOrNodeOrLiteral::Variable(var) = &self.object {
-            variables.push(var.clone());
-        }
-
-        variables
-    }
 }
 
 /// # VarOrNode
@@ -551,6 +554,22 @@ pub enum VarOrNodeOrLiteral {
     /// # Node
     /// A node, i.e. an IRI or a blank node.
     Node(Node),
+    /// # Literal
+    /// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal), i.e. a simple literal,
+    /// a language-tagged string or a typed value.
+    Literal(Literal),
+}
+
+/// # VarOrNamedNodeOrLiteral
+/// Represents either a variable, a named node or a literal.
+#[cw_serde]
+pub enum VarOrNamedNodeOrLiteral {
+    /// # Variable
+    /// A variable.
+    Variable(String),
+    /// # NamedNode
+    /// An RDF [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri).
+    NamedNode(IRI),
     /// # Literal
     /// An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal), i.e. a simple literal,
     /// a language-tagged string or a typed value.
@@ -596,12 +615,7 @@ pub enum Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::Literal::Simple;
-    use crate::msg::Node::{BlankNode, NamedNode};
-    use crate::msg::IRI::{Full, Prefixed};
-    use crate::msg::{
-        InstantiateMsg, StoreLimitsInput, TriplePattern, VarOrNode, VarOrNodeOrLiteral,
-    };
+    use crate::msg::{InstantiateMsg, StoreLimitsInput};
     use cosmwasm_std::Uint128;
     use schemars::_serde_json;
 
@@ -635,78 +649,5 @@ mod tests {
         assert_eq!(msg.limits.max_triple_byte_size, Uint128::MAX);
         assert_eq!(msg.limits.max_insert_data_byte_size, Uint128::MAX);
         assert_eq!(msg.limits.max_insert_data_triple_count, Uint128::MAX);
-    }
-
-    #[test]
-    fn variables_from_triple_pattern() {
-        let (s, p, o) = ("s".to_string(), "p".to_string(), "o".to_string());
-        let (node, prefixed, literal) = (
-            "node".to_string(),
-            "a:node".to_string(),
-            "literal".to_string(),
-        );
-
-        let cases = vec![
-            (
-                TriplePattern {
-                    subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![s.clone(), p.clone(), o.clone()],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Node(NamedNode(Full(node.clone()))),
-                    predicate: VarOrNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![p.clone(), o.clone()],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Node(NamedNode(Prefixed(prefixed.clone()))),
-                    predicate: VarOrNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![p.clone(), o.clone()],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Node(BlankNode(node.clone())),
-                    predicate: VarOrNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![p.clone(), o.clone()],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNode::Node(NamedNode(Full(node.clone()))),
-                    object: VarOrNodeOrLiteral::Variable(o.clone()),
-                },
-                vec![s.clone(), o],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Variable(s.clone()),
-                    predicate: VarOrNode::Variable(p.clone()),
-                    object: VarOrNodeOrLiteral::Literal(Simple(literal.clone())),
-                },
-                vec![s, p],
-            ),
-            (
-                TriplePattern {
-                    subject: VarOrNode::Node(BlankNode(node)),
-                    predicate: VarOrNode::Node(NamedNode(Prefixed(prefixed))),
-                    object: VarOrNodeOrLiteral::Literal(Simple(literal)),
-                },
-                vec![],
-            ),
-        ];
-
-        for (triple_pattern, expected) in cases {
-            assert_eq!(triple_pattern.variables(), expected);
-        }
     }
 }

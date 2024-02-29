@@ -1,6 +1,7 @@
 use crate::msg::{Value, IRI};
 use crate::state::{Literal, Object, Predicate, Subject};
 use cosmwasm_std::StdResult;
+use okp4_rdf::normalize::IdentifierIssuer;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ResolvedVariable {
@@ -16,7 +17,7 @@ impl ResolvedVariable {
             ResolvedVariable::Predicate(p) => Subject::Named(p.clone()),
             ResolvedVariable::Object(o) => match o {
                 Object::Named(node) => Subject::Named(node.clone()),
-                Object::Blank(node) => Subject::Blank(node.clone()),
+                Object::Blank(node) => Subject::Blank(*node),
                 Object::Literal(_) => None?,
             },
         })
@@ -41,14 +42,14 @@ impl ResolvedVariable {
         Some(match self {
             ResolvedVariable::Subject(s) => match s {
                 Subject::Named(node) => Object::Named(node.clone()),
-                Subject::Blank(node) => Object::Blank(node.clone()),
+                Subject::Blank(node) => Object::Blank(*node),
             },
             ResolvedVariable::Predicate(p) => Object::Named(p.clone()),
             ResolvedVariable::Object(o) => o.clone(),
         })
     }
 
-    pub fn as_value<F>(&self, ns_fn: &mut F) -> StdResult<Value>
+    pub fn as_value<F>(&self, ns_fn: &mut F, id_issuer: &mut IdentifierIssuer) -> StdResult<Value>
     where
         F: FnMut(u128) -> StdResult<String>,
     {
@@ -58,7 +59,7 @@ impl ResolvedVariable {
                     value: IRI::Full(iri),
                 })?,
                 Subject::Blank(blank) => Value::BlankNode {
-                    value: blank.to_string(),
+                    value: id_issuer.get_str_or_issue(blank.to_string()),
                 },
             },
             ResolvedVariable::Predicate(predicate) => {
@@ -71,7 +72,7 @@ impl ResolvedVariable {
                     value: IRI::Full(named.as_iri(ns_fn)?),
                 },
                 Object::Blank(blank) => Value::BlankNode {
-                    value: blank.to_string(),
+                    value: id_issuer.get_str_or_issue(blank.to_string()),
                 },
                 Object::Literal(literal) => match literal {
                     Literal::Simple { value } => Value::Literal {
@@ -155,9 +156,9 @@ mod tests {
     fn conversions() {
         let cases: Vec<(Option<Subject>, Option<Predicate>, Option<Object>)> = vec![
             (
-                Some(Subject::Blank("_".to_string())),
+                Some(Subject::Blank(0u128)),
                 None,
-                Some(Object::Blank("_".to_string())),
+                Some(Object::Blank(0u128)),
             ),
             (
                 Some(Subject::Named(Node {
@@ -226,9 +227,9 @@ mod tests {
                 }),
             ),
             (
-                ResolvedVariable::Subject(Subject::Blank("_".to_string())),
+                ResolvedVariable::Subject(Subject::Blank(0u128)),
                 Ok(Value::BlankNode {
-                    value: "_".to_string(),
+                    value: "b0".to_string(),
                 }),
             ),
             (
@@ -250,9 +251,9 @@ mod tests {
                 }),
             ),
             (
-                ResolvedVariable::Object(Object::Blank("_".to_string())),
+                ResolvedVariable::Object(Object::Blank(0u128)),
                 Ok(Value::BlankNode {
-                    value: "_".to_string(),
+                    value: "b0".to_string(),
                 }),
             ),
             (
@@ -292,61 +293,38 @@ mod tests {
             ),
         ];
 
+        let mut id_issuer = IdentifierIssuer::new("b", 0u128);
         for (var, expected) in cases {
-            assert_eq!(var.as_value(&mut ns), expected)
+            assert_eq!(var.as_value(&mut ns, &mut id_issuer), expected)
         }
     }
 
     #[test]
     fn merged_variables() {
         let mut vars1 = ResolvedVariables::with_capacity(3);
-        vars1.merge_index(
-            0,
-            ResolvedVariable::Object(Object::Blank("foo".to_string())),
-        );
-        vars1.merge_index(
-            2,
-            ResolvedVariable::Object(Object::Blank("bar".to_string())),
-        );
+        vars1.merge_index(0, ResolvedVariable::Object(Object::Blank(0u128)));
+        vars1.merge_index(2, ResolvedVariable::Object(Object::Blank(1u128)));
 
         let mut vars2 = ResolvedVariables::with_capacity(3);
-        vars2.merge_index(
-            1,
-            ResolvedVariable::Object(Object::Blank("pop".to_string())),
-        );
-        vars2.merge_index(
-            2,
-            ResolvedVariable::Object(Object::Blank("bar".to_string())),
-        );
+        vars2.merge_index(1, ResolvedVariable::Object(Object::Blank(2u128)));
+        vars2.merge_index(2, ResolvedVariable::Object(Object::Blank(1u128)));
 
         assert_eq!(
             vars2.get(1),
-            &Some(ResolvedVariable::Object(Object::Blank("pop".to_string())))
+            &Some(ResolvedVariable::Object(Object::Blank(2u128)))
         );
         assert_eq!(vars1.get(1), &None);
 
         let mut expected_result = ResolvedVariables::with_capacity(3);
-        expected_result.merge_index(
-            0,
-            ResolvedVariable::Object(Object::Blank("foo".to_string())),
-        );
-        expected_result.merge_index(
-            1,
-            ResolvedVariable::Object(Object::Blank("pop".to_string())),
-        );
-        expected_result.merge_index(
-            2,
-            ResolvedVariable::Object(Object::Blank("bar".to_string())),
-        );
+        expected_result.merge_index(0, ResolvedVariable::Object(Object::Blank(0u128)));
+        expected_result.merge_index(1, ResolvedVariable::Object(Object::Blank(2u128)));
+        expected_result.merge_index(2, ResolvedVariable::Object(Object::Blank(1u128)));
 
         let result = vars1.merge_with(&vars2);
         assert_eq!(result, Some(expected_result));
 
         let mut vars3 = ResolvedVariables::with_capacity(3);
-        vars3.merge_index(
-            1,
-            ResolvedVariable::Object(Object::Blank("pop".to_string())),
-        );
+        vars3.merge_index(1, ResolvedVariable::Object(Object::Blank(2u128)));
         vars3.merge_index(
             2,
             ResolvedVariable::Predicate(Node {

@@ -22,18 +22,16 @@ pub enum PlanVariable {
 impl QueryPlan {
     /// Resolve the index corresponding to the variable name, if not attached to a blank node.
     pub fn get_var_index(&self, var_name: &str) -> Option<usize> {
-        self.variables
-            .iter()
-            .enumerate()
-            .find_map(|(index, it)| match it {
-                PlanVariable::Basic(name) => {
-                    if name == var_name {
-                        return Some(index);
-                    }
-                    None
-                }
-                PlanVariable::BlankNode(_) => None,
-            })
+        self.variables.iter().enumerate().find_map(|(index, it)| {
+            matches!(it, PlanVariable::Basic(name) if name == var_name).then_some(index)
+        })
+    }
+
+    /// Resolve the index corresponding to blank node name.
+    pub fn get_bnode_index(&self, bnode_name: &str) -> Option<usize> {
+        self.variables.iter().enumerate().find_map(|(index, it)| {
+            matches!(it, PlanVariable::BlankNode(name) if name == bnode_name).then_some(index)
+        })
     }
 }
 
@@ -155,16 +153,14 @@ mod tests {
                         child: Box::new(QueryNode::ForLoopJoin {
                             left: Box::new(QueryNode::CartesianProductJoin {
                                 left: Box::new(QueryNode::TriplePattern {
-                                    subject: PatternValue::Constant(Subject::Blank(
-                                        "_".to_string(),
-                                    )),
-                                    predicate: PatternValue::Variable(4usize),
+                                    subject: PatternValue::BlankVariable(4usize),
+                                    predicate: PatternValue::Variable(5usize),
                                     object: PatternValue::Variable(0usize),
                                 }),
                                 right: Box::new(QueryNode::TriplePattern {
                                     subject: PatternValue::Variable(3usize),
                                     predicate: PatternValue::Variable(1usize),
-                                    object: PatternValue::Constant(Object::Blank("_".to_string())),
+                                    object: PatternValue::BlankVariable(4usize),
                                 }),
                             }),
                             right: Box::new(QueryNode::TriplePattern {
@@ -175,7 +171,7 @@ mod tests {
                         }),
                     }),
                 },
-                BTreeSet::from([0usize, 1usize, 2usize, 3usize, 4usize]),
+                BTreeSet::from([0usize, 1usize, 2usize, 3usize, 4usize, 5usize]),
             ),
         ];
 

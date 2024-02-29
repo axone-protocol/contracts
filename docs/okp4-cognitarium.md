@@ -411,16 +411,16 @@ Only the smart contract owner (i.e. the address who instantiated it) is authoriz
 
 Delete the data (RDF triples) from the store matching the patterns defined by the provided query. For non-existing triples it acts as no-op.
 
-Example: `json { "prefixes": [ { "prefix": "foaf", "namespace": "http://xmlns.com/foaf/0.1/" } ], "delete": [ { "subject": { "variable": "s" }, "predicate": { "variable": "p" }, "object": { "variable": "o" } } ], "where": [ { "simple": { "triplePattern": { "subject": { "variable": "s" }, "predicate": { "node": { "namedNode": {"prefixed": "foaf:givenName"} } }, "object": { "literal": { "simple": "Myrddin" } } } } }, { "simple": { "triplePattern": { "subject": { "variable": "s" }, "predicate": { "variable": "p" }, "object": { "variable": "o" } } } } ] `
+Example: `json { "prefixes": [ { "prefix": "foaf", "namespace": "http://xmlns.com/foaf/0.1/" } ], "delete": [ { "subject": { "variable": "s" }, "predicate": { "variable": "p" }, "object": { "variable": "o" } } ], "where": [ { "simple": { "triplePattern": { "subject": { "variable": "s" }, "predicate": { "namedNode": {"prefixed": "foaf:givenName"} }, "object": { "literal": { "simple": "Myrddin" } } } } }, { "simple": { "triplePattern": { "subject": { "variable": "s" }, "predicate": { "variable": "p" }, "object": { "variable": "o" } } } } ] `
 
 Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform this action.
 
-| parameter              | description                                                                                                                                                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `delete_data`          | _(Required.) _ **object**.                                                                                                                                                                             |
-| `delete_data.delete`   | _(Required.) _ **Array&lt;[TriplePattern](#triplepattern)&gt;**. Specifies the specific triple patterns to delete. If nothing is provided, the patterns from the `where` clause are used for deletion. |
-| `delete_data.prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the operation.                                                                                                                 |
-| `delete_data.where`    | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. Defines the patterns that data (RDF triples) should match in order for it to be considered for deletion.                            |
+| parameter              | description                                                                                                                                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delete_data`          | _(Required.) _ **object**.                                                                                                                                                                                            |
+| `delete_data.delete`   | _(Required.) _ **Array&lt;[TripleDeleteTemplate](#tripledeletetemplate)&gt;**. Specifies the specific triple templates to delete. If nothing is provided, the patterns from the `where` clause are used for deletion. |
+| `delete_data.prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the operation.                                                                                                                                |
+| `delete_data.where`    | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. Defines the patterns that data (RDF triples) should match in order for it to be considered for deletion.                                           |
 
 ## QueryMsg
 
@@ -536,11 +536,11 @@ An RDF [blank node](https://www.w3.org/TR/rdf11-concepts/#dfn-blank-node).
 
 Represents a CONSTRUCT query over the triple store, allowing to retrieve a set of triples serialized in a specific format.
 
-| property    | description                                                                                                                                                                        |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `construct` | _(Required.) _ **Array&lt;[TriplePattern](#triplepattern)&gt;**. The triples to construct. If nothing is provided, the patterns from the `where` clause are used for construction. |
-| `prefixes`  | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                                                 |
-| `where`     | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. The WHERE clause. This clause is used to specify the triples to construct using variable bindings.              |
+| property    | description                                                                                                                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `construct` | _(Required.) _ **Array&lt;[TripleConstructTemplate](#tripleconstructtemplate)&gt;**. The triples to construct. If nothing is provided, the patterns from the `where` clause are used for construction. |
+| `prefixes`  | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                                                                     |
+| `where`     | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. The WHERE clause. This clause is used to specify the triples to construct using variable bindings.                                  |
 
 ### DataFormat
 
@@ -747,6 +747,26 @@ Contains usage information about the triple store.
 | `namespace_count` | _(Required.) _ **[Uint128](#uint128)**. The total number of IRI namespace present in the store. |
 | `triple_count`    | _(Required.) _ **[Uint128](#uint128)**. The total number of triple present in the store.        |
 
+### TripleConstructTemplate
+
+Represents a triple template to be forged for a construct query.
+
+| property    | description                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| `object`    | _(Required.) _ **[VarOrNodeOrLiteral](#varornodeorliteral)**. The object of the triple pattern. |
+| `predicate` | _(Required.) _ **[VarOrNamedNode](#varornamednode)**. The predicate of the triple pattern.      |
+| `subject`   | _(Required.) _ **[VarOrNode](#varornode)**. The subject of the triple pattern.                  |
+
+### TripleDeleteTemplate
+
+Represents a triple template to be deleted.
+
+| property    | description                                                                                               |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| `object`    | _(Required.) _ **[VarOrNamedNodeOrLiteral](#varornamednodeorliteral)**. The object of the triple pattern. |
+| `predicate` | _(Required.) _ **[VarOrNamedNode](#varornamednode)**. The predicate of the triple pattern.                |
+| `subject`   | _(Required.) _ **[VarOrNamedNode](#varornamednode)**. The subject of the triple pattern.                  |
+
 ### TriplePattern
 
 Represents a triple pattern in a [SimpleWhereCondition].
@@ -754,7 +774,7 @@ Represents a triple pattern in a [SimpleWhereCondition].
 | property    | description                                                                                     |
 | ----------- | ----------------------------------------------------------------------------------------------- |
 | `object`    | _(Required.) _ **[VarOrNodeOrLiteral](#varornodeorliteral)**. The object of the triple pattern. |
-| `predicate` | _(Required.) _ **[VarOrNode](#varornode)**. The predicate of the triple pattern.                |
+| `predicate` | _(Required.) _ **[VarOrNamedNode](#varornamednode)**. The predicate of the triple pattern.      |
 | `subject`   | _(Required.) _ **[VarOrNode](#varornode)**. The subject of the triple pattern.                  |
 
 ### Turtle
@@ -809,6 +829,16 @@ Represents either a variable or a named node (IRI).
 | [Variable](#variable)   | **object**. A variable.                                                  |
 | [NamedNode](#namednode) | **object**. An RDF [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri). |
 
+### VarOrNamedNodeOrLiteral
+
+Represents either a variable, a named node or a literal.
+
+| variant                 | description                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Variable](#variable)   | **object**. A variable.                                                                                                                            |
+| [NamedNode](#namednode) | **object**. An RDF [IRI](https://www.w3.org/TR/rdf11-concepts/#dfn-iri).                                                                           |
+| [Literal](#literal)     | **object**. An RDF [literal](https://www.w3.org/TR/rdf11-concepts/#dfn-literal), i.e. a simple literal, a language-tagged string or a typed value. |
+
 ### VarOrNode
 
 Represents either a variable or a node.
@@ -846,4 +876,4 @@ Represents a condition in a [WhereClause].
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-cognitarium.json` (`b3bea598ea8fda42`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-cognitarium.json` (`7aa73b0502a6138b`)_

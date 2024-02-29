@@ -77,7 +77,7 @@ impl Subject {
                 key
             }
             Subject::Blank(n) => {
-                let val = n.as_bytes();
+                let val = n.to_be_bytes();
                 let mut key: Vec<u8> = Vec::with_capacity(val.len() + 1);
                 key.push(b'b');
                 key.extend(val);
@@ -108,7 +108,7 @@ impl Object {
                     .update(n.value.as_bytes());
             }
             Object::Blank(n) => {
-                hasher.update(&[b'b']).update(n.as_bytes());
+                hasher.update(&[b'b']).update(n.to_be_bytes().as_slice());
             }
             Object::Literal(l) => {
                 hasher.update(&[b'l']);
@@ -131,7 +131,8 @@ impl Object {
     }
 }
 
-pub type BlankNode = String;
+pub const BLANK_NODE_SIZE: usize = 16usize;
+pub type BlankNode = u128;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Node {
@@ -191,10 +192,7 @@ mod test {
                     value: "val".to_string(),
                 }),
             ),
-            (
-                Object::Blank("val1".to_string()),
-                Object::Blank("val2".to_string()),
-            ),
+            (Object::Blank(0u128), Object::Blank(1u128)),
             (
                 Object::Literal(Literal::Simple {
                     value: "val1".to_string(),
@@ -272,7 +270,7 @@ mod test {
                 }),
             ),
             (
-                Object::Blank("val".to_string()),
+                Object::Blank(0u128),
                 Object::Literal(Literal::Simple {
                     value: "val".to_string(),
                 }),

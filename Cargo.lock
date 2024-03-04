@@ -39,6 +39,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
+name = "base64"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9475866fec1451be56a3c2400fd081ff546538961565ccb5b7142cbd22bc7a51"
+
+[[package]]
 name = "base64ct"
 version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -185,7 +191,7 @@ version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef8666e572a3a2519010dde88c04d16e9339ae751b56b2bb35081fe3f7d6be74"
 dependencies = [
- "base64",
+ "base64 0.21.7",
  "bech32",
  "bnum",
  "cosmwasm-crypto",
@@ -735,7 +741,7 @@ dependencies = [
 name = "okp4-cognitarium"
 version = "3.0.0"
 dependencies = [
- "base64",
+ "base64 0.22.0",
  "blake3",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -767,7 +773,7 @@ dependencies = [
 name = "okp4-dataverse"
 version = "0.0.1"
 dependencies = [
- "base64",
+ "base64 0.22.0",
  "bs58",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -830,7 +836,7 @@ name = "okp4-objectarium"
 version = "3.0.0"
 dependencies = [
  "base16ct",
- "base64",
+ "base64 0.22.0",
  "bs58",
  "cosmwasm-schema",
  "cosmwasm-std",

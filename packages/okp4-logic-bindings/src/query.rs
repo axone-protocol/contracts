@@ -18,13 +18,12 @@ pub struct AskResponse {
     pub height: u64,
     pub gas_used: u64,
     pub answer: Option<Answer>,
+    pub user_output: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct Answer {
-    pub success: bool,
-    pub error: Option<String>,
     pub has_more: bool,
     pub variables: Vec<String>,
     pub results: Vec<Result>,
@@ -33,6 +32,7 @@ pub struct Answer {
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct Result {
+    pub error: Option<String>,
     pub substitutions: Vec<Substitution>,
 }
 

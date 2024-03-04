@@ -29,6 +29,12 @@ pub enum LogicAskResponseError {
     #[error("Could not parse term: {0}")]
     Parse(TermParseError),
 
+    #[error("Substitution error: {0}")]
+    Substitution(String),
+
+    #[error("Unexpected response: {0}")]
+    Unexpected(String),
+
     #[error("Invalid parsed term format.")]
     UnexpectedTerm,
 }

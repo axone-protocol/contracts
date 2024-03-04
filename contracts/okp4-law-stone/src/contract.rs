@@ -299,17 +299,17 @@ mod tests {
                         height: 1,
                         gas_used: 1000,
                         answer: Some(Answer {
-                            success: true,
-                            error: None,
                             has_more: false,
                             variables: vec!["Files".to_string()],
                             results: vec![LogicResult {
+                                error: None,
                                 substitutions: vec![Substitution {
                                     variable: "Files".to_string(),
                                     expression: deps_name,
                                 }],
                             }],
                         }),
+                        user_output: None,
                     })
                     .into(),
                 )
@@ -459,17 +459,17 @@ mod tests {
                     height: 1,
                     gas_used: 1000,
                     answer: Some(Answer {
-                        success: true,
-                        error: None,
                         has_more: false,
                         variables: vec!["Foo".to_string()],
                         results: vec![LogicResult {
+                            error: None,
                             substitutions: vec![Substitution {
                                 variable: "Foo".to_string(),
                                 expression: "bar".to_string(),
                             }],
                         }],
                     }),
+                    user_output: None,
                 })
                 .into(),
             ),

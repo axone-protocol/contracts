@@ -4,7 +4,7 @@ use cosmwasm_std::{Event, StdError, StdResult};
 use itertools::Itertools;
 use okp4_logic_bindings::error::CosmwasmUriError;
 use okp4_logic_bindings::uri::CosmwasmUri;
-use okp4_logic_bindings::{AskResponse, Substitution, TermValue};
+use okp4_logic_bindings::{AskResponse, TermValue};
 use okp4_objectarium_client::ObjectRef;
 use std::any::type_name;
 
@@ -46,13 +46,29 @@ pub fn ask_response_to_objects(
     res: AskResponse,
     variable: String,
 ) -> Result<Vec<ObjectRef>, ContractError> {
-    res.answer
+    let result = res
+        .answer
         .map(|a| a.results)
         .unwrap_or_default()
-        .iter()
-        .flat_map(|r: &okp4_logic_bindings::Result| r.substitutions.clone())
+        .into_iter()
+        .exactly_one()
+        .map_err(|_| {
+            ContractError::LogicAskResponse(LogicAskResponseError::Unexpected(
+                "expected exactly one result".to_string(),
+            ))
+        })?;
+
+    if let Some(e) = result.error {
+        return Err(ContractError::LogicAskResponse(
+            LogicAskResponseError::Substitution(e),
+        ));
+    }
+
+    result
+        .substitutions
+        .into_iter()
         .filter(|s| s.variable == variable)
-        .map(|s: Substitution| {
+        .map(|s| {
             s.parse_expression()
                 .map_err(|e| ContractError::LogicAskResponse(LogicAskResponseError::Parse(e)))
                 .and_then(term_as_vec)
@@ -71,7 +87,7 @@ pub fn ask_response_to_objects(
 mod tests {
     use super::*;
     use okp4_logic_bindings::error::TermParseError;
-    use okp4_logic_bindings::Answer;
+    use okp4_logic_bindings::{Answer, Substitution};
 
     #[test]
     fn logic_to_objects() {
@@ -102,18 +118,18 @@ mod tests {
                     AskResponse {
                         answer: Some(Answer {
                             results: vec![okp4_logic_bindings::Result {
+                                error: None,
                                 substitutions: vec![Substitution {
                                     variable: "X".to_string(),
                                     expression: case.0,
                                 }]
                             }],
                             has_more: false,
-                            success: true,
                             variables: vec![],
-                            error: None,
                         }),
                         height: 1,
                         gas_used: 1,
+                        user_output: None,
                     },
                     "X".to_string()
                 ),

@@ -511,4 +511,4 @@ A string containing a 128-bit integer in decimal representation.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`37a6830a8446a597`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`6e145d8e13059aaa`)_

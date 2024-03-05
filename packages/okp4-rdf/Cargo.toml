@@ -2,7 +2,7 @@
 authors = ["OKP4"]
 edition = "2021"
 name = "okp4-rdf"
-version = "3.0.0"
+version = "4.0.0"
 
 [dependencies]
 base16ct = { version = "0.2.0", features = ["alloc"] }

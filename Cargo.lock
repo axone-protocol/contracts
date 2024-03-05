@@ -739,7 +739,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-cognitarium"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "base64 0.22.0",
  "blake3",
@@ -762,7 +762,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-cognitarium-client"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "cosmwasm-std",
  "okp4-cognitarium",
@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-dataverse"
-version = "0.0.1"
+version = "4.0.0"
 dependencies = [
  "base64 0.22.0",
  "bs58",
@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-law-stone"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -820,7 +820,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-logic-bindings"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "cosmwasm-std",
  "form_urlencoded",
@@ -833,7 +833,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-objectarium"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "base16ct",
  "base64 0.22.0",
@@ -858,7 +858,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-objectarium-client"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "cosmwasm-std",
  "okp4-logic-bindings",
@@ -869,7 +869,7 @@ dependencies = [
 
 [[package]]
 name = "okp4-rdf"
-version = "3.0.0"
+version = "4.0.0"
 dependencies = [
  "base16ct",
  "cosmwasm-std",

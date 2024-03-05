@@ -1,5 +1,110 @@
 # ØKP4 contracts
 
+## [4.0.0](https://github.com/okp4/contracts/compare/v3.0.0...v4.0.0) (2024-03-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **law-stone:** match v7 logic module model
+* **logic-bindings:** match v7 okp4d logic module model
+* **cognitarium:** rework construct clause based on template
+* **cognitarium:** use var or named node as msg pattern predicate
+* **cognitarium:** rework delete input to remove template bnodes
+* **law-stone:** update needed by new logic bindings
+
+### Features
+
+* **cognitarium-client:** add basic client ([d4ab756](https://github.com/okp4/contracts/commit/d4ab756b1d07b5c5175d86e7b792668f33cb2e89))
+* **cognitarium:** add select mapping to msg on describe ([a2010a7](https://github.com/okp4/contracts/commit/a2010a72c14c906c5c528b4566d58bb6827a32fa))
+* **cognitarium:** add select msg mapping layer ([ef789f8](https://github.com/okp4/contracts/commit/ef789f8f6a73d9277605934a6ec3a15936d6054c))
+* **cognitarium:** allow delete without where clause ([e22d9b9](https://github.com/okp4/contracts/commit/e22d9b93a501f9feae7a2c0788f14f17a31641ba))
+* **cognitarium:** generate bnode identifiers on query ([93acb93](https://github.com/okp4/contracts/commit/93acb9392032f10c273d5b02433251ec774be86d))
+* **cognitarium:** implement construct query ([7a5490e](https://github.com/okp4/contracts/commit/7a5490efb40949256d337cfd4e5600c2b7ffba21))
+* **cognitarium:** introduce blank node id counter state ([2e60a12](https://github.com/okp4/contracts/commit/2e60a1203095fa7749e317b4651437f3d3fe5ff6))
+* **cognitarium:** issue new id for bnode provided in construct ([f22eb81](https://github.com/okp4/contracts/commit/f22eb817d4f4e047e69b41a68b085a440ca43ba7))
+* **cognitarium:** make construct rely on atoms iterator ([6ebbf83](https://github.com/okp4/contracts/commit/6ebbf837d1bfd2a744bb8044934a07615dc6ae21))
+* **cognitarium:** make delete msg rely on triple iterator ([1fdc691](https://github.com/okp4/contracts/commit/1fdc6918e378f68ff46f230674f97d98888d5710))
+* **cognitarium:** make describe msg rely on atom iterator ([78648b4](https://github.com/okp4/contracts/commit/78648b49688d5c4bfa6a8b2d5777fe2dcd4b923c))
+* **cognitarium:** offer additional querier iterators ([292ef7d](https://github.com/okp4/contracts/commit/292ef7df229c37c060cfee85cac7bd0e77988a30))
+* **cognitarium:** reuse where clause in construct empty ([61ff078](https://github.com/okp4/contracts/commit/61ff0782de781381157327f3b83a6b0d4c7fd715))
+* **cognitarium:** rework construct clause based on template ([f15d822](https://github.com/okp4/contracts/commit/f15d8228c8a92efcb8532152e15eaffabe71fe23))
+* **cognitarium:** rework delete input to remove template bnodes ([7dfb48e](https://github.com/okp4/contracts/commit/7dfb48ebf8c2ae1fa69616f9de957d3576889fb7))
+* **cognitarium:** update triple state model with u128 as bnode ([1a492e7](https://github.com/okp4/contracts/commit/1a492e7463c0e34288a2cbefded5488f3ca380f3))
+* **cognitarium:** use only state model in querier ([3e6d8af](https://github.com/okp4/contracts/commit/3e6d8afdee2a3ec682e7030c8f458974527f7b81))
+* **dataverse:** add basic internal state ([1c05850](https://github.com/okp4/contracts/commit/1c05850dd8c1f87b8680ce19c7e8c24b1a497999))
+* **dataverse:** add DataIntegrityProof vc support ([a0d055d](https://github.com/okp4/contracts/commit/a0d055d4181997d54403c759b33216786958bcb9))
+* **dataverse:** add dedicated errors to credentials ([4e8890e](https://github.com/okp4/contracts/commit/4e8890e77e4a65a8b9b47b50c7472f7ea4287fea))
+* **dataverse:** add ecdsa secp 2019 vc proof support ([46cd40c](https://github.com/okp4/contracts/commit/46cd40c383f72ff27dbdc4a8dec768aa04cd7b9c))
+* **dataverse:** add secp256k1 crypto support ([47462be](https://github.com/okp4/contracts/commit/47462bed1b977fe521c76ff97a6f92bf27e1a866))
+* **dataverse:** add support of Ed25519Signature2018 proof ([ede8320](https://github.com/okp4/contracts/commit/ede83205d68c9e5aa912e1c868f88f4711df3f8b))
+* **dataverse:** add support to parse ed25519 2020 proofs ([c6c5540](https://github.com/okp4/contracts/commit/c6c554022d928e130ed10ab63f396196f8fa4237))
+* **dataverse:** add triple store config to instantiate msg ([0a129c5](https://github.com/okp4/contracts/commit/0a129c587fd9a1d5957f282c7e3352f5f751b26b))
+* **dataverse:** allow no proof in vc parsing according to spec ([6c56cd0](https://github.com/okp4/contracts/commit/6c56cd096478f17cee80592c3e640aaf8ac87293))
+* **dataverse:** dissociate triple store msg limits struct ([c142976](https://github.com/okp4/contracts/commit/c142976a035348f1bc32758c316d1b3848a835d7))
+* **dataverse:** garantee claim storage format ([b2f6d43](https://github.com/okp4/contracts/commit/b2f6d43ce3b32e4a917987e59622c1073f80ec0b))
+* **dataverse:** impl rdf serialization of dataverse cred ([d4da31d](https://github.com/okp4/contracts/commit/d4da31d4945b3c303a620d7a42b8b65e0958deb8))
+* **dataverse:** implement instantiate msg ([f5fade2](https://github.com/okp4/contracts/commit/f5fade26c110a71c82831207f5e38a618f76b457))
+* **dataverse:** implement vc proof parsing ([bd826f9](https://github.com/okp4/contracts/commit/bd826f924f8884636c0e1084251fea8f5084f374))
+* **dataverse:** implements claims registering in cognitarium ([385426e](https://github.com/okp4/contracts/commit/385426ee413750bd8f414c761f432d3ae784c78d))
+* **dataverse:** implements dummy submitclaims exec msg ([948331f](https://github.com/okp4/contracts/commit/948331f8957eb6892dbd051789a80a7c8b2320cc))
+* **dataverse:** implements proof verification ([ae8f97e](https://github.com/okp4/contracts/commit/ae8f97e3242a6ffbf68ece68486ba93e329a2cd4))
+* **dataverse:** implements VC rdf parsing ([a972284](https://github.com/okp4/contracts/commit/a97228457c616bdd518155ec2f04aa914607d3d3))
+* **dataverse:** initialize blueprint smart contract ([fde585b](https://github.com/okp4/contracts/commit/fde585b6ab05c12324d492ebd9a55a6ae3bd5240))
+* **dataverse:** introduce dataverse credential model ([3347455](https://github.com/okp4/contracts/commit/33474559727da5cc5991d732ddf87bbc00ca20ce))
+* **dataverse:** introduce subject ids for RDF resource designation ([bc37b48](https://github.com/okp4/contracts/commit/bc37b48385db812283deb74d8a3a23759f4231b2))
+* **dataverse:** properly persists claims in related exec msg ([6abb559](https://github.com/okp4/contracts/commit/6abb559566a24942f9d888f94c6fdf39b2388af7))
+* **dataverse:** rework SubmitClaims msg doc ([1489f95](https://github.com/okp4/contracts/commit/1489f95e8305c5fed943c69fe54353b16c5e6995))
+* **dataverse:** specify AttachMetadata execute message ([99684f5](https://github.com/okp4/contracts/commit/99684f5404df1b8d86b2d70f2786cb5c71555c21))
+* **dataverse:** specify contract instanciation ([9168c68](https://github.com/okp4/contracts/commit/9168c68c928fabb0504eb30ca2acbeaf2e1d02b2))
+* **dataverse:** specify DetachMetadata execute message ([7666455](https://github.com/okp4/contracts/commit/76664553df746ad706f272a809ac043816fa5431))
+* **dataverse:** specify FoundZone execute message ([2c38b6b](https://github.com/okp4/contracts/commit/2c38b6b8cd5cc1f37aca5e840d99ba8d7a7228d5))
+* **dataverse:** specify RegisterDataset execute message ([7a2f935](https://github.com/okp4/contracts/commit/7a2f935bd7ee6c032b67246a779600d4f5ba0f4b))
+* **dataverse:** specify RegisterService execute message ([8faf0c1](https://github.com/okp4/contracts/commit/8faf0c1d2946c0f9640fbf5312f426556414548d))
+* **dataverse:** specify ReviseMetadata execution message ([6a0a67a](https://github.com/okp4/contracts/commit/6a0a67a9f693fea184af18d9bf635d03a01d5111))
+* **dataverse:** use a dedicated type predicate for cred storage ([f74aa3b](https://github.com/okp4/contracts/commit/f74aa3b3aecfc4c81ebd2787fe905ae8c1e02a86))
+* **dataverse:** use Addr type for triple store state address ([89a55ee](https://github.com/okp4/contracts/commit/89a55eeb39af3a1581d33f27fbff2c6716819ca7))
+* **law-stone:** implement program_code query ([ef8255d](https://github.com/okp4/contracts/commit/ef8255da755362602317fe15ec28a1fafd0a6193))
+* **law-stone:** match v7 logic module model ([c25128a](https://github.com/okp4/contracts/commit/c25128a2c4afff4d16dc57d8365cf8e086b235ce))
+* **law-stone:** update needed by new logic bindings ([dcaef7a](https://github.com/okp4/contracts/commit/dcaef7a13bef554939e6afa27aa13a726f7b503d))
+* **logic-bindings:** make Answer match logic module format ([f1a809c](https://github.com/okp4/contracts/commit/f1a809c5d2e0efae410a71f8da359543e439432a))
+* **logic-bindings:** match v7 okp4d logic module model ([32e114e](https://github.com/okp4/contracts/commit/32e114e6b6e2fdc7895125018d03d883fc2a8975))
+* **rdf:** add basic error management ([58415de](https://github.com/okp4/contracts/commit/58415dec1694ad13649d64f52f972c4f4450307e))
+* **rdf:** add nquads parsing to owned model ([4b8a3e8](https://github.com/okp4/contracts/commit/4b8a3e8b98b609fb514034a1ba81eadff47e40ab))
+* **rdf:** add rdf dataset querying utils ([1c6c456](https://github.com/okp4/contracts/commit/1c6c456c28d6094e459643a5eb24bed3eef85424))
+* **rdf:** allow to get incremented raw id from issuer ([96286f7](https://github.com/okp4/contracts/commit/96286f77f00a2c6f388e0030e87a9219dcecc7d9))
+* **rdf:** implement owned quad model ([c2acec0](https://github.com/okp4/contracts/commit/c2acec0e6de7261244be4a71ffc1457f9cfda16b))
+* **rdf:** implements rdf canonicalization ([60df2a6](https://github.com/okp4/contracts/commit/60df2a6a4c5b268226be4206b66a6bbfd0eaf169))
+
+
+### Bug Fixes
+
+* **cognitarium:** allow to reuse where as delete select ([2e763ee](https://github.com/okp4/contracts/commit/2e763eee87c05ea569a80f3e872f2b0b89161242))
+* **cognitarium:** avoir error on not found ns at plan building ([18fe57b](https://github.com/okp4/contracts/commit/18fe57b5f277782593325b5e919a946babd20e92))
+* **cognitarium:** consider blank node query as special variables ([e59616d](https://github.com/okp4/contracts/commit/e59616d2db7b3fde54a6a83ce0927cbead43ab45))
+* **cognitarium:** ensure equality of same var values in a triple pattern ([3c05fe8](https://github.com/okp4/contracts/commit/3c05fe872bb1c26e362393aeb3d7cc11e94d359c))
+* **cognitarium:** manage blank node variable as post state filters ([870d0f3](https://github.com/okp4/contracts/commit/870d0f3dd355710e00fbefd2c9c8faa2620ed34a))
+* **cognitarium:** prevent predicate blank node filter ([447bc72](https://github.com/okp4/contracts/commit/447bc723e378d7ab53d5c9159bc633922413a4e8))
+* **dataverse:** consider proof options in signed message ([4b1a058](https://github.com/okp4/contracts/commit/4b1a05844a1d553c9ba9d0361682e8ce27e6efda))
+* **dataverse:** correct some error messages in vc parsing ([087c933](https://github.com/okp4/contracts/commit/087c93386d64b1f2c4bfd8eb3a7364f2244a880b))
+* **dataverse:** make ed25519 verification wasm friendly ([da2e885](https://github.com/okp4/contracts/commit/da2e8857b0df3dd70d2c8be2cf3131e92679aa8d))
+* **dataverse:** persists claim sender addr as literal ([bd4a169](https://github.com/okp4/contracts/commit/bd4a1697ce6f7ddd37f227430a66d6a6e3d7da6d))
+* **dataverse:** properly extract claims from VC ([88141ba](https://github.com/okp4/contracts/commit/88141ba85e51c365cbfa7f4704d5dc1c6118f833))
+* **dataverse:** remove graph name from proof opts doc ([6c6dd60](https://github.com/okp4/contracts/commit/6c6dd604e72d3c79592308faabb92fecc700b88a))
+* **rdf:** allow duplicate hash in n degree path list ([7589054](https://github.com/okp4/contracts/commit/7589054b8fb5d16826f4b2205255905a779bcdc1))
+* **rdf:** make quad pattern iter skip work ([c14bf42](https://github.com/okp4/contracts/commit/c14bf4248550f9ad8f9baac1e9083dc59b6bc5b3))
+
+
+### Performance Improvements
+
+* **cognitarium:** use resolved variables to construct atoms ([72766ff](https://github.com/okp4/contracts/commit/72766ff6c29b3db0286e54f89282a1c3ca4d27e6))
+* **cognitarium:** use resolved vars to contruct triples ([e389931](https://github.com/okp4/contracts/commit/e389931dc5606383c5f914375105fd8999750d54))
+* **rdf:** improve hash sortings ([6b6e629](https://github.com/okp4/contracts/commit/6b6e6290fc67c59c07da804a1c2749ba31b11b87))
+
+
+### Code Refactoring
+
+* **cognitarium:** use var or named node as msg pattern predicate ([a194d1c](https://github.com/okp4/contracts/commit/a194d1c8bc86219df5b75710fe7001707b51219c))
+
 ## [3.0.0](https://github.com/okp4/contracts/compare/v2.1.0...v3.0.0) (2023-09-28)
 
 

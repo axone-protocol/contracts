@@ -68,11 +68,12 @@ ProgramCode returns the law program code.
 
 ### ask
 
-| property   | description                  |
-| ---------- | ---------------------------- |
-| `answer`   | **[Answer](#answer)\|null**. |
-| `gas_used` | _(Required.) _ **integer**.  |
-| `height`   | _(Required.) _ **integer**.  |
+| property      | description                  |
+| ------------- | ---------------------------- |
+| `answer`      | **[Answer](#answer)\|null**. |
+| `gas_used`    | _(Required.) _ **integer**.  |
+| `height`      | _(Required.) _ **integer**.  |
+| `user_output` | **string\|null**.            |
 
 ### program
 
@@ -99,10 +100,8 @@ This is only needed as serde-json-\{core,wasm\} has a horrible encoding for Vec&
 
 | property    | description                                        |
 | ----------- | -------------------------------------------------- |
-| `error`     | **string\|null**.                                  |
 | `has_more`  | _(Required.) _ **boolean**.                        |
 | `results`   | _(Required.) _ **Array&lt;[Result](#result)&gt;**. |
-| `success`   | _(Required.) _ **boolean**.                        |
 | `variables` | _(Required.) _ **Array&lt;string&gt;**.            |
 
 ### Binary
@@ -117,6 +116,7 @@ A string containing Base64-encoded data.
 
 | property        | description                                                    |
 | --------------- | -------------------------------------------------------------- |
+| `error`         | **string\|null**.                                              |
 | `substitutions` | _(Required.) _ **Array&lt;[Substitution](#substitution)&gt;**. |
 
 ### Substitution
@@ -128,4 +128,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`b4af0e49e5a861ed`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`c581ec9711833fae`)_

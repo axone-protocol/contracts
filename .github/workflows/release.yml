@@ -43,6 +43,12 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup jq
+        uses: dcarbone/install-jq-action@v2
+        with:
+          version: 1.7
+          force: true
+
       - name: Setup rust
         uses: actions-rs/toolchain@v1
         with:

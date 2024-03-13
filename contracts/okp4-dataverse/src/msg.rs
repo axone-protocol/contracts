@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Binary, Uint128, Uint64};
+use cosmwasm_std::{Addr, Binary, Uint128, Uint64};
 
 /// `InstantiateMsg` is used to initialize a new instance of the dataverse.
 #[cw_serde]
@@ -189,4 +189,6 @@ pub enum QueryMsg {
 pub struct DataverseResponse {
     /// The name of the dataverse.
     pub name: String,
+    /// The cognitarium contract address.
+    pub triplestore_address: Addr,
 }

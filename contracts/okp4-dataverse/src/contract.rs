@@ -113,16 +113,29 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps<'_>, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    Err(StdError::generic_err("Not implemented"))
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Dataverse {} => to_json_binary(&query::dataverse(deps)?),
+    }
 }
 
-pub mod query {}
+pub mod query {
+    use crate::msg::DataverseResponse;
+    use crate::state::DATAVERSE;
+    use cosmwasm_std::{Deps, StdResult};
+
+    pub fn dataverse(deps: Deps<'_>) -> StdResult<DataverseResponse> {
+        DATAVERSE.load(deps.storage).map(|d| DataverseResponse {
+            name: d.name,
+            triplestore_address: d.triplestore_address,
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::{RdfFormat, TripleStoreConfig, TripleStoreLimitsInput};
+    use crate::msg::{DataverseResponse, RdfFormat, TripleStoreConfig, TripleStoreLimitsInput};
     use crate::testutil::testutil::read_test_data;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
@@ -195,6 +208,33 @@ mod tests {
                 triplestore_address: Addr::unchecked("predicted address"),
             }
         )
+    }
+
+    #[test]
+    fn proper_dataverse() {
+        let mut deps = mock_dependencies();
+
+        DATAVERSE
+            .save(
+                deps.as_mut().storage,
+                &Dataverse {
+                    name: "my-dataverse".to_string(),
+                    triplestore_address: Addr::unchecked("my-dataverse-addr"),
+                },
+            )
+            .unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Dataverse {});
+        assert!(res.is_ok());
+        let res: StdResult<DataverseResponse> = from_json(res.unwrap());
+        assert!(res.is_ok());
+        assert_eq!(
+            res.unwrap(),
+            DataverseResponse {
+                name: "my-dataverse".to_string(),
+                triplestore_address: Addr::unchecked("my-dataverse-addr"),
+            }
+        );
     }
 
     #[test]

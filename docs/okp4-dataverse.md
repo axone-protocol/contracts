@@ -135,11 +135,26 @@ Retrieves information about the current dataverse instance.
 
 DataverseResponse is the response of the Dataverse query.
 
-| property | description                                           |
-| -------- | ----------------------------------------------------- |
-| `name`   | _(Required.) _ **string**. The name of the dataverse. |
+| property              | description                                                         |
+| --------------------- | ------------------------------------------------------------------- |
+| `name`                | _(Required.) _ **string**. The name of the dataverse.               |
+| `triplestore_address` | _(Required.) _ **[Addr](#addr)**. The cognitarium contract address. |
 
 ## Definitions
+
+### Addr
+
+A human readable address.
+
+In Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.
+
+This type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.
+
+This type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.
+
+| type        |
+| ----------- |
+| **string**. |
 
 ### Binary
 
@@ -223,5 +238,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`c007ecd2b9eeb04a`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-dataverse.json` (`bd9dd1798f1b3a0d`)*
 ````

@@ -5,7 +5,7 @@ members = ["contracts/*", "packages/*"]
 cosmwasm-schema = "1.5.3"
 cosmwasm-std = { version = "1.5.3", features = ["cosmwasm_1_2"] }
 cosmwasm-storage = "1.5.2"
-cw-multi-test = "0.20.0"
+cw-multi-test = "0.20.1"
 cw-storage-plus = "1.2.0"
 cw-utils = "1.0.3"
 cw2 = "1.1.1"

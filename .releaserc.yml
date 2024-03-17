@@ -21,11 +21,11 @@ plugins:
         cargo make schema && cargo make docs-generate && cargo make release-wasm
   - - "@semantic-release/github"
     - assets:
-        - path: "./target/wasm32-unknown-unknown/release/okp4_objectarium.wasm"
-        - path: "./target/wasm32-unknown-unknown/release/okp4_law_stone.wasm"
-        - path: "./target/wasm32-unknown-unknown/release/okp4_cognitarium.wasm"
-        - path: "./target/wasm32-unknown-unknown/release/okp4_dataverse.wasm"
-        - path: "./target/wasm32-unknown-unknown/release/checksums.txt"
+        - path: "./artifacts/okp4_objectarium.wasm"
+        - path: "./artifacts/okp4_law_stone.wasm"
+        - path: "./artifacts/okp4_cognitarium.wasm"
+        - path: "./artifacts/okp4_dataverse.wasm"
+        - path: "./artifacts/checksums.txt"
         - path: "./contracts/okp4-objectarium/schema/okp4-objectarium.json"
         - path: "./contracts/okp4-law-stone/schema/okp4-law-stone.json"
         - path: "./contracts/okp4-cognitarium/schema/okp4-cognitarium.json"

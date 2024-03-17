@@ -1,5 +1,12 @@
 # ØKP4 contracts
 
+## [4.1.0](https://github.com/okp4/contracts/compare/v4.0.0...v4.1.0) (2024-03-17)
+
+
+### Features
+
+* **dataverse:** implements dataverse query ([f93641d](https://github.com/okp4/contracts/commit/f93641dde61edb58ce26fca474e5df421f563a94))
+
 ## [4.0.0](https://github.com/okp4/contracts/compare/v3.0.0...v4.0.0) (2024-03-05)
 
 

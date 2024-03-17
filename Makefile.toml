@@ -217,6 +217,7 @@ docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
   cosmwasm/optimizer:0.15.1
 
+mkdir -p ${DIR_WASM}
 mv artifacts/* ${DIR_WASM}
 rmdir artifacts
 '''

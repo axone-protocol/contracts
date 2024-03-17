@@ -212,14 +212,10 @@ echo "📖 Documentation has been successfully generated and available at $(pwd)
 description = "Build optimized wasm using CosmWasm optimizer and provide checksums"
 script = '''
 echo "📦 Generating release binaries and checksums into ${DIR_WASM}"
-docker run --rm --user $(id -u):$(id -g) -v "$(pwd)":/code \
+docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
   cosmwasm/optimizer:0.15.1
-
-mkdir -p ${DIR_WASM}
-mv artifacts/* ${DIR_WASM}
-rmdir artifacts
 '''
 
 [tasks.scaffold-smart-contract]

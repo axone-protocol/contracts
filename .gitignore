@@ -6,3 +6,4 @@ target/
 *.lcov
 lcov.info
 contracts/*/schema/
+artifacts

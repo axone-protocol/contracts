@@ -77,7 +77,7 @@ pub mod execute {
             .query_wasm_contract_info(env.contract.address)?
             .admin
         {
-            Some(admin_addr) if admin_addr != info.sender => Err(ContractError::Unauthorized {}),
+            Some(admin_addr) if admin_addr != info.sender => Err(ContractError::Unauthorized),
             _ => Ok(()),
         }?;
 
@@ -906,18 +906,8 @@ mod tests {
     #[test]
     fn break_stone_admin() {
         let cases = vec![
-            (
-                "not-admin",
-                true,
-                false,
-                Some(ContractError::Unauthorized {}),
-            ),
-            (
-                "not-admin",
-                true,
-                true,
-                Some(ContractError::Unauthorized {}),
-            ),
+            ("not-admin", true, false, Some(ContractError::Unauthorized)),
+            ("not-admin", true, true, Some(ContractError::Unauthorized)),
             ("admin", true, false, None),
             ("anyone", false, false, None),
         ];

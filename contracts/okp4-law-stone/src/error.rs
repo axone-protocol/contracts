@@ -21,7 +21,7 @@ pub enum ContractError {
     LogicAskResponse(LogicAskResponseError),
 
     #[error("Only the contract admin can perform this operation.")]
-    Unauthorized {},
+    Unauthorized,
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]

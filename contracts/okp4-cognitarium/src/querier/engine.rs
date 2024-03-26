@@ -902,9 +902,9 @@ impl AtomTemplate {
             &mut |value| {
                 Ok(match value {
                     Subject::Named(n) => rdf::Subject::NamedNode(n.as_iri(resolve_ns_fn)?),
-                    Subject::Blank(n) => {
-                        rdf::Subject::BlankNode(id_issuer.get_str_or_issue(n.to_string()))
-                    }
+                    Subject::Blank(n) => rdf::Subject::BlankNode(
+                        id_issuer.get_str_or_issue(n.to_string()).to_string(),
+                    ),
                 })
             },
             "subject",
@@ -945,7 +945,7 @@ impl AtomTemplate {
                 Ok(match value {
                     Object::Named(n) => rdf::Value::NamedNode(n.as_iri(resolve_ns_fn)?),
                     Object::Blank(n) => {
-                        rdf::Value::BlankNode(id_issuer.get_str_or_issue(n.to_string()))
+                        rdf::Value::BlankNode(id_issuer.get_str_or_issue(n.to_string()).to_string())
                     }
                     Object::Literal(l) => match l {
                         state::Literal::Simple { value } => rdf::Value::LiteralSimple(value),

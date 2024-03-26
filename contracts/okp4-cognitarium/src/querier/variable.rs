@@ -59,7 +59,7 @@ impl ResolvedVariable {
                     value: IRI::Full(iri),
                 })?,
                 Subject::Blank(blank) => Value::BlankNode {
-                    value: id_issuer.get_str_or_issue(blank.to_string()),
+                    value: id_issuer.get_str_or_issue(blank.to_string()).to_string(),
                 },
             },
             ResolvedVariable::Predicate(predicate) => {
@@ -72,7 +72,7 @@ impl ResolvedVariable {
                     value: IRI::Full(named.as_iri(ns_fn)?),
                 },
                 Object::Blank(blank) => Value::BlankNode {
-                    value: id_issuer.get_str_or_issue(blank.to_string()),
+                    value: id_issuer.get_str_or_issue(blank.to_string()).to_string(),
                 },
                 Object::Literal(literal) => match literal {
                     Literal::Simple { value } => Value::Literal {

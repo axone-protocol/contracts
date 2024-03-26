@@ -2,9 +2,21 @@ use crate::credential::rdf_marker::RDF_DATE_TYPE;
 use crate::registrar::credential::DataverseCredential;
 use crate::ContractError;
 use cosmwasm_std::{Binary, StdError};
+use okp4_rdf::dataset::QuadIterator;
 use okp4_rdf::normalize::IdentifierIssuer;
 use okp4_rdf::serde::{DataFormat, TripleWriter};
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term, Triple};
+
+pub const VC_RESERVED_PREDICATES: &[NamedNode<'_>] = &[
+    VC_SUBMITTER_ADDRESS,
+    VC_TYPE,
+    VC_ISSUER,
+    VC_VALID_FROM,
+    VC_VALID_UNTIL,
+    VC_SUBJECT,
+    VC_CLAIM,
+    VC_CLAIM_ORIGINAL_NODE,
+];
 
 pub const VC_SUBMITTER_ADDRESS: NamedNode<'_> = NamedNode {
     iri: "dataverse:credential#submitterAddress",
@@ -28,7 +40,37 @@ pub const VC_CLAIM: NamedNode<'_> = NamedNode {
     iri: "dataverse:credential#claim",
 };
 
+/// Used when a claim triple contains a named node as object to establish a hierarchy, we replace this hierarchical link
+/// with a blank node, and this predicate is used to allow the reconciliation with the original named node.  
+pub const VC_CLAIM_ORIGINAL_NODE: NamedNode<'_> = NamedNode {
+    iri: "dataverse:claim#original-node",
+};
+
 impl<'a> DataverseCredential<'a> {
+    pub fn serialize(&self, format: DataFormat) -> Result<Binary, ContractError> {
+        if self.contains_reserved_predicates() {
+            Err(ContractError::UnsupportedCredential(
+                "Claim contains reserved predicates.".to_string(),
+            ))?;
+        }
+
+        let claim_node = BlankNode { id: "c0" };
+        // Used to rename all blank nodes to avoid conflict with the forged claim node `c0`
+        let mut id_issuer = IdentifierIssuer::new("b", 0u128);
+        let triples: Vec<Triple<'_>> = self.as_triples(claim_node, &mut id_issuer)?;
+        let out: Vec<u8> = Vec::default();
+        let mut writer = TripleWriter::new(&format, out);
+        for triple in triples {
+            writer.write(&triple).map_err(|e| {
+                StdError::serialize_err("triple", format!("Error writing triple: {e}"))
+            })?;
+        }
+
+        Ok(Binary::from(writer.finish().map_err(|e| {
+            StdError::serialize_err("triple", format!("Error writing triple: {e}"))
+        })?))
+    }
+
     fn as_triples(
         &'a self,
         claim_node: BlankNode<'a>,
@@ -152,27 +194,14 @@ impl<'a> DataverseCredential<'a> {
 
         Ok(triples)
     }
-}
 
-pub fn serialize(
-    credential: &DataverseCredential<'_>,
-    format: DataFormat,
-) -> Result<Binary, ContractError> {
-    let claim_node = BlankNode { id: "c0" };
-    // Used to rename all blank nodes to avoid conflict with the forged claim node `c0`
-    let mut id_issuer = IdentifierIssuer::new("b", 0u128);
-    let triples: Vec<Triple<'_>> = credential.as_triples(claim_node, &mut id_issuer)?;
-    let out: Vec<u8> = Vec::default();
-    let mut writer = TripleWriter::new(&format, out);
-    for triple in triples {
-        writer
-            .write(&triple)
-            .map_err(|e| StdError::serialize_err("triple", format!("Error writing triple: {e}")))?;
+    fn contains_reserved_predicates(&self) -> bool {
+        self.claim
+            .content
+            .iter()
+            .predicates()
+            .any(|p| VC_RESERVED_PREDICATES.contains(&p))
     }
-
-    Ok(Binary::from(writer.finish().map_err(|e| {
-        StdError::serialize_err("triple", format!("Error writing triple: {e}"))
-    })?))
 }
 
 #[cfg(test)]
@@ -204,12 +233,32 @@ _:c0 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/des
 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#claim> _:c0 .
 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#validUntil> \"2025-01-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n";
 
-        let serialization_res = serialize(&dc, DataFormat::NQuads);
+        let serialization_res = dc.serialize(DataFormat::NQuads);
         assert!(serialization_res.is_ok());
 
         assert_eq!(
             String::from_utf8(serialization_res.unwrap().0).unwrap(),
             expected
         );
+    }
+
+    #[test]
+    fn serialize_reserved_predicates() {
+        let owned_quads = testutil::read_test_quads("vc-unsupported-4.nq");
+        let dataset = Dataset::from(owned_quads.as_slice());
+        let vc = VerifiableCredential::try_from(&dataset).unwrap();
+        let dc = DataverseCredential::try_from((
+            Addr::unchecked("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf"),
+            &vc,
+        ))
+        .unwrap();
+
+        let res = dc.serialize(DataFormat::NQuads);
+        assert!(res.is_err());
+        if let ContractError::UnsupportedCredential(msg) = res.err().unwrap() {
+            assert_eq!(msg, "Claim contains reserved predicates.".to_string());
+        } else {
+            assert!(false);
+        }
     }
 }

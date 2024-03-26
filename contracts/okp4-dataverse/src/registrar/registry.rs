@@ -1,5 +1,4 @@
 use crate::registrar::credential::DataverseCredential;
-use crate::registrar::rdf::serialize;
 use crate::state::DATAVERSE;
 use crate::ContractError;
 use cosmwasm_std::{DepsMut, StdResult, Storage, WasmMsg};
@@ -58,7 +57,7 @@ impl ClaimRegistrar {
         self.triplestore
             .insert_data(
                 Some(Self::RDF_DATA_FORMAT),
-                serialize(credential, (&Self::RDF_DATA_FORMAT).into())?,
+                credential.serialize((&Self::RDF_DATA_FORMAT).into())?,
             )
             .map_err(ContractError::from)
     }

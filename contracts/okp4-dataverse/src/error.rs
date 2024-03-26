@@ -25,4 +25,7 @@ pub enum ContractError {
 
     #[error("Credential already exists: '{0}'")]
     CredentialAlreadyExists(String),
+
+    #[error("An unexpected error occurred: {0}")]
+    Unexpected(String),
 }

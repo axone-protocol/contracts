@@ -1,6 +1,7 @@
 use crate::error::CosmwasmUriError;
 use serde::{de, ser};
 use std::collections::HashMap;
+use std::fmt::Display;
 use url::Url;
 
 const COSMWASM_SCHEME: &str = "cosmwasm";
@@ -96,10 +97,10 @@ impl TryFrom<String> for CosmwasmUri {
     }
 }
 
-impl ToString for CosmwasmUri {
-    fn to_string(&self) -> String {
+impl Display for CosmwasmUri {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let encoded_query = self.clone().encode_query();
-        match self.contract_name.clone() {
+        let str = match self.contract_name.clone() {
             Some(name) => [
                 COSMWASM_SCHEME,
                 ":",
@@ -118,7 +119,8 @@ impl ToString for CosmwasmUri {
                 encoded_query.as_str(),
             ]
             .join(""),
-        }
+        };
+        write!(f, "{}", str)
     }
 }
 

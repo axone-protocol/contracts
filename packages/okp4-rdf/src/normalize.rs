@@ -2,7 +2,7 @@ use itertools::Itertools;
 use rio_api::model::{BlankNode, GraphName, Quad, Subject, Term};
 use sha2;
 use sha2::Digest;
-use std::collections::hash_map::Entry;
+use std::collections::hash_map::{Entry, Iter};
 use std::collections::{BTreeMap, HashMap};
 use thiserror::Error;
 
@@ -376,6 +376,10 @@ impl IdentifierIssuer {
 
     pub fn issued(&self, identifier: &str) -> bool {
         self.issued.contains_key(identifier)
+    }
+
+    pub fn issued_iter(&self) -> Iter<'_, String, (u128, String)> {
+        self.issued.iter()
     }
 }
 

@@ -56,8 +56,11 @@ impl<'a> DataverseCredential<'a> {
 
         let claim_node = BlankNode { id: "c0" };
         // Used to rename all blank nodes to avoid conflict with the forged claim node `c0`
-        let mut id_issuer = IdentifierIssuer::new("b", 0u128);
-        let triples: Vec<Triple<'_>> = self.as_triples(claim_node, &mut id_issuer)?;
+        let mut blank_issuer = IdentifierIssuer::new("b", 0u128);
+        // Used to replace named node based hierarchy with blank nodes
+        let mut named_issuer = IdentifierIssuer::new("a", 0u128);
+        let triples: Vec<Triple<'_>> =
+            self.as_triples(claim_node, &mut named_issuer, &mut blank_issuer)?;
         let out: Vec<u8> = Vec::default();
         let mut writer = TripleWriter::new(&format, out);
         for triple in triples {
@@ -74,7 +77,8 @@ impl<'a> DataverseCredential<'a> {
     fn as_triples(
         &'a self,
         claim_node: BlankNode<'a>,
-        id_issuer: &'a mut IdentifierIssuer,
+        named_issuer: &'a mut IdentifierIssuer,
+        blank_issuer: &'a mut IdentifierIssuer,
     ) -> Result<Vec<Triple<'a>>, ContractError> {
         let c_subject = Subject::NamedNode(NamedNode { iri: self.id });
 
@@ -111,7 +115,7 @@ impl<'a> DataverseCredential<'a> {
             },
         ];
 
-        triples.extend(self.claim_as_triples(claim_node, id_issuer)?);
+        triples.extend(self.claim_as_triples(claim_node, named_issuer, blank_issuer)?);
 
         if let Some(valid_until) = self.valid_until {
             triples.push(Triple {
@@ -130,15 +134,23 @@ impl<'a> DataverseCredential<'a> {
     fn claim_as_triples(
         &'a self,
         claim_node: BlankNode<'a>,
-        id_issuer: &'a mut IdentifierIssuer,
+        named_issuer: &'a mut IdentifierIssuer,
+        blank_issuer: &'a mut IdentifierIssuer,
     ) -> Result<Vec<Triple<'a>>, ContractError> {
-        // issue replacement identifiers for blank nodes
+        // issue replacement identifiers for nodes
         self.claim.content.iter().for_each(|q| {
-            if let Subject::BlankNode(BlankNode { id }) = q.subject {
-                let _ = id_issuer.get_or_issue(id.to_string());
-            }
+            match q.subject {
+                Subject::NamedNode(NamedNode { iri }) if iri != self.claim.id => {
+                    named_issuer.get_or_issue(iri.to_string());
+                }
+                Subject::BlankNode(BlankNode { id }) => {
+                    blank_issuer.get_or_issue(id.to_string());
+                }
+                _ => (),
+            };
+
             if let Term::BlankNode(BlankNode { id }) = q.object {
-                let _ = id_issuer.get_or_issue(id.to_string());
+                blank_issuer.get_or_issue(id.to_string());
             }
         });
 
@@ -148,16 +160,21 @@ impl<'a> DataverseCredential<'a> {
             .iter()
             .map(|q| {
                 let subject = match q.subject {
-                    Subject::NamedNode(n) => {
-                        if n.iri != self.claim.id {
-                            Err(ContractError::UnsupportedCredential(
-                                "claim hierarchy can be forge only through blank nodes".to_string(),
-                            ))?;
-                        }
+                    Subject::NamedNode(n) if n.iri == self.claim.id => {
                         Subject::BlankNode(claim_node)
                     }
+                    Subject::NamedNode(n) if n.iri != self.claim.id => {
+                        Subject::BlankNode(BlankNode {
+                            id: named_issuer.get(n.iri).ok_or_else(|| {
+                                ContractError::Unexpected(
+                                    "Could not replace named node, canonical identifier not found"
+                                        .to_string(),
+                                )
+                            })?,
+                        })
+                    }
                     Subject::BlankNode(BlankNode { id }) => Subject::BlankNode(BlankNode {
-                        id: id_issuer.get(id).ok_or_else(|| {
+                        id: blank_issuer.get(id).ok_or_else(|| {
                             ContractError::Unexpected(
                                 "Could not replace blank node, canonical identifier not found"
                                     .to_string(),
@@ -167,8 +184,12 @@ impl<'a> DataverseCredential<'a> {
                     _ => q.subject,
                 };
                 let object = match q.object {
+                    Term::NamedNode(n) => match named_issuer.get(n.iri) {
+                        Some(id) => Term::BlankNode(BlankNode { id }),
+                        None => Term::NamedNode(n),
+                    },
                     Term::BlankNode(BlankNode { id }) => Term::BlankNode(BlankNode {
-                        id: id_issuer.get(id).ok_or_else(|| {
+                        id: blank_issuer.get(id).ok_or_else(|| {
                             ContractError::Unexpected(
                                 "Could not replace blank node, canonical identifier not found"
                                     .to_string(),
@@ -185,6 +206,16 @@ impl<'a> DataverseCredential<'a> {
                 })
             })
             .collect::<Result<Vec<Triple<'a>>, ContractError>>()?;
+
+        named_issuer
+            .issued_iter()
+            .for_each(|(original, (_, replacement))| {
+                triples.push(Triple {
+                    subject: Subject::BlankNode(BlankNode { id: replacement }),
+                    predicate: VC_CLAIM_ORIGINAL_NODE,
+                    object: Term::NamedNode(NamedNode { iri: original }),
+                });
+            });
 
         triples.push(Triple {
             subject: Subject::NamedNode(NamedNode { iri: self.id }),

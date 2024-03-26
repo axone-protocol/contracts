@@ -243,6 +243,39 @@ _:c0 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/des
     }
 
     #[test]
+    fn proper_named_hierarchy_serialization() {
+        let owned_quads = testutil::read_test_quads("vc-claim-hierarchy.nq");
+        let dataset = Dataset::from(owned_quads.as_slice());
+        let vc = VerifiableCredential::try_from(&dataset).unwrap();
+        let dc = DataverseCredential::try_from((
+            Addr::unchecked("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf"),
+            &vc,
+        ))
+        .unwrap();
+
+        let expected = "<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#submitterAddress> \"okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf\" .
+<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#issuer> <did:key:zQ3shs7auhJSmVJpiUbQWco6bxxEhSqWnVEPvaBHBRvBKw6Q3> .
+<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#type> <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/DigitalServiceDescriptionCredential> .
+<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#validFrom> \"2024-01-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#subject> <did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB> .
+_:c0 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/hasCategory> <https://w3id.org/okp4/ontology/vnext/thesaurus/digital-service-category/Storage> .
+_:c0 <https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/hasTag> \"Cloud\" .
+_:c0 <test:claim#named-hierarchy> _:a0 .
+_:a0 <test:claim#nested-predicate> \"nested value\" .
+_:a0 <dataverse:claim#original-node> <test:named-link> .
+<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#claim> _:c0 .
+<https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential#validUntil> \"2025-01-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n";
+
+        let serialization_res = dc.serialize(DataFormat::NQuads);
+        assert!(serialization_res.is_ok());
+
+        assert_eq!(
+            String::from_utf8(serialization_res.unwrap().0).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
     fn serialize_reserved_predicates() {
         let owned_quads = testutil::read_test_quads("vc-unsupported-4.nq");
         let dataset = Dataset::from(owned_quads.as_slice());

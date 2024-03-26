@@ -2,8 +2,9 @@ use crate::credential::rdf_marker::RDF_DATE_TYPE;
 use crate::registrar::credential::DataverseCredential;
 use crate::ContractError;
 use cosmwasm_std::{Binary, StdError};
+use okp4_rdf::normalize::IdentifierIssuer;
 use okp4_rdf::serde::{DataFormat, TripleWriter};
-use rio_api::model::{Literal, NamedNode, Subject, Term, Triple};
+use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term, Triple};
 
 pub const VC_SUBMITTER_ADDRESS: NamedNode<'_> = NamedNode {
     iri: "dataverse:credential#submitterAddress",
@@ -27,52 +28,50 @@ pub const VC_CLAIM: NamedNode<'_> = NamedNode {
     iri: "dataverse:credential#claim",
 };
 
-impl<'a> From<&'a DataverseCredential<'a>> for Vec<Triple<'a>> {
-    fn from(credential: &'a DataverseCredential<'a>) -> Self {
-        let c_subject = Subject::NamedNode(NamedNode { iri: credential.id });
+impl<'a> DataverseCredential<'a> {
+    fn as_triples(
+        &'a self,
+        claim_node: BlankNode<'a>,
+        id_issuer: &'a mut IdentifierIssuer,
+    ) -> Result<Vec<Triple<'a>>, ContractError> {
+        let c_subject = Subject::NamedNode(NamedNode { iri: self.id });
 
         let mut triples = vec![
             Triple {
                 subject: c_subject,
                 predicate: VC_SUBMITTER_ADDRESS,
                 object: Term::Literal(Literal::Simple {
-                    value: credential.submitter_addr.as_str(),
+                    value: self.submitter_addr.as_str(),
                 }),
             },
             Triple {
                 subject: c_subject,
                 predicate: VC_ISSUER,
-                object: Term::NamedNode(NamedNode {
-                    iri: credential.issuer,
-                }),
+                object: Term::NamedNode(NamedNode { iri: self.issuer }),
             },
             Triple {
                 subject: c_subject,
                 predicate: VC_TYPE,
-                object: Term::NamedNode(NamedNode {
-                    iri: credential.r#type,
-                }),
+                object: Term::NamedNode(NamedNode { iri: self.r#type }),
             },
             Triple {
                 subject: c_subject,
                 predicate: VC_VALID_FROM,
                 object: Term::Literal(Literal::Typed {
-                    value: credential.valid_from,
+                    value: self.valid_from,
                     datatype: RDF_DATE_TYPE,
                 }),
             },
             Triple {
                 subject: c_subject,
                 predicate: VC_SUBJECT,
-                object: Term::NamedNode(NamedNode {
-                    iri: credential.subject,
-                }),
+                object: Term::NamedNode(NamedNode { iri: self.claim.id }),
             },
         ];
 
-        triples.extend(credential.claim.as_slice());
+        triples.extend(self.claim_as_triples(claim_node, id_issuer)?);
 
-        if let Some(valid_until) = credential.valid_until {
+        if let Some(valid_until) = self.valid_until {
             triples.push(Triple {
                 subject: c_subject,
                 predicate: VC_VALID_UNTIL,
@@ -83,7 +82,75 @@ impl<'a> From<&'a DataverseCredential<'a>> for Vec<Triple<'a>> {
             });
         }
 
-        triples
+        Ok(triples)
+    }
+
+    fn claim_as_triples(
+        &'a self,
+        claim_node: BlankNode<'a>,
+        id_issuer: &'a mut IdentifierIssuer,
+    ) -> Result<Vec<Triple<'a>>, ContractError> {
+        // issue replacement identifiers for blank nodes
+        self.claim.content.iter().for_each(|q| {
+            if let Subject::BlankNode(BlankNode { id }) = q.subject {
+                let _ = id_issuer.get_or_issue(id.to_string());
+            }
+            if let Term::BlankNode(BlankNode { id }) = q.object {
+                let _ = id_issuer.get_or_issue(id.to_string());
+            }
+        });
+
+        let mut triples = self
+            .claim
+            .content
+            .iter()
+            .map(|q| {
+                let subject = match q.subject {
+                    Subject::NamedNode(n) => {
+                        if n.iri != self.claim.id {
+                            Err(ContractError::UnsupportedCredential(
+                                "claim hierarchy can be forge only through blank nodes".to_string(),
+                            ))?;
+                        }
+                        Subject::BlankNode(claim_node)
+                    }
+                    Subject::BlankNode(BlankNode { id }) => Subject::BlankNode(BlankNode {
+                        id: id_issuer.get(id).ok_or_else(|| {
+                            ContractError::Unexpected(
+                                "Could not replace blank node, canonical identifier not found"
+                                    .to_string(),
+                            )
+                        })?,
+                    }),
+                    _ => q.subject,
+                };
+                let object = match q.object {
+                    Term::BlankNode(BlankNode { id }) => Term::BlankNode(BlankNode {
+                        id: id_issuer.get(id).ok_or_else(|| {
+                            ContractError::Unexpected(
+                                "Could not replace blank node, canonical identifier not found"
+                                    .to_string(),
+                            )
+                        })?,
+                    }),
+                    _ => q.object,
+                };
+
+                Ok(Triple {
+                    subject,
+                    predicate: q.predicate,
+                    object,
+                })
+            })
+            .collect::<Result<Vec<Triple<'a>>, ContractError>>()?;
+
+        triples.push(Triple {
+            subject: Subject::NamedNode(NamedNode { iri: self.id }),
+            predicate: VC_CLAIM,
+            object: Term::BlankNode(claim_node),
+        });
+
+        Ok(triples)
     }
 }
 
@@ -91,7 +158,10 @@ pub fn serialize(
     credential: &DataverseCredential<'_>,
     format: DataFormat,
 ) -> Result<Binary, ContractError> {
-    let triples: Vec<Triple<'_>> = credential.into();
+    let claim_node = BlankNode { id: "c0" };
+    // Used to rename all blank nodes to avoid conflict with the forged claim node `c0`
+    let mut id_issuer = IdentifierIssuer::new("b", 0u128);
+    let triples: Vec<Triple<'_>> = credential.as_triples(claim_node, &mut id_issuer)?;
     let out: Vec<u8> = Vec::default();
     let mut writer = TripleWriter::new(&format, out);
     for triple in triples {

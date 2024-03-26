@@ -106,7 +106,7 @@ pub mod execute {
         Ok(Response::default()
             .add_attribute("action", "submit_claims")
             .add_attribute("credential", credential.id)
-            .add_attribute("subject", credential.subject)
+            .add_attribute("subject", credential.claim.id)
             .add_attribute("type", credential.r#type)
             .add_message(registrar.submit_claim(&deps, &credential)?))
     }
@@ -321,9 +321,9 @@ mod tests {
 <http://example.edu/credentials/3732> <dataverse:credential#type> <https://example.org/examples#UniversityDegreeCredential> .
 <http://example.edu/credentials/3732> <dataverse:credential#validFrom> \"2024-02-16T00:00:00Z\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <http://example.edu/credentials/3732> <dataverse:credential#subject> <did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw> .
-_:c0 <https://example.org/examples#degree> _:b2 .
-_:b2 <http://schema.org/name> \"Bachelor of Science and Arts\"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML> .
-_:b2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/examples#BachelorDegree> .
+_:c0 <https://example.org/examples#degree> _:b0 .
+_:b0 <http://schema.org/name> \"Bachelor of Science and Arts\"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML> .
+_:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/examples#BachelorDegree> .
 <http://example.edu/credentials/3732> <dataverse:credential#claim> _:c0 .
 <http://example.edu/credentials/3732> <dataverse:credential#validUntil> \"2026-02-16T00:00:00Z\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n";
 

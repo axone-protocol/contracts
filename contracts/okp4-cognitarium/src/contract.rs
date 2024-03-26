@@ -298,15 +298,15 @@ pub mod query {
             .map(|t| TripleConstructTemplate {
                 subject: match t.subject {
                     VarOrNode::Node(Node::BlankNode(n)) => {
-                        VarOrNode::Node(Node::BlankNode(id_issuer.get_str_or_issue(n)))
+                        VarOrNode::Node(Node::BlankNode(id_issuer.get_str_or_issue(n).to_string()))
                     }
                     _ => t.subject,
                 },
                 predicate: t.predicate,
                 object: match t.object {
-                    VarOrNodeOrLiteral::Node(Node::BlankNode(n)) => {
-                        VarOrNodeOrLiteral::Node(Node::BlankNode(id_issuer.get_str_or_issue(n)))
-                    }
+                    VarOrNodeOrLiteral::Node(Node::BlankNode(n)) => VarOrNodeOrLiteral::Node(
+                        Node::BlankNode(id_issuer.get_str_or_issue(n).to_string()),
+                    ),
                     _ => t.object,
                 },
             })

@@ -233,7 +233,7 @@ impl<'a> Normalizer<'a> {
                         if !issuer.issued(&related) {
                             recursion_list.push(related.clone());
                         }
-                        path.push_str(&issuer.get_str_or_issue(related));
+                        path.push_str(issuer.get_str_or_issue(related));
                     }
                 }
 
@@ -245,7 +245,7 @@ impl<'a> Normalizer<'a> {
                 for related in recursion_list {
                     let (result, mut issuer) = self.compute_n_degree_hash(&mut issuer, &related)?;
                     path.push_str("_:");
-                    path.push_str(&issuer.get_str_or_issue(related));
+                    path.push_str(issuer.get_str_or_issue(related));
                     path.push('<');
                     path.push_str(&result);
                     path.push('>');
@@ -347,25 +347,26 @@ impl IdentifierIssuer {
         }
     }
 
-    pub fn get_or_issue(&mut self, identifier: String) -> (u128, String) {
-        match self.issued.entry(identifier.clone()) {
-            Entry::Occupied(e) => e.get().clone(),
+    pub fn get_or_issue(&mut self, identifier: String) -> (u128, &str) {
+        let res = match self.issued.entry(identifier.clone()) {
+            Entry::Occupied(e) => e.into_mut(),
             Entry::Vacant(e) => {
                 let n = self.counter;
                 let str = format!("{}{}", self.prefix, n);
                 self.counter += 1;
 
                 self.issue_log.push(identifier);
-                e.insert((n, str)).clone()
+                e.insert((n, str))
             }
-        }
+        };
+        (res.0, res.1.as_str())
     }
 
     pub fn get_n_or_issue(&mut self, identifier: String) -> u128 {
         self.get_or_issue(identifier).0
     }
 
-    pub fn get_str_or_issue(&mut self, identifier: String) -> String {
+    pub fn get_str_or_issue(&mut self, identifier: String) -> &str {
         self.get_or_issue(identifier).1
     }
 

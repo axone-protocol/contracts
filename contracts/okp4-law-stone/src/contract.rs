@@ -163,11 +163,11 @@ pub mod query {
     }
 
     pub fn build_ask_query(program: ObjectRef, query: String) -> StdResult<LogicCustomQuery> {
-        let program_uri = object_ref_to_uri(program)?.to_string();
+        let program_uri = object_ref_to_uri(program)?;
 
         Ok(LogicCustomQuery::Ask {
-            program: String::new(),
-            query: ["consult('", program_uri.as_str(), "'), ", query.as_str()].join(""),
+            program: format!(":- consult('{}').", program_uri),
+            query,
         })
     }
 }

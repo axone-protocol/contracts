@@ -1,8 +1,8 @@
 use cosmwasm_std::{to_json_binary, Coin, StdResult, WasmMsg};
-use okp4_logic_bindings::error::CosmwasmUriError;
-use okp4_logic_bindings::uri::CosmwasmUri;
 use okp4_objectarium::msg::QueryMsg::ObjectData;
 use okp4_objectarium::msg::{ExecuteMsg, QueryMsg};
+use okp4_wasm::error::CosmwasmUriError;
+use okp4_wasm::uri::CosmwasmUri;
 use serde::{Deserialize, Serialize};
 
 const CONTRACT_NAME: &str = "okp4-objectarium";

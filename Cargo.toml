@@ -21,6 +21,7 @@ okp4-objectarium = { path = "contracts/okp4-objectarium", features = [
 ] }
 okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
 okp4-rdf = { path = "packages/okp4-rdf" }
+okp4-wasm = { path = "packages/okp4-wasm" }
 rdf-types = "0.18.2"
 rio_api = "0.8.4"
 rio_turtle = "0.8.4"

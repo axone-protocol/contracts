@@ -270,11 +270,11 @@ mod tests {
         SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use okp4_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
-    use okp4_logic_bindings::uri::CosmwasmUri;
     use okp4_logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
     };
     use okp4_objectarium::msg::PageInfo;
+    use okp4_wasm::uri::CosmwasmUri;
     use std::collections::VecDeque;
 
     fn custom_logic_handler_with_dependencies(

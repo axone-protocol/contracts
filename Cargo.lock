@@ -812,6 +812,7 @@ dependencies = [
  "okp4-logic-bindings",
  "okp4-objectarium",
  "okp4-objectarium-client",
+ "okp4-wasm",
  "schemars",
  "serde",
  "thiserror",
@@ -824,6 +825,7 @@ version = "4.1.0"
 dependencies = [
  "cosmwasm-std",
  "form_urlencoded",
+ "okp4-wasm",
  "schemars",
  "serde",
  "serde-json-wasm 1.0.1",
@@ -861,8 +863,8 @@ name = "okp4-objectarium-client"
 version = "4.1.0"
 dependencies = [
  "cosmwasm-std",
- "okp4-logic-bindings",
  "okp4-objectarium",
+ "okp4-wasm",
  "schemars",
  "serde",
 ]
@@ -879,6 +881,19 @@ dependencies = [
  "rio_xml",
  "sha2 0.10.8",
  "thiserror",
+]
+
+[[package]]
+name = "okp4-wasm"
+version = "4.1.0"
+dependencies = [
+ "cosmwasm-std",
+ "form_urlencoded",
+ "schemars",
+ "serde",
+ "serde-json-wasm 1.0.1",
+ "thiserror",
+ "url",
 ]
 
 [[package]]

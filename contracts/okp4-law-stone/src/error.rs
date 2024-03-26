@@ -1,6 +1,7 @@
 use cosmwasm_std::StdError;
 use cw_utils::ParseReplyError;
-use okp4_logic_bindings::error::{CosmwasmUriError, TermParseError};
+use okp4_logic_bindings::error::TermParseError;
+use okp4_wasm::error::CosmwasmUriError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]

@@ -7,8 +7,12 @@ use url::Url;
 const COSMWASM_SCHEME: &str = "cosmwasm";
 const COSMWASM_QUERY_PARAM: &str = "query";
 
-/// Represents a file system URI used to load files from the logic module dedicated to the resolution
-/// of data coming from a CosmWasm smart contract query. The URI having the form:
+/// A CosmWasm URI identifies a resource on a blockchain by referencing a specific instantiated
+/// smart contract. It includes the contract's address and uses query parameters to encode the message
+/// intended for the contract. The resource identified by the URI is the response provided by the
+/// smart contract following this query.
+///
+/// Its general form is as follows:
 ///
 /// `cosmwasm:{contract_name}:{contract_address}?query={contract_query}`
 ///

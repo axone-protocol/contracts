@@ -29,6 +29,20 @@ pub struct Answer {
     pub results: Vec<Result>,
 }
 
+impl Answer {
+    /// Create a new Answer with an error message.
+    pub fn from_error(error: String) -> Self {
+        Self {
+            has_more: false,
+            variables: vec![],
+            results: vec![Result {
+                error: Some(error),
+                substitutions: vec![],
+            }],
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Eq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct Result {

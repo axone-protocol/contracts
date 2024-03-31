@@ -14,13 +14,12 @@ pub fn object_ref_to_uri(object: ObjectRef) -> StdResult<CosmwasmUri> {
     })
 }
 
-pub fn get_reply_event_attribute(events: Vec<Event>, key: String) -> Option<String> {
-    return events
+pub fn get_reply_event_attribute(events: &[Event], key: &str) -> Option<String> {
+    events
         .iter()
-        .flat_map(|e| e.attributes.clone())
-        .filter(|a| a.key == key)
-        .map(|a| a.value)
-        .next();
+        .flat_map(|e| e.attributes.iter())
+        .find(|a| a.key == key)
+        .map(|a| a.value.clone())
 }
 
 fn term_as_vec(term: TermValue) -> Result<Vec<String>, ContractError> {

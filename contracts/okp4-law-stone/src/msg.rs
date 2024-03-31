@@ -30,17 +30,27 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// # Ask
-    /// If not broken, ask the logic module the provided query with the law program loaded.
+    /// Submits a Prolog query string to the `Logic` module, evaluating it against the
+    /// law program associated with this contract.
+    ///
+    /// If the law stone is broken the query returns a response with the error `error(system_error(broken_law_stone),root)`
+    /// set in the `answer` field.
     #[returns(AskResponse)]
     Ask { query: String },
 
     /// # Program
-    /// If not broken, returns the law program location information.
+    /// Retrieves the location metadata of the law program bound to this contract.
+    ///
+    /// This includes the contract address of the `objectarium` and the program object ID,
+    /// where the law program's code can be accessed.
     #[returns(ProgramResponse)]
     Program,
 
     /// # ProgramCode
-    /// ProgramCode returns the law program code.
+    /// Fetches the raw code of the law program tied to this contract.
+    ///
+    /// If the law stone is broken, the query may fail if the program is no longer available in the
+    /// `Objectarium`.
     #[returns(Binary)]
     ProgramCode,
 }

@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
-    SubMsg, WasmMsg,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsg,
+    WasmMsg,
 };
 use cw2::set_contract_version;
 use okp4_logic_bindings::LogicCustomQuery;
@@ -133,7 +133,7 @@ pub mod query {
     use crate::msg::ProgramResponse;
     use crate::state::PROGRAM;
     use cosmwasm_std::QueryRequest;
-    use okp4_logic_bindings::AskResponse;
+    use okp4_logic_bindings::{Answer, AskResponse};
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
         let program = PROGRAM.load(deps.storage)?.into();
@@ -180,7 +180,7 @@ pub fn reply(
 ) -> Result<Response, ContractError> {
     match msg.id {
         STORE_PROGRAM_REPLY_ID => reply::store_program_reply(deps, env, msg),
-        _ => Err(StdError::generic_err("Not implemented").into()),
+        _ => Err(ContractError::UnknownReplyID),
     }
 }
 
@@ -188,6 +188,7 @@ pub mod reply {
     use super::*;
     use crate::helper::{ask_response_to_objects, get_reply_event_attribute, object_ref_to_uri};
     use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
+    use cw_utils::ParseReplyError;
 
     pub fn store_program_reply(
         deps: DepsMut<'_, LogicCustomQuery>,
@@ -198,14 +199,14 @@ pub mod reply {
 
         msg.result
             .into_result()
-            .map_err(|_| {
-                ContractError::InvalidReplyMsg(StdError::generic_err("no message in reply"))
-            })
+            .map_err(ParseReplyError::SubMsgFailure)
+            .map_err(Into::into)
             .and_then(|e| {
-                get_reply_event_attribute(e.events, "id".to_string()).ok_or_else(|| {
-                    ContractError::InvalidReplyMsg(StdError::generic_err(
-                        "reply event doesn't contains object id",
-                    ))
+                get_reply_event_attribute(&e.events, "id").ok_or_else(|| {
+                    ParseReplyError::SubMsgFailure(
+                        "reply event doesn't contains object id".to_string(),
+                    )
+                    .into()
                 })
             })
             .map(|obj_id| LawStone {
@@ -275,6 +276,7 @@ mod tests {
     };
     use okp4_objectarium::msg::PageInfo;
     use okp4_wasm::uri::CosmwasmUri;
+    use schemars::_serde_json::json;
     use std::collections::VecDeque;
 
     fn custom_logic_handler_with_dependencies(

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use sha2;
 use sha2::Digest;
 use std::any::type_name;
+use std::fmt;
 
 /// HashAlgorithm is the type of the hash algorithm.
 pub enum HashAlgorithm {
@@ -34,7 +35,7 @@ impl HashAlgorithm {
     }
 }
 
-/// Hash represent a Object hash as binary value.  
+/// Hash represent a Object hash as binary value.
 #[derive(
     Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema,
 )]
@@ -83,9 +84,11 @@ impl TryFrom<String> for Hash {
     }
 }
 
-impl From<Hash> for String {
-    fn from(hash: Hash) -> Self {
-        base16ct::lower::encode_string(hash.0.as_slice())
+// Allows for a (user-friendly) string representation of Hash as a lower Base16 (hex) encoding.
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let hex_string = base16ct::lower::encode_string(&self.0);
+        write!(f, "{}", hex_string)
     }
 }
 

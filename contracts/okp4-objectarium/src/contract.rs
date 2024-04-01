@@ -161,7 +161,7 @@ pub mod execute {
 
         Ok(Response::new()
             .add_attribute("action", "store_object")
-            .add_attribute("id", object.id.clone()))
+            .add_attribute("id", object.id.to_string()))
     }
 
     pub fn pin_object(
@@ -1260,7 +1260,7 @@ mod tests {
             .save(deps.as_mut().storage, &data)
             .expect("no error when storing data");
 
-        let msg = QueryMsg::ObjectData { id: id.into() };
+        let msg = QueryMsg::ObjectData { id: id.to_string() };
 
         let result = query(deps.as_ref(), mock_env(), msg);
         assert_eq!(

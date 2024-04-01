@@ -275,7 +275,7 @@ pub struct Object {
 impl From<&Object> for ObjectResponse {
     fn from(object: &Object) -> Self {
         ObjectResponse {
-            id: object.id.clone().into(),
+            id: object.id.to_string(),
             size: object.size,
             owner: object.owner.clone().into(),
             is_pinned: object.pin_count > Uint128::zero(),

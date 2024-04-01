@@ -419,6 +419,8 @@ impl From<state::HashAlgorithm> for crypto::HashAlgorithm {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compress;
+    use crate::crypto::Hash;
     use crate::error::BucketError;
     use crate::msg::{
         BucketConfig, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm, HashAlgorithm,
@@ -427,7 +429,7 @@ mod tests {
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_json, Attribute, Order, StdError, Uint128};
+    use cosmwasm_std::{from_json, Addr, Attribute, Order, StdError, Uint128};
     use std::any::type_name;
 
     fn decode_hex(hex: &str) -> Vec<u8> {
@@ -1233,6 +1235,41 @@ mod tests {
             let result = query(deps.as_ref(), mock_env(), msg).unwrap();
             assert_eq!(result, to_json_binary(&data).unwrap());
         }
+    }
+
+    #[test]
+    fn object_data_error() {
+        let mut deps = mock_dependencies();
+        let id: Hash = vec![1, 2, 3].into();
+        let data = &vec![255, 255, 0];
+
+        let object = &Object {
+            id: id.clone(),
+            owner: Addr::unchecked("john"),
+            size: 42u8.into(),
+            pin_count: Uint128::one(),
+            compression: compress::CompressionAlgorithm::Lzma,
+            compressed_size: Uint128::from(data.len() as u128),
+        };
+
+        objects()
+            .save(deps.as_mut().storage, object.id.clone(), object)
+            .expect("no error when storing object");
+        let data_path = DATA.key(id.clone());
+        data_path
+            .save(deps.as_mut().storage, &data)
+            .expect("no error when storing data");
+
+        let msg = QueryMsg::ObjectData { id: id.into() };
+
+        let result = query(deps.as_ref(), mock_env(), msg);
+        assert_eq!(
+            result,
+            Err(StdError::serialize_err(
+                "Lzma",
+                "lzma error: LZMA header invalid properties: 255 must be < 225"
+            ))
+        );
     }
 
     #[test]

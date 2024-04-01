@@ -277,12 +277,14 @@ mod tests {
     use crate::msg::ProgramResponse;
     use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
     use cosmwasm_std::testing::{
-        mock_dependencies, mock_env, mock_info, MockQuerierCustomHandlerResult,
+        mock_dependencies, mock_env, mock_info, MockApi, MockQuerier,
+        MockQuerierCustomHandlerResult, MockStorage,
     };
     use cosmwasm_std::{
         from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
-        SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
+        OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
+    use cw_utils::ParseReplyError::SubMsgFailure;
     use okp4_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
     use okp4_logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
@@ -290,6 +292,7 @@ mod tests {
     use okp4_objectarium::msg::PageInfo;
     use okp4_wasm::uri::CosmwasmUri;
     use std::collections::VecDeque;
+    use std::marker::PhantomData;
 
     fn custom_logic_handler_with_dependencies(
         dependencies: Vec<String>,
@@ -754,6 +757,56 @@ mod tests {
                 INSTANTIATE_CONTEXT.load(&deps.storage).is_err(),
                 "the instantiate context should be cleaned at the end"
             )
+        }
+    }
+
+    #[test]
+    fn program_reply_errors() {
+        let object_id = "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s";
+        let cases = vec![
+            (
+                Reply {
+                    id: 404,
+                    result: SubMsgResult::Ok(SubMsgResponse {
+                        events: vec![Event::new("e".to_string())
+                            .add_attribute("id".to_string(), object_id.to_string())],
+                        data: None,
+                    }),
+                },
+                Err(ContractError::UnknownReplyID),
+            ),
+            (
+                Reply {
+                    id: 1,
+                    result: SubMsgResult::Ok(SubMsgResponse {
+                        events: vec![Event::new("e".to_string())],
+                        data: None,
+                    }),
+                },
+                Err(ContractError::ParseReplyError(SubMsgFailure(
+                    "reply event doesn't contains object id".to_string(),
+                ))),
+            ),
+        ];
+
+        for case in cases {
+            let mut deps = OwnedDeps {
+                storage: MockStorage::default(),
+                api: MockApi::default(),
+                querier: MockQuerier::default(),
+                custom_query_type: PhantomData,
+            };
+
+            INSTANTIATE_CONTEXT
+                .save(
+                    deps.as_mut().storage,
+                    &"okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(),
+                )
+                .unwrap();
+
+            let response = reply(deps.as_mut(), mock_env(), case.0);
+
+            assert_eq!(response, case.1);
         }
     }
 

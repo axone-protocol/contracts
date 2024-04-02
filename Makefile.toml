@@ -119,6 +119,14 @@ then
    exit 1
 fi
 echo "✅ \`perl\` installed"
+
+echo "❔ Checking \`jq\` installation..."
+if [[ $(jq --version) != jq-1\.7* ]]
+then
+  echo "\n❌ Require jq version 1.7"
+  exit 1
+fi
+echo "✅ \`jq\` installed"
 '''
 
 [tasks.docs-generate]

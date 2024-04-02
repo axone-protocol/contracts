@@ -129,6 +129,12 @@ echo "🧹 Cleaning old documentation..."
 rm -rf $SCHEMA_FOLDER
 rm -rf $DOCS_FOLDER
 
+if [[ $(jq --version) != jq-1\.7* ]]
+then
+	echo "Error: jq version 1.7 is needed"
+  exit 1
+fi
+
 echo "📚 Generating documentation in ${DOCS_FOLDER} folder..."
 
 mkdir -p $SCHEMA_FOLDER

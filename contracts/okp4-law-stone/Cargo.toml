@@ -38,6 +38,7 @@ itertools = "0.12.1"
 okp4-logic-bindings.workspace = true
 okp4-objectarium-client.workspace = true
 okp4-objectarium.workspace = true
+okp4-wasm.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true

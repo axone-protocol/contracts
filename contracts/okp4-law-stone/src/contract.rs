@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
-    SubMsg, WasmMsg,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsg,
+    WasmMsg,
 };
 use cw2::set_contract_version;
 use okp4_logic_bindings::LogicCustomQuery;
@@ -77,7 +77,7 @@ pub mod execute {
             .query_wasm_contract_info(env.contract.address)?
             .admin
         {
-            Some(admin_addr) if admin_addr != info.sender => Err(ContractError::Unauthorized {}),
+            Some(admin_addr) if admin_addr != info.sender => Err(ContractError::Unauthorized),
             _ => Ok(()),
         }?;
 
@@ -119,9 +119,9 @@ pub mod execute {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps<'_, LogicCustomQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<'_, LogicCustomQuery>, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Ask { query } => to_json_binary(&query::ask(deps, query)?),
+        QueryMsg::Ask { query } => to_json_binary(&query::ask(deps, env, query)?),
         QueryMsg::Program => to_json_binary(&query::program(deps)?),
         QueryMsg::ProgramCode => to_json_binary(&query::program_code(deps)?),
     }
@@ -133,7 +133,9 @@ pub mod query {
     use crate::msg::ProgramResponse;
     use crate::state::PROGRAM;
     use cosmwasm_std::QueryRequest;
-    use okp4_logic_bindings::AskResponse;
+    use okp4_logic_bindings::{Answer, AskResponse};
+
+    const ERR_STONE_BROKEN: &str = "system_error(broken_law_stone)";
 
     pub fn program(deps: Deps<'_, LogicCustomQuery>) -> StdResult<ProgramResponse> {
         let program = PROGRAM.load(deps.storage)?.into();
@@ -152,10 +154,21 @@ pub mod query {
         )
     }
 
-    pub fn ask(deps: Deps<'_, LogicCustomQuery>, query: String) -> StdResult<AskResponse> {
+    pub fn ask(
+        deps: Deps<'_, LogicCustomQuery>,
+        env: Env,
+        query: String,
+    ) -> StdResult<AskResponse> {
         let stone = PROGRAM.load(deps.storage)?;
         if stone.broken {
-            return Err(StdError::generic_err("Law is broken"));
+            return Ok(AskResponse {
+                height: env.block.height,
+                answer: Some(Answer::from_error(format!(
+                    "error({},root)",
+                    ERR_STONE_BROKEN
+                ))),
+                ..Default::default()
+            });
         }
 
         let req: QueryRequest<LogicCustomQuery> = build_ask_query(stone.law, query)?.into();
@@ -163,11 +176,11 @@ pub mod query {
     }
 
     pub fn build_ask_query(program: ObjectRef, query: String) -> StdResult<LogicCustomQuery> {
-        let program_uri = object_ref_to_uri(program)?.to_string();
+        let program_uri = object_ref_to_uri(program)?;
 
         Ok(LogicCustomQuery::Ask {
-            program: String::new(),
-            query: ["consult('", program_uri.as_str(), "'), ", query.as_str()].join(""),
+            program: format!(":- consult('{}').", program_uri),
+            query,
         })
     }
 }
@@ -180,7 +193,7 @@ pub fn reply(
 ) -> Result<Response, ContractError> {
     match msg.id {
         STORE_PROGRAM_REPLY_ID => reply::store_program_reply(deps, env, msg),
-        _ => Err(StdError::generic_err("Not implemented").into()),
+        _ => Err(ContractError::UnknownReplyID),
     }
 }
 
@@ -188,6 +201,7 @@ pub mod reply {
     use super::*;
     use crate::helper::{ask_response_to_objects, get_reply_event_attribute, object_ref_to_uri};
     use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
+    use cw_utils::ParseReplyError;
 
     pub fn store_program_reply(
         deps: DepsMut<'_, LogicCustomQuery>,
@@ -198,14 +212,14 @@ pub mod reply {
 
         msg.result
             .into_result()
-            .map_err(|_| {
-                ContractError::InvalidReplyMsg(StdError::generic_err("no message in reply"))
-            })
+            .map_err(ParseReplyError::SubMsgFailure)
+            .map_err(Into::into)
             .and_then(|e| {
-                get_reply_event_attribute(e.events, "id".to_string()).ok_or_else(|| {
-                    ContractError::InvalidReplyMsg(StdError::generic_err(
-                        "reply event doesn't contains object id",
-                    ))
+                get_reply_event_attribute(&e.events, "id").ok_or_else(|| {
+                    ParseReplyError::SubMsgFailure(
+                        "reply event doesn't contains object id".to_string(),
+                    )
+                    .into()
                 })
             })
             .map(|obj_id| LawStone {
@@ -263,19 +277,22 @@ mod tests {
     use crate::msg::ProgramResponse;
     use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
     use cosmwasm_std::testing::{
-        mock_dependencies, mock_env, mock_info, MockQuerierCustomHandlerResult,
+        mock_dependencies, mock_env, mock_info, MockApi, MockQuerier,
+        MockQuerierCustomHandlerResult, MockStorage,
     };
     use cosmwasm_std::{
         from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
-        SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
+        OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
+    use cw_utils::ParseReplyError::SubMsgFailure;
     use okp4_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
-    use okp4_logic_bindings::uri::CosmwasmUri;
     use okp4_logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
     };
     use okp4_objectarium::msg::PageInfo;
+    use okp4_wasm::uri::CosmwasmUri;
     use std::collections::VecDeque;
+    use std::marker::PhantomData;
 
     fn custom_logic_handler_with_dependencies(
         dependencies: Vec<String>,
@@ -441,6 +458,7 @@ mod tests {
     }
 
     fn custom_logic_handler_with_query(
+        env: &Env,
         query: String,
         program: ObjectRef,
         request: &LogicCustomQuery,
@@ -456,7 +474,7 @@ mod tests {
                 query: queryy,
             } if *queryy == exp_query && *program == exp_program => SystemResult::Ok(
                 to_json_binary(&AskResponse {
-                    height: 1,
+                    height: env.block.height,
                     gas_used: 1000,
                     answer: Some(Answer {
                         has_more: false,
@@ -493,8 +511,23 @@ mod tests {
                         "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
                             .to_string(),
                 },
-                Some("Foo"), // Variable result
-                None,        // Expected error
+                Some(AskResponse {
+                    height: 12345,
+                    gas_used: 1000,
+                    answer: Some(Answer {
+                        variables: vec!["Foo".to_string()],
+                        results: vec![okp4_logic_bindings::Result {
+                            substitutions: vec![Substitution {
+                                variable: "Foo".to_string(),
+                                expression: "bar".to_string(),
+                            }],
+                            ..Default::default()
+                        }],
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
+                None, // Expected error
             ),
             (
                 true,                     // broken
@@ -506,8 +539,18 @@ mod tests {
                         "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
                             .to_string(),
                 },
-                None,                                         // Variable result
-                Some(StdError::generic_err("Law is broken")), // Expected error
+                Some(AskResponse {
+                    height: 12345,
+                    answer: Some(Answer {
+                        results: vec![okp4_logic_bindings::Result {
+                            error: Some("error(system_error(broken_law_stone),root)".to_string()),
+                            ..Default::default()
+                        }],
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
+                None, // Expected error
             ),
         ];
 
@@ -517,9 +560,12 @@ mod tests {
                 case.2.object_id.to_string(),
                 case.2.storage_address.to_string(),
             ));
+            let env = mock_env();
+            let env_4_closure = env.clone();
             let mut deps = mock_dependencies_with_logic_handler(move |request| {
                 let (query, o, s) = p.as_ref();
                 custom_logic_handler_with_query(
+                    &env_4_closure,
                     query.to_string(),
                     ObjectRef {
                         object_id: o.to_string(),
@@ -539,7 +585,7 @@ mod tests {
                 )
                 .unwrap();
 
-            let res = query(deps.as_ref(), mock_env(), QueryMsg::Ask { query: case.1 });
+            let res = query(deps.as_ref(), env, QueryMsg::Ask { query: case.1 });
 
             match res {
                 Ok(result) => {
@@ -547,12 +593,7 @@ mod tests {
 
                     assert!(case.3.is_some());
                     assert!(result.answer.is_some());
-                    assert!(result
-                        .answer
-                        .unwrap()
-                        .variables
-                        .contains(&case.3.unwrap().to_string()));
-
+                    assert_eq!(result, case.3.unwrap());
                     assert!(case.4.is_none(), "query doesn't return error")
                 }
                 Err(e) => {
@@ -720,6 +761,56 @@ mod tests {
     }
 
     #[test]
+    fn program_reply_errors() {
+        let object_id = "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s";
+        let cases = vec![
+            (
+                Reply {
+                    id: 404,
+                    result: SubMsgResult::Ok(SubMsgResponse {
+                        events: vec![Event::new("e".to_string())
+                            .add_attribute("id".to_string(), object_id.to_string())],
+                        data: None,
+                    }),
+                },
+                Err(ContractError::UnknownReplyID),
+            ),
+            (
+                Reply {
+                    id: 1,
+                    result: SubMsgResult::Ok(SubMsgResponse {
+                        events: vec![Event::new("e".to_string())],
+                        data: None,
+                    }),
+                },
+                Err(ContractError::ParseReplyError(SubMsgFailure(
+                    "reply event doesn't contains object id".to_string(),
+                ))),
+            ),
+        ];
+
+        for case in cases {
+            let mut deps = OwnedDeps {
+                storage: MockStorage::default(),
+                api: MockApi::default(),
+                querier: MockQuerier::default(),
+                custom_query_type: PhantomData,
+            };
+
+            INSTANTIATE_CONTEXT
+                .save(
+                    deps.as_mut().storage,
+                    &"okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(),
+                )
+                .unwrap();
+
+            let response = reply(deps.as_mut(), mock_env(), case.0);
+
+            assert_eq!(response, case.1);
+        }
+    }
+
+    #[test]
     fn build_source_files_query() {
         let result = reply::build_source_files_query(ObjectRef {
             object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
@@ -754,8 +845,8 @@ mod tests {
 
         match result {
             Ok(LogicCustomQuery::Ask { program, query }) => {
-                assert_eq!(program, "");
-                assert_eq!(query, "consult('cosmwasm:okp4-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), test(X).")
+                assert_eq!(program, ":- consult('cosmwasm:okp4-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D').");
+                assert_eq!(query, "test(X).")
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
         }
@@ -906,18 +997,8 @@ mod tests {
     #[test]
     fn break_stone_admin() {
         let cases = vec![
-            (
-                "not-admin",
-                true,
-                false,
-                Some(ContractError::Unauthorized {}),
-            ),
-            (
-                "not-admin",
-                true,
-                true,
-                Some(ContractError::Unauthorized {}),
-            ),
+            ("not-admin", true, false, Some(ContractError::Unauthorized)),
+            ("not-admin", true, true, Some(ContractError::Unauthorized)),
             ("admin", true, false, None),
             ("anyone", false, false, None),
         ];

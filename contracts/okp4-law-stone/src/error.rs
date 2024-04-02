@@ -1,6 +1,7 @@
 use cosmwasm_std::StdError;
 use cw_utils::ParseReplyError;
-use okp4_logic_bindings::error::{CosmwasmUriError, TermParseError};
+use okp4_logic_bindings::error::TermParseError;
+use okp4_wasm::error::CosmwasmUriError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -9,10 +10,10 @@ pub enum ContractError {
     Std(#[from] StdError),
 
     #[error("{0}")]
-    Parse(#[from] ParseReplyError),
+    ParseReplyError(#[from] ParseReplyError),
 
-    #[error("Invalid reply message: {0}")]
-    InvalidReplyMsg(StdError),
+    #[error("An unknown reply ID was received.")]
+    UnknownReplyID,
 
     #[error("Cannot parse cosmwasm uri: {0}")]
     ParseCosmwasmUri(CosmwasmUriError),
@@ -21,7 +22,7 @@ pub enum ContractError {
     LogicAskResponse(LogicAskResponseError),
 
     #[error("Only the contract admin can perform this operation.")]
-    Unauthorized {},
+    Unauthorized,
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]

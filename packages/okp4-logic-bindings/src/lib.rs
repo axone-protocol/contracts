@@ -1,7 +1,6 @@
 pub mod error;
 mod query;
 mod term_parser;
-pub mod uri;
 
 pub use query::{Answer, AskResponse, LogicCustomQuery, Result, Substitution};
 pub use term_parser::TermValue;

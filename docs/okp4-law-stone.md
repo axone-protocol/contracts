@@ -41,7 +41,9 @@ Query messages
 
 ### QueryMsg::Ask
 
-If not broken, ask the logic module the provided query with the law program loaded.
+Submits a Prolog query string to the `Logic` module, evaluating it against the law program associated with this contract.
+
+If the law stone is broken the query returns a response with the error `error(system_error(broken_law_stone),root)` set in the `answer` field.
 
 | parameter   | description                |
 | ----------- | -------------------------- |
@@ -50,7 +52,9 @@ If not broken, ask the logic module the provided query with the law program load
 
 ### QueryMsg::Program
 
-If not broken, returns the law program location information.
+Retrieves the location metadata of the law program bound to this contract.
+
+This includes the contract address of the `objectarium` and the program object ID, where the law program's code can be accessed.
 
 | literal     |
 | ----------- |
@@ -58,7 +62,9 @@ If not broken, returns the law program location information.
 
 ### QueryMsg::ProgramCode
 
-ProgramCode returns the law program code.
+Fetches the raw code of the law program tied to this contract.
+
+If the law stone is broken, the query may fail if the program is no longer available in the `Objectarium`.
 
 | literal          |
 | ---------------- |
@@ -128,4 +134,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`a95a2760652729c5`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-law-stone.json` (`f92ef76322c09083`)_

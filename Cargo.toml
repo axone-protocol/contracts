@@ -1,5 +1,17 @@
 [workspace]
 members = ["contracts/*", "packages/*"]
+resolver = "2"
+
+[profile.release]
+codegen-units = 1
+debug = false
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = 3
+overflow-checks = true
+panic = 'abort'
+rpath = false
 
 [workspace.dependencies]
 cosmwasm-schema = "1.5.3"

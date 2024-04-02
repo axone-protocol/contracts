@@ -1,5 +1,32 @@
 # ØKP4 contracts
 
+## [5.0.0](https://github.com/okp4/contracts/compare/v4.1.0...v5.0.0) (2024-04-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **law-stone:** return a prolog error when law is broken
+
+### Features
+
+* **dataverse:** support claim with named node hierarchy ([2081625](https://github.com/okp4/contracts/commit/20816255966bad0dd943d788df75784731eba8d1))
+
+
+### Bug Fixes
+
+* **dataverse:** avoid possible conflicts between nodes ([73c65e7](https://github.com/okp4/contracts/commit/73c65e762a82948af1cb23f7c6833d1dc57edcac))
+* **dataverse:** prevent vc to contain reserved predicates ([2917fdb](https://github.com/okp4/contracts/commit/2917fdb6f72dfeae4ca2814b72e5ac6acba1605d))
+
+
+### Performance Improvements
+
+* **rdf:** make id issuer return references ([64a227f](https://github.com/okp4/contracts/commit/64a227fd76d65b97f35374a7b92632bb571b6932))
+
+
+### Code Refactoring
+
+* **law-stone:** return a prolog error when law is broken ([41f9de5](https://github.com/okp4/contracts/commit/41f9de556f4a49c8d1fbc1bdfd73e7d71cd4492e))
+
 ## [4.1.0](https://github.com/okp4/contracts/compare/v4.0.0...v4.1.0) (2024-03-17)
 
 

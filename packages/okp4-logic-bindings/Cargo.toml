@@ -2,7 +2,7 @@
 authors = ["OKP4"]
 edition = "2021"
 name = "okp4-logic-bindings"
-version = "4.1.0"
+version = "5.0.0"
 
 [dependencies]
 cosmwasm-std.workspace = true

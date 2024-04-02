@@ -3,7 +3,7 @@ authors = ["OKP4"]
 edition = "2021"
 name = "okp4-law-stone"
 rust-version = "1.75"
-version = "4.1.0"
+version = "5.0.0"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.

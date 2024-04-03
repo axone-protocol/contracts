@@ -16,17 +16,6 @@ exclude = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[profile.release]
-codegen-units = 1
-debug = false
-debug-assertions = false
-incremental = false
-lto = true
-opt-level = 3
-overflow-checks = true
-panic = 'abort'
-rpath = false
-
 [dependencies]
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true

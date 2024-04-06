@@ -33,7 +33,7 @@ pub enum ExecuteMsg {
     /// # StoreObject
     /// StoreObject store an object to the bucket and make the sender the owner of the object.
     /// The object is referenced by the hash of its content and this value is returned.
-    /// If the object is already stored, an error is returned.
+    /// If the object is already stored, it is a no-op. It may be pinned though.
     ///
     /// The "pin" parameter specifies if the object should be pinned for the sender. In such case,
     /// the object cannot be removed (forget) from the storage.

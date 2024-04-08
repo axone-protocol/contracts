@@ -61,7 +61,7 @@ pub mod execute {
     use crate::msg;
     use crate::state::BucketLimits;
     use crate::ContractError::ObjectPinned;
-    use cosmwasm_std::{Order, Uint128};
+    use cosmwasm_std::{Addr, Order, Storage, Uint128};
 
     pub fn store_object(
         deps: DepsMut<'_>,
@@ -118,23 +118,11 @@ pub mod execute {
         let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.0);
         let data_path = DATA.key(id.clone());
 
-        if !data_path.has(deps.storage) {
+        let (old_obj, mut new_obj) = if !data_path.has(deps.storage) {
             let compressed_data = compression.compress(&data.0)?;
-
             data_path.save(deps.storage, &compressed_data)?;
 
-            // store object
             let compressed_size = (compressed_data.len() as u128).into();
-            let object = &Object {
-                id: id.clone(),
-                owner: info.sender.clone(),
-                size,
-                pin_count: if pin { Uint128::one() } else { Uint128::zero() },
-                compression,
-                compressed_size,
-            };
-
-            objects().save(deps.storage, object.id.clone(), object)?;
 
             // save bucket stats
             BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
@@ -144,19 +132,28 @@ pub mod execute {
                 stat.compressed_size += compressed_size;
                 Ok(bucket)
             })?;
+
+            (
+                None,
+                Object {
+                    id: id.clone(),
+                    owner: info.sender.clone(),
+                    size,
+                    pin_count: Uint128::zero(),
+                    compression,
+                    compressed_size,
+                },
+            )
+        } else {
+            let old = objects().load(deps.storage, id.clone())?;
+            (Some(old.clone()), old)
+        };
+
+        if pin {
+            may_pin_object(deps.storage, info.sender, &mut new_obj)?;
         }
 
-        // save pin
-        if pin {
-            pins().save(
-                deps.storage,
-                (id.clone(), info.sender.clone()),
-                &Pin {
-                    id: id.clone(),
-                    address: info.sender,
-                },
-            )?;
-        }
+        objects().replace(deps.storage, id.clone(), Some(&new_obj), old_obj.as_ref())?;
 
         Ok(Response::new()
             .add_attribute("action", "store_object")
@@ -173,42 +170,14 @@ pub mod execute {
             .add_attribute("id", object_id.clone());
 
         let id: Hash = object_id.try_into()?;
-        if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
-            return Ok(res);
-        }
-
         let object = objects().load(deps.storage, id.clone())?;
         let mut updated_object = object.clone();
-        updated_object.pin_count += Uint128::one();
 
-        objects().replace(
-            deps.storage,
-            id.clone(),
-            Some(&updated_object),
-            Some(&object),
-        )?;
-
-        let bucket = BUCKET.load(deps.storage)?;
-
-        match bucket.limits {
-            BucketLimits {
-                max_object_pins: Some(max),
-                ..
-            } if max < updated_object.pin_count => {
-                Err(BucketError::MaxObjectPinsLimitExceeded(updated_object.pin_count, max).into())
-            }
-            _ => {
-                pins().save(
-                    deps.storage,
-                    (id.clone(), info.sender.clone()),
-                    &Pin {
-                        id,
-                        address: info.sender,
-                    },
-                )?;
-                Ok(res)
-            }
+        if may_pin_object(deps.storage, info.sender, &mut updated_object)? {
+            objects().replace(deps.storage, id, Some(&updated_object), Some(&object))?;
         }
+
+        Ok(res)
     }
 
     pub fn unpin_object(
@@ -269,6 +238,40 @@ pub mod execute {
         Ok(Response::new()
             .add_attribute("action", "forget_object")
             .add_attribute("id", object_id))
+    }
+
+    fn may_pin_object(
+        storage: &mut dyn Storage,
+        pinner: Addr,
+        target: &mut Object,
+    ) -> Result<bool, ContractError> {
+        if pins().has(storage, (target.id.clone(), pinner.clone())) {
+            return Ok(false);
+        }
+
+        target.pin_count += Uint128::one();
+
+        let bucket = BUCKET.load(storage)?;
+
+        match bucket.limits {
+            BucketLimits {
+                max_object_pins: Some(max),
+                ..
+            } if max < target.pin_count => {
+                Err(BucketError::MaxObjectPinsLimitExceeded(target.pin_count, max).into())
+            }
+            _ => {
+                pins().save(
+                    storage,
+                    (target.id.clone(), pinner.clone()),
+                    &Pin {
+                        id: target.id.clone(),
+                        address: pinner,
+                    },
+                )?;
+                Ok(true)
+            }
+        }
     }
 }
 
@@ -879,7 +882,18 @@ mod tests {
                     .into(),
                 info.sender
             ),
-        ))
+        ));
+        assert_eq!(
+            objects()
+                .load(
+                    &deps.storage,
+                    decode_hex("46c4b2f687df251a98cc83cc35437e9893c16861899c2f9d183e1de57d3a2c0e")
+                        .into()
+                )
+                .unwrap()
+                .pin_count,
+            Uint128::one()
+        );
     }
 
     #[test]

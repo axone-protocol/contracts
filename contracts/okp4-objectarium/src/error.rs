@@ -35,9 +35,6 @@ pub enum BucketError {
     #[error("Maximum object pins number exceeded: {0} / {1}")]
     MaxObjectPinsLimitExceeded(Uint128, Uint128),
 
-    #[error("Object is already stored")]
-    ObjectAlreadyStored,
-
     #[error("Compression algorithm is not accepted: {0:?} (accepted: \"{1:?}\")")]
     CompressionAlgorithmNotAccepted(CompressionAlgorithm, Vec<CompressionAlgorithm>),
 }
@@ -81,10 +78,6 @@ fn test_bucket_error_messages() {
         (
             ContractError::Bucket(BucketError::MaxObjectPinsLimitExceeded(5u8.into(), 2u8.into())),
             "Maximum object pins number exceeded: 5 / 2",
-        ),
-        (
-            ContractError::Bucket(BucketError::ObjectAlreadyStored),
-            "Object is already stored",
         ),
         (
             ContractError::Bucket(BucketError::CompressionAlgorithmNotAccepted(

@@ -164,7 +164,7 @@ Execute messages
 
 ### ExecuteMsg::StoreObject
 
-StoreObject store an object to the bucket and make the sender the owner of the object. The object is referenced by the hash of its content and this value is returned. If the object is already stored, an error is returned.
+StoreObject store an object to the bucket and make the sender the owner of the object. The object is referenced by the hash of its content and this value is returned. If the object is already stored, it is a no-op. It may be pinned though.
 
 The "pin" parameter specifies if the object should be pinned for the sender. In such case, the object cannot be removed (forget) from the storage.
 
@@ -511,4 +511,4 @@ A string containing a 128-bit integer in decimal representation.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`8f8fd1b1c8982ddb`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `okp4-objectarium.json` (`dbf16753cc3b0930`)_

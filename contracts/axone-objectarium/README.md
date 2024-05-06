@@ -23,17 +23,17 @@ Features like pinning, unpinning, and discarding objects offer a strategic way t
 
 ## Rationale
 
-In a sense, we can consider blockchains built on the [Cosmos L0](https://docs.cosmos.network/main) layer as decentralized databases, and their nature can be shaped and modeled through the smart contracts or modules. Given this, it provides a great opportunity to address the wide range of data management needs. One such important area is the management of unstructured, immutable data, which is written once but accessed frequently — commonly known as object storage. This is the primary focus of `okp4-objectarium`: a specialized smart contract designed to offer a versatile and efficient approach to handling *on-chain*, *unstructured*, *immutable* data in a *decentralized* manner.
+In a sense, we can consider blockchains built on the [Cosmos L0](https://docs.cosmos.network/main) layer as decentralized databases, and their nature can be shaped and modeled through the smart contracts or modules. Given this, it provides a great opportunity to address the wide range of data management needs. One such important area is the management of unstructured, immutable data, which is written once but accessed frequently — commonly known as object storage. This is the primary focus of `axone-objectarium`: a specialized smart contract designed to offer a versatile and efficient approach to handling *on-chain*, *unstructured*, *immutable* data in a *decentralized* manner.
 
 ## Terminology
 
 ### Object
 
-In the context of the `okp4-objectarium` smart contract, an `object` refers to a piece of data stored on the blockchain. It can represent various types of information, such as documents, binary files, or any other digital content. Objects are immutable once stored and are identified by their cryptographic hash, which can be generated using algorithms like MD5 or SHA256. This ensures the integrity and security of the stored data, as any modification to the object would result in a different hash value.
+In the context of the `axone-objectarium` smart contract, an `object` refers to a piece of data stored on the blockchain. It can represent various types of information, such as documents, binary files, or any other digital content. Objects are immutable once stored and are identified by their cryptographic hash, which can be generated using algorithms like MD5 or SHA256. This ensures the integrity and security of the stored data, as any modification to the object would result in a different hash value.
 
 ### Bucket
 
-The smart contract is organized around buckets. A bucket represents a logical container within the `okp4-objectarium` smart contract instance that groups related Objects together. It acts as a storage unit for Objects and provides a context for managing and organizing them. Each bucket has a unique name and is associated with a set of configurations and limits that define its behaviour and characteristics.
+The smart contract is organized around buckets. A bucket represents a logical container within the `axone-objectarium` smart contract instance that groups related Objects together. It acts as a storage unit for Objects and provides a context for managing and organizing them. Each bucket has a unique name and is associated with a set of configurations and limits that define its behaviour and characteristics.
 
 ### Pin
 
@@ -43,9 +43,9 @@ Pin refers to a mechanism that allows users to mark or "pin" specific objects wi
 
 The unstructured nature of the data stored in the chain opens up a plethora of possibilities for decentralized applications that require this type of versatile storage.
 
-### In the OKP4 protocol
+### In the AXONE protocol
 
-The primary function of this smart contract within the OKP4 protocol is to enable the persistence of governance rules, which are encoded in Prolog. These programs are stored in an immutable format within the protocol and can be referenced by their unique identifiers in situations where there is a need to refer to these rules.
+The primary function of this smart contract within the AXONE protocol is to enable the persistence of governance rules, which are encoded in Prolog. These programs are stored in an immutable format within the protocol and can be referenced by their unique identifiers in situations where there is a need to refer to these rules.
 
 ### In the wild world
 
@@ -55,7 +55,7 @@ A plethora of possibilities opens up for decentralized applications (dApps) that
 
 ### Instantiation
 
-The `okp4-objectarium` can be instantiated as follows, refer to the schema for more information on configuration, limits and pagination configuration:
+The `axone-objectarium` can be instantiated as follows, refer to the schema for more information on configuration, limits and pagination configuration:
 
 ```bash
 axoned tx wasm instantiate $CODE_ID \
@@ -122,7 +122,7 @@ We can also list the objects, eventually filtering on the object owner:
 
 ```bash
 axoned query wasm contract-state smart $CONTRACT_ADDR \
-    "{\"objects\": {\"address\": \"okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6\"}}"
+    "{\"objects\": {\"address\": \"axone1p8u47en82gmzfm259y6z93r9qe63l25d858vqu\"}}"
 ```
 
 And navigate in a cursor based pagination:

@@ -41,7 +41,7 @@ Claims are submitted in the form of [Verifiable Presentations (VPs)](https://www
 
 ## Dependencies
 
-Given its role and status, this smart contract serves as the primary access point for the OKP4 protocol to manage all on-chain stored resources. To fulfill its tasks, the smart contract relies on other smart contracts within the OKP4 ecosystem. Notably, it uses the `Cognitarium` smart contract for persisting the Dataverse representation in an ontological form and the `Law Stone` smart contract to establish governance rules.
+Given its role and status, this smart contract serves as the primary access point for the AXONE protocol to manage all on-chain stored resources. To fulfill its tasks, the smart contract relies on other smart contracts within the AXONE ecosystem. Notably, it uses the `Cognitarium` smart contract for persisting the Dataverse representation in an ontological form and the `Law Stone` smart contract to establish governance rules.
 
 ## InstantiateMsg
 
@@ -238,5 +238,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`106914533c81f813`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`ba8a2c46ec80deb5`)*
 ````

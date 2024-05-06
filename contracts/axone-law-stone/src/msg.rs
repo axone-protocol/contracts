@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Binary;
 #[allow(unused_imports)]
-use okp4_logic_bindings::AskResponse;
+use axone_logic_bindings::AskResponse;
 
 /// Instantiate message
 #[cw_serde]

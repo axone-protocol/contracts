@@ -27,7 +27,7 @@ axone-cognitarium = { path = "contracts/axone-cognitarium", features = [
   "library",
 ] }
 axone-cognitarium-client = { path = "packages/axone-cognitarium-client" }
-okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
+axone-logic-bindings = { path = "packages/axone-logic-bindings" }
 axone-objectarium = { path = "contracts/axone-objectarium", features = [
   "library",
 ] }

@@ -84,6 +84,7 @@ dependencies = [
 name = "axone-law-stone"
 version = "5.0.0"
 dependencies = [
+ "axone-logic-bindings",
  "axone-objectarium",
  "axone-objectarium-client",
  "axone-wasm",
@@ -95,9 +96,22 @@ dependencies = [
  "cw-utils",
  "cw2",
  "itertools 0.12.1",
- "okp4-logic-bindings",
  "schemars",
  "serde",
+ "thiserror",
+ "url",
+]
+
+[[package]]
+name = "axone-logic-bindings"
+version = "5.0.0"
+dependencies = [
+ "axone-wasm",
+ "cosmwasm-std",
+ "form_urlencoded",
+ "schemars",
+ "serde",
+ "serde-json-wasm 1.0.1",
  "thiserror",
  "url",
 ]
@@ -880,20 +894,6 @@ dependencies = [
  "base-x",
  "data-encoding",
  "data-encoding-macro",
-]
-
-[[package]]
-name = "okp4-logic-bindings"
-version = "5.0.0"
-dependencies = [
- "axone-wasm",
- "cosmwasm-std",
- "form_urlencoded",
- "schemars",
- "serde",
- "serde-json-wasm 1.0.1",
- "thiserror",
- "url",
 ]
 
 [[package]]

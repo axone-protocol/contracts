@@ -2,7 +2,7 @@ use crate::error::LogicAskResponseError;
 use crate::ContractError;
 use cosmwasm_std::{Event, StdError, StdResult};
 use itertools::Itertools;
-use okp4_logic_bindings::{AskResponse, TermValue};
+use axone_logic_bindings::{AskResponse, TermValue};
 use axone_objectarium_client::ObjectRef;
 use axone_wasm::error::CosmwasmUriError;
 use axone_wasm::uri::CosmwasmUri;
@@ -92,14 +92,14 @@ pub fn ask_response_to_objects(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use okp4_logic_bindings::error::TermParseError;
-    use okp4_logic_bindings::{Answer, Substitution};
+    use axone_logic_bindings::error::TermParseError;
+    use axone_logic_bindings::{Answer, Substitution};
 
     #[test]
     fn logic_to_objects() {
         let cases = vec![
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -109,7 +109,7 @@ mod tests {
                 Ok(vec![])
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -122,7 +122,7 @@ mod tests {
                 }])
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -138,7 +138,7 @@ mod tests {
                 }])
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -148,7 +148,7 @@ mod tests {
                 Err(ContractError::LogicAskResponse(LogicAskResponseError::Parse(TermParseError::EmptyValue)))
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -158,7 +158,7 @@ mod tests {
                 Err(ContractError::LogicAskResponse(LogicAskResponseError::UnexpectedTerm))
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -168,7 +168,7 @@ mod tests {
                 Err(ContractError::LogicAskResponse(LogicAskResponseError::UnexpectedTerm))
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -178,7 +178,7 @@ mod tests {
                 Err(ContractError::LogicAskResponse(LogicAskResponseError::UnexpectedTerm))
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -188,7 +188,7 @@ mod tests {
                 Err(ContractError::ParseCosmwasmUri(CosmwasmUriError::ParseURI(url::ParseError::RelativeUrlWithoutBase)))
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
@@ -199,14 +199,14 @@ mod tests {
             ),
             (
                 vec![
-                    okp4_logic_bindings::Result {
+                    axone_logic_bindings::Result {
                         error: None,
                         substitutions: vec![Substitution {
                             variable: "X".to_string(),
                             expression: "[]".to_string(),
                         }]
                     },
-                    okp4_logic_bindings::Result {
+                    axone_logic_bindings::Result {
                         error: None,
                         substitutions: vec![Substitution {
                             variable: "X".to_string(),
@@ -218,7 +218,7 @@ mod tests {
             ),
             (
                 vec![
-                    okp4_logic_bindings::Result {
+                    axone_logic_bindings::Result {
                         error: None,
                         substitutions: vec![
                             Substitution {
@@ -235,7 +235,7 @@ mod tests {
                 Err(ContractError::LogicAskResponse(LogicAskResponseError::Unexpected("expected exactly one substitution".to_string())))
             ),
             (
-                vec![okp4_logic_bindings::Result {
+                vec![axone_logic_bindings::Result {
                     error: Some("error".to_string()),
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),

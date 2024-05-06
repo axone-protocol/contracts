@@ -5,7 +5,7 @@ use cosmwasm_std::{
     WasmMsg,
 };
 use cw2::set_contract_version;
-use okp4_logic_bindings::LogicCustomQuery;
+use axone_logic_bindings::LogicCustomQuery;
 use axone_objectarium::msg::{
     ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery,
 };
@@ -133,7 +133,7 @@ pub mod query {
     use crate::msg::ProgramResponse;
     use crate::state::PROGRAM;
     use cosmwasm_std::QueryRequest;
-    use okp4_logic_bindings::{Answer, AskResponse};
+    use axone_logic_bindings::{Answer, AskResponse};
 
     const ERR_STONE_BROKEN: &str = "system_error(broken_law_stone)";
 
@@ -285,8 +285,8 @@ mod tests {
         OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use cw_utils::ParseReplyError::SubMsgFailure;
-    use okp4_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
-    use okp4_logic_bindings::{
+    use axone_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
+    use axone_logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
     };
     use axone_objectarium::msg::PageInfo;
@@ -516,7 +516,7 @@ mod tests {
                     gas_used: 1000,
                     answer: Some(Answer {
                         variables: vec!["Foo".to_string()],
-                        results: vec![okp4_logic_bindings::Result {
+                        results: vec![axone_logic_bindings::Result {
                             substitutions: vec![Substitution {
                                 variable: "Foo".to_string(),
                                 expression: "bar".to_string(),
@@ -542,7 +542,7 @@ mod tests {
                 Some(AskResponse {
                     height: 12345,
                     answer: Some(Answer {
-                        results: vec![okp4_logic_bindings::Result {
+                        results: vec![axone_logic_bindings::Result {
                             error: Some("error(system_error(broken_law_stone),root)".to_string()),
                             ..Default::default()
                         }],

@@ -1,6 +1,6 @@
 use cosmwasm_std::StdError;
 use cw_utils::ParseReplyError;
-use okp4_logic_bindings::error::TermParseError;
+use axone_logic_bindings::error::TermParseError;
 use axone_wasm::error::CosmwasmUriError;
 use thiserror::Error;
 

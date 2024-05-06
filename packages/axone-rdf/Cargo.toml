@@ -1,5 +1,5 @@
 [package]
-authors = ["OKP4"]
+authors = ["AXONE"]
 edition = "2021"
 name = "axone-rdf"
 version = "5.0.0"

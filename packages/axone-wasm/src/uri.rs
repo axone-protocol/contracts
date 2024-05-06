@@ -17,7 +17,7 @@ const COSMWASM_QUERY_PARAM: &str = "query";
 /// `cosmwasm:{contract_name}:{contract_address}?query={contract_query}`
 ///
 /// Where:
-/// - `{contract_name}`: Only informative, represents the corresponding smart contract name or type (e.g. `okp4-objectarium`);
+/// - `{contract_name}`: Only informative, represents the corresponding smart contract name or type (e.g. `axone-objectarium`);
 /// - `{contract_address}`: The address of the smart contract to query;
 /// - `{contract_query}`: The JSON query to perform on the targeted smart contract, URL encoded;
 #[derive(Clone, Debug, PartialEq, Eq)]

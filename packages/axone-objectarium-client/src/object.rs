@@ -101,12 +101,12 @@ mod tests {
             (
                 CosmwasmUri {
                     contract_name: None,
-                    contract_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
+                    contract_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string(),
                     raw_query: "{\"object_data\":{\"id\":\"4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05\"}}".to_string(),
                 },
                 Ok(ObjectRef {
                     object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string(),
-                    storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
+                    storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string(),
                 }),
             ),
             (
@@ -132,12 +132,12 @@ mod tests {
         let res = CosmwasmUri::try_from(ObjectRef {
             object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
                 .to_string(),
-            storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+            storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
                 .to_string(),
         });
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap().to_string(), "cosmwasm:axone-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D");
+        assert_eq!(res.unwrap().to_string(), "cosmwasm:axone-objectarium:axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D");
     }
 
     #[test]
@@ -146,7 +146,7 @@ mod tests {
         let object = ObjectRef {
             object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
                 .to_string(),
-            storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+            storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
                 .to_string(),
         };
 

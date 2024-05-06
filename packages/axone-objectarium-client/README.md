@@ -1,3 +1,3 @@
 # Objectarium client
 
-Package that holds components to interact with the `okp4-objectarium` contract.
+Package that holds components to interact with the `axone-objectarium` contract.

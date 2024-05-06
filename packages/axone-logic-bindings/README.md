@@ -1,3 +1,3 @@
 # Logic bindings
 
-Package that holds all bindings for querying the OKP4 logic module.
+Package that holds all bindings for querying the AXONE logic module.

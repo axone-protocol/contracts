@@ -6,7 +6,7 @@ use axone_cognitarium::msg::{
     DataFormat, Node, SelectItem, SelectQuery, SimpleWhereCondition, TriplePattern, VarOrNamedNode,
     VarOrNode, VarOrNodeOrLiteral, WhereCondition, IRI,
 };
-use okp4_cognitarium_client::CognitariumClient;
+use axone_cognitarium_client::CognitariumClient;
 
 /// ClaimRegistrar is the entity responsible to manage claims (i.e. submission and revocation) into
 /// the Dataverse, ensuring that any pre-condition criteria to an action is met, and any attached

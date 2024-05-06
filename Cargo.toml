@@ -26,7 +26,7 @@ langtag = "0.3.4"
 axone-cognitarium = { path = "contracts/axone-cognitarium", features = [
   "library",
 ] }
-okp4-cognitarium-client = { path = "packages/okp4-cognitarium-client" }
+axone-cognitarium-client = { path = "packages/axone-cognitarium-client" }
 okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
 axone-objectarium = { path = "contracts/axone-objectarium", features = [
   "library",

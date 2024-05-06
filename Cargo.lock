@@ -44,10 +44,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "axone-cognitarium-client"
+version = "5.0.0"
+dependencies = [
+ "axone-cognitarium",
+ "cosmwasm-std",
+ "serde",
+]
+
+[[package]]
 name = "axone-dataverse"
 version = "5.0.0"
 dependencies = [
  "axone-cognitarium",
+ "axone-cognitarium-client",
  "axone-rdf",
  "base64 0.22.0",
  "bs58",
@@ -60,7 +70,6 @@ dependencies = [
  "cw2",
  "itertools 0.12.1",
  "multibase",
- "okp4-cognitarium-client",
  "rio_api",
  "rio_turtle",
  "schemars",
@@ -860,15 +869,6 @@ dependencies = [
  "base-x",
  "data-encoding",
  "data-encoding-macro",
-]
-
-[[package]]
-name = "okp4-cognitarium-client"
-version = "5.0.0"
-dependencies = [
- "axone-cognitarium",
- "cosmwasm-std",
- "serde",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 [package]
-authors = ["OKP4"]
+authors = ["AXONE"]
 edition = "2021"
 name = "{{ contract_name }}"
 rust-version = "1.69"
@@ -34,9 +34,9 @@ cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
-okp4-logic-bindings.workspace = true
-okp4-objectarium.workspace = true
-okp4-objectarium-client.workspace = true
+axone-logic-bindings.workspace = true
+axone-objectarium-client.workspace = true
+axone-objectarium.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true

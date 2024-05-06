@@ -238,7 +238,7 @@ docker run --rm -v "$(pwd)":/code \
 '''
 
 [tasks.scaffold-smart-contract]
-args = ["apply", "-s", "templates/okp4-smart-contract", "-d", "contracts"]
+args = ["apply", "-s", "templates/axone-smart-contract", "-d", "contracts"]
 command = "ffizer"
 dependencies = ["install-ffizer"]
 

@@ -1,6 +1,6 @@
 variables:
   - name: contract_name
-    default_value: okp4-foo
+    default_value: axone-foo
 
 scripts:
   - message: |

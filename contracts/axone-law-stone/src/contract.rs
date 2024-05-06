@@ -290,7 +290,7 @@ mod tests {
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
     };
     use axone_objectarium::msg::PageInfo;
-    use okp4_wasm::uri::CosmwasmUri;
+    use axone_wasm::uri::CosmwasmUri;
     use std::collections::VecDeque;
     use std::marker::PhantomData;
 

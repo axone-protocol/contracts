@@ -7,6 +7,6 @@ version = "5.0.0"
 [dependencies]
 cosmwasm-std.workspace = true
 axone-objectarium.workspace = true
-okp4-wasm.workspace = true
+axone-wasm.workspace = true
 schemars.workspace = true
 serde.workspace = true

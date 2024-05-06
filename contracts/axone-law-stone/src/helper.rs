@@ -4,8 +4,8 @@ use cosmwasm_std::{Event, StdError, StdResult};
 use itertools::Itertools;
 use okp4_logic_bindings::{AskResponse, TermValue};
 use okp4_objectarium_client::ObjectRef;
-use okp4_wasm::error::CosmwasmUriError;
-use okp4_wasm::uri::CosmwasmUri;
+use axone_wasm::error::CosmwasmUriError;
+use axone_wasm::uri::CosmwasmUri;
 use std::any::type_name;
 
 pub fn object_ref_to_uri(object: ObjectRef) -> StdResult<CosmwasmUri> {

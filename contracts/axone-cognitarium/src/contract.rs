@@ -557,7 +557,7 @@ mod tests {
                 StoreStat {
                     triple_count: 40u128.into(),
                     namespace_count: 17u128.into(),
-                    byte_size: 7103u128.into(),
+                    byte_size: 7190u128.into(),
                 },
             );
             assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 17u128);
@@ -565,11 +565,11 @@ mod tests {
                 namespaces()
                     .load(
                         &deps.storage,
-                        "https://ontology.okp4.space/dataverse/dataspace/".to_string(),
+                        "https://ontology.axone.space/dataverse/dataspace/".to_string(),
                     )
                     .unwrap(),
                 Namespace {
-                    value: "https://ontology.okp4.space/dataverse/dataspace/".to_string(),
+                    value: "https://ontology.axone.space/dataverse/dataspace/".to_string(),
                     key: 0u128,
                     counter: 5u128,
                 }
@@ -705,7 +705,7 @@ mod tests {
             StoreStat {
                 triple_count: 40u128.into(),
                 namespace_count: 17u128.into(),
-                byte_size: 7103u128.into(),
+                byte_size: 7190u128.into(),
             },
         );
         assert_eq!(NAMESPACE_KEY_INCREMENT.load(&deps.storage).unwrap(), 17u128);
@@ -788,7 +788,7 @@ mod tests {
                     .build()
                     .unwrap(),
                 Some(ContractError::from(StoreError::TripleByteSize(
-                    176u128.into(),
+                    177u128.into(),
                     150u128.into(),
                 ))),
             ),
@@ -846,39 +846,39 @@ mod tests {
 
     #[test]
     fn proper_delete() {
-        let id = "https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
+        let id = "https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
         let cases = vec![
             (
                 DeleteData {
                     prefixes: vec![],
                     delete: vec![msg::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/dataverse/dataspace/metadata/unknown"
+                            "https://ontology.axone.space/dataverse/dataspace/metadata/unknown"
                                 .to_string(),
                         )),
                         predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            "https://ontology.axone.space/core/hasTopic".to_string(),
                         )),
                         object: VarOrNamedNodeOrLiteral::NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         )),
                     }],
                     r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
                         subject: VarOrNode::Node(NamedNode(Full(
-                            "https://ontology.okp4.space/dataverse/dataspace/metadata/unknown"
+                            "https://ontology.axone.space/dataverse/dataspace/metadata/unknown"
                                 .to_string(),
                         ))),
                         predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            "https://ontology.axone.space/core/hasTopic".to_string(),
                         )),
                         object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         ))),
                     }))],
                 },
                 0,
                 0,
-                Uint128::from(7103u128),
+                Uint128::from(7190u128),
             ),
             (
                 DeleteData {
@@ -886,36 +886,36 @@ mod tests {
                     delete: vec![msg::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(id.to_string())),
                         predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            "https://ontology.axone.space/core/hasTopic".to_string(),
                         )),
                         object: VarOrNamedNodeOrLiteral::NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         )),
                     }],
                     r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
                         subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
                         predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            "https://ontology.axone.space/core/hasTopic".to_string(),
                         )),
                         object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         ))),
                     }))],
                 },
                 1,
                 0,
-                Uint128::from(6921u128),
+                Uint128::from(7005u128),
             ),
             (
                 DeleteData {
                     prefixes: vec![
                         Prefix {
                             prefix: "core".to_string(),
-                            namespace: "https://ontology.okp4.space/core/".to_string(),
+                            namespace: "https://ontology.axone.space/core/".to_string(),
                         },
                         Prefix {
                             prefix: "thesaurus".to_string(),
-                            namespace: "https://ontology.okp4.space/thesaurus/topic/".to_string(),
+                            namespace: "https://ontology.axone.space/thesaurus/topic/".to_string(),
                         },
                     ],
                     delete: vec![msg::TripleDeleteTemplate {
@@ -935,18 +935,18 @@ mod tests {
                 },
                 1,
                 0,
-                Uint128::from(6921u128),
+                Uint128::from(7005u128),
             ),
             (
                 DeleteData {
                     prefixes: vec![
                         Prefix {
                             prefix: "core".to_string(),
-                            namespace: "https://ontology.okp4.space/core/".to_string(),
+                            namespace: "https://ontology.axone.space/core/".to_string(),
                         },
                         Prefix {
                             prefix: "thesaurus".to_string(),
-                            namespace: "https://ontology.okp4.space/thesaurus/topic/".to_string(),
+                            namespace: "https://ontology.axone.space/thesaurus/topic/".to_string(),
                         },
                     ],
                     delete: vec![msg::TripleDeleteTemplate {
@@ -962,7 +962,7 @@ mod tests {
                 },
                 1,
                 0,
-                Uint128::from(6921u128),
+                Uint128::from(7005u128),
             ),
             (
                 DeleteData {
@@ -980,7 +980,7 @@ mod tests {
                 },
                 11,
                 2,
-                Uint128::from(5272u128),
+                Uint128::from(5334u128),
             ),
             (
                 DeleteData {
@@ -994,7 +994,7 @@ mod tests {
                 },
                 11,
                 2,
-                Uint128::from(5272u128),
+                Uint128::from(5334u128),
             ),
             (
                 DeleteData {
@@ -1015,11 +1015,11 @@ mod tests {
                     prefixes: vec![
                         Prefix {
                             prefix: "core".to_string(),
-                            namespace: "https://ontology.okp4.space/core/".to_string(),
+                            namespace: "https://ontology.axone.space/core/".to_string(),
                         },
                         Prefix {
                             prefix: "thesaurus".to_string(),
-                            namespace: "https://ontology.okp4.space/thesaurus/topic/".to_string(),
+                            namespace: "https://ontology.axone.space/thesaurus/topic/".to_string(),
                         },
                     ],
                     delete: vec![msg::TripleDeleteTemplate {
@@ -1033,7 +1033,7 @@ mod tests {
                 },
                 1,
                 0,
-                Uint128::from(6921u128),
+                Uint128::from(7005u128),
             ),
         ];
 
@@ -1107,19 +1107,19 @@ mod tests {
                     delete: vec![msg::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Prefixed("foo:bar".to_string())),
                         predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            "https://ontology.axone.space/core/hasTopic".to_string(),
                         )),
                         object: VarOrNamedNodeOrLiteral::NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         )),
                     }],
                     r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
                         subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
                         predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasTopic".to_string(),
+                            "https://ontology.axone.space/core/hasTopic".to_string(),
                         )),
                         object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         ))),
                     }))],
                 },
@@ -1130,14 +1130,14 @@ mod tests {
                     prefixes: vec![],
                     delete: vec![msg::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         )),
                         predicate: VarOrNamedNode::Variable("z".to_string()),
                         object: VarOrNamedNodeOrLiteral::Variable("o".to_string()),
                     }],
                     r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
                         subject: VarOrNode::Node(NamedNode(Full(
-                            "https://ontology.okp4.space/thesaurus/topic/Test".to_string(),
+                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         ))),
                         predicate: VarOrNamedNode::Variable("p".to_string()),
                         object: VarOrNodeOrLiteral::Variable("o".to_string()),
@@ -1256,7 +1256,7 @@ mod tests {
                         msg::TriplePattern {
                             subject: VarOrNode::Variable("a".to_string()),
                             predicate: VarOrNamedNode::NamedNode(Full(
-                                "https://ontology.okp4.space/core/hasDescription".to_string(),
+                                "https://ontology.axone.space/core/hasDescription".to_string(),
                             )),
                             object: VarOrNodeOrLiteral::Variable("b".to_string()),
                         },
@@ -1273,7 +1273,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())
                                     }
                                 ),
                                 (
@@ -1289,7 +1289,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
                                     }
                                 ),
                                 (
@@ -1305,7 +1305,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
                                     }
                                 ),
                                 (
@@ -1321,7 +1321,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())
                                     }
                                 ),
                                 (
@@ -1339,7 +1339,7 @@ mod tests {
             ),
             (
                 SelectQuery {
-                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![
                         SelectItem::Variable("a".to_string()),
                     ],
@@ -1364,7 +1364,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string())
                                     }
                                 ),
                             ])
@@ -1380,7 +1380,7 @@ mod tests {
                     ],
                     r#where: vec![WhereCondition::Simple(TriplePattern(
                         msg::TriplePattern {
-                            subject: VarOrNode::Node(NamedNode(Full("https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string()))),
+                            subject: VarOrNode::Node(NamedNode(Full("https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string()))),
                             predicate: VarOrNamedNode::Variable("a".to_string()),
                             object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
                         },
@@ -1397,7 +1397,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/core/hasDescription".to_string())
+                                        value: Full("https://ontology.axone.space/core/hasDescription".to_string())
                                     }
                                 ),
                             ])
@@ -1443,7 +1443,7 @@ mod tests {
         let cases = vec![
             (
                 SelectQuery {
-                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
                     r#where: vec![
                         WhereCondition::Simple(TriplePattern(
@@ -1474,7 +1474,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
                                     }
                                 ),
                                 (
@@ -1492,7 +1492,7 @@ mod tests {
             ),
             (
                 SelectQuery {
-                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
                     r#where: vec![
                         WhereCondition::Simple(TriplePattern(
@@ -1523,7 +1523,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
                                     }
                                 ),
                                 (
@@ -1541,7 +1541,7 @@ mod tests {
             ),
             (
                 SelectQuery {
-                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
                     r#where: vec![
                         WhereCondition::Simple(TriplePattern(
@@ -1572,7 +1572,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
                                     }
                                 ),
                                 (
@@ -1590,7 +1590,7 @@ mod tests {
             ),
             (
                 SelectQuery {
-                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                    prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
                     r#where: vec![
                         WhereCondition::Simple(TriplePattern(
@@ -1612,7 +1612,7 @@ mod tests {
                                 (
                                     "a".to_string(),
                                     Value::URI {
-                                        value: Full("https://ontology.okp4.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
+                                        value: Full("https://ontology.axone.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string())
                                     }
                                 ),
                                 (
@@ -1689,7 +1689,7 @@ mod tests {
                 SelectQuery {
                     prefixes: vec![Prefix {
                         prefix: "core".to_string(),
-                        namespace: "https://ontology.okp4.space/core/".to_string(),
+                        namespace: "https://ontology.axone.space/core/".to_string(),
                     }],
                     select: vec![SelectItem::Variable("a".to_string())],
                     r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
@@ -1713,7 +1713,7 @@ mod tests {
                     r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
                         subject: VarOrNode::Variable("a".to_string()),
                         predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.okp4.space/core/hasDescription".to_string(),
+                            "https://ontology.axone.space/core/hasDescription".to_string(),
                         )),
                         object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString {
                             value: "A test Dataset.".to_string(),
@@ -1768,7 +1768,7 @@ mod tests {
                 QueryMsg::Describe {
                     query: DescribeQuery {
                         prefixes: vec![],
-                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
                         r#where: vec![],
                     },
                     format: Some(DataFormat::Turtle),
@@ -1776,13 +1776,13 @@ mod tests {
                 DescribeResponse {
                     format: DataFormat::Turtle,
                     data: Binary::from(
-                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
-\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;
-\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
-\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
-\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
-\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
-\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
+                        "<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.axone.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
+\t<https://ontology.axone.space/core/hasTag> \"Test\" , \"AXONE\" ;
+\t<https://ontology.axone.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
+\t<https://ontology.axone.space/core/hasTopic> <https://ontology.axone.space/thesaurus/topic/Test> ;
+\t<https://ontology.axone.space/core/describes> <https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
+\t<https://ontology.axone.space/core/hasPublisher> \"AXONE\" ;
+\t<https://ontology.axone.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
 \
                 ".to_string().as_bytes().to_vec()),
                 }
@@ -1791,7 +1791,7 @@ mod tests {
                 QueryMsg::Describe {
                     query: DescribeQuery {
                         prefixes: vec![],
-                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
                         r#where: vec![],
                     },
                     format: Some(DataFormat::RDFXml),
@@ -1800,17 +1800,17 @@ mod tests {
                     format: DataFormat::RDFXml,
                     data: Binary::from(
                         "<?xml version=\"1.0\" encoding=\"UTF-8\"?><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\
-<rdf:Description rdf:about=\"https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473\">\
-<type xmlns=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" rdf:resource=\"https://ontology.okp4.space/metadata/dataspace/GeneralMetadata\"/>\
+<rdf:Description rdf:about=\"https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473\">\
+<type xmlns=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" rdf:resource=\"https://ontology.axone.space/metadata/dataspace/GeneralMetadata\"/>\
 <type xmlns=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" rdf:resource=\"http://www.w3.org/2002/07/owl#NamedIndividual\"/>\
-<hasTag xmlns=\"https://ontology.okp4.space/core/\">Test</hasTag><hasTag xmlns=\"https://ontology.okp4.space/core/\">OKP4</hasTag>\
-<hasTitle xmlns=\"https://ontology.okp4.space/core/\" xml:lang=\"fr\">Data Space de test</hasTitle>\
-<hasTitle xmlns=\"https://ontology.okp4.space/core/\" xml:lang=\"en\">Test Data Space</hasTitle>\
-<hasTopic xmlns=\"https://ontology.okp4.space/core/\" rdf:resource=\"https://ontology.okp4.space/thesaurus/topic/Test\"/>\
-<describes xmlns=\"https://ontology.okp4.space/core/\" rdf:resource=\"https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33\"/>\
-<hasPublisher xmlns=\"https://ontology.okp4.space/core/\">OKP4</hasPublisher>\
-<hasDescription xmlns=\"https://ontology.okp4.space/core/\" xml:lang=\"en\">A test Data Space.</hasDescription>\
-<hasDescription xmlns=\"https://ontology.okp4.space/core/\" xml:lang=\"fr\">Un Data Space de test.</hasDescription></rdf:Description>\
+<hasTag xmlns=\"https://ontology.axone.space/core/\">Test</hasTag><hasTag xmlns=\"https://ontology.axone.space/core/\">AXONE</hasTag>\
+<hasTitle xmlns=\"https://ontology.axone.space/core/\" xml:lang=\"fr\">Data Space de test</hasTitle>\
+<hasTitle xmlns=\"https://ontology.axone.space/core/\" xml:lang=\"en\">Test Data Space</hasTitle>\
+<hasTopic xmlns=\"https://ontology.axone.space/core/\" rdf:resource=\"https://ontology.axone.space/thesaurus/topic/Test\"/>\
+<describes xmlns=\"https://ontology.axone.space/core/\" rdf:resource=\"https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33\"/>\
+<hasPublisher xmlns=\"https://ontology.axone.space/core/\">AXONE</hasPublisher>\
+<hasDescription xmlns=\"https://ontology.axone.space/core/\" xml:lang=\"en\">A test Data Space.</hasDescription>\
+<hasDescription xmlns=\"https://ontology.axone.space/core/\" xml:lang=\"fr\">Un Data Space de test.</hasDescription></rdf:Description>\
 </rdf:RDF>\
 \
                 ".to_string().as_bytes().to_vec()),
@@ -1820,12 +1820,12 @@ mod tests {
                 QueryMsg::Describe {
                     query: DescribeQuery {
                         prefixes: vec![],
-                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
                         r#where: vec![WhereCondition::Simple(TriplePattern(
                             msg::TriplePattern {
                                 subject: VarOrNode::Variable("a".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Full(
-                                    "https://ontology.okp4.space/core/hasDescription".to_string(),
+                                    "https://ontology.axone.space/core/hasDescription".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("b".to_string()),
                             },
@@ -1836,17 +1836,17 @@ mod tests {
                 DescribeResponse {
                     format: DataFormat::NTriples,
                     data: Binary::from(
-                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"OKP4\" .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTitle> \"Test Data Space\"@en .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasPublisher> \"OKP4\" .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"Un Data Space de test.\"@fr .
+                        "<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.axone.space/metadata/dataspace/GeneralMetadata> .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTag> \"Test\" .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTag> \"AXONE\" .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTitle> \"Data Space de test\"@fr .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTitle> \"Test Data Space\"@en .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTopic> <https://ontology.axone.space/thesaurus/topic/Test> .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/describes> <https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasPublisher> \"AXONE\" .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasDescription> \"A test Data Space.\"@en .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasDescription> \"Un Data Space de test.\"@fr .
 \
                 ".to_string().as_bytes().to_vec()),
                 }
@@ -1855,7 +1855,7 @@ mod tests {
                 QueryMsg::Describe {
                     query: DescribeQuery {
                         prefixes: vec![],
-                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
+                        resource: VarOrNamedNode::NamedNode(Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
                         r#where: vec![],
                     },
                     format: Some(DataFormat::NQuads),
@@ -1863,17 +1863,17 @@ mod tests {
                 DescribeResponse {
                     format: DataFormat::NQuads,
                     data: Binary::from(
-                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"OKP4\" .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTitle> \"Test Data Space\"@en .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasPublisher> \"OKP4\" .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en .
-<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasDescription> \"Un Data Space de test.\"@fr .
+                        "<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.axone.space/metadata/dataspace/GeneralMetadata> .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTag> \"Test\" .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTag> \"AXONE\" .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTitle> \"Data Space de test\"@fr .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTitle> \"Test Data Space\"@en .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTopic> <https://ontology.axone.space/thesaurus/topic/Test> .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/describes> <https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasPublisher> \"AXONE\" .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasDescription> \"A test Data Space.\"@en .
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasDescription> \"Un Data Space de test.\"@fr .
 \
                 ".to_string().as_bytes().to_vec()),
                 }
@@ -1926,7 +1926,7 @@ mod tests {
                         prefixes: vec![
                             Prefix {
                                 prefix: "metadata".to_string(),
-                                namespace: "https://ontology.okp4.space/dataverse/dataspace/metadata/".to_string(),
+                                namespace: "https://ontology.axone.space/dataverse/dataspace/metadata/".to_string(),
                             },
                         ],
                         resource: VarOrNamedNode::NamedNode(Prefixed("metadata:dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
@@ -1937,13 +1937,13 @@ mod tests {
                 DescribeResponse {
                     format: DataFormat::Turtle,
                     data: Binary::from(
-                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
-\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;
-\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
-\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;
-\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
-\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;
-\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
+                        "<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.axone.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;
+\t<https://ontology.axone.space/core/hasTag> \"Test\" , \"AXONE\" ;
+\t<https://ontology.axone.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;
+\t<https://ontology.axone.space/core/hasTopic> <https://ontology.axone.space/thesaurus/topic/Test> ;
+\t<https://ontology.axone.space/core/describes> <https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
+\t<https://ontology.axone.space/core/hasPublisher> \"AXONE\" ;
+\t<https://ontology.axone.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .
 \
                 ".to_string().as_bytes().to_vec()),
                 }
@@ -1993,7 +1993,7 @@ mod tests {
             (
                 QueryMsg::Describe {
                     query: DescribeQuery {
-                        prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                        prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                         resource: VarOrNamedNode::Variable("a".to_string()),
                         r#where: vec![WhereCondition::Simple(TriplePattern(
                             msg::TriplePattern {
@@ -2010,7 +2010,7 @@ mod tests {
                 DescribeResponse {
                     format: DataFormat::Turtle,
                     data: Binary::from(
-                        "<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"test\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
+                        "<https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.axone.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.axone.space/core/hasTag> \"test\" ;\n\t<https://ontology.axone.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.axone.space/core/hasTopic> <https://ontology.axone.space/thesaurus/topic/Test> ;\n\t<https://ontology.axone.space/core/describes> <https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.axone.space/core/hasFormat> <https://ontology.axone.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.axone.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.axone.space/core/hasLicense> <https://ontology.axone.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.axone.space/core/hasPublisher> \"AXONE\" ;\n\t<https://ontology.axone.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
                 }
             ),
         ];
@@ -2058,7 +2058,7 @@ mod tests {
             (
                 QueryMsg::Describe {
                     query: DescribeQuery {
-                        prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() }],
+                        prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                         resource: VarOrNamedNode::Variable("a".to_string()),
                         r#where: vec![WhereCondition::Simple(TriplePattern(
                             msg::TriplePattern {
@@ -2066,7 +2066,7 @@ mod tests {
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasPublisher".to_string(),
                                 )),
-                                object: VarOrNodeOrLiteral::Literal(Literal::Simple("OKP4".to_string())),
+                                object: VarOrNodeOrLiteral::Literal(Literal::Simple("AXONE".to_string())),
                             },
                         ))],
                     },
@@ -2075,7 +2075,7 @@ mod tests {
                 DescribeResponse {
                     format: DataFormat::Turtle,
                     data: Binary::from(
-                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .\n<https://ontology.okp4.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.okp4.space/core/hasTag> \"test\" ;\n\t<https://ontology.okp4.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.okp4.space/core/hasTopic> <https://ontology.okp4.space/thesaurus/topic/Test> ;\n\t<https://ontology.okp4.space/core/describes> <https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.okp4.space/core/hasFormat> <https://ontology.okp4.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.okp4.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.okp4.space/core/hasLicense> <https://ontology.okp4.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.okp4.space/core/hasPublisher> \"OKP4\" ;\n\t<https://ontology.okp4.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
+                        "<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.axone.space/metadata/dataspace/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.axone.space/core/hasTag> \"Test\" , \"AXONE\" ;\n\t<https://ontology.axone.space/core/hasTitle> \"Data Space de test\"@fr , \"Test Data Space\"@en ;\n\t<https://ontology.axone.space/core/hasTopic> <https://ontology.axone.space/thesaurus/topic/Test> ;\n\t<https://ontology.axone.space/core/describes> <https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;\n\t<https://ontology.axone.space/core/hasPublisher> \"AXONE\" ;\n\t<https://ontology.axone.space/core/hasDescription> \"A test Data Space.\"@en , \"Un Data Space de test.\"@fr .\n<https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.axone.space/metadata/dataset/GeneralMetadata> , <http://www.w3.org/2002/07/owl#NamedIndividual> ;\n\t<https://ontology.axone.space/core/hasTag> \"test\" ;\n\t<https://ontology.axone.space/core/hasTitle> \"test Dataset\"@en , \"Dataset de test\"@fr ;\n\t<https://ontology.axone.space/core/hasTopic> <https://ontology.axone.space/thesaurus/topic/Test> ;\n\t<https://ontology.axone.space/core/describes> <https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;\n\t<https://ontology.axone.space/core/hasFormat> <https://ontology.axone.space/thesaurus/media-type/application_vndms-excel> ;\n\t<https://ontology.axone.space/core/hasCreator> \"Me\" ;\n\t<https://ontology.axone.space/core/hasLicense> <https://ontology.axone.space/thesaurus/license/LO-FR-1_0> ;\n\t<https://ontology.axone.space/core/hasPublisher> \"AXONE\" ;\n\t<https://ontology.axone.space/core/hasDescription> \"Un Dataset de test.\"@fr , \"A test Dataset.\"@en .\n".to_string().as_bytes().to_vec()),
                 }
             ),
         ];
@@ -2124,8 +2124,8 @@ mod tests {
                 QueryMsg::Describe {
                     query: DescribeQuery {
                         prefixes: vec![
-                            Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() },
-                            Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string() },
+                            Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() },
+                            Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.axone.space/dataverse/dataset/metadata/".to_string() },
                         ],
                         resource: VarOrNamedNode::Variable("x".to_string()),
                         r#where: vec![WhereCondition::Simple(TriplePattern(
@@ -2144,7 +2144,7 @@ mod tests {
                 DescribeResponse {
                     format: DataFormat::Turtle,
                     data: Binary::from(
-                        "<b0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> , <https://ontology.okp4.space/core/Period> ;\n\t<https://ontology.okp4.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n".to_string().as_bytes().to_vec()),
+                        "<b0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> , <https://ontology.axone.space/core/Period> ;\n\t<https://ontology.axone.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n".to_string().as_bytes().to_vec()),
                 }
             ),
         ];
@@ -2188,7 +2188,7 @@ mod tests {
 
     #[test]
     fn proper_construct() {
-        let id = "https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
+        let id = "https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473";
         let cases = vec![
             (
                 InsertData {
@@ -2202,7 +2202,7 @@ mod tests {
                         r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
                             subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
                             predicate: VarOrNamedNode::NamedNode(Full(
-                                "https://ontology.okp4.space/core/hasTag".to_string(),
+                                "https://ontology.axone.space/core/hasTag".to_string(),
                             )),
                             object: VarOrNodeOrLiteral::Variable("o".to_string()),
                         }))],
@@ -2212,7 +2212,7 @@ mod tests {
                 ConstructResponse {
                     format: DataFormat::Turtle,
                     data: Binary::from(
-                        "<https://ontology.okp4.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.okp4.space/core/hasTag> \"Test\" , \"OKP4\" .\n".to_string().as_bytes().to_vec()),
+                        "<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473> <https://ontology.axone.space/core/hasTag> \"Test\" , \"AXONE\" .\n".to_string().as_bytes().to_vec()),
                 },
             ),
             (
@@ -2224,7 +2224,7 @@ mod tests {
                     query: ConstructQuery {
                         prefixes: vec![
                             Prefix { prefix: "my-ns".to_string(), namespace: "https://my-ns.org/".to_string() },
-                            Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string() },
+                            Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.axone.space/dataverse/dataset/metadata/".to_string() },
                         ],
                         construct: vec![
                             msg::TripleConstructTemplate {
@@ -2238,7 +2238,7 @@ mod tests {
                         r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
                             subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
                             predicate: VarOrNamedNode::NamedNode(Full(
-                                "https://ontology.okp4.space/core/hasTag".to_string(),
+                                "https://ontology.axone.space/core/hasTag".to_string(),
                             )),
                             object: VarOrNodeOrLiteral::Variable("o".to_string()),
                         }))],
@@ -2248,7 +2248,7 @@ mod tests {
                 ConstructResponse {
                     format: DataFormat::NTriples,
                     data: Binary::from(
-                        "<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"Test\" .\n<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"OKP4\" .\n".to_string().as_bytes().to_vec()),
+                        "<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"Test\" .\n<https://my-ns.org/instance-1> <https://my-ns/predicate/tag> \"AXONE\" .\n".to_string().as_bytes().to_vec()),
                 },
             ),
             (
@@ -2259,8 +2259,8 @@ mod tests {
                 QueryMsg::Construct {
                     query: ConstructQuery {
                         prefixes: vec![
-                            Prefix { prefix: "core".to_string(), namespace: "https://ontology.okp4.space/core/".to_string() },
-                            Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.okp4.space/dataverse/dataset/metadata/".to_string() },
+                            Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() },
+                            Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.axone.space/dataverse/dataset/metadata/".to_string() },
                         ],
                         construct: vec![
                             msg::TripleConstructTemplate {
@@ -2320,7 +2320,7 @@ mod tests {
                 ConstructResponse {
                     format: DataFormat::NTriples,
                     data: Binary::from(
-                        "<a0> <https://my-ns/predicate/tcov> <b0> .\n<a0> <https://my-ns/predicate/info> <b1> .\n<b0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .\n<b1> <https://ontology.okp4.space/core/hasInformation> \"this is a dataset\" .\n<a0> <https://my-ns/predicate/tcov> <b0> .\n<a0> <https://my-ns/predicate/info> <b1> .\n<b0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.okp4.space/core/Period> .\n<b1> <https://ontology.okp4.space/core/hasInformation> \"this is a dataset\" .\n<a0> <https://my-ns/predicate/tcov> <b0> .\n<a0> <https://my-ns/predicate/info> <b1> .\n<b0> <https://ontology.okp4.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n<b1> <https://ontology.okp4.space/core/hasInformation> \"this is a dataset\" .\n".to_string().as_bytes().to_vec()),
+                        "<a0> <https://my-ns/predicate/tcov> <b0> .\n<a0> <https://my-ns/predicate/info> <b1> .\n<b0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .\n<b1> <https://ontology.axone.space/core/hasInformation> \"this is a dataset\" .\n<a0> <https://my-ns/predicate/tcov> <b0> .\n<a0> <https://my-ns/predicate/info> <b1> .\n<b0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ontology.axone.space/core/Period> .\n<b1> <https://ontology.axone.space/core/hasInformation> \"this is a dataset\" .\n<a0> <https://my-ns/predicate/tcov> <b0> .\n<a0> <https://my-ns/predicate/info> <b1> .\n<b0> <https://ontology.axone.space/core/hasStartDate> \"2022-01-01T00:00:00+00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n<b1> <https://ontology.axone.space/core/hasInformation> \"this is a dataset\" .\n".to_string().as_bytes().to_vec()),
                 },
             ),
         ];

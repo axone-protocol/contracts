@@ -94,7 +94,7 @@ The same RDF triple can be expressed in RDF/XML format (`.rdf.xml` file):
 
 ### Instantiate the Smart Contract
 
-Let's initiate a new instance of Smart Contract and input some RDF triples into it. The `okp4-cognitarium` can be set up in the following manner. Please consult the schema for additional details regarding configuration settings.
+Let's initiate a new instance of Smart Contract and input some RDF triples into it. The `axone-cognitarium` can be set up in the following manner. Please consult the schema for additional details regarding configuration settings.
 
 ```bash
 axoned tx wasm instantiate $CODE_ID \
@@ -162,7 +162,7 @@ You can insert this data into the `cognitarium` smart contract with the followin
 
 ```bash
 axoned tx wasm execute $CONTRACT_ADDR \
-    --from okp41cu9wzlcyyxpek20jaqfwzu3llzjgx34cwnv2v5 \
+    --from axone1cu9wzlcyyxpek20jaqfwzu3llzjgx34cqf94yj \
     --gas 10000000 \
     "{\"insert_data\":{\"format\": \"turtle\", \"data\": \"$(cat data.ttl | base64 | tr -d '\n\r')\"}}"
 ```
@@ -176,7 +176,7 @@ axoned query tx $TX_HASH -ojson |
 
 ### Query RDF triples
 
-Now that we've populated the okp4-cognitarium with several triples, let's explore how to retrieve this data. We can utilize the Select query message for this purpose. If you're familiar with [SPARQL](https://www.w3.org/TR/rdf-sparql-query/), you'll find the process quite intuitive.
+Now that we've populated the axone-cognitarium with several triples, let's explore how to retrieve this data. We can utilize the Select query message for this purpose. If you're familiar with [SPARQL](https://www.w3.org/TR/rdf-sparql-query/), you'll find the process quite intuitive.
 
 A `select` query on a `cognitarium` instance enables you to fetch and filter the data. The `select.query` JSON should contain the following:
 

@@ -327,7 +327,7 @@ mod test {
                 TriplePattern {
                     subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
                     predicate: VarOrNamedNode::NamedNode(IRI::Full(
-                        "http://okp4.space/hasTitle".to_string(),
+                        "http://axone.space/hasTitle".to_string(),
                     )),
                     object: VarOrNodeOrLiteral::Node(Node::BlankNode("2".to_string())),
                 },
@@ -343,11 +343,11 @@ mod test {
             (
                 TriplePattern {
                     subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
-                        "http://okp4.space/123456789".to_string(),
+                        "http://axone.space/123456789".to_string(),
                     ))),
                     predicate: VarOrNamedNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Node(Node::NamedNode(IRI::Full(
-                        "http://okp4.space/1234567892".to_string(),
+                        "http://axone.space/1234567892".to_string(),
                     ))),
                 },
                 Ok(QueryNode::TriplePattern {
@@ -400,7 +400,7 @@ mod test {
                     predicate: VarOrNamedNode::Variable("p".to_string()),
                     object: VarOrNodeOrLiteral::Literal(Literal::TypedValue {
                         value: "typed".to_string(),
-                        datatype: IRI::Full("http://okp4.space/type".to_string()),
+                        datatype: IRI::Full("http://axone.space/type".to_string()),
                     }),
                 },
                 Ok(QueryNode::TriplePattern {
@@ -457,9 +457,9 @@ mod test {
         namespaces()
             .save(
                 deps.as_mut().storage,
-                "http://okp4.space/".to_string(),
+                "http://axone.space/".to_string(),
                 &Namespace {
-                    value: "http://okp4.space/".to_string(),
+                    value: "http://axone.space/".to_string(),
                     key: 0u128,
                     counter: 1u128,
                 },
@@ -696,9 +696,9 @@ mod test {
         namespaces()
             .save(
                 deps.as_mut().storage,
-                "http://okp4.space/".to_string(),
+                "http://axone.space/".to_string(),
                 &Namespace {
-                    value: "http://okp4.space/".to_string(),
+                    value: "http://axone.space/".to_string(),
                     key: 0u128,
                     counter: 1u128,
                 },

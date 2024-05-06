@@ -1325,7 +1325,7 @@ mod test {
                             }),
                             object: PatternValue::Constant(Object::Literal(
                                 state::Literal::Simple {
-                                    value: "OKP4".to_string(),
+                                    value: "AXONE".to_string(),
                                 },
                             )),
                         }),

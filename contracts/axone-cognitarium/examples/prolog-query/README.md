@@ -1,14 +1,14 @@
 # Prolog query
 
-In this example we'll see how to query the `okp4-cognitarium` from Prolog programs executed by the OKP4 logic module.
+In this example we'll see how to query the `axone-cognitarium` from Prolog programs executed by the AXONE logic module.
 
 We'll use for that purpose the [query.pl](query.pl) sample program, multiple predicates are defined in it, we'll explore them step by step.
 
-The query we'll make will be performed against a `okp4-cognitarium` instance filled with the provided [sample data](../sample-data.rdf.xml), see the [basic example](../basic) to insert them.
+The query we'll make will be performed against a `axone-cognitarium` instance filled with the provided [sample data](../sample-data.rdf.xml), see the [basic example](../basic) to insert them.
 
 ## Forge the CosmWasm query
 
-As seen in a [okp4-law-stone example](../../../okp4-law-stone/examples/multiple-sources), interaction with smart contracts from Prolog is based on the
+As seen in a [axone-law-stone example](../../../axone-law-stone/examples/multiple-sources), interaction with smart contracts from Prolog is based on the
 interpreter virtual filesystem that'll handle dedicated cosmwasm URIs.
 
 It's worth to mention that to query cosmwasm smart contracts and getting the raw response we'll need to set in the related URI the param `base64Decode` to `false`.
@@ -23,7 +23,7 @@ axoned query logic ask \
 
 ## Call the smart contract
 
-By calling the `cosmwasm_call` predicate with a cosmwasm URI we'll be able to get the JSON response, let's try it with a simple `okp4-cognitarium` `Store` query which returns usage information about the triple store:
+By calling the `cosmwasm_call` predicate with a cosmwasm URI we'll be able to get the JSON response, let's try it with a simple `axone-cognitarium` `Store` query which returns usage information about the triple store:
 
 ```bash
 axoned query logic ask \
@@ -38,7 +38,7 @@ Through the `cognitarium_dataset_tags`, we can query the tags present in metadat
 ```bash
 axoned query logic ask \
     --program-file query.pl \
-    "cognitarium_dataset_tags('${CONTRACT_ADDR}', 'https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde', Tags)."
+    "cognitarium_dataset_tags('${CONTRACT_ADDR}', 'https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde', Tags)."
 ```
 
 ## Exploiting the response
@@ -48,5 +48,5 @@ Using the `cognitarium_dataset_has_tag` predicate we show how to define rules ba
 ```bash
 axoned query logic ask \
     --program-file query.pl \
-    "cognitarium_dataset_has_tag('${CONTRACT_ADDR}', 'https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde', 'AwesomeData')."
+    "cognitarium_dataset_has_tag('${CONTRACT_ADDR}', 'https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde', 'AwesomeData')."
 ```

@@ -61,8 +61,8 @@ cognitarium_dataset_tags(CognitariumAddr, DatasetDID, Tags) :-
     cognitarium_select(
         [
             json([prefix-'rdf', namespace-'http://www.w3.org/1999/02/22-rdf-syntax-ns#']),
-            json([prefix-'core', namespace-'https://ontology.okp4.space/core/']),
-            json([prefix-'meta', namespace-'https://ontology.okp4.space/metadata/dataset/'])
+            json([prefix-'core', namespace-'https://ontology.axone.space/core/']),
+            json([prefix-'meta', namespace-'https://ontology.axone.space/metadata/dataset/'])
         ],
         [
             json([variable-'tag'])

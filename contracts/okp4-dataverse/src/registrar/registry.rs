@@ -2,7 +2,7 @@ use crate::registrar::credential::DataverseCredential;
 use crate::state::DATAVERSE;
 use crate::ContractError;
 use cosmwasm_std::{DepsMut, StdResult, Storage, WasmMsg};
-use okp4_cognitarium::msg::{
+use axone_cognitarium::msg::{
     DataFormat, Node, SelectItem, SelectQuery, SimpleWhereCondition, TriplePattern, VarOrNamedNode,
     VarOrNode, VarOrNodeOrLiteral, WhereCondition, IRI,
 };

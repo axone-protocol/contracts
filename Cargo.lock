@@ -21,6 +21,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
 
 [[package]]
+name = "axone-cognitarium"
+version = "5.0.0"
+dependencies = [
+ "base64 0.22.0",
+ "blake3",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "derive_builder",
+ "either",
+ "okp4-rdf",
+ "rio_api",
+ "rio_turtle",
+ "rio_xml",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "axone-objectarium"
 version = "5.0.0"
 dependencies = [
@@ -763,34 +786,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "okp4-cognitarium"
-version = "5.0.0"
-dependencies = [
- "base64 0.22.0",
- "blake3",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "derive_builder",
- "either",
- "okp4-rdf",
- "rio_api",
- "rio_turtle",
- "rio_xml",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "okp4-cognitarium-client"
 version = "5.0.0"
 dependencies = [
+ "axone-cognitarium",
  "cosmwasm-std",
- "okp4-cognitarium",
  "serde",
 ]
 
@@ -798,6 +798,7 @@ dependencies = [
 name = "okp4-dataverse"
 version = "5.0.0"
 dependencies = [
+ "axone-cognitarium",
  "base64 0.22.0",
  "bs58",
  "cosmwasm-schema",
@@ -809,7 +810,6 @@ dependencies = [
  "cw2",
  "itertools 0.12.1",
  "multibase",
- "okp4-cognitarium",
  "okp4-cognitarium-client",
  "okp4-rdf",
  "rio_api",

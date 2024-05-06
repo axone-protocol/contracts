@@ -23,7 +23,7 @@ cw-utils = "1.0.3"
 cw2 = "1.1.1"
 iref = "3.1.3"
 langtag = "0.3.4"
-okp4-cognitarium = { path = "contracts/okp4-cognitarium", features = [
+axone-cognitarium = { path = "contracts/axone-cognitarium", features = [
   "library",
 ] }
 okp4-cognitarium-client = { path = "packages/okp4-cognitarium-client" }

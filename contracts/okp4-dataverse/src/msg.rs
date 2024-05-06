@@ -121,9 +121,9 @@ pub struct TripleStoreLimitsInput {
     pub max_insert_data_triple_count: Option<Uint128>,
 }
 
-impl From<TripleStoreLimitsInput> for okp4_cognitarium::msg::StoreLimitsInput {
+impl From<TripleStoreLimitsInput> for axone_cognitarium::msg::StoreLimitsInput {
     fn from(value: TripleStoreLimitsInput) -> Self {
-        let mut limits = okp4_cognitarium::msg::StoreLimitsInput::default();
+        let mut limits = axone_cognitarium::msg::StoreLimitsInput::default();
         if let Some(max_triple_count) = value.max_triple_count {
             limits.max_triple_count = max_triple_count;
         }

@@ -55,7 +55,7 @@ pub fn instantiate(
             admin: Some(env.contract.address.to_string()),
             code_id: msg.triplestore_config.code_id.u64(),
             label: format!("{}_triplestore", msg.name),
-            msg: to_json_binary(&okp4_cognitarium::msg::InstantiateMsg {
+            msg: to_json_binary(&axone_cognitarium::msg::InstantiateMsg {
                 limits: msg.triplestore_config.limits.into(),
             })?,
             funds: vec![],
@@ -142,7 +142,7 @@ mod tests {
         from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError,
         SystemResult, Uint128, Uint64, WasmQuery,
     };
-    use okp4_cognitarium::msg::{
+    use axone_cognitarium::msg::{
         DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse,
         SimpleWhereCondition, TriplePattern, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
         WhereCondition, IRI,
@@ -193,7 +193,7 @@ mod tests {
                 admin: Some(env.contract.address.to_string()),
                 code_id: 17,
                 label: "my-dataverse_triplestore".to_string(),
-                msg: to_json_binary(&okp4_cognitarium::msg::InstantiateMsg {
+                msg: to_json_binary(&axone_cognitarium::msg::InstantiateMsg {
                     limits: store_limits.into(),
                 })
                 .unwrap(),
@@ -247,10 +247,10 @@ mod tests {
                         addr: contract_addr.to_string(),
                     });
                 }
-                let query_msg: StdResult<okp4_cognitarium::msg::QueryMsg> = from_json(msg);
+                let query_msg: StdResult<axone_cognitarium::msg::QueryMsg> = from_json(msg);
                 assert_eq!(
                     query_msg,
-                    Ok(okp4_cognitarium::msg::QueryMsg::Select {
+                    Ok(axone_cognitarium::msg::QueryMsg::Select {
                         query: SelectQuery {
                             prefixes: vec![],
                             limit: Some(1u32),
@@ -333,10 +333,10 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
                 msg,
                 funds,
             }) if contract_addr == "my-dataverse-addr".to_string() && funds == vec![] => {
-                let exec_msg: StdResult<okp4_cognitarium::msg::ExecuteMsg> = from_json(msg);
+                let exec_msg: StdResult<axone_cognitarium::msg::ExecuteMsg> = from_json(msg);
                 assert!(exec_msg.is_ok());
                 match exec_msg.unwrap() {
-                    okp4_cognitarium::msg::ExecuteMsg::InsertData { format, data } => {
+                    axone_cognitarium::msg::ExecuteMsg::InsertData { format, data } => {
                         assert_eq!(format, Some(DataFormat::NTriples));
                         assert_eq!(String::from_utf8(data.0).unwrap(), expected_data);
                     }

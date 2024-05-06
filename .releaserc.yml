@@ -21,15 +21,15 @@ plugins:
         cargo make schema && cargo make docs-generate && cargo make release-wasm
   - - "@semantic-release/github"
     - assets:
-        - path: "./artifacts/okp4_objectarium.wasm"
+        - path: "./artifacts/axone_objectarium.wasm"
         - path: "./artifacts/okp4_law_stone.wasm"
-        - path: "./artifacts/okp4_cognitarium.wasm"
+        - path: "./artifacts/axone_cognitarium.wasm"
         - path: "./artifacts/okp4_dataverse.wasm"
         - path: "./artifacts/checksums.txt"
-        - path: "./contracts/okp4-objectarium/schema/okp4-objectarium.json"
+        - path: "./contracts/axone-objectarium/schema/axone-objectarium.json"
         - path: "./contracts/okp4-law-stone/schema/okp4-law-stone.json"
-        - path: "./contracts/okp4-cognitarium/schema/okp4-cognitarium.json"
-        - path: "./contracts/okp4-cognitarium/schema/okp4-dataverse.json"
+        - path: "./contracts/axone-cognitarium/schema/axone-cognitarium.json"
+        - path: "./contracts/okp4-dataverse/schema/okp4-dataverse.json"
   - - "@semantic-release/git"
     - assets:
         - CHANGELOG.md

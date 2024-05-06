@@ -13,7 +13,7 @@ use axone_objectarium::msg::{
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::INSTANTIATE_CONTEXT;
-use okp4_objectarium_client::ObjectRef;
+use axone_objectarium_client::ObjectRef;
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));

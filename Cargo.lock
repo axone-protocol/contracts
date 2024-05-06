@@ -85,6 +85,7 @@ name = "axone-law-stone"
 version = "5.0.0"
 dependencies = [
  "axone-objectarium",
+ "axone-objectarium-client",
  "axone-wasm",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -95,7 +96,6 @@ dependencies = [
  "cw2",
  "itertools 0.12.1",
  "okp4-logic-bindings",
- "okp4-objectarium-client",
  "schemars",
  "serde",
  "thiserror",
@@ -125,6 +125,17 @@ dependencies = [
  "sha2 0.10.8",
  "snap",
  "thiserror",
+]
+
+[[package]]
+name = "axone-objectarium-client"
+version = "5.0.0"
+dependencies = [
+ "axone-objectarium",
+ "axone-wasm",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -883,17 +894,6 @@ dependencies = [
  "serde-json-wasm 1.0.1",
  "thiserror",
  "url",
-]
-
-[[package]]
-name = "okp4-objectarium-client"
-version = "5.0.0"
-dependencies = [
- "axone-objectarium",
- "axone-wasm",
- "cosmwasm-std",
- "schemars",
- "serde",
 ]
 
 [[package]]

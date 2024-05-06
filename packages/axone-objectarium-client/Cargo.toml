@@ -1,7 +1,7 @@
 [package]
 authors = ["OKP4"]
 edition = "2021"
-name = "okp4-objectarium-client"
+name = "axone-objectarium-client"
 version = "5.0.0"
 
 [dependencies]

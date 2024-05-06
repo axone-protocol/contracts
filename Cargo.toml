@@ -31,7 +31,7 @@ okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
 axone-objectarium = { path = "contracts/axone-objectarium", features = [
   "library",
 ] }
-okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }
+axone-objectarium-client = { path = "packages/axone-objectarium-client" }
 axone-rdf = { path = "packages/axone-rdf" }
 axone-wasm = { path = "packages/axone-wasm" }
 rdf-types = "0.18.2"

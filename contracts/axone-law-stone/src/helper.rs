@@ -3,7 +3,7 @@ use crate::ContractError;
 use cosmwasm_std::{Event, StdError, StdResult};
 use itertools::Itertools;
 use okp4_logic_bindings::{AskResponse, TermValue};
-use okp4_objectarium_client::ObjectRef;
+use axone_objectarium_client::ObjectRef;
 use axone_wasm::error::CosmwasmUriError;
 use axone_wasm::uri::CosmwasmUri;
 use std::any::type_name;

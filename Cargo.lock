@@ -44,6 +44,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "axone-law-stone"
+version = "5.0.0"
+dependencies = [
+ "axone-objectarium",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "itertools 0.12.1",
+ "okp4-logic-bindings",
+ "okp4-objectarium-client",
+ "okp4-wasm",
+ "schemars",
+ "serde",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "axone-objectarium"
 version = "5.0.0"
 dependencies = [
@@ -819,28 +841,6 @@ dependencies = [
  "sha2 0.10.8",
  "thiserror",
  "unsigned-varint",
- "url",
-]
-
-[[package]]
-name = "okp4-law-stone"
-version = "5.0.0"
-dependencies = [
- "axone-objectarium",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
- "itertools 0.12.1",
- "okp4-logic-bindings",
- "okp4-objectarium-client",
- "okp4-wasm",
- "schemars",
- "serde",
- "thiserror",
  "url",
 ]
 

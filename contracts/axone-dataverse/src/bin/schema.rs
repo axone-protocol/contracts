@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use okp4_dataverse::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use axone_dataverse::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

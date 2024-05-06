@@ -44,6 +44,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "axone-dataverse"
+version = "5.0.0"
+dependencies = [
+ "axone-cognitarium",
+ "base64 0.22.0",
+ "bs58",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "itertools 0.12.1",
+ "multibase",
+ "okp4-cognitarium-client",
+ "okp4-rdf",
+ "rio_api",
+ "rio_turtle",
+ "schemars",
+ "serde",
+ "sha2 0.10.8",
+ "thiserror",
+ "unsigned-varint",
+ "url",
+]
+
+[[package]]
 name = "axone-law-stone"
 version = "5.0.0"
 dependencies = [
@@ -814,34 +842,6 @@ dependencies = [
  "axone-cognitarium",
  "cosmwasm-std",
  "serde",
-]
-
-[[package]]
-name = "okp4-dataverse"
-version = "5.0.0"
-dependencies = [
- "axone-cognitarium",
- "base64 0.22.0",
- "bs58",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
- "itertools 0.12.1",
- "multibase",
- "okp4-cognitarium-client",
- "okp4-rdf",
- "rio_api",
- "rio_turtle",
- "schemars",
- "serde",
- "sha2 0.10.8",
- "thiserror",
- "unsigned-varint",
- "url",
 ]
 
 [[package]]

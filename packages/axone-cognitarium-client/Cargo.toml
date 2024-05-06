@@ -5,6 +5,6 @@ name = "axone-cognitarium-client"
 version = "5.0.0"
 
 [dependencies]
-cosmwasm-std.workspace = true
 axone-cognitarium.workspace = true
+cosmwasm-std.workspace = true
 serde.workspace = true

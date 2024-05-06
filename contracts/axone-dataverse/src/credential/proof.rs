@@ -5,8 +5,8 @@ use crate::credential::rdf_marker::{
     PROOF_RDF_PROOF_VALUE_TYPE, PROOF_RDF_VERIFICATION_METHOD, RDF_CREATED, RDF_DATE_TYPE,
     RDF_TYPE,
 };
-use itertools::Itertools;
 use axone_rdf::dataset::{Dataset, QuadIterator};
+use itertools::Itertools;
 use rio_api::model::{GraphName, Literal, NamedNode, Quad, Term};
 
 #[derive(Debug, PartialEq)]

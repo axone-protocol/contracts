@@ -137,15 +137,15 @@ mod tests {
     use super::*;
     use crate::msg::{DataverseResponse, RdfFormat, TripleStoreConfig, TripleStoreLimitsInput};
     use crate::testutil::testutil::read_test_data;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{
-        from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError,
-        SystemResult, Uint128, Uint64, WasmQuery,
-    };
     use axone_cognitarium::msg::{
         DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse,
         SimpleWhereCondition, TriplePattern, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
         WhereCondition, IRI,
+    };
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{
+        from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError,
+        SystemResult, Uint128, Uint64, WasmQuery,
     };
     use std::collections::BTreeMap;
 

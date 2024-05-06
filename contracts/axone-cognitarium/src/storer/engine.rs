@@ -4,10 +4,10 @@ use crate::state::{
     BLANK_NODE_IDENTIFIER_COUNTER, BLANK_NODE_SIZE, STORE,
 };
 use crate::ContractError;
-use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use axone_rdf::normalize::IdentifierIssuer;
 use axone_rdf::serde::TripleReader;
 use axone_rdf::uri::explode_iri;
+use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use rio_api::model;
 use rio_api::model::Term;
 use std::io::BufRead;

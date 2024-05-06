@@ -1,8 +1,8 @@
-use cosmwasm_std::{to_json_binary, Coin, StdResult, WasmMsg};
 use axone_objectarium::msg::QueryMsg::ObjectData;
 use axone_objectarium::msg::{ExecuteMsg, QueryMsg};
 use axone_wasm::error::CosmwasmUriError;
 use axone_wasm::uri::CosmwasmUri;
+use cosmwasm_std::{to_json_binary, Coin, StdResult, WasmMsg};
 use serde::{Deserialize, Serialize};
 
 const CONTRACT_NAME: &str = "axone-objectarium";

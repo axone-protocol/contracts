@@ -57,8 +57,8 @@ pub mod execute {
     use crate::rdf::PrefixMap;
     use crate::state::{HasCachedNamespaces, Triple};
     use crate::storer::StoreEngine;
-    use either::{Left, Right};
     use axone_rdf::serde::TripleReader;
+    use either::{Left, Right};
     use std::io::BufReader;
 
     pub fn verify_owner(deps: &DepsMut<'_>, info: &MessageInfo) -> Result<(), ContractError> {
@@ -339,9 +339,9 @@ pub mod util {
     use crate::querier::{PlanBuilder, QueryEngine, SelectResults};
     use crate::rdf::{Atom, PrefixMap};
     use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver};
-    use cosmwasm_std::Storage;
     use axone_rdf::normalize::IdentifierIssuer;
     use axone_rdf::serde::TripleWriter;
+    use cosmwasm_std::Storage;
     use std::collections::BTreeMap;
 
     pub fn map_select_solutions(

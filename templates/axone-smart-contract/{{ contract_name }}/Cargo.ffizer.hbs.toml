@@ -28,15 +28,15 @@ panic = 'abort'
 rpath = false
 
 [dependencies]
+axone-logic-bindings.workspace = true
+axone-objectarium-client.workspace = true
+axone-objectarium.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
-axone-logic-bindings.workspace = true
-axone-objectarium-client.workspace = true
-axone-objectarium.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true

@@ -1,7 +1,7 @@
 use crate::msg;
 use crate::rdf::{Property, Subject, Value};
-use cosmwasm_std::StdError;
 use axone_rdf::uri::expand_uri;
+use cosmwasm_std::StdError;
 use std::collections::HashMap;
 
 impl TryFrom<(msg::Node, &HashMap<String, String>)> for Subject {

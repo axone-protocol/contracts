@@ -1,9 +1,9 @@
 use crate::credential::error::VerificationError;
 use crate::credential::proof::ProofMaterial;
+use axone_rdf::normalize::Normalizer;
 use base64::prelude::BASE64_URL_SAFE_NO_PAD;
 use base64::Engine;
 use cosmwasm_std::DepsMut;
-use axone_rdf::normalize::Normalizer;
 use rio_api::model::Quad;
 use sha2::Digest;
 

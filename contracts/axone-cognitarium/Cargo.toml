@@ -17,6 +17,7 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+axone-rdf.workspace = true
 blake3 = "1.5.1"
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
@@ -25,7 +26,6 @@ cw-storage-plus.workspace = true
 cw2.workspace = true
 derive_builder = "0.20.0"
 either = "1.10.0"
-axone-rdf.workspace = true
 rio_api.workspace = true
 rio_turtle.workspace = true
 rio_xml.workspace = true

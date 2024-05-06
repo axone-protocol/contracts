@@ -1,7 +1,7 @@
-use cosmwasm_std::StdError;
-use cw_utils::ParseReplyError;
 use axone_logic_bindings::error::TermParseError;
 use axone_wasm::error::CosmwasmUriError;
+use cosmwasm_std::StdError;
+use cw_utils::ParseReplyError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]

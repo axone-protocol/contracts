@@ -1,12 +1,12 @@
 use crate::registrar::credential::DataverseCredential;
 use crate::state::DATAVERSE;
 use crate::ContractError;
-use cosmwasm_std::{DepsMut, StdResult, Storage, WasmMsg};
 use axone_cognitarium::msg::{
     DataFormat, Node, SelectItem, SelectQuery, SimpleWhereCondition, TriplePattern, VarOrNamedNode,
     VarOrNode, VarOrNodeOrLiteral, WhereCondition, IRI,
 };
 use axone_cognitarium_client::CognitariumClient;
+use cosmwasm_std::{DepsMut, StdResult, Storage, WasmMsg};
 
 /// ClaimRegistrar is the entity responsible to manage claims (i.e. submission and revocation) into
 /// the Dataverse, ensuring that any pre-condition criteria to an action is met, and any attached

@@ -1,6 +1,6 @@
 use crate::credential::error::{InvalidCredentialError, VerificationError};
-use cosmwasm_std::{Instantiate2AddressError, StdError};
 use axone_rdf::serde::NQuadsReadError;
+use cosmwasm_std::{Instantiate2AddressError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

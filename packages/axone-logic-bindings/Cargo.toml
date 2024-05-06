@@ -5,9 +5,9 @@ name = "axone-logic-bindings"
 version = "5.0.0"
 
 [dependencies]
+axone-wasm.workspace = true
 cosmwasm-std.workspace = true
 form_urlencoded = "1.2.1"
-axone-wasm.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde-json-wasm.workspace = true

@@ -7,9 +7,9 @@ use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
 use crate::rdf::Atom;
 use crate::state::{triples, Namespace, NamespaceResolver, Object, Predicate, Subject, Triple};
 use crate::{rdf, state};
+use axone_rdf::normalize::IdentifierIssuer;
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use either::{Either, Left, Right};
-use axone_rdf::normalize::IdentifierIssuer;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
@@ -1001,9 +1001,9 @@ mod test {
         Node, Store, StoreStat, BLANK_NODE_IDENTIFIER_COUNTER, NAMESPACE_KEY_INCREMENT, STORE,
     };
     use crate::storer::StoreEngine;
+    use axone_rdf::serde::TripleReader;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
-    use axone_rdf::serde::TripleReader;
     use std::env;
     use std::fs::File;
     use std::io::{BufReader, Read};

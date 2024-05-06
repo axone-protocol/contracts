@@ -1,3 +1,7 @@
+use axone_logic_bindings::LogicCustomQuery;
+use axone_objectarium::msg::{
+    ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -5,10 +9,6 @@ use cosmwasm_std::{
     WasmMsg,
 };
 use cw2::set_contract_version;
-use axone_logic_bindings::LogicCustomQuery;
-use axone_objectarium::msg::{
-    ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery,
-};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -132,8 +132,8 @@ pub mod query {
     use crate::helper::object_ref_to_uri;
     use crate::msg::ProgramResponse;
     use crate::state::PROGRAM;
-    use cosmwasm_std::QueryRequest;
     use axone_logic_bindings::{Answer, AskResponse};
+    use cosmwasm_std::QueryRequest;
 
     const ERR_STONE_BROKEN: &str = "system_error(broken_law_stone)";
 
@@ -276,6 +276,12 @@ mod tests {
     use super::*;
     use crate::msg::ProgramResponse;
     use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
+    use axone_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
+    use axone_logic_bindings::{
+        Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
+    };
+    use axone_objectarium::msg::PageInfo;
+    use axone_wasm::uri::CosmwasmUri;
     use cosmwasm_std::testing::{
         mock_dependencies, mock_env, mock_info, MockApi, MockQuerier,
         MockQuerierCustomHandlerResult, MockStorage,
@@ -285,12 +291,6 @@ mod tests {
         OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use cw_utils::ParseReplyError::SubMsgFailure;
-    use axone_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
-    use axone_logic_bindings::{
-        Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
-    };
-    use axone_objectarium::msg::PageInfo;
-    use axone_wasm::uri::CosmwasmUri;
     use std::collections::VecDeque;
     use std::marker::PhantomData;
 

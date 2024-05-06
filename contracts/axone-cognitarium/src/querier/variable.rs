@@ -1,7 +1,7 @@
 use crate::msg::{Value, IRI};
 use crate::state::{Literal, Object, Predicate, Subject};
-use cosmwasm_std::StdResult;
 use axone_rdf::normalize::IdentifierIssuer;
+use cosmwasm_std::StdResult;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ResolvedVariable {

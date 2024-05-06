@@ -1,10 +1,10 @@
 use crate::credential::error::{InvalidCredentialError, InvalidProofError, VerificationError};
 use crate::credential::proof::{Proof, ProofPurpose};
 use crate::credential::rdf_marker::*;
-use cosmwasm_std::DepsMut;
-use itertools::Itertools;
 use axone_rdf::dataset::QuadIterator;
 use axone_rdf::dataset::{Dataset, QuadPattern};
+use cosmwasm_std::DepsMut;
+use itertools::Itertools;
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
 
 #[derive(Debug, PartialEq)]

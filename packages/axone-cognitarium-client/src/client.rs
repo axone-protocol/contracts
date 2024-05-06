@@ -1,8 +1,8 @@
+use axone_cognitarium::msg::{DataFormat, ExecuteMsg, QueryMsg, SelectQuery, SelectResponse};
 use cosmwasm_std::{
     to_json_binary, Addr, Binary, Coin, CustomQuery, QuerierWrapper, QueryRequest, StdResult,
     WasmMsg, WasmQuery,
 };
-use axone_cognitarium::msg::{DataFormat, ExecuteMsg, QueryMsg, SelectQuery, SelectResponse};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 

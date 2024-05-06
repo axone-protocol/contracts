@@ -48,8 +48,8 @@ pub enum CompressionError {
     Error(String),
 }
 
-impl From<std::io::Error> for CompressionError {
-    fn from(err: std::io::Error) -> Self {
+impl From<io::Error> for CompressionError {
+    fn from(err: io::Error) -> Self {
         CompressionError::Error(err.to_string())
     }
 }

@@ -3,11 +3,11 @@ use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{Coin, OwnedDeps, QuerierResult};
 use std::marker::PhantomData;
 
-pub fn mock_dependencies_with_logic_handler<LH: 'static>(
+pub fn mock_dependencies_with_logic_handler<LH>(
     handler: LH,
 ) -> OwnedDeps<MockStorage, MockApi, MockQuerier<LogicCustomQuery>, LogicCustomQuery>
 where
-    LH: Fn(&LogicCustomQuery) -> QuerierResult,
+    LH: Fn(&LogicCustomQuery) -> QuerierResult + 'static,
 {
     OwnedDeps {
         storage: MockStorage::default(),
@@ -41,9 +41,9 @@ impl LogicQuerier {
     }
 
     #[allow(dead_code)]
-    fn update_handler<LH: 'static>(&mut self, handler: LH)
+    fn update_handler<LH>(&mut self, handler: LH)
     where
-        LH: Fn(&LogicCustomQuery) -> QuerierResult,
+        LH: Fn(&LogicCustomQuery) -> QuerierResult + 'static,
     {
         self.handler = Box::from(handler);
     }

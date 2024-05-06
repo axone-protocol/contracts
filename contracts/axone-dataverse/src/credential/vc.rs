@@ -3,8 +3,8 @@ use crate::credential::proof::{Proof, ProofPurpose};
 use crate::credential::rdf_marker::*;
 use cosmwasm_std::DepsMut;
 use itertools::Itertools;
-use okp4_rdf::dataset::QuadIterator;
-use okp4_rdf::dataset::{Dataset, QuadPattern};
+use axone_rdf::dataset::QuadIterator;
+use axone_rdf::dataset::{Dataset, QuadPattern};
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
 
 #[derive(Debug, PartialEq)]

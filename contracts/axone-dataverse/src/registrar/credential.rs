@@ -60,7 +60,7 @@ impl<'a> TryFrom<(Addr, &'a VerifiableCredential<'a>)> for DataverseCredential<'
 mod test {
     use super::*;
     use crate::testutil::testutil;
-    use okp4_rdf::dataset::Dataset;
+    use axone_rdf::dataset::Dataset;
     use rio_api::model::{Literal, NamedNode, Quad};
 
     #[test]

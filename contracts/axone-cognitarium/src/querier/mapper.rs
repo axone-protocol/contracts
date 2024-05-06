@@ -2,7 +2,7 @@ use crate::msg::{Literal, IRI};
 use crate::state;
 use crate::state::{NamespaceResolver, Object};
 use cosmwasm_std::{StdResult, Storage};
-use okp4_rdf::uri::{expand_uri, explode_iri};
+use axone_rdf::uri::{expand_uri, explode_iri};
 use std::collections::HashMap;
 
 pub fn literal_as_object(

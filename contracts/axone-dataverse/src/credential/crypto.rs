@@ -3,7 +3,7 @@ use crate::credential::proof::ProofMaterial;
 use base64::prelude::BASE64_URL_SAFE_NO_PAD;
 use base64::Engine;
 use cosmwasm_std::DepsMut;
-use okp4_rdf::normalize::Normalizer;
+use axone_rdf::normalize::Normalizer;
 use rio_api::model::Quad;
 use sha2::Digest;
 

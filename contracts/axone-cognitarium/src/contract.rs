@@ -58,7 +58,7 @@ pub mod execute {
     use crate::state::{HasCachedNamespaces, Triple};
     use crate::storer::StoreEngine;
     use either::{Left, Right};
-    use okp4_rdf::serde::TripleReader;
+    use axone_rdf::serde::TripleReader;
     use std::io::BufReader;
 
     pub fn verify_owner(deps: &DepsMut<'_>, info: &MessageInfo) -> Result<(), ContractError> {
@@ -179,7 +179,7 @@ pub mod query {
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::PrefixMap;
     use crate::state::HasCachedNamespaces;
-    use okp4_rdf::normalize::IdentifierIssuer;
+    use axone_rdf::normalize::IdentifierIssuer;
 
     pub fn store(deps: Deps<'_>) -> StdResult<StoreResponse> {
         STORE.load(deps.storage).map(Into::into)
@@ -340,8 +340,8 @@ pub mod util {
     use crate::rdf::{Atom, PrefixMap};
     use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver};
     use cosmwasm_std::Storage;
-    use okp4_rdf::normalize::IdentifierIssuer;
-    use okp4_rdf::serde::TripleWriter;
+    use axone_rdf::normalize::IdentifierIssuer;
+    use axone_rdf::serde::TripleWriter;
     use std::collections::BTreeMap;
 
     pub fn map_select_solutions(

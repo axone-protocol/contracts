@@ -6,7 +6,7 @@ use crate::credential::rdf_marker::{
     RDF_TYPE,
 };
 use itertools::Itertools;
-use okp4_rdf::dataset::{Dataset, QuadIterator};
+use axone_rdf::dataset::{Dataset, QuadIterator};
 use rio_api::model::{GraphName, Literal, NamedNode, Quad, Term};
 
 #[derive(Debug, PartialEq)]

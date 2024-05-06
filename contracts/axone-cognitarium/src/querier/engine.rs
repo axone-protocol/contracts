@@ -9,7 +9,7 @@ use crate::state::{triples, Namespace, NamespaceResolver, Object, Predicate, Sub
 use crate::{rdf, state};
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
 use either::{Either, Left, Right};
-use okp4_rdf::normalize::IdentifierIssuer;
+use axone_rdf::normalize::IdentifierIssuer;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::iter;
 use std::rc::Rc;
@@ -1003,7 +1003,7 @@ mod test {
     use crate::storer::StoreEngine;
     use cosmwasm_std::testing::mock_dependencies;
     use cosmwasm_std::{Addr, Uint128};
-    use okp4_rdf::serde::TripleReader;
+    use axone_rdf::serde::TripleReader;
     use std::env;
     use std::fs::File;
     use std::io::{BufReader, Read};
@@ -1039,7 +1039,7 @@ mod test {
         BLANK_NODE_IDENTIFIER_COUNTER.save(storage, &0u128).unwrap();
         let data = read_test_data("sample.rdf.xml");
         let buf = BufReader::new(data.as_slice());
-        let mut reader = TripleReader::new(&okp4_rdf::serde::DataFormat::RDFXml, buf);
+        let mut reader = TripleReader::new(&axone_rdf::serde::DataFormat::RDFXml, buf);
         let mut storer = StoreEngine::new(storage).unwrap();
         let count = storer.store_all(&mut reader).unwrap();
 

@@ -5,9 +5,9 @@ use crate::state::{
 };
 use crate::ContractError;
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
-use okp4_rdf::normalize::IdentifierIssuer;
-use okp4_rdf::serde::TripleReader;
-use okp4_rdf::uri::explode_iri;
+use axone_rdf::normalize::IdentifierIssuer;
+use axone_rdf::serde::TripleReader;
+use axone_rdf::uri::explode_iri;
 use rio_api::model;
 use rio_api::model::Term;
 use std::io::BufRead;

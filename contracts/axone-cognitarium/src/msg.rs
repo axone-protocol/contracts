@@ -149,7 +149,7 @@ pub enum DataFormat {
     NQuads,
 }
 
-impl From<&DataFormat> for okp4_rdf::serde::DataFormat {
+impl From<&DataFormat> for axone_rdf::serde::DataFormat {
     fn from(value: &DataFormat) -> Self {
         match value {
             DataFormat::RDFXml => Self::RDFXml,

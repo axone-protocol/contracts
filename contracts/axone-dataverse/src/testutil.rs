@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod testutil {
-    use okp4_rdf::owned_model::OwnedQuad;
-    use okp4_rdf::serde::NQuadsReader;
+    use axone_rdf::owned_model::OwnedQuad;
+    use axone_rdf::serde::NQuadsReader;
     use std::env;
     use std::fs::File;
     use std::io::{BufReader, Read};

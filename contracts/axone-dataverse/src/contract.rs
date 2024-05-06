@@ -84,8 +84,8 @@ pub mod execute {
     use crate::credential::vc::VerifiableCredential;
     use crate::registrar::credential::DataverseCredential;
     use crate::registrar::registry::ClaimRegistrar;
-    use okp4_rdf::dataset::Dataset;
-    use okp4_rdf::serde::NQuadsReader;
+    use axone_rdf::dataset::Dataset;
+    use axone_rdf::serde::NQuadsReader;
     use std::io::BufReader;
 
     pub fn submit_claims(

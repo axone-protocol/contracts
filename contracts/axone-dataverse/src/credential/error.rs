@@ -1,4 +1,4 @@
-use okp4_rdf::normalize::NormalizationError;
+use axone_rdf::normalize::NormalizationError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]

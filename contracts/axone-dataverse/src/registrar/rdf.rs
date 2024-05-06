@@ -2,9 +2,9 @@ use crate::credential::rdf_marker::RDF_DATE_TYPE;
 use crate::registrar::credential::DataverseCredential;
 use crate::ContractError;
 use cosmwasm_std::{Binary, StdError};
-use okp4_rdf::dataset::QuadIterator;
-use okp4_rdf::normalize::IdentifierIssuer;
-use okp4_rdf::serde::{DataFormat, TripleWriter};
+use axone_rdf::dataset::QuadIterator;
+use axone_rdf::normalize::IdentifierIssuer;
+use axone_rdf::serde::{DataFormat, TripleWriter};
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term, Triple};
 
 pub const VC_RESERVED_PREDICATES: &[NamedNode<'_>] = &[
@@ -241,7 +241,7 @@ mod test {
     use crate::credential::vc::VerifiableCredential;
     use crate::testutil::testutil;
     use cosmwasm_std::Addr;
-    use okp4_rdf::dataset::Dataset;
+    use axone_rdf::dataset::Dataset;
 
     #[test]
     fn proper_serialization() {

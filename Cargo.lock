@@ -24,6 +24,7 @@ checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
 name = "axone-cognitarium"
 version = "5.0.0"
 dependencies = [
+ "axone-rdf",
  "base64 0.22.0",
  "blake3",
  "cosmwasm-schema",
@@ -34,7 +35,6 @@ dependencies = [
  "cw2",
  "derive_builder",
  "either",
- "okp4-rdf",
  "rio_api",
  "rio_turtle",
  "rio_xml",
@@ -48,6 +48,7 @@ name = "axone-dataverse"
 version = "5.0.0"
 dependencies = [
  "axone-cognitarium",
+ "axone-rdf",
  "base64 0.22.0",
  "bs58",
  "cosmwasm-schema",
@@ -60,7 +61,6 @@ dependencies = [
  "itertools 0.12.1",
  "multibase",
  "okp4-cognitarium-client",
- "okp4-rdf",
  "rio_api",
  "rio_turtle",
  "schemars",
@@ -115,6 +115,20 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "snap",
+ "thiserror",
+]
+
+[[package]]
+name = "axone-rdf"
+version = "5.0.0"
+dependencies = [
+ "base16ct",
+ "cosmwasm-std",
+ "itertools 0.12.1",
+ "rio_api",
+ "rio_turtle",
+ "rio_xml",
+ "sha2 0.10.8",
  "thiserror",
 ]
 
@@ -880,20 +894,6 @@ dependencies = [
  "cosmwasm-std",
  "schemars",
  "serde",
-]
-
-[[package]]
-name = "okp4-rdf"
-version = "5.0.0"
-dependencies = [
- "base16ct",
- "cosmwasm-std",
- "itertools 0.12.1",
- "rio_api",
- "rio_turtle",
- "rio_xml",
- "sha2 0.10.8",
- "thiserror",
 ]
 
 [[package]]

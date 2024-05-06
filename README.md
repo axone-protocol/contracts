@@ -242,7 +242,7 @@ cargo make --list-all-steps | grep chain | sort | sed -r 's/chain(-?[a-zA-Z\-]*)
 
 The list of available tasks for managing the chain is as follows:
 
-- `chain` - Run the okp4d CLI using the chain's home directory under a Docker container.
+- `chain` - Run the axoned CLI using the chain's home directory under a Docker container.
 - `chain-add-keys` - Add a set of predefined keys (recovered from the seed phrases) to the chain.
 - `chain-clean` - Clean the chain data (⚠️ definitively)
 - `chain-deploy-contract` - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
@@ -255,7 +255,7 @@ The list of available tasks for managing the chain is as follows:
 - `chain-list-contracts` - List all the contracts deployed to the chain.
 - `chain-logs` - Show the chain's container logs.
 - `chain-query-contract` - Query a specific contract to the chain. The contract must be already deployed and instantiated.
-- `chain-start` - Run the full node okp4d application using the chain's home directory under a Docker container.
+- `chain-start` - Run the full node axoned application using the chain's home directory under a Docker container.
 - `chain-stop` - Stop the chain's container.
 
 ## 💻 Develop
@@ -302,11 +302,11 @@ Now, you can interact with the deployed Smart Contracts and test them out.
 
 ### 🎮 Free execution of the CLI command
 
-You can freely interact with the local chain by executing the following CLI command. This will execute the `okp4d`
+You can freely interact with the local chain by executing the following CLI command. This will execute the `axoned`
 binary
 inside a Docker container with the `--home` argument pointing to the chain's home directory and using the same network
 as
-the chain's container. The arguments passed to the command will be directly passed to the `okp4d` binary.
+the chain's container. The arguments passed to the command will be directly passed to the `axoned` binary.
 
 ```sh
 cargo make chain <command>
@@ -407,8 +407,8 @@ git commit -am "docs: update generated documentation"
 ## 📘 Resources
 
 - [CosmWasm Docs](https://docs.cosmwasm.com/)
-- [OKP4 Whitepaper](https://docs.okp4.network/whitepaper/abstract)
-- [OKP4 Blockchain](https://githhub.com/okp4/okp4d)
+- [AXONE Whitepaper](https://docs.axone.xyz/whitepaper/abstract)
+- [AXONE Blockchain](https://github.com/axone-protocol/axoned)
 
 ## You want to get involved? 😍
 

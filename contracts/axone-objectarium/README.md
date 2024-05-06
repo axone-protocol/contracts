@@ -58,7 +58,7 @@ A plethora of possibilities opens up for decentralized applications (dApps) that
 The `okp4-objectarium` can be instantiated as follows, refer to the schema for more information on configuration, limits and pagination configuration:
 
 ```bash
-okp4d tx wasm instantiate $CODE_ID \
+axoned tx wasm instantiate $CODE_ID \
     --label "my-storage" \
     --from $ADDR \
     --admin $ADMIN_ADDR \
@@ -71,7 +71,7 @@ okp4d tx wasm instantiate $CODE_ID \
 We can store an object by providing its data in base64 encoded, we can pin the stored object to prevent it from being removed:
 
 ```bash
-okp4d tx wasm execute $CONTRACT_ADDR \
+axoned tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
     "{\"store_object\":{\"data\": \"$(cat my-data | base64)\",\"pin\":true}}"
@@ -82,12 +82,12 @@ The object id is stable as it is a hash, we can't store an object twice.
 With the following commands we can pin and unpin existing objects:
 
 ```bash
-okp4d tx wasm execute $CONTRACT_ADDR \
+axoned tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
     "{\"pin_object\":{\"id\": \"$OBJECT_ID\"}}"
 
-okp4d tx wasm execute $CONTRACT_ADDR \
+axoned tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
     "{\"unpin_object\":{\"id\": \"$OBJECT_ID\"}}"
@@ -96,7 +96,7 @@ okp4d tx wasm execute $CONTRACT_ADDR \
 And if an object is not pinned, or pinned by the sender of transaction, we can remove it:
 
 ```bash
-okp4d tx wasm execute $CONTRACT_ADDR \
+axoned tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
     "{\"forget_object\":{\"id\": \"$OBJECT_ID\"}}"
@@ -107,34 +107,34 @@ okp4d tx wasm execute $CONTRACT_ADDR \
 Query an object by its id:
 
 ```bash
-okp4d query wasm contract-state smart $CONTRACT_ADDR \
+axoned query wasm contract-state smart $CONTRACT_ADDR \
     "{\"object\": {\"id\": \"$OBJECT_ID\"}}"
 ```
 
 Or its data:
 
 ```bash
-okp4d query wasm contract-state smart $CONTRACT_ADDR \
+axoned query wasm contract-state smart $CONTRACT_ADDR \
     "{\"object_data\": {\"id\": \"$OBJECT_ID\"}}"
 ```
 
 We can also list the objects, eventually filtering on the object owner:
 
 ```bash
-okp4d query wasm contract-state smart $CONTRACT_ADDR \
+axoned query wasm contract-state smart $CONTRACT_ADDR \
     "{\"objects\": {\"address\": \"okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6\"}}"
 ```
 
 And navigate in a cursor based pagination:
 
 ```bash
-okp4d query wasm contract-state smart $CONTRACT_ADDR \
+axoned query wasm contract-state smart $CONTRACT_ADDR \
     "{\"objects\": {\"first\": 5, \"after\": \"23Y5t5DBe7DkPwfJo3Sd26Y8Z9epmtpA1FTpdG7DiG6MD8vPRTzzbQ9TccmyoBcePkPK6atUiqcAzJVo3TfYNBGY\"}}"
 ```
 
 We can also query object pins with the same cursor based pagination:
 
 ```bash
-okp4d query wasm contract-state smart $CONTRACT_ADDR \
+axoned query wasm contract-state smart $CONTRACT_ADDR \
     "{\"object_pins\": {\"id\": \"$OBJECT_ID\", \"first\": 5, \"after\": \"23Y5t5DBe7DkPwfJo3Sd26Y8Z9epmtpA1FTpdG7DiG6MD8vPRTzzbQ9TccmyoBcePkPK6atUiqcAzJVo3TfYNBGY\"}}"
 ```

@@ -16,7 +16,7 @@ It's worth to mention that to query cosmwasm smart contracts and getting the raw
 The `cosmwasm_query` predicate will help to create the cosmwasm URI, for example:
 
 ```bash
-okp4d query logic ask \
+axoned query logic ask \
     --program-file query.pl \
     "cosmwasm_query(cognitarium, '${CONTRACT_ADDR}', json([key-value]), false, URI)."
 ```
@@ -26,7 +26,7 @@ okp4d query logic ask \
 By calling the `cosmwasm_call` predicate with a cosmwasm URI we'll be able to get the JSON response, let's try it with a simple `okp4-cognitarium` `Store` query which returns usage information about the triple store:
 
 ```bash
-okp4d query logic ask \
+axoned query logic ask \
     --program-file query.pl \
     "cosmwasm_query(cognitarium, '${CONTRACT_ADDR}', 'store', false, URI), cosmwasm_call(URI, Response)."
 ```
@@ -36,7 +36,7 @@ okp4d query logic ask \
 Through the `cognitarium_dataset_tags`, we can query the tags present in metadata describing a specific dataset, for example:
 
 ```bash
-okp4d query logic ask \
+axoned query logic ask \
     --program-file query.pl \
     "cognitarium_dataset_tags('${CONTRACT_ADDR}', 'https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde', Tags)."
 ```
@@ -46,7 +46,7 @@ okp4d query logic ask \
 Using the `cognitarium_dataset_has_tag` predicate we show how to define rules based on the contract response, here on the present of a certain tag:
 
 ```bash
-okp4d query logic ask \
+axoned query logic ask \
     --program-file query.pl \
     "cognitarium_dataset_has_tag('${CONTRACT_ADDR}', 'https://ontology.okp4.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde', 'AwesomeData')."
 ```

@@ -40,7 +40,7 @@
 ### ⚠ BREAKING CHANGES
 
 * **law-stone:** match v7 logic module model
-* **logic-bindings:** match v7 okp4d logic module model
+* **logic-bindings:** match v7okp4d logic module model
 * **cognitarium:** rework construct clause based on template
 * **cognitarium:** use var or named node as msg pattern predicate
 * **cognitarium:** rework delete input to remove template bnodes

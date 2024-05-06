@@ -20,7 +20,7 @@ The `can(Action, DID)` predicate will allow or not an action for a `did` (i.e. D
 The instantiate will take as parameters the base64 encoded program and the address of a `okp4-objectarium` contract, on which the program will be stored and pinned to prevent its removal and thus ensure its availability:
 
 ```bash
-okp4d tx wasm instantiate $CODE_ID \
+axoned tx wasm instantiate $CODE_ID \
     --label "single-source" \
     --from $ADDR \
     --admin $ADMIN_ADDR \
@@ -35,7 +35,7 @@ You can retrieve the new `okp4-law-stone` smart contract address in the `_contra
 By using the `Ask` query we can provide Prolog predicates to be evaluated againsts the underlying program:
 
 ```bash
-okp4d query wasm contract-state smart $CONTRACT_ADDR \
+axoned query wasm contract-state smart $CONTRACT_ADDR \
     "{\"ask\": {\"query\": \"can('change_governance', 'did:example:okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').\"}}"
 ```
 
@@ -48,7 +48,7 @@ The program stored in the `okp4-objectarium` smart contract will be removed, or 
 By breaking the stone, you will not be able to query it anymore.
 
 ```bash
-okp4d tx wasm execute $CONTRACT_ADDR \
+axoned tx wasm execute $CONTRACT_ADDR \
     --from $ADDR \
     --gas 1000000 \
     '"break_stone"'

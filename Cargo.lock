@@ -21,6 +21,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
 
 [[package]]
+name = "axone-objectarium"
+version = "5.0.0"
+dependencies = [
+ "base16ct",
+ "base64 0.22.0",
+ "bs58",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "derive_builder",
+ "either",
+ "enum-iterator",
+ "lzma-rs",
+ "md-5",
+ "schemars",
+ "serde",
+ "sha2 0.10.8",
+ "snap",
+ "thiserror",
+]
+
+[[package]]
 name = "base-x"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -801,6 +826,7 @@ dependencies = [
 name = "okp4-law-stone"
 version = "5.0.0"
 dependencies = [
+ "axone-objectarium",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -810,7 +836,6 @@ dependencies = [
  "cw2",
  "itertools 0.12.1",
  "okp4-logic-bindings",
- "okp4-objectarium",
  "okp4-objectarium-client",
  "okp4-wasm",
  "schemars",
@@ -834,36 +859,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "okp4-objectarium"
-version = "5.0.0"
-dependencies = [
- "base16ct",
- "base64 0.22.0",
- "bs58",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "derive_builder",
- "either",
- "enum-iterator",
- "lzma-rs",
- "md-5",
- "schemars",
- "serde",
- "sha2 0.10.8",
- "snap",
- "thiserror",
-]
-
-[[package]]
 name = "okp4-objectarium-client"
 version = "5.0.0"
 dependencies = [
+ "axone-objectarium",
  "cosmwasm-std",
- "okp4-objectarium",
  "okp4-wasm",
  "schemars",
  "serde",

@@ -6,7 +6,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use okp4_logic_bindings::LogicCustomQuery;
-use okp4_objectarium::msg::{
+use axone_objectarium::msg::{
     ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery,
 };
 
@@ -289,7 +289,7 @@ mod tests {
     use okp4_logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
     };
-    use okp4_objectarium::msg::PageInfo;
+    use axone_objectarium::msg::PageInfo;
     use okp4_wasm::uri::CosmwasmUri;
     use std::collections::VecDeque;
     use std::marker::PhantomData;
@@ -825,7 +825,7 @@ mod tests {
                     program,
                     "source_files(Files) :- bagof(File, source_file(File), Files)."
                 );
-                assert_eq!(query, "consult('cosmwasm:okp4-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
+                assert_eq!(query, "consult('cosmwasm:axone-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
         }
@@ -845,7 +845,7 @@ mod tests {
 
         match result {
             Ok(LogicCustomQuery::Ask { program, query }) => {
-                assert_eq!(program, ":- consult('cosmwasm:okp4-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D').");
+                assert_eq!(program, ":- consult('cosmwasm:axone-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D').");
                 assert_eq!(query, "test(X).")
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),

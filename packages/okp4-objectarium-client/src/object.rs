@@ -1,19 +1,19 @@
 use cosmwasm_std::{to_json_binary, Coin, StdResult, WasmMsg};
-use okp4_objectarium::msg::QueryMsg::ObjectData;
-use okp4_objectarium::msg::{ExecuteMsg, QueryMsg};
+use axone_objectarium::msg::QueryMsg::ObjectData;
+use axone_objectarium::msg::{ExecuteMsg, QueryMsg};
 use okp4_wasm::error::CosmwasmUriError;
 use okp4_wasm::uri::CosmwasmUri;
 use serde::{Deserialize, Serialize};
 
-const CONTRACT_NAME: &str = "okp4-objectarium";
+const CONTRACT_NAME: &str = "axone-objectarium";
 
-/// Represents a reference to an Object stored in the `okp4-objectarium` contract.
+/// Represents a reference to an Object stored in the `axone-objectarium` contract.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ObjectRef {
-    /// The object id in the `okp4-objectarium` contract.
+    /// The object id in the `axone-objectarium` contract.
     pub object_id: String,
 
-    /// The `okp4-objectarium` contract address on which the object is stored.
+    /// The `axone-objectarium` contract address on which the object is stored.
     pub storage_address: String,
 }
 
@@ -137,7 +137,7 @@ mod tests {
         });
 
         assert!(res.is_ok());
-        assert_eq!(res.unwrap().to_string(), "cosmwasm:okp4-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D");
+        assert_eq!(res.unwrap().to_string(), "cosmwasm:axone-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D");
     }
 
     #[test]

@@ -28,7 +28,7 @@ okp4-cognitarium = { path = "contracts/okp4-cognitarium", features = [
 ] }
 okp4-cognitarium-client = { path = "packages/okp4-cognitarium-client" }
 okp4-logic-bindings = { path = "packages/okp4-logic-bindings" }
-okp4-objectarium = { path = "contracts/okp4-objectarium", features = [
+axone-objectarium = { path = "contracts/axone-objectarium", features = [
   "library",
 ] }
 okp4-objectarium-client = { path = "packages/okp4-objectarium-client" }

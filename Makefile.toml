@@ -28,8 +28,9 @@ find . -type f \( -name "Cargo.toml" \) -print0 | xargs -0 -n1 cargo make lint-c
 '''
 
 [tasks.lint-cargo-toml-file]
-args = ["verify-project", "--manifest-path", "${@}", "--verbose"]
-command = "cargo"
+args = ["${@}"]
+command = "cargo-toml-lint"
+dependencies = ["install-cargo-toml-lint"]
 description = "Check lint of the given toml file"
 
 [tasks.format-toml]
@@ -616,6 +617,9 @@ install_crate = { rustup_component_name = "rustfmt" }
 
 [tasks.install-taplo-cli]
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help", min_version = "0.9.0" }
+
+[tasks.install-cargo-toml-lint]
+install_crate = { crate_name = "cargo-toml-lint", min_version = "0.1.1" }
 
 [tasks.install-llvm-cov]
 install_crate = { crate_name = "cargo-llvm-cov", min_version = "0.5.38" }

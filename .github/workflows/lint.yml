@@ -239,7 +239,6 @@ jobs:
           if [[ $(git status -s | grep .toml) ]]; then
             >&2 echo "❌ There is a diff between formatted files and source code"
             >&2 git status
-            >&2 git --no-pager diff *.toml
             exit 1
           fi
 

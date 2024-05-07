@@ -604,7 +604,7 @@ install_crate = { rustup_component_name = "clippy" }
 
 [tasks.intall-cranky]
 dependencies = ["install-clippy"]
-install_crate = { crate_name = "cranky" }
+install_crate = { crate_name = "cranky", min_version = "0.3.0" }
 
 [tasks.install-rustfmt]
 install_crate = { rustup_component_name = "rustfmt" }
@@ -617,6 +617,7 @@ install_crate = { crate_name = "cargo-toml-lint", min_version = "0.1.1" }
 
 [tasks.install-llvm-cov]
 install_crate = { crate_name = "cargo-llvm-cov", min_version = "0.6.9" }
+install_crate_args = ["--force"]
 
 [tasks.install-cosmwasm-check]
 install_crate = { crate_name = "cosmwasm-check", min_version = "1.5.3" }

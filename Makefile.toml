@@ -615,7 +615,7 @@ install_crate = { crate_name = "cranky" }
 install_crate = { rustup_component_name = "rustfmt" }
 
 [tasks.install-taplo-cli]
-install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help" }
+install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help", min_version = "0.9.0" }
 
 [tasks.install-llvm-cov]
 install_crate = { crate_name = "cargo-llvm-cov", min_version = "0.5.38" }

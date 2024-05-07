@@ -18,8 +18,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 axone-logic-bindings.workspace = true
-axone-objectarium-client.workspace = true
 axone-objectarium.workspace = true
+axone-objectarium-client.workspace = true
 axone-wasm.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true

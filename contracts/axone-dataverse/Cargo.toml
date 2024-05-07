@@ -17,8 +17,8 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axone-cognitarium-client.workspace = true
 axone-cognitarium.workspace = true
+axone-cognitarium-client.workspace = true
 axone-rdf.workspace = true
 base64 = "0.22.0"
 bs58 = "0.5.1"

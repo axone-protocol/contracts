@@ -29,8 +29,8 @@ rpath = false
 
 [dependencies]
 axone-logic-bindings.workspace = true
-axone-objectarium-client.workspace = true
 axone-objectarium.workspace = true
+axone-objectarium-client.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true

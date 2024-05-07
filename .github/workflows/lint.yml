@@ -59,6 +59,7 @@ jobs:
         with:
           files: |
             **/Cargo.toml
+            Cargo.toml
 
       - name: Setup rust
         if: steps.changed-rust-cargo.outputs.any_changed == 'true'
@@ -69,6 +70,7 @@ jobs:
           override: true
 
       - name: Install cargo make
+        if: steps.changed-rust-cargo.outputs.any_changed == 'true'
         uses: davidB/rust-cargo-make@v1
 
       - name: Lint all Cargo.toml file

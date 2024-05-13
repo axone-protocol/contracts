@@ -1,8 +1,8 @@
-admin_addr('okp41p8u47en82gmzfm259y6z93r9qe63l25dfwwng6').
+admin_addr('axone1p8u47en82gmzfm259y6z93r9qe63l25d858vqu').
 
-allow_denom('uknow').
+allow_denom('uaxone').
 allow_did_method('example').
-allow_addr(Addr) :- bech32_address(-('okp4', _), Addr).
+allow_addr(Addr) :- bech32_address(-('axone', _), Addr).
 
 valid_did(DID, Addr) :-
     did_components(DID, did_components(Method, Addr, _, _, _)),

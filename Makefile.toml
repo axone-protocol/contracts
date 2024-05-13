@@ -459,8 +459,7 @@ docker run --rm \
   ${DOCKER_IMAGE_AXONED} \
     query wasm list-code \
       --limit 1000 \
-      --home ${CHAIN_HOME} \
-      --chain-id ${CHAIN}
+      --home ${CHAIN_HOME}
 '''
 
 [tasks.chain-inspect-contract]
@@ -478,8 +477,7 @@ docker run --rm \
   -w /app \
   ${DOCKER_IMAGE_AXONED} \
     query wasm code-info $code_id \
-      --home ${CHAIN_HOME} \
-      --chain-id ${CHAIN}
+      --home ${CHAIN_HOME}
 '''
 
 [tasks.chain-instantiate-contract]

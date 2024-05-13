@@ -304,7 +304,6 @@ docker run --rm \
       --chain-id=${CHAIN} \
       --home ${CHAIN_HOME}
 sed -i ${SED_FLAG} 's/"stake"/"uknow"/g' ${CHAIN_HOME}/config/genesis.json
-sed -i ${SED_FLAG} 's/"time_iota_ms": "1000"/"time_iota_ms": "10"/' ${CHAIN_HOME}/config/genesis.json
 
 docker run --rm \
   -v `pwd`:/app \

@@ -303,17 +303,9 @@ docker run --rm \
     init ${CHAIN_MONIKER} \
       --chain-id=${CHAIN} \
       --home ${CHAIN_HOME}
-sed -i ${SED_FLAG} 's/"stake"/"uknow"/g' ${CHAIN_HOME}/config/genesis.json
-
-docker run --rm \
-  -v `pwd`:/app \
-  -w /app \
-  ${DOCKER_IMAGE_OKP4D} \
-    genesis add-genesis-account validator ${BALANCE_VALIDATOR} \
-      --keyring-backend test \
-      --home ${CHAIN_HOME}
 
 balances=(
+  "validator:${BALANCE_VALIDATOR}"
   "alice:${BALANCE_ALICE}"
   "bob:${BALANCE_BOB}"
   "charlie:${BALANCE_CHARLIE}"
@@ -345,7 +337,7 @@ docker run --rm \
     genesis gentx validator 1000000uknow \
       --node-id ${NODE_ID} \
       --chain-id=${CHAIN} \
-      --keyring-backend test \
+      --keyring-backend ${KEYRING_BACKEND} \
       --home ${CHAIN_HOME}
 
 docker run --rm \
@@ -354,6 +346,9 @@ docker run --rm \
   ${DOCKER_IMAGE_OKP4D} \
 	  genesis collect-gentxs \
 	    --home ${CHAIN_HOME}
+
+sed -i ${SED_FLAG} 's/"stake"/"uknow"/g' ${CHAIN_HOME}/config/genesis.json
+
 '''
 
 [tasks.chain-start]

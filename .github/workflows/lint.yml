@@ -58,6 +58,7 @@ jobs:
         uses: tj-actions/changed-files@v44.0.0
         with:
           files: |
+            **/Cargo.toml
             Cargo.toml
 
       - name: Setup rust
@@ -68,15 +69,14 @@ jobs:
           default: true
           override: true
 
-      - name: Install cargo-toml-lint
+      - name: Install cargo make
         if: steps.changed-rust-cargo.outputs.any_changed == 'true'
-        run: |
-          cargo install --force cargo-toml-lint
+        uses: davidB/rust-cargo-make@v1
 
-      - name: Lint Cargo.toml file
+      - name: Lint all Cargo.toml file
         if: steps.changed-rust-cargo.outputs.any_changed == 'true'
         run: |
-          cargo-toml-lint Cargo.toml
+          cargo make lint-cargo-toml
 
   lint-cargo-makefile:
     runs-on: ubuntu-22.04

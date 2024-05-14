@@ -415,7 +415,8 @@ mod tests {
 
     #[test]
     fn program_code() {
-        const CONTRACT_ID: &str = "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv";
+        const CONTRACT_ID: &str =
+            "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv";
         const OBJECT_ID: &str = "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05";
         const A_PROGRAM: &str = "foo(_) :- true.";
 
@@ -887,7 +888,9 @@ mod tests {
                     contract_info.admin = Some("creator".to_string());
                     SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
-                WasmQuery::Smart { contract_addr, msg } if contract_addr == "axone-objectarium1" => {
+                WasmQuery::Smart { contract_addr, msg }
+                    if contract_addr == "axone-objectarium1" =>
+                {
                     match from_json(msg) {
                         Ok(StorageQuery::ObjectPins {
                             id,

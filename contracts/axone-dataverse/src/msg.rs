@@ -28,7 +28,7 @@ pub enum ExecuteMsg {
     ///
     /// Claims are injected into the dataverse through Verifiable Credentials (VCs).
     ///
-    /// Primarily, the claims leverage the OKP4 ontology, which facilitates articulating assertions about widely acknowledged resources
+    /// Primarily, the claims leverage the AXONE ontology, which facilitates articulating assertions about widely acknowledged resources
     /// in the dataverse, including digital services, digital resources, zones, governance, and more.
     ///
     /// Additionally, other schemas may also be employed to supplement and enhance the validated knowledge contributed to these resources.

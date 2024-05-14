@@ -69,28 +69,28 @@ mod test {
         let dataset = Dataset::from(owned_quads.as_slice());
         let vc = VerifiableCredential::try_from(&dataset).unwrap();
         let dc_res = DataverseCredential::try_from((
-            Addr::unchecked("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf"),
+            Addr::unchecked("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0"),
             &vc,
         ));
 
         assert!(dc_res.is_ok());
         assert_eq!(dc_res.unwrap(), DataverseCredential {
-                submitter_addr: Addr::unchecked("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf"),
-                id: "https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9",
+                submitter_addr: Addr::unchecked("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0"),
+                id: "https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9",
                 issuer: "did:key:zQ3shs7auhJSmVJpiUbQWco6bxxEhSqWnVEPvaBHBRvBKw6Q3",
-                r#type: "https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/DigitalServiceDescriptionCredential",
+                r#type: "https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/DigitalServiceDescriptionCredential",
                 valid_from: "2024-01-22T00:00:00",
                 valid_until: Some("2025-01-22T00:00:00"),
             claim: &Claim {
                 id: "did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB",
                 content: Dataset::new(vec![Quad {
                     subject: NamedNode {iri: "did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB"}.into(),
-                    predicate: NamedNode {iri: "https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/hasCategory"}.into(),
-                    object: NamedNode{iri: "https://w3id.org/okp4/ontology/vnext/thesaurus/digital-service-category/Storage"}.into(),
+                    predicate: NamedNode {iri: "https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/hasCategory"}.into(),
+                    object: NamedNode{iri: "https://w3id.org/axone/ontology/vnext/thesaurus/digital-service-category/Storage"}.into(),
                     graph_name: None,
                 },Quad {
                     subject: NamedNode {iri: "did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB"}.into(),
-                    predicate: NamedNode {iri: "https://w3id.org/okp4/ontology/vnext/schema/credential/digital-service/description/hasTag"}.into(),
+                    predicate: NamedNode {iri: "https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/hasTag"}.into(),
                     object: Literal::Simple {value: "Cloud"}.into(),
                     graph_name: None,
                 }]),
@@ -120,7 +120,7 @@ mod test {
             let dataset = Dataset::from(owned_quads.as_slice());
             let vc = VerifiableCredential::try_from(&dataset).unwrap();
             let dc_res = DataverseCredential::try_from((
-                Addr::unchecked("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf"),
+                Addr::unchecked("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0"),
                 &vc,
             ));
 

@@ -290,7 +290,7 @@ mod tests {
         let resp = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(read_test_data("vc-eddsa-2020-ok.nq")),
                 format: Some(RdfFormat::NQuads),
@@ -316,7 +316,7 @@ mod tests {
             ]
         );
 
-        let expected_data = "<http://example.edu/credentials/3732> <dataverse:credential#submitterAddress> \"okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf\" .
+        let expected_data = "<http://example.edu/credentials/3732> <dataverse:credential#submitterAddress> \"axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0\" .
 <http://example.edu/credentials/3732> <dataverse:credential#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
 <http://example.edu/credentials/3732> <dataverse:credential#type> <https://example.org/examples#UniversityDegreeCredential> .
 <http://example.edu/credentials/3732> <dataverse:credential#validFrom> \"2024-02-16T00:00:00Z\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
@@ -352,7 +352,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
         let resp = execute(
             mock_dependencies().as_mut(),
             mock_env(),
-            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary("notrdf".as_bytes().to_vec()),
                 format: Some(RdfFormat::NQuads),
@@ -368,7 +368,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
         let resp = execute(
             mock_dependencies().as_mut(),
             mock_env(),
-            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(vec![]),
                 format: Some(RdfFormat::NQuads),
@@ -387,7 +387,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
         let resp = execute(
             mock_dependencies().as_mut(),
             mock_env(),
-            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(read_test_data("vc-eddsa-2020-ok-unsecured.nq")),
                 format: Some(RdfFormat::NQuads),
@@ -406,7 +406,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
         let resp = execute(
             mock_dependencies().as_mut(),
             mock_env(),
-            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(read_test_data("vc-unsupported-1.nq")),
                 format: Some(RdfFormat::NQuads),
@@ -454,7 +454,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
         let resp = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info("okp41072nc6egexqr2v6vpp7yxwm68plvqnkf6xsytf", &[]),
+            mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(read_test_data("vc-eddsa-2020-ok.nq")),
                 format: Some(RdfFormat::NQuads),

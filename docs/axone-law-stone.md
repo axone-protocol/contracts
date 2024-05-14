@@ -18,10 +18,10 @@ To be able to free the underlying resources (i.e. objects in `axone-objectarium`
 
 Instantiate message
 
-| parameter         | description                                                                                           |
-| ----------------- | ----------------------------------------------------------------------------------------------------- |
-| `program`         | _(Required.) _ **[Binary](#binary)**. The Prolog program carrying law rules and facts.                |
-| `storage_address` | _(Required.) _ **string**. The `okp4-objectarium` contract address on which to store the law program. |
+| parameter         | description                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------ |
+| `program`         | _(Required.) _ **[Binary](#binary)**. The Prolog program carrying law rules and facts.                 |
+| `storage_address` | _(Required.) _ **string**. The `axone-objectarium` contract address on which to store the law program. |
 
 ## ExecuteMsg
 
@@ -29,7 +29,7 @@ Execute messages
 
 ### ExecuteMsg::BreakStone
 
-Break the stone making this contract unusable, by clearing all the related resources: - Unpin all the pinned objects on `okp4-objectarium` contracts, if any. - Forget the main program (i.e. or at least unpin it). Only the contract admin is authorized to break it, if any. If already broken, this is a no-op.
+Break the stone making this contract unusable, by clearing all the related resources: - Unpin all the pinned objects on `axone-objectarium` contracts, if any. - Forget the main program (i.e. or at least unpin it). Only the contract admin is authorized to break it, if any. If already broken, this is a no-op.
 
 | literal         |
 | --------------- |
@@ -83,12 +83,12 @@ If the law stone is broken, the query may fail if the program is no longer avail
 
 ### program
 
-ProgramResponse carry elements to locate the program in a `okp4-objectarium` contract.
+ProgramResponse carry elements to locate the program in a `axone-objectarium` contract.
 
-| property          | description                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------ |
-| `object_id`       | _(Required.) _ **string**. The program object id in the `okp4-objectarium` contract.                   |
-| `storage_address` | _(Required.) _ **string**. The `okp4-objectarium` contract address on which the law program is stored. |
+| property          | description                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------- |
+| `object_id`       | _(Required.) _ **string**. The program object id in the `axone-objectarium` contract.                   |
+| `storage_address` | _(Required.) _ **string**. The `axone-objectarium` contract address on which the law program is stored. |
 
 ### program_code
 
@@ -134,4 +134,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-law-stone.json` (`8e0735522d41fae3`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-law-stone.json` (`96a9a3b253c6a3fc`)_

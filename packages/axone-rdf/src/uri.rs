@@ -49,9 +49,9 @@ mod tests {
             ))
         );
         assert_eq!(
-            explode_iri("https://ontology.okp4.space/core/Governance"),
+            explode_iri("https://ontology.axone.space/core/Governance"),
             Ok((
-                "https://ontology.okp4.space/core/".to_string(),
+                "https://ontology.axone.space/core/".to_string(),
                 "Governance".to_string()
             ))
         );

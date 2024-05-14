@@ -113,12 +113,12 @@ mod tests {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
-                        expression: "['cosmwasm:okp4-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D']".to_string(),
+                        expression: "['cosmwasm:axone-objectarium:axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D']".to_string(),
                     }]
                 }],
                 Ok(vec![ObjectRef{
                     object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string(),
-                    storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
+                    storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string(),
                 }])
             ),
             (
@@ -126,15 +126,15 @@ mod tests {
                     error: None,
                     substitutions: vec![Substitution {
                         variable: "X".to_string(),
-                        expression: "['cosmwasm:okp4-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D','cosmwasm:okp4-objectarium:okp41cxmx7su8h5pvqca85cxdylz86uj9x9gu5xuqv34kw87q5x0hexds8w44jg?query=%7B%22object_data%22%3A%7B%22id%22%3A%221485133dd3ab4b1c4b8085e7265585f91ae3cca0996a39e0377a1059296f6aa7%22%7D%7D']".to_string(),
+                        expression: "['cosmwasm:axone-objectarium:axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv?query=%7B%22object_data%22%3A%7B%22id%22%3A%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D','cosmwasm:axone-objectarium:axone1cxmx7su8h5pvqca85cxdylz86uj9x9gu5xuqv34kw87q5x0hexdsr3g4x4?query=%7B%22object_data%22%3A%7B%22id%22%3A%221485133dd3ab4b1c4b8085e7265585f91ae3cca0996a39e0377a1059296f6aa7%22%7D%7D']".to_string(),
                     }]
                 }],
                 Ok(vec![ObjectRef{
                     object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string(),
-                    storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
+                    storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string(),
                 },ObjectRef{
                     object_id: "1485133dd3ab4b1c4b8085e7265585f91ae3cca0996a39e0377a1059296f6aa7".to_string(),
-                    storage_address: "okp41cxmx7su8h5pvqca85cxdylz86uj9x9gu5xuqv34kw87q5x0hexds8w44jg".to_string(),
+                    storage_address: "axone1cxmx7su8h5pvqca85cxdylz86uj9x9gu5xuqv34kw87q5x0hexdsr3g4x4".to_string(),
                 }])
             ),
             (

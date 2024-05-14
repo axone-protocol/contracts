@@ -9,7 +9,7 @@ pub struct InstantiateMsg {
     /// The Prolog program carrying law rules and facts.
     pub program: Binary,
 
-    /// The `okp4-objectarium` contract address on which to store the law program.
+    /// The `axone-objectarium` contract address on which to store the law program.
     pub storage_address: String,
 }
 
@@ -18,7 +18,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     /// # BreakStone
     /// Break the stone making this contract unusable, by clearing all the related resources:
-    /// - Unpin all the pinned objects on `okp4-objectarium` contracts, if any.
+    /// - Unpin all the pinned objects on `axone-objectarium` contracts, if any.
     /// - Forget the main program (i.e. or at least unpin it).
     /// Only the contract admin is authorized to break it, if any.
     /// If already broken, this is a no-op.
@@ -56,12 +56,12 @@ pub enum QueryMsg {
 }
 
 /// # ProgramResponse
-/// ProgramResponse carry elements to locate the program in a `okp4-objectarium` contract.
+/// ProgramResponse carry elements to locate the program in a `axone-objectarium` contract.
 #[cw_serde]
 pub struct ProgramResponse {
-    /// The program object id in the `okp4-objectarium` contract.
+    /// The program object id in the `axone-objectarium` contract.
     pub object_id: String,
 
-    /// The `okp4-objectarium` contract address on which the law program is stored.
+    /// The `axone-objectarium` contract address on which the law program is stored.
     pub storage_address: String,
 }

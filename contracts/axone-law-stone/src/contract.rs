@@ -346,14 +346,14 @@ mod tests {
 
         let msg = InstantiateMsg {
             program: program.clone(),
-            storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+            storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
                 .to_string(),
         };
         let info = mock_info("creator", &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        // Check if a message is send to the okp4-objectarium to store the logic program.
+        // Check if a message is send to the axone-objectarium to store the logic program.
         assert_eq!(1, res.messages.len());
         let sub_msg = res.messages.first().unwrap();
         assert_eq!(STORE_PROGRAM_REPLY_ID, sub_msg.id);
@@ -379,7 +379,7 @@ mod tests {
             _ => panic!("cosmos sub message should be a Wasm message execute"),
         }
         assert_eq!(
-            "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string(),
+            "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string(),
             INSTANTIATE_CONTEXT.load(&deps.storage).unwrap()
         );
     }
@@ -392,7 +392,7 @@ mod tests {
         let object_id =
             "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string();
         let storage_addr =
-            "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3".to_string();
+            "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string();
         PROGRAM
             .save(
                 deps.as_mut().storage,
@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn program_code() {
-        const CONTRACT_ID: &str = "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3";
+        const CONTRACT_ID: &str = "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv";
         const OBJECT_ID: &str = "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05";
         const A_PROGRAM: &str = "foo(_) :- true.";
 
@@ -508,7 +508,7 @@ mod tests {
                     object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
                         .to_string(),
                     storage_address:
-                        "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                        "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
                             .to_string(),
                 },
                 Some(AskResponse {
@@ -536,7 +536,7 @@ mod tests {
                     object_id: "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05"
                         .to_string(),
                     storage_address:
-                        "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                        "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
                             .to_string(),
                 },
                 Some(AskResponse {
@@ -616,8 +616,8 @@ mod tests {
             StoreTestCase {
                 dependencies: vec![
                     (
-                        "cosmwasm:okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s?query=%7B%22object_data%22%3A%7B%22id%22%3A%20%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D".to_string(),
-                        "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(),
+                        "cosmwasm:axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd?query=%7B%22object_data%22%3A%7B%22id%22%3A%20%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D".to_string(),
+                        "axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".to_string(),
                         "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string()
                     ),
                 ],
@@ -632,13 +632,13 @@ mod tests {
             StoreTestCase {
                 dependencies: vec![
                     (
-                        "cosmwasm:okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s?query=%7B%22object_data%22%3A%7B%22id%22%3A%20%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D".to_string(),
-                        "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(), // contract addr
+                        "cosmwasm:axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd?query=%7B%22object_data%22%3A%7B%22id%22%3A%20%224cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05%22%7D%7D".to_string(),
+                        "axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".to_string(), // contract addr
                         "4cbe36399aabfcc7158ee7a66cbfffa525bb0ceab33d1ff2cff08759fe0a9b05".to_string() // object id
                     ),
                     (
-                        "cosmwasm:okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s?query=%7B%22object_data%22%3A%7B%22id%22%3A%20%220689c526187c6785dfcce28f8df19138da292598dc19548a852de1792062f271%22%7D%7D".to_string(),
-                        "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(), // contract addr
+                        "cosmwasm:axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd?query=%7B%22object_data%22%3A%7B%22id%22%3A%20%220689c526187c6785dfcce28f8df19138da292598dc19548a852de1792062f271%22%7D%7D".to_string(),
+                        "axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".to_string(), // contract addr
                         "0689c526187c6785dfcce28f8df19138da292598dc19548a852de1792062f271".to_string() // object id
                     ),
                 ],
@@ -662,7 +662,7 @@ mod tests {
                     ObjectRef {
                         object_id: program_object_id.clone(),
                         storage_address:
-                            "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s"
+                            "axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd"
                                 .to_string(),
                     },
                     request,
@@ -682,7 +682,7 @@ mod tests {
             INSTANTIATE_CONTEXT
                 .save(
                     deps.as_mut().storage,
-                    &"okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(),
+                    &"axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".to_string(),
                 )
                 .unwrap();
 
@@ -762,7 +762,7 @@ mod tests {
 
     #[test]
     fn program_reply_errors() {
-        let object_id = "okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s";
+        let object_id = "axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd";
         let cases = vec![
             (
                 Reply {
@@ -800,7 +800,7 @@ mod tests {
             INSTANTIATE_CONTEXT
                 .save(
                     deps.as_mut().storage,
-                    &"okp41dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqavca4s".to_string(),
+                    &"axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".to_string(),
                 )
                 .unwrap();
 
@@ -815,7 +815,7 @@ mod tests {
         let result = reply::build_source_files_query(ObjectRef {
             object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
                 .to_string(),
-            storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+            storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
                 .to_string(),
         });
 
@@ -825,7 +825,7 @@ mod tests {
                     program,
                     "source_files(Files) :- bagof(File, source_file(File), Files)."
                 );
-                assert_eq!(query, "consult('cosmwasm:axone-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
+                assert_eq!(query, "consult('cosmwasm:axone-objectarium:axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D'), source_files(Files).")
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
         }
@@ -837,7 +837,7 @@ mod tests {
             ObjectRef {
                 object_id: "1cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d"
                     .to_string(),
-                storage_address: "okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3"
+                storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
                     .to_string(),
             },
             "test(X).".to_string(),
@@ -845,7 +845,7 @@ mod tests {
 
         match result {
             Ok(LogicCustomQuery::Ask { program, query }) => {
-                assert_eq!(program, ":- consult('cosmwasm:axone-objectarium:okp41ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pqrteqt3?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D').");
+                assert_eq!(program, ":- consult('cosmwasm:axone-objectarium:axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv?query=%7B%22object_data%22%3A%7B%22id%22%3A%221cc6de7672c97db145a3940df2264140ea893c6688fa5ca55b73cb8b68e0574d%22%7D%7D').");
                 assert_eq!(query, "test(X).")
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
@@ -887,7 +887,7 @@ mod tests {
                     contract_info.admin = Some("creator".to_string());
                     SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
-                WasmQuery::Smart { contract_addr, msg } if contract_addr == "okp4-objectarium1" => {
+                WasmQuery::Smart { contract_addr, msg } if contract_addr == "axone-objectarium1" => {
                     match from_json(msg) {
                         Ok(StorageQuery::ObjectPins {
                             id,
@@ -916,7 +916,7 @@ mod tests {
                         broken: false,
                         law: ObjectRef {
                             object_id: "program-id".to_string(),
-                            storage_address: "okp4-objectarium1".to_string(),
+                            storage_address: "axone-objectarium1".to_string(),
                         },
                     },
                 )
@@ -948,7 +948,7 @@ mod tests {
                     CosmosMsg::Wasm(WasmMsg::Execute {
                         contract_addr, msg, ..
                     }) => {
-                        assert_eq!(contract_addr, "okp4-objectarium1".to_string());
+                        assert_eq!(contract_addr, "axone-objectarium1".to_string());
                         if case.0 > 1 {
                             match from_json(&msg) {
                                 Ok(StorageMsg::UnpinObject { id }) => {

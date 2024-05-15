@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:ns0="https://ontology.axone.space/core/">
+
+  <owl:NamedIndividual rdf:about="https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33">
+    <rdf:type rdf:resource="https://ontology.axone.space/core/DataSpace"/>
+    <ns0:hasRegistrar rdf:resource="did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"/>
+  </owl:NamedIndividual>
+
+  <owl:NamedIndividual rdf:about="https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473">
+    <ns0:describes rdf:resource="https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33"/>
+    <ns0:hasDescription xml:lang="en">A test Data Space.</ns0:hasDescription>
+    <ns0:hasDescription xml:lang="fr">Un Data Space de test.</ns0:hasDescription>
+    <ns0:hasPublisher>AXONE</ns0:hasPublisher>
+    <rdf:type rdf:resource="https://ontology.axone.space/metadata/dataspace/GeneralMetadata"/>
+    <ns0:hasTag>AXONE</ns0:hasTag>
+    <ns0:hasTag>Test</ns0:hasTag>
+    <ns0:hasTopic rdf:resource="https://ontology.axone.space/thesaurus/topic/Test"/>
+    <ns0:hasTitle xml:lang="fr">Data Space de test</ns0:hasTitle>
+    <ns0:hasTitle xml:lang="en">Test Data Space</ns0:hasTitle>
+  </owl:NamedIndividual>
+
+  <owl:NamedIndividual rdf:about="https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde">
+    <ns0:hasIdentifier rdf:resource="urn:uuid:0ea1fc7a-dd97-4adc-a10e-169c6597bcde"/>
+    <ns0:providedBy rdf:resource="https://ontology.axone.space/dataverse/service/d1b0b4d3-f9a6-4115-bcd8-ad97233a7b08"/>
+    <ns0:belongsTo rdf:resource="https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33"/>
+    <rdf:type rdf:resource="https://ontology.axone.space/core/Dataset"/>
+    <ns0:hasRegistrar rdf:resource="did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"/>
+  </owl:NamedIndividual>
+
+  <owl:NamedIndividual rdf:about="https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e">
+    <ns0:hasPublisher>AXONE</ns0:hasPublisher>
+    <ns0:hasLicense rdf:resource="https://ontology.axone.space/thesaurus/license/LO-FR-1_0"/>
+    <ns0:hasFormat rdf:resource="https://ontology.axone.space/thesaurus/media-type/application_vndms-excel"/>
+    <rdf:type rdf:resource="https://ontology.axone.space/metadata/dataset/GeneralMetadata"/>
+    <ns0:hasTag>test</ns0:hasTag>
+    <ns0:hasTitle xml:lang="fr">Dataset de test</ns0:hasTitle>
+    <ns0:hasTitle xml:lang="en">test Dataset</ns0:hasTitle>
+    <ns0:hasCreator>Me</ns0:hasCreator>
+    <ns0:describes rdf:resource="https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde"/>
+    <ns0:hasDescription xml:lang="en">A test Dataset.</ns0:hasDescription>
+    <ns0:hasDescription xml:lang="fr">Un Dataset de test.</ns0:hasDescription>
+    <ns0:hasTopic rdf:resource="https://ontology.axone.space/thesaurus/topic/Test"/>
+  </owl:NamedIndividual>
+
+  <owl:NamedIndividual rdf:about="https://ontology.axone.space/dataverse/dataset/metadata/15592fd4-e368-46d3-b113-5d0ef8d4d10f">
+    <ns0:createdBy rdf:resource="did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"/>
+    <ns0:lastModifiedBy rdf:resource="did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655"/>
+    <ns0:updatedOn rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2023-03-28T00:00:00+00:00</ns0:updatedOn>
+    <rdf:type rdf:resource="https://ontology.axone.space/metadata/AuditMetadata"/>
+    <ns0:createdOn rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2023-03-28T00:00:00+00:00</ns0:createdOn>
+    <ns0:describes rdf:resource="https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde"/>
+  </owl:NamedIndividual>
+
+</rdf:RDF>

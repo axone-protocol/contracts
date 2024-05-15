@@ -1,0 +1,43 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix ns0: <https://ontology.axone.space/core/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33>
+  a owl:NamedIndividual, <https://ontology.axone.space/core/DataSpace> ;
+  ns0:hasRegistrar <did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655> .
+
+<https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473>
+  a owl:NamedIndividual, <https://ontology.axone.space/metadata/dataspace/GeneralMetadata> ;
+  ns0:describes <https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
+  ns0:hasDescription "A test Data Space."@en, "Un Data Space de test."@fr ;
+  ns0:hasPublisher "AXONE" ;
+  ns0:hasTag "AXONE", "Test" ;
+  ns0:hasTopic <https://ontology.axone.space/thesaurus/topic/Test> ;
+  ns0:hasTitle "Data Space de test"@fr, "Test Data Space"@en .
+
+<https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde>
+  a owl:NamedIndividual, ns0:Dataset ;
+  ns0:hasIdentifier <urn:uuid:0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;
+  ns0:providedBy <https://ontology.axone.space/dataverse/service/d1b0b4d3-f9a6-4115-bcd8-ad97233a7b08> ;
+  ns0:belongsTo <https://ontology.axone.space/dataverse/dataspace/97ff7e16-c08d-47be-8475-211016c82e33> ;
+  ns0:hasRegistrar <did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655> .
+
+<https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e>
+  a owl:NamedIndividual, <https://ontology.axone.space/metadata/dataset/GeneralMetadata> ;
+  ns0:hasPublisher "AXONE" ;
+  ns0:hasLicense <https://ontology.axone.space/thesaurus/license/LO-FR-1_0> ;
+  ns0:hasFormat <https://ontology.axone.space/thesaurus/media-type/application_vndms-excel> ;
+  ns0:hasTag "test" ;
+  ns0:hasTitle "Dataset de test"@fr, "test Dataset"@en ;
+  ns0:hasCreator "Me" ;
+  ns0:describes <https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> ;
+  ns0:hasDescription "A test Dataset."@en, "Un Dataset de test."@fr ;
+  ns0:hasTopic <https://ontology.axone.space/thesaurus/topic/Test> .
+
+<https://ontology.axone.space/dataverse/dataset/metadata/15592fd4-e368-46d3-b113-5d0ef8d4d10f>
+  a owl:NamedIndividual, <https://ontology.axone.space/metadata/AuditMetadata> ;
+  ns0:createdBy <did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655> ;
+  ns0:lastModifiedBy <did:key:0x04d1f1b8f8a7a28f9a5a254c326a963a22f5a5b5d5f5e5d5c5b5a5958575655> ;
+  ns0:updatedOn "2023-03-28T00:00:00+00:00"^^xsd:dateTime ;
+  ns0:createdOn "2023-03-28T00:00:00+00:00"^^xsd:dateTime ;
+  ns0:describes <https://ontology.axone.space/dataverse/dataset/0ea1fc7a-dd97-4adc-a10e-169c6597bcde> .

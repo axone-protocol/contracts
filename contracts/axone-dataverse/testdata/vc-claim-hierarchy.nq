@@ -1,0 +1,16 @@
+<did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB> <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/hasCategory> <https://w3id.org/axone/ontology/vnext/thesaurus/digital-service-category/Storage> .
+<did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB> <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/hasTag> "Cloud" .
+<did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB> <test:claim#named-hierarchy> <test:named-link> .
+<test:named-link> <test:claim#nested-predicate> "nested value" .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/DigitalServiceDescriptionCredential> .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <https://www.w3.org/2018/credentials#credentialSubject> <did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB> .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <https://www.w3.org/2018/credentials#issuanceDate> "2024-01-22T00:00:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <https://www.w3.org/2018/credentials#expirationDate> "2025-01-22T00:00:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <https://www.w3.org/2018/credentials#issuer> <did:key:zQ3shs7auhJSmVJpiUbQWco6bxxEhSqWnVEPvaBHBRvBKw6Q3> .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <https://w3id.org/security#proof> _:b0 .
+_:b1 <http://purl.org/dc/terms/created> "2024-02-01T17:46:53.676947Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> _:b0 .
+_:b1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/security#Ed25519Signature2020> _:b0 .
+_:b1 <https://w3id.org/security#proofPurpose> <https://w3id.org/security#assertionMethod> _:b0 .
+_:b1 <https://w3id.org/security#proofValue> "z3WboEDRwsWokH8vQrveVWbg6fQnqhHfhrkGHT9tyG2GYgzQVZ9zFW6eK2ZNcnGhydqXWDwwTsZq29e7cHJkbnVkF"^^<https://w3id.org/security#multibase> _:b0 .
+_:b1 <https://w3id.org/security#verificationMethod> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY#z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> _:b0 .

@@ -1,0 +1,12 @@
+[package]
+authors = ["AXONE"]
+edition = "2021"
+name = "axone-objectarium-client"
+version = "5.0.0"
+
+[dependencies]
+axone-objectarium.workspace = true
+axone-wasm.workspace = true
+cosmwasm-std.workspace = true
+schemars.workspace = true
+serde.workspace = true

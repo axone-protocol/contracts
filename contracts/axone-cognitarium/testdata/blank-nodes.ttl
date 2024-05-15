@@ -1,0 +1,37 @@
+@prefix area: <https://ontology.axone.space/thesaurus/area/> .
+@prefix core: <https://ontology.axone.space/core/> .
+@prefix dataset: <https://ontology.axone.space/dataverse/dataset/> .
+@prefix license: <https://ontology.axone.space/thesaurus/license/> .
+@prefix mediatype: <https://ontology.axone.space/thesaurus/media-type/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix topic: <https://ontology.axone.space/thesaurus/topic/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://ontology.axone.space/dataverse/dataset/metadata/80b1f84e-86dc-4730-b54f-701ad9b1888a> a owl:NamedIndividual,
+        <https://ontology.axone.space/metadata/dataset/GeneralMetadata> ;
+  core:describes dataset:7ff3d2a4-e6b2-4b06-8619-4fc8740dad86 ;
+  core:hasCreator "IGN" ;
+  core:hasDescription "ADMIN EXPRESS permet d'effectuer des croisements avec d'autres sources de données dans le but de construire des représentations thématiques du territoire selon une granularité administrative (commune, arrondissement départementaux, département, région). ADMIN EXPRESS est décliné dans une édition \"COG\", conforme au code officiel géographique publié chaque année par l'INSEE."@fr ;
+  core:hasDescription "ADMIN EXPRESS allows cross-referencing with other data sources in order to build thematic representations of the territory according to an administrative granularity (commune, departmental district, department, region). ADMIN EXPRESS is available in a \"COG\" edition, in accordance with the official geographic code published each year by INSEE."@en ;
+  core:hasDescription "ADMIN EXPRESS ermöglicht es, Kreuzungen mit anderen Datenquellen vorzunehmen, um thematische Darstellungen des Gebiets nach administrativer Granularität (Gemeinde, Departementsbezirke, Departement, Region) zu erstellen. ADMIN EXPRESS ist in einer \"COG\"-Ausgabe erhältlich, die dem offiziellen geografischen Code entspricht, der jedes Jahr vom INSEE veröffentlicht wird."@de ;
+  core:hasFormat mediatype:application_vnd-shp ;
+  core:hasImage <https://images.unsplash.com/photo-1537721664796-76f77222a5d0> ;
+  core:hasLicense license:LO-FR-2_0 ;
+  core:hasPublisher "AXONE" ;
+  core:hasSpatialCoverage area:250 ;
+  core:hasTag "INSEE",
+      "commune",
+      "france",
+      "open data",
+      "territoire" ;
+  core:hasTemporalCoverage [ 
+      a owl:NamedIndividual, core:Period ; 
+      core:hasStartDate "2022-01-01T00:00:00+00:00"^^xsd:dateTime 
+  ] ;
+  core:hasInformations [
+      core:hasInformation "this is a dataset"
+  ] ;
+  core:hasTitle "ADMIN EXPRESS COG 2022 COMMUNE"@fr ;
+  core:hasTitle "ADMIN EXPRESS COG 2022 CITY"@en ;
+  core:hasTitle "ADMIN EXPRESS COG 2022 GEMEINDE"@de ;
+  core:hasTopic topic:Other .

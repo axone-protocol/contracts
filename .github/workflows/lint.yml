@@ -277,7 +277,7 @@ jobs:
       - name: Report wasm size limit
         uses: andresz1/size-limit-action@v1
         with:
-          github_token: ${{ secrets.OKP4_TOKEN }}
+          github_token: ${{ secrets.OPS_TOKEN }}
 
   check-contracts:
     runs-on: ubuntu-22.04
@@ -405,7 +405,7 @@ jobs:
         if: ${{ failure() }}
         uses: codelytv/no-pull-requests@v1
         with:
-          GITHUB_TOKEN: ${{ secrets.OKP4_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.OPS_TOKEN }}
           message: 🙅 Closing the PR because it does not respect naming conventions. Edit the branch name and submit a new PR.
     env:
-      GITHUB_TOKEN: ${{ secrets.OKP4_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.OPS_TOKEN }}

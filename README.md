@@ -1,18 +1,18 @@
-# 📜 OKP4 Smart Contracts
+# 📜 AXONE Smart Contracts
 
-> [CosmWasm](https://cosmwasm.com) contracts for the [OKP4 network](http://okp4.network).
+> [CosmWasm](https://cosmwasm.com) contracts for the [AXONE network](http://axone.xyz).
 
-[![build](https://img.shields.io/github/actions/workflow/status/okp4/contracts/build.yml?label=build&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/build.yml)
-[![lint](https://img.shields.io/github/actions/workflow/status/okp4/contracts/lint.yml?label=lint&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/lint.yml)
-[![test](https://img.shields.io/github/actions/workflow/status/okp4/contracts/test.yml?label=test&style=for-the-badge&logo=github)](https://github.com/okp4/contracts/actions/workflows/test.yml)
-[![coverage](https://img.shields.io/codecov/c/github/okp4/contracts?style=for-the-badge)](https://app.codecov.io/gh/okp4/contracts)
+[![build](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/build.yml?label=build&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/build.yml)
+[![lint](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/lint.yml?label=lint&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/lint.yml)
+[![test](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/test.yml?label=test&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/test.yml)
+[![coverage](https://img.shields.io/codecov/c/github/axone-protocol/contracts?style=for-the-badge)](https://app.codecov.io/gh/axone-protocol/contracts)
 [![conventional commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg?style=for-the-badge&logo=conventionalcommits)](https://conventionalcommits.org)
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=for-the-badge)](https://github.com/semantic-release/semantic-release)
 [![license](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=for-the-badge)](https://opensource.org/licenses/BSD-3-Clause)
 
 ## ✨ Smart Contracts
 
-This repository hosts Smart Contracts that are deployed on the [OKP4 network](http://okp4.network). But they are compatible with any
+This repository hosts Smart Contracts that are deployed on the [AXONE network](http://axone.xyz). But they are compatible with any
 [Cosmos blockchains](https://cosmos.network/) that uses the [CosmWasm](https://cosmwasm.com/) framework.
 
 ### 🗄️ Storage oriented Smart Contracts
@@ -23,8 +23,8 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
 <table>
   <tr>
     <th rowspan="4">
-      <a href="https://docs.okp4.network/contracts/next/okp4-objectarium"><img align="center" width="350" src="etc/objectarium.webp" alt="objectarium" /></a>
-      <br/><sub><a href="https://docs.okp4.network/contracts/next/okp4-objectarium">→ Tech documentation</a></sub>
+      <a href="https://docs.axone.xyz/contracts/next/axone-objectarium"><img align="center" width="350" src="etc/objectarium.webp" alt="objectarium" /></a>
+      <br/><sub><a href="https://docs.axone.xyz/contracts/next/axone-objectarium">→ Tech documentation</a></sub>
     </th>
   </tr>
   <tr>
@@ -32,8 +32,8 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
       <a href="#---mature-stage">
       <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
       </a>
-      <a href="https://github.com/okp4/contracts/releases" target="_blank">
-      <img alt="version" src="https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github"/>
+      <a href="https://github.com/axone-protocol/contracts/releases" target="_blank">
+      <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
     </a>
     </td>
   </tr>
@@ -56,8 +56,8 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
 <table>
   <tr>
     <th rowspan="4">
-      <a href="https://docs.okp4.network/contracts/next/okp4-cognitarium"><img align="center" width="350" src="etc/cognitarium.webp" alt="cognitarium" /></a>
-      <br/><sub><a href="https://docs.okp4.network/contracts/next/okp4-cognitarium">→ Tech documentation</a></sub>
+      <a href="https://docs.axone.xyz/contracts/next/axone-cognitarium"><img align="center" width="350" src="etc/cognitarium.webp" alt="cognitarium" /></a>
+      <br/><sub><a href="https://docs.axone.xyz/contracts/next/axone-cognitarium">→ Tech documentation</a></sub>
     </th>
   </tr>
     <tr>
@@ -65,8 +65,8 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
       <a href="#---intermediate-stage">
       <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
       </a>
-      <a href="https://github.com/okp4/contracts/releases" target="_blank">
-      <img alt="version" src="https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github"/>
+      <a href="https://github.com/axone-protocol/contracts/releases" target="_blank">
+      <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
     </a>
     </td>
   </tr>
@@ -91,8 +91,8 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
 <table>
   <tr>
     <th rowspan="4">
-      <a href="https://docs.okp4.network/contracts/next/okp4-law-stone"><img align="center" width="350" src="etc/law-stone.webp" alt="law-stone" /></a>
-      <br/><sub><a href="https://docs.okp4.network/contracts/next/okp4-law-stone">→ Tech documentation</a></sub>
+      <a href="https://docs.axone.xyz/contracts/next/axone-law-stone"><img align="center" width="350" src="etc/law-stone.webp" alt="law-stone" /></a>
+      <br/><sub><a href="https://docs.axone.xyz/contracts/next/axone-law-stone">→ Tech documentation</a></sub>
     </th>
   </tr>
   <tr>
@@ -100,8 +100,8 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
       <a href="#---mature-stage">
       <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
       </a>
-      <a href="https://github.com/okp4/contracts/releases" target="_blank">
-      <img alt="version" src="https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github"/>
+      <a href="https://github.com/axone-protocol/contracts/releases" target="_blank">
+      <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
     </a>
     </td>
   </tr>
@@ -128,8 +128,8 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
 <table>
   <tr>
     <th rowspan="4">
-      <a href="https://docs.okp4.network/contracts/next/okp4-dataverse"><img align="center" width="350" src="etc/dataverse.webp" alt="dataverse" /></a>
-      <br/><sub><a href="https://docs.okp4.network/contracts/next/okp4-dataverse">→ Tech documentation</a></sub>
+      <a href="https://docs.axone.xyz/contracts/next/axone-dataverse"><img align="center" width="350" src="etc/dataverse.webp" alt="dataverse" /></a>
+      <br/><sub><a href="https://docs.axone.xyz/contracts/next/axone-dataverse">→ Tech documentation</a></sub>
     </th>
   </tr>
   <tr>
@@ -137,14 +137,14 @@ This repository hosts Smart Contracts that are deployed on the [OKP4 network](ht
       <a href="#---genesis-stage">
       <img alt="status: genesis" src="https://img.shields.io/badge/status-💥-black?style=for-the-badge" />
       </a>
-      <a href="https://github.com/okp4/contracts/releases" target="_blank">
-      <img alt="version" src="https://img.shields.io/github/v/release/okp4/contracts?style=for-the-badge&logo=github"/>
+      <a href="https://github.com/axone-protocol/contracts/releases" target="_blank">
+      <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
     </a>
     </td>
   </tr>
   <tr>
     <td>
-<p>A Smart Contract responsible for overseeing and managing the <a href="https://docs.okp4.network/whitepaper/solution#the-dataverse">Dataverse</a> within the <a href="https://okp4.network">OKP4 network</a>.</p><p>The Dataverse is an ever-expanding universe that encompasses a wide range of Digital Resources, including datasets, data processing algorithms, ML algorithm, storage resources, computational resources, identity management solutions, orchestration engines, oracles, and many other resources recorded on the blockchain.</p>
+<p>A Smart Contract responsible for overseeing and managing the <a href="https://docs.axone.xyz/whitepaper/solution#the-dataverse">Dataverse</a> within the <a href="https://axone.xyz">AXONE network</a>.</p><p>The Dataverse is an ever-expanding universe that encompasses a wide range of Digital Resources, including datasets, data processing algorithms, ML algorithm, storage resources, computational resources, identity management solutions, orchestration engines, oracles, and many other resources recorded on the blockchain.</p>
     </td>
   </tr>
   <tr>
@@ -242,7 +242,7 @@ cargo make --list-all-steps | grep chain | sort | sed -r 's/chain(-?[a-zA-Z\-]*)
 
 The list of available tasks for managing the chain is as follows:
 
-- `chain` - Run the okp4d CLI using the chain's home directory under a Docker container.
+- `chain` - Run the axoned CLI using the chain's home directory under a Docker container.
 - `chain-add-keys` - Add a set of predefined keys (recovered from the seed phrases) to the chain.
 - `chain-clean` - Clean the chain data (⚠️ definitively)
 - `chain-deploy-contract` - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
@@ -255,7 +255,7 @@ The list of available tasks for managing the chain is as follows:
 - `chain-list-contracts` - List all the contracts deployed to the chain.
 - `chain-logs` - Show the chain's container logs.
 - `chain-query-contract` - Query a specific contract to the chain. The contract must be already deployed and instantiated.
-- `chain-start` - Run the full node okp4d application using the chain's home directory under a Docker container.
+- `chain-start` - Run the full node axoned application using the chain's home directory under a Docker container.
 - `chain-stop` - Stop the chain's container.
 
 ## 💻 Develop
@@ -302,11 +302,11 @@ Now, you can interact with the deployed Smart Contracts and test them out.
 
 ### 🎮 Free execution of the CLI command
 
-You can freely interact with the local chain by executing the following CLI command. This will execute the `okp4d`
+You can freely interact with the local chain by executing the following CLI command. This will execute the `axoned`
 binary
 inside a Docker container with the `--home` argument pointing to the chain's home directory and using the same network
 as
-the chain's container. The arguments passed to the command will be directly passed to the `okp4d` binary.
+the chain's container. The arguments passed to the command will be directly passed to the `axoned` binary.
 
 ```sh
 cargo make chain <command>
@@ -407,23 +407,23 @@ git commit -am "docs: update generated documentation"
 ## 📘 Resources
 
 - [CosmWasm Docs](https://docs.cosmwasm.com/)
-- [OKP4 Whitepaper](https://docs.okp4.network/whitepaper/abstract)
-- [OKP4 Blockchain](https://githhub.com/okp4/okp4d)
+- [AXONE Whitepaper](https://docs.axone.xyz/whitepaper/abstract)
+- [AXONE Blockchain](https://github.com/axone-protocol/axoned)
 
 ## You want to get involved? 😍
 
 So you want to contribute? Great! ❤️ We appreciate any help you're willing to give. Don't hesitate to open issues and/or
 submit pull requests.
 
-We believe that collaboration is key to the success of the OKP4 project. Join our Community discussions on the [Community Repository](https://github.com/okp4/community) to:
+We believe that collaboration is key to the success of the AXONE project. Join our Community discussions on the [Community Repository](https://github.com/axone-protocol/community) to:
 
 - Engage in conversations with peers and experts.
-- Share your insights and experiences with OKP4.
+- Share your insights and experiences with AXONE.
 - Learn from others and expand your knowledge of the protocol.
 
-The Community Repository serves as a hub for discussions, questions, and knowledge-sharing related to OKP4. We encourage you to actively participate and contribute to the growth of our community.
+The Community Repository serves as a hub for discussions, questions, and knowledge-sharing related to AXONE. We encourage you to actively participate and contribute to the growth of our community.
 
-Please check out OKP4 health files:
+Please check out AXONE health files:
 
-- [Contributing](https://github.com/okp4/.github/blob/main/CONTRIBUTING.md)
-- [Code of conduct](https://github.com/okp4/.github/blob/main/CODE_OF_CONDUCT.md)
+- [Contributing](https://github.com/axone-protocol/.github/blob/main/CONTRIBUTING.md)
+- [Code of conduct](https://github.com/axone-protocol/.github/blob/main/CODE_OF_CONDUCT.md)

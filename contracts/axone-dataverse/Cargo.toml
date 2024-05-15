@@ -1,0 +1,50 @@
+[package]
+authors = ["AXONE"]
+edition = "2021"
+name = "axone-dataverse"
+rust-version = "1.75"
+version = "5.0.0"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+axone-cognitarium.workspace = true
+axone-cognitarium-client.workspace = true
+axone-rdf.workspace = true
+base64 = "0.22.0"
+bs58 = "0.5.1"
+cosmwasm-schema.workspace = true
+cosmwasm-std.workspace = true
+cosmwasm-storage.workspace = true
+cw-storage-plus.workspace = true
+cw-utils.workspace = true
+cw2.workspace = true
+itertools = "0.12.1"
+multibase = "0.9.1"
+rio_api.workspace = true
+rio_turtle.workspace = true
+schemars.workspace = true
+serde.workspace = true
+sha2 = "0.10.8"
+thiserror.workspace = true
+unsigned-varint = "0.8.0"
+
+[dev-dependencies]
+base64 = "0.22.0"
+cw-multi-test.workspace = true
+url = "2.5.0"
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []

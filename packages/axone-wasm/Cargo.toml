@@ -1,0 +1,14 @@
+[package]
+authors = ["AXONE"]
+edition = "2021"
+name = "axone-wasm"
+version = "5.0.0"
+
+[dependencies]
+cosmwasm-std.workspace = true
+form_urlencoded = "1.2.1"
+schemars.workspace = true
+serde.workspace = true
+serde-json-wasm.workspace = true
+thiserror.workspace = true
+url = "2.5.0"

@@ -1,0 +1,7 @@
+variables:
+  - name: contract_name
+    default_value: axone-foo
+
+scripts:
+  - message: |
+      🖨️ Smart contract 🚀 {{ contract_name }} scaffolded! Enjoy!

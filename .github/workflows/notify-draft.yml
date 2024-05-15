@@ -11,9 +11,9 @@ jobs:
       - name: Update draft docs repository
         uses: fjogeleit/http-request-action@v1
         with:
-          url: 'https://api.github.com/repos/okp4/docs/actions/workflows/39152549/dispatches'
+          url: 'https://api.github.com/repos/axone-protocol/docs/actions/workflows/39152549/dispatches'
           method: 'POST'
-          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OKP4_TOKEN }}"}'
+          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OPS_TOKEN }}"}'
           data: |-
             {
               "ref": "main",
@@ -26,20 +26,20 @@ jobs:
               }
             }
 
-  update-schema:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Update draft docs repository
-        uses: fjogeleit/http-request-action@v1
-        with:
-          url: 'https://api.github.com/repos/okp4/okp4-contract-schema/actions/workflows/68383422/dispatches'
-          method: 'POST'
-          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OKP4_TOKEN }}"}'
-          data: |-
-            {
-              "ref": "main",
-              "inputs": {
-                "ref": "main",
-                "draft": "true"
-              }
-            }
+#  update-schema:
+#    runs-on: ubuntu-22.04
+#    steps:
+#      - name: Update draft docs repository
+#        uses: fjogeleit/http-request-action@v1
+#        with:
+#          url: 'https://api.github.com/repos/okp4/okp4-contract-schema/actions/workflows/68383422/dispatches'
+#          method: 'POST'
+#          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OPS_TOKEN }}"}'
+#          data: |-
+#            {
+#              "ref": "main",
+#              "inputs": {
+#                "ref": "main",
+#                "draft": "true"
+#              }
+#            }

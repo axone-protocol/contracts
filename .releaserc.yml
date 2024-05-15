@@ -20,7 +20,8 @@ plugins:
     - prepareCmd: |
         cargo make schema && cargo make docs-generate && cargo make release-wasm
   - - "@semantic-release/github"
-    - assets:
+    - successComment: false
+      assets:
         - path: "./artifacts/axone_objectarium.wasm"
         - path: "./artifacts/axone_law_stone.wasm"
         - path: "./artifacts/axone_cognitarium.wasm"

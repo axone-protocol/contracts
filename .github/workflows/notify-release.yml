@@ -2,7 +2,7 @@ name: notify-release
 
 on:
   release:
-    types: [published]
+    types: [ published ]
 
 jobs:
   notify-discord:
@@ -11,7 +11,7 @@ jobs:
       - name: Notify Discord
         uses: fjogeleit/http-request-action@v1
         with:
-          url: ${{ secrets.AXONE_DISCORD_WEBHOOK }}
+          url: ${{ secrets.DISCORD_WEBHOOK }}
           method: 'POST'
           customHeaders: '{"Content-Type": "application/json"}'
           data: |-
@@ -29,7 +29,7 @@ jobs:
         with:
           url: 'https://api.github.com/repos/axone-protocol/docs/actions/workflows/39152549/dispatches'
           method: 'POST'
-          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.AXONE_TOKEN }}"}'
+          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OPS_TOKEN }}"}'
           data: |-
             {
               "ref": "main",
@@ -50,7 +50,7 @@ jobs:
 #        with:
 #          url: 'https://api.github.com/repos/okp4/okp4-contract-schema/actions/workflows/68383422/dispatches'
 #          method: 'POST'
-#          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.AXONE_TOKEN }}"}'
+#          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OPS_TOKEN }}"}'
 #          data: |-
 #            {
 #              "ref": "main",

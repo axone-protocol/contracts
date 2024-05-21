@@ -12,5 +12,5 @@ jobs:
     steps:
       - uses: actions/add-to-project@v1.0.1
         with:
-          project-url: https://github.com/orgs/axone-protocol/projects/9
+          project-url: https://github.com/orgs/axone-protocol/projects/2
           github-token: ${{ secrets.OPS_TOKEN }}

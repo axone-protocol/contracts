@@ -6,9 +6,9 @@ rust-version = "1.75"
 version = "5.0.0"
 
 exclude = [
-    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-    "contract.wasm",
-    "hash.txt",
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -46,3 +46,8 @@ serde_yaml = "0.9.34"
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+
+[[test]]
+harness = false
+name = "cucumber"
+path = "tests/e2e/main.rs"

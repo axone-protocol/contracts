@@ -6,9 +6,9 @@ rust-version = "1.75"
 version = "5.0.0"
 
 exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
+    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+    "contract.wasm",
+    "hash.txt",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -35,7 +35,11 @@ thiserror.workspace = true
 
 [dev-dependencies]
 base64 = "0.22.1"
+cucumber = "0.21.0"
 cw-multi-test.workspace = true
+futures = "0.3.30"
+serde_json = "1.0.117"
+serde_yaml = "0.9.34"
 
 [features]
 # for more explicit tests, cargo test --features=backtraces

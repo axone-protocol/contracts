@@ -143,11 +143,9 @@ mod tests {
         WhereCondition, IRI,
     };
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{
-        from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError,
-        SystemResult, Uint128, Uint64, WasmQuery,
-    };
+    use cosmwasm_std::{from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError, SystemResult, Uint128, Uint64, WasmQuery, coins};
     use std::collections::BTreeMap;
+    use cw_utils::PaymentError;
 
     #[test]
     fn proper_instantiate() {
@@ -235,6 +233,22 @@ mod tests {
                 triplestore_address: Addr::unchecked("my-dataverse-addr"),
             }
         );
+    }
+
+    #[test]
+    fn execute_fail_with_funds() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let msg = ExecuteMsg::SubmitClaims {
+            metadata: Binary::from("data".as_bytes()),
+            format: Some(RdfFormat::NQuads),
+        };
+
+        let result = execute(deps.as_mut(), env, info, msg);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ContractError::Payment(PaymentError::NonPayable {})));
     }
 
     #[test]

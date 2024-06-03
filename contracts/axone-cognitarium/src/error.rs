@@ -1,4 +1,5 @@
 use cosmwasm_std::{StdError, Uint128};
+use cw_utils::PaymentError;
 use rio_turtle::TurtleError;
 use rio_xml::RdfXmlError;
 use thiserror::Error;
@@ -19,6 +20,9 @@ pub enum ContractError {
 
     #[error("Only the owner can perform this operation.")]
     Unauthorized,
+
+    #[error("{0}")]
+    Payment(#[from] PaymentError),
 }
 
 impl From<RdfXmlError> for ContractError {

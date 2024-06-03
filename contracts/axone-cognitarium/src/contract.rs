@@ -4,6 +4,7 @@ use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
+use cw_utils::nonpayable;
 
 use crate::error::ContractError;
 use crate::msg::{DataFormat, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -36,6 +37,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     match msg {
         ExecuteMsg::InsertData { format, data } => {
             execute::insert(deps, info, format.unwrap_or_default(), data)

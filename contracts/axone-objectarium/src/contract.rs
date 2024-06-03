@@ -3,6 +3,7 @@ use crate::error::BucketError;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
+use cw_utils::nonpayable;
 
 use crate::crypto;
 use crate::error::ContractError;
@@ -42,6 +43,8 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
     match msg {
         ExecuteMsg::StoreObject {
             data,
@@ -434,6 +437,7 @@ mod tests {
     use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::{coins, from_json, Addr, Attribute, Order, StdError, Uint128};
     use cw_utils::PaymentError;
+
     use std::any::type_name;
 
     fn decode_hex(hex: &str) -> Vec<u8> {

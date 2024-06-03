@@ -5,6 +5,7 @@ use cosmwasm_std::{
     MessageInfo, Response, StdError, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
+use cw_utils::nonpayable;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -70,6 +71,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     match msg {
         ExecuteMsg::SubmitClaims {
             metadata,
@@ -143,9 +145,12 @@ mod tests {
         WhereCondition, IRI,
     };
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError, SystemResult, Uint128, Uint64, WasmQuery, coins};
-    use std::collections::BTreeMap;
+    use cosmwasm_std::{
+        coins, from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg,
+        SystemError, SystemResult, Uint128, Uint64, WasmQuery,
+    };
     use cw_utils::PaymentError;
+    use std::collections::BTreeMap;
 
     #[test]
     fn proper_instantiate() {
@@ -248,7 +253,10 @@ mod tests {
 
         let result = execute(deps.as_mut(), env, info, msg);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ContractError::Payment(PaymentError::NonPayable {})));
+        assert!(matches!(
+            result.unwrap_err(),
+            ContractError::Payment(PaymentError::NonPayable {})
+        ));
     }
 
     #[test]

@@ -229,6 +229,7 @@ pub mod execute {
         BUCKET.update(deps.storage, |mut b| -> Result<_, ContractError> {
             b.stat.object_count -= Uint128::one();
             b.stat.size -= object.size;
+            b.stat.compressed_size -= object.compressed_size;
             Ok(b)
         })?;
 

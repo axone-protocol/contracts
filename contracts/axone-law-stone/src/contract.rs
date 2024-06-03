@@ -287,12 +287,13 @@ mod tests {
         MockQuerierCustomHandlerResult, MockStorage,
     };
     use cosmwasm_std::{
-        from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
-        OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
+        coins, from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event,
+        Order, OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use cw_utils::ParseReplyError::SubMsgFailure;
     use std::collections::VecDeque;
     use std::marker::PhantomData;
+    use cw_utils::PaymentError;
 
     fn custom_logic_handler_with_dependencies(
         dependencies: Vec<String>,
@@ -851,6 +852,22 @@ mod tests {
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
         }
+    }
+
+    #[test]
+    fn execute_fail_with_funds() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let result = execute(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            ExecuteMsg::BreakStone,
+        );
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ContractError::Payment(PaymentError::NonPayable {}));
     }
 
     #[test]

@@ -2200,6 +2200,7 @@ mod tests {
             forget_senders: Vec<MessageInfo>,
             expected_count: usize,
             expected_total_size: Uint128,
+            expected_compressed_size: Uint128,
             expected_error: Option<ContractError>,
         }
 
@@ -2211,8 +2212,9 @@ mod tests {
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
                 forget_senders: vec![mock_info("bob", &[])],
-                expected_count: 2,
-                expected_total_size: Uint128::new(9),
+                expected_count: 3,
+                expected_total_size: Uint128::new(474),
+                expected_compressed_size: Uint128::new(418),
                 expected_error: None,
             },
             TC {
@@ -2227,8 +2229,21 @@ mod tests {
                     ),
                 ],
                 forget_senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
-                expected_count: 1,
-                expected_total_size: Uint128::new(4),
+                expected_count: 2,
+                expected_total_size: Uint128::new(469),
+                expected_compressed_size: Uint128::new(413),
+                expected_error: None,
+            },
+            TC {
+                pins: vec![],
+                pins_senders: vec![],
+                forget_objects: vec![ObjectId::from(
+                    "d1abcabb14dd23d2cf60472dffb4823be10ac20148e8ef7b9644cc14fcf8a073",
+                )],
+                forget_senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
+                expected_count: 3,
+                expected_total_size: Uint128::new(13),
+                expected_compressed_size: Uint128::new(13),
                 expected_error: None,
             },
             TC {
@@ -2240,8 +2255,9 @@ mod tests {
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
                 forget_senders: vec![mock_info("alice", &[])], // the sender is different from the pinner, so error
-                expected_count: 3,
-                expected_total_size: Uint128::new(13),
+                expected_count: 4,
+                expected_total_size: Uint128::new(478),
+                expected_compressed_size: Uint128::new(422),
                 expected_error: Some(ContractError::ObjectPinned {}),
             },
             TC {
@@ -2253,8 +2269,9 @@ mod tests {
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
                 forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, so forget should work
-                expected_count: 2,
-                expected_total_size: Uint128::new(9),
+                expected_count: 3,
+                expected_total_size: Uint128::new(474),
+                expected_compressed_size: Uint128::new(418),
                 expected_error: None,
             },
             TC {
@@ -2271,8 +2288,9 @@ mod tests {
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
                 forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
-                expected_count: 3,
-                expected_total_size: Uint128::new(13),
+                expected_count: 4,
+                expected_total_size: Uint128::new(478),
+                expected_compressed_size: Uint128::new(422),
                 expected_error: Some(ContractError::ObjectPinned {}),
             },
             TC {
@@ -2289,8 +2307,9 @@ mod tests {
                     "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
                 )],
                 forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
-                expected_count: 3,
-                expected_total_size: Uint128::new(13),
+                expected_count: 4,
+                expected_total_size: Uint128::new(478),
+                expected_compressed_size: Uint128::new(422),
                 expected_error: Some(ContractError::Std(StdError::not_found(
                     not_found_object_info::<Object>(
                         "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
@@ -2309,8 +2328,9 @@ mod tests {
                 pins_senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
                 forget_objects: vec![ObjectId::from("invalid id")],
                 forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
-                expected_count: 3,
-                expected_total_size: Uint128::new(13),
+                expected_count: 4,
+                expected_total_size: Uint128::new(478),
+                expected_compressed_size: Uint128::new(422),
                 expected_error: Some(ContractError::Std(StdError::parse_err(
                     type_name::<Vec<u8>>(),
                     "invalid Base16 encoding".to_string(),
@@ -2356,6 +2376,22 @@ mod tests {
                 data: Binary::from_base64(data.as_str()).unwrap(),
                 pin: false,
                 compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+            };
+            let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            let data = general_purpose::STANDARD.encode(
+                "In a magical land, there \
+            were many realms, one of which was known as OKP4. Within this realm, druid programmers \
+            possessed the power to create smart contracts. As the kingdom grew, the druids used \
+            their skills to power decentralized systems, bringing prosperity and wonder to all who \
+            sought their expertise. And so, the legend of the druid programmers and their magical \
+            smart contracts lived on, inspiring future generations to unlock the power of the \
+            digital realm.",
+            );
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(data.as_str()).unwrap(),
+                pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Snappy),
             };
             let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -2414,6 +2450,7 @@ mod tests {
                 Uint128::from(case.expected_count as u128)
             );
             assert_eq!(bucket.stat.size, case.expected_total_size);
+            assert_eq!(bucket.stat.compressed_size, case.expected_compressed_size);
         }
     }
 

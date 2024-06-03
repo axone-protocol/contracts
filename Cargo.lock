@@ -196,6 +196,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus",
+ "cw-utils",
  "cw2",
  "derive_builder",
  "either",

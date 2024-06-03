@@ -23,6 +23,7 @@ cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
+cw-utils.workspace = true
 cw2.workspace = true
 derive_builder = "0.20.0"
 either = "1.12.0"

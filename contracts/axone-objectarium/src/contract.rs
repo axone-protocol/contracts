@@ -432,7 +432,8 @@ mod tests {
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
-    use cosmwasm_std::{from_json, Addr, Attribute, Order, StdError, Uint128};
+    use cosmwasm_std::{coins, from_json, Addr, Attribute, Order, StdError, Uint128};
+    use cw_utils::PaymentError;
     use std::any::type_name;
 
     fn decode_hex(hex: &str) -> Vec<u8> {
@@ -643,6 +644,39 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_json(&res).unwrap();
         assert_eq!("foobar", value.name);
+    }
+
+    #[test]
+    fn execute_fail_with_funds() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let messages = vec![
+            ExecuteMsg::StoreObject {
+                data: Binary::from("data".as_bytes()),
+                pin: false,
+                compression_algorithm: None,
+            },
+            ExecuteMsg::PinObject {
+                id: "object_id".to_string(),
+            },
+            ExecuteMsg::UnpinObject {
+                id: "object_id".to_string(),
+            },
+            ExecuteMsg::ForgetObject {
+                id: "object_id".to_string(),
+            },
+        ];
+
+        for msg in messages {
+            let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+            assert!(result.is_err());
+            assert_eq!(
+                result.unwrap_err(),
+                ContractError::Payment(PaymentError::NonPayable {})
+            );
+        }
     }
 
     #[test]

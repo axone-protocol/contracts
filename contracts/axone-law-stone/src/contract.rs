@@ -9,6 +9,7 @@ use cosmwasm_std::{
     WasmMsg,
 };
 use cw2::set_contract_version;
+use cw_utils::nonpayable;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -57,6 +58,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     match msg {
         ExecuteMsg::BreakStone => execute::break_stone(deps, env, info),
     }
@@ -291,9 +293,9 @@ mod tests {
         Order, OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use cw_utils::ParseReplyError::SubMsgFailure;
+    use cw_utils::PaymentError;
     use std::collections::VecDeque;
     use std::marker::PhantomData;
-    use cw_utils::PaymentError;
 
     fn custom_logic_handler_with_dependencies(
         dependencies: Vec<String>,
@@ -867,7 +869,10 @@ mod tests {
             ExecuteMsg::BreakStone,
         );
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), ContractError::Payment(PaymentError::NonPayable {}));
+        assert_eq!(
+            result.unwrap_err(),
+            ContractError::Payment(PaymentError::NonPayable {})
+        );
     }
 
     #[test]

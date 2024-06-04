@@ -26,9 +26,10 @@ const STORE_PROGRAM_REPLY_ID: u64 = 1;
 pub fn instantiate(
     deps: DepsMut<'_, LogicCustomQuery>,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let store_msg = StorageMsg::StoreObject {
@@ -294,6 +295,7 @@ mod tests {
     };
     use cw_utils::ParseReplyError::SubMsgFailure;
     use cw_utils::PaymentError;
+    use cw_utils::PaymentError::NonPayable;
     use std::collections::VecDeque;
     use std::marker::PhantomData;
 
@@ -385,6 +387,24 @@ mod tests {
             "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string(),
             INSTANTIATE_CONTEXT.load(&deps.storage).unwrap()
         );
+    }
+
+    #[test]
+    fn instantiate_fail_with_funds() {
+        let mut deps =
+            mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let msg = InstantiateMsg {
+            program: to_json_binary("foo(_) :- true.").unwrap(),
+            storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
+                .to_string(),
+        };
+
+        let result = instantiate(deps.as_mut(), env, info, msg);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ContractError::Payment(NonPayable {}));
     }
 
     #[test]

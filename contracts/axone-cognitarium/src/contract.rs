@@ -446,12 +446,12 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coins, from_json, Addr, Attribute, Order, Uint128};
     use cw_utils::PaymentError;
+    use cw_utils::PaymentError::NonPayable;
     use std::collections::BTreeMap;
     use std::fs::File;
     use std::io::Read;
     use std::path::Path;
     use std::{env, u128};
-    use cw_utils::PaymentError::NonPayable;
 
     #[test]
     fn proper_initialization() {

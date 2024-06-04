@@ -390,7 +390,7 @@ mod tests {
     }
 
     #[test]
-    fn instantiate_fail_with_funds() {
+    fn funds_initialization() {
         let mut deps =
             mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
         let env = mock_env();

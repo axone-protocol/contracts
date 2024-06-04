@@ -504,7 +504,7 @@ mod tests {
     }
 
     #[test]
-    fn instantiate_fail_with_funds() {
+    fn funds_initialization() {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let info = mock_info("sender", &coins(10, "uaxone"));

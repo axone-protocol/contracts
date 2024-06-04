@@ -22,6 +22,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     let bucket = Bucket::try_new(
         info.sender,
         msg.bucket,
@@ -648,6 +649,25 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_json(&res).unwrap();
         assert_eq!("foobar", value.name);
+    }
+
+    #[test]
+    fn funds_initialization() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            bucket: "foo".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        let info = mock_info("creator", &coins(10, "uaxone"));
+
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg);
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err(),
+            ContractError::Payment(PaymentError::NonPayable {})
+        );
     }
 
     #[test]

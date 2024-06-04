@@ -21,6 +21,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     STORE.save(deps.storage, &Store::new(info.sender, msg.limits.into()))?;
@@ -450,6 +451,7 @@ mod tests {
     use std::io::Read;
     use std::path::Path;
     use std::{env, u128};
+    use cw_utils::PaymentError::NonPayable;
 
     #[test]
     fn proper_initialization() {
@@ -499,6 +501,19 @@ mod tests {
             BLANK_NODE_IDENTIFIER_COUNTER.load(&deps.storage).unwrap(),
             0u128
         );
+    }
+
+    #[test]
+    fn instantiate_fail_with_funds() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let msg = InstantiateMsg::default();
+
+        let result = instantiate(deps.as_mut(), env, info, msg);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ContractError::Payment(NonPayable {}));
     }
 
     #[test]

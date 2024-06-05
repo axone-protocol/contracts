@@ -5,6 +5,7 @@ use cosmwasm_std::{
     MessageInfo, Response, StdError, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
+use cw_utils::nonpayable;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -18,9 +19,10 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut<'_>,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
@@ -70,6 +72,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     match msg {
         ExecuteMsg::SubmitClaims {
             metadata,
@@ -144,9 +147,10 @@ mod tests {
     };
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
-        from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError,
-        SystemResult, Uint128, Uint64, WasmQuery,
+        coins, from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg,
+        SystemError, SystemResult, Uint128, Uint64, WasmQuery,
     };
+    use cw_utils::PaymentError::NonPayable;
     use std::collections::BTreeMap;
 
     #[test]
@@ -211,6 +215,28 @@ mod tests {
     }
 
     #[test]
+    fn funds_initialization() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let msg = InstantiateMsg {
+            name: "my-dataverse".to_string(),
+            triplestore_config: TripleStoreConfig {
+                code_id: Uint64::from(17u64),
+                limits: TripleStoreLimitsInput::default(),
+            },
+        };
+
+        let result = instantiate(deps.as_mut(), env, info, msg);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ContractError::Payment(NonPayable {})
+        ));
+    }
+
+    #[test]
     fn proper_dataverse() {
         let mut deps = mock_dependencies();
 
@@ -235,6 +261,25 @@ mod tests {
                 triplestore_address: Addr::unchecked("my-dataverse-addr"),
             }
         );
+    }
+
+    #[test]
+    fn execute_fail_with_funds() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let msg = ExecuteMsg::SubmitClaims {
+            metadata: Binary::from("data".as_bytes()),
+            format: Some(RdfFormat::NQuads),
+        };
+
+        let result = execute(deps.as_mut(), env, info, msg);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ContractError::Payment(NonPayable {})
+        ));
     }
 
     #[test]

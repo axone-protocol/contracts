@@ -1,7 +1,7 @@
 use axone_logic_bindings::error::TermParseError;
 use axone_wasm::error::CosmwasmUriError;
 use cosmwasm_std::StdError;
-use cw_utils::ParseReplyError;
+use cw_utils::{ParseReplyError, PaymentError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -23,6 +23,9 @@ pub enum ContractError {
 
     #[error("Only the contract admin can perform this operation.")]
     Unauthorized,
+
+    #[error("{0}")]
+    Payment(#[from] PaymentError),
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]

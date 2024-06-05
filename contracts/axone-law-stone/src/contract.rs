@@ -9,6 +9,7 @@ use cosmwasm_std::{
     WasmMsg,
 };
 use cw2::set_contract_version;
+use cw_utils::nonpayable;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -25,9 +26,10 @@ const STORE_PROGRAM_REPLY_ID: u64 = 1;
 pub fn instantiate(
     deps: DepsMut<'_, LogicCustomQuery>,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let store_msg = StorageMsg::StoreObject {
@@ -57,6 +59,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     match msg {
         ExecuteMsg::BreakStone => execute::break_stone(deps, env, info),
     }
@@ -287,10 +290,12 @@ mod tests {
         MockQuerierCustomHandlerResult, MockStorage,
     };
     use cosmwasm_std::{
-        from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order,
-        OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
+        coins, from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event,
+        Order, OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use cw_utils::ParseReplyError::SubMsgFailure;
+    use cw_utils::PaymentError;
+    use cw_utils::PaymentError::NonPayable;
     use std::collections::VecDeque;
     use std::marker::PhantomData;
 
@@ -382,6 +387,24 @@ mod tests {
             "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string(),
             INSTANTIATE_CONTEXT.load(&deps.storage).unwrap()
         );
+    }
+
+    #[test]
+    fn funds_initialization() {
+        let mut deps =
+            mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let msg = InstantiateMsg {
+            program: to_json_binary("foo(_) :- true.").unwrap(),
+            storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
+                .to_string(),
+        };
+
+        let result = instantiate(deps.as_mut(), env, info, msg);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ContractError::Payment(NonPayable {}));
     }
 
     #[test]
@@ -851,6 +874,25 @@ mod tests {
             }
             _ => panic!("Expected Ok(LogicCustomQuery)."),
         }
+    }
+
+    #[test]
+    fn execute_fail_with_funds() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let result = execute(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            ExecuteMsg::BreakStone,
+        );
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            ContractError::Payment(PaymentError::NonPayable {})
+        );
     }
 
     #[test]

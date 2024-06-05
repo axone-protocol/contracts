@@ -4,6 +4,7 @@ use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
+use cw_utils::nonpayable;
 
 use crate::error::ContractError;
 use crate::msg::{DataFormat, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -20,6 +21,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     STORE.save(deps.storage, &Store::new(info.sender, msg.limits.into()))?;
@@ -36,6 +38,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     match msg {
         ExecuteMsg::InsertData { format, data } => {
             execute::insert(deps, info, format.unwrap_or_default(), data)
@@ -441,7 +444,9 @@ mod tests {
     };
     use crate::{msg, state};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_json, Addr, Attribute, Order, Uint128};
+    use cosmwasm_std::{coins, from_json, Addr, Attribute, Order, Uint128};
+    use cw_utils::PaymentError;
+    use cw_utils::PaymentError::NonPayable;
     use std::collections::BTreeMap;
     use std::fs::File;
     use std::io::Read;
@@ -496,6 +501,47 @@ mod tests {
             BLANK_NODE_IDENTIFIER_COUNTER.load(&deps.storage).unwrap(),
             0u128
         );
+    }
+
+    #[test]
+    fn funds_initialization() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let msg = InstantiateMsg::default();
+
+        let result = instantiate(deps.as_mut(), env, info, msg);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), ContractError::Payment(NonPayable {}));
+    }
+
+    #[test]
+    fn execute_fail_with_funds() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info("sender", &coins(10, "uaxone"));
+
+        let messages = vec![
+            InsertData {
+                format: Some(DataFormat::RDFXml),
+                data: Binary::from("data".as_bytes()),
+            },
+            DeleteData {
+                prefixes: vec![],
+                delete: vec![],
+                r#where: vec![],
+            },
+        ];
+
+        for msg in messages {
+            let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+            assert!(result.is_err());
+            assert_eq!(
+                result.unwrap_err(),
+                ContractError::Payment(PaymentError::NonPayable {})
+            );
+        }
     }
 
     #[test]

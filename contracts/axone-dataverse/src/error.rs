@@ -1,6 +1,7 @@
 use crate::credential::error::{InvalidCredentialError, VerificationError};
 use axone_rdf::serde::NQuadsReadError;
 use cosmwasm_std::{Instantiate2AddressError, StdError};
+use cw_utils::PaymentError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -28,4 +29,7 @@ pub enum ContractError {
 
     #[error("An unexpected error occurred: {0}")]
     Unexpected(String),
+
+    #[error("{0}")]
+    Payment(#[from] PaymentError),
 }

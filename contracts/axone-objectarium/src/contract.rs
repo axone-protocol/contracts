@@ -27,7 +27,7 @@ pub fn instantiate(
         info.sender,
         msg.bucket,
         msg.config.into(),
-        msg.limits.into(),
+        msg.limits.try_into()?,
         msg.pagination.try_into()?,
     )?;
 
@@ -582,9 +582,10 @@ mod tests {
     }
 
     #[test]
-    fn invalid_pagination_initialization() {
+    fn invalid_initialization() {
         let cases = vec![
             (
+                Default::default(),
                 PaginationConfigBuilder::default()
                     .max_page_size(u32::MAX)
                     .build()
@@ -592,11 +593,53 @@ mod tests {
                 StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'"),
             ),
             (
+                Default::default(),
                 PaginationConfigBuilder::default()
                     .default_page_size(31)
                     .build()
                     .unwrap(),
                 StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'"),
+            ),
+            (
+                Default::default(),
+                PaginationConfigBuilder::default()
+                    .default_page_size(0)
+                    .build()
+                    .unwrap(),
+                StdError::generic_err("'default_page_size' cannot be zero"),
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_objects(0u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                StdError::generic_err("'max_objects' cannot be zero"),
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_object_size(0u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                StdError::generic_err("'max_object_size' cannot be zero"),
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_total_size(0u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                StdError::generic_err("'max_total_size' cannot be zero"),
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_total_size(10u128)
+                    .max_object_size(20u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                StdError::generic_err("'max_total_size' cannot be less than 'max_object_size'"),
             ),
         ];
         for case in cases {
@@ -604,11 +647,11 @@ mod tests {
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
                 config: Default::default(),
-                limits: Default::default(),
-                pagination: case.0,
+                limits: case.0,
+                pagination: case.1,
             };
             match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
-                Err(err) => assert_eq!(err, ContractError::Std(case.1)),
+                Err(err) => assert_eq!(err, ContractError::Std(case.2)),
                 _ => panic!("assertion failure!"),
             }
         }

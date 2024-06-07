@@ -224,6 +224,10 @@ impl Pagination {
             ));
         }
 
+        if default_page_size == 0 {
+            return Err(StdError::generic_err("'default_page_size' cannot be zero"));
+        }
+
         if default_page_size > max_page_size {
             return Err(StdError::generic_err(
                 "'default_page_size' cannot exceed 'max_page_size'",

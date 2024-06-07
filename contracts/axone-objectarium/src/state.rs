@@ -183,17 +183,6 @@ pub struct BucketLimits {
     pub max_object_pins: Option<Uint128>,
 }
 
-impl From<msg::BucketLimits> for BucketLimits {
-    fn from(limits: msg::BucketLimits) -> Self {
-        BucketLimits {
-            max_total_size: limits.max_total_size,
-            max_objects: limits.max_objects,
-            max_object_size: limits.max_object_size,
-            max_object_pins: limits.max_object_pins,
-        }
-    }
-}
-
 impl From<BucketLimits> for msg::BucketLimits {
     fn from(limits: BucketLimits) -> Self {
         msg::BucketLimits {
@@ -202,6 +191,61 @@ impl From<BucketLimits> for msg::BucketLimits {
             max_object_size: limits.max_object_size,
             max_object_pins: limits.max_object_pins,
         }
+    }
+}
+
+impl BucketLimits {
+    fn try_new(
+        max_total_size: Option<Uint128>,
+        max_objects: Option<Uint128>,
+        max_object_size: Option<Uint128>,
+        max_object_pins: Option<Uint128>,
+    ) -> StdResult<BucketLimits> {
+        if let Some(max_total_size) = max_total_size {
+            if max_total_size == Uint128::zero() {
+                return Err(StdError::generic_err("'max_total_size' cannot be zero"));
+            }
+        }
+
+        if let Some(max_objects) = max_objects {
+            if max_objects == Uint128::zero() {
+                return Err(StdError::generic_err("'max_objects' cannot be zero"));
+            }
+        }
+
+        if let Some(max_object_size) = max_object_size {
+            if max_object_size == Uint128::zero() {
+                return Err(StdError::generic_err("'max_object_size' cannot be zero"));
+            }
+        }
+
+        if let (Some(max_total_size), Some(max_object_size)) = (max_total_size, max_object_size) {
+            if max_total_size < max_object_size {
+                return Err(StdError::generic_err(
+                    "'max_total_size' cannot be less than 'max_object_size'",
+                ));
+            }
+        }
+
+        Ok(BucketLimits {
+            max_total_size,
+            max_objects,
+            max_object_size,
+            max_object_pins,
+        })
+    }
+}
+
+impl TryFrom<msg::BucketLimits> for BucketLimits {
+    type Error = StdError;
+
+    fn try_from(limits: msg::BucketLimits) -> StdResult<BucketLimits> {
+        BucketLimits::try_new(
+            limits.max_total_size,
+            limits.max_objects,
+            limits.max_object_size,
+            limits.max_object_pins,
+        )
     }
 }
 

@@ -257,13 +257,19 @@ const MAX_PAGE_MAX_SIZE: u32 = u32::MAX - 1;
 
 impl Pagination {
     fn try_new(max_page_size: u32, default_page_size: u32) -> StdResult<Pagination> {
-        ensure!(max_page_size <= MAX_PAGE_MAX_SIZE, StdError::generic_err(
-            "'max_page_size' cannot exceed 'u32::MAX - 1'"
-        ));
-        ensure_ne!(default_page_size, 0, StdError::generic_err("'default_page_size' cannot be zero"));
-        ensure!(default_page_size <= max_page_size, StdError::generic_err(
-            "'default_page_size' cannot exceed 'max_page_size'"
-        ));
+        ensure!(
+            max_page_size <= MAX_PAGE_MAX_SIZE,
+            StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'")
+        );
+        ensure_ne!(
+            default_page_size,
+            0,
+            StdError::generic_err("'default_page_size' cannot be zero")
+        );
+        ensure!(
+            default_page_size <= max_page_size,
+            StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'")
+        );
 
         Ok(Pagination {
             max_page_size,

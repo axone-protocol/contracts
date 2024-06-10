@@ -590,7 +590,9 @@ mod tests {
                     .max_page_size(u32::MAX)
                     .build()
                     .unwrap(),
-                StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'"),
+                Some(StdError::generic_err(
+                    "'max_page_size' cannot exceed 'u32::MAX - 1'",
+                )),
             ),
             (
                 Default::default(),
@@ -598,7 +600,29 @@ mod tests {
                     .default_page_size(31)
                     .build()
                     .unwrap(),
-                StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'"),
+                Some(StdError::generic_err(
+                    "'default_page_size' cannot exceed 'max_page_size'",
+                )),
+            ),
+            (
+                Default::default(),
+                PaginationConfigBuilder::default()
+                    .default_page_size(701)
+                    .max_page_size(700)
+                    .build()
+                    .unwrap(),
+                Some(StdError::generic_err(
+                    "'default_page_size' cannot exceed 'max_page_size'",
+                )),
+            ),
+            (
+                Default::default(),
+                PaginationConfigBuilder::default()
+                    .default_page_size(20)
+                    .max_page_size(20)
+                    .build()
+                    .unwrap(),
+                None,
             ),
             (
                 Default::default(),
@@ -606,7 +630,7 @@ mod tests {
                     .default_page_size(0)
                     .build()
                     .unwrap(),
-                StdError::generic_err("'default_page_size' cannot be zero"),
+                Some(StdError::generic_err("'default_page_size' cannot be zero")),
             ),
             (
                 BucketLimitsBuilder::default()
@@ -614,7 +638,7 @@ mod tests {
                     .build()
                     .unwrap(),
                 Default::default(),
-                StdError::generic_err("'max_objects' cannot be zero"),
+                Some(StdError::generic_err("'max_objects' cannot be zero")),
             ),
             (
                 BucketLimitsBuilder::default()
@@ -622,7 +646,7 @@ mod tests {
                     .build()
                     .unwrap(),
                 Default::default(),
-                StdError::generic_err("'max_object_size' cannot be zero"),
+                Some(StdError::generic_err("'max_object_size' cannot be zero")),
             ),
             (
                 BucketLimitsBuilder::default()
@@ -630,7 +654,7 @@ mod tests {
                     .build()
                     .unwrap(),
                 Default::default(),
-                StdError::generic_err("'max_total_size' cannot be zero"),
+                Some(StdError::generic_err("'max_total_size' cannot be zero")),
             ),
             (
                 BucketLimitsBuilder::default()
@@ -639,7 +663,18 @@ mod tests {
                     .build()
                     .unwrap(),
                 Default::default(),
-                StdError::generic_err("'max_total_size' cannot be less than 'max_object_size'"),
+                Some(StdError::generic_err(
+                    "'max_total_size' cannot be less than 'max_object_size'",
+                )),
+            ),
+            (
+                BucketLimitsBuilder::default()
+                    .max_total_size(20u128)
+                    .max_object_size(20u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                None,
             ),
         ];
         for case in cases {
@@ -651,8 +686,11 @@ mod tests {
                 pagination: case.1,
             };
             match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
-                Err(err) => assert_eq!(err, ContractError::Std(case.2)),
-                _ => panic!("assertion failure!"),
+                Err(err) => {
+                    assert!(case.2.is_some());
+                    assert_eq!(err, ContractError::Std(case.2.unwrap()))
+                }
+                _ => assert!(case.2.is_none()),
             }
         }
     }

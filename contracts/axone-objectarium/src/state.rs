@@ -4,7 +4,7 @@ use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
 use crate::msg;
 use crate::msg::{ObjectResponse, PaginationConfig};
-use cosmwasm_std::{Addr, StdError, StdResult, Uint128};
+use cosmwasm_std::{ensure, ensure_ne, Addr, StdError, StdResult, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -46,9 +46,7 @@ impl Bucket {
         pagination: Pagination,
     ) -> Result<Self, BucketError> {
         let n: String = name.split_whitespace().collect();
-        if n.is_empty() {
-            return Err(EmptyName);
-        }
+        ensure!(!n.is_empty(), EmptyName);
 
         Ok(Self {
             owner,
@@ -201,31 +199,28 @@ impl BucketLimits {
         max_object_size: Option<Uint128>,
         max_object_pins: Option<Uint128>,
     ) -> StdResult<BucketLimits> {
-        if let Some(max_total_size) = max_total_size {
-            if max_total_size == Uint128::zero() {
-                return Err(StdError::generic_err("'max_total_size' cannot be zero"));
-            }
-        }
-
-        if let Some(max_objects) = max_objects {
-            if max_objects == Uint128::zero() {
-                return Err(StdError::generic_err("'max_objects' cannot be zero"));
-            }
-        }
-
-        if let Some(max_object_size) = max_object_size {
-            if max_object_size == Uint128::zero() {
-                return Err(StdError::generic_err("'max_object_size' cannot be zero"));
-            }
-        }
-
-        if let (Some(max_total_size), Some(max_object_size)) = (max_total_size, max_object_size) {
-            if max_total_size < max_object_size {
-                return Err(StdError::generic_err(
-                    "'max_total_size' cannot be less than 'max_object_size'",
-                ));
-            }
-        }
+        ensure_ne!(
+            max_total_size,
+            Some(Uint128::zero()),
+            StdError::generic_err("'max_total_size' cannot be zero")
+        );
+        ensure_ne!(
+            max_objects,
+            Some(Uint128::zero()),
+            StdError::generic_err("'max_objects' cannot be zero")
+        );
+        ensure_ne!(
+            max_object_size,
+            Some(Uint128::zero()),
+            StdError::generic_err("'max_object_size' cannot be zero")
+        );
+        ensure!(
+            !matches!(
+                (max_total_size, max_object_size),
+                (Some(max_total_size), Some(max_object_size)) if max_total_size < max_object_size
+            ),
+            StdError::generic_err("'max_total_size' cannot be less than 'max_object_size'")
+        );
 
         Ok(BucketLimits {
             max_total_size,
@@ -262,21 +257,13 @@ const MAX_PAGE_MAX_SIZE: u32 = u32::MAX - 1;
 
 impl Pagination {
     fn try_new(max_page_size: u32, default_page_size: u32) -> StdResult<Pagination> {
-        if max_page_size > MAX_PAGE_MAX_SIZE {
-            return Err(StdError::generic_err(
-                "'max_page_size' cannot exceed 'u32::MAX - 1'",
-            ));
-        }
-
-        if default_page_size == 0 {
-            return Err(StdError::generic_err("'default_page_size' cannot be zero"));
-        }
-
-        if default_page_size > max_page_size {
-            return Err(StdError::generic_err(
-                "'default_page_size' cannot exceed 'max_page_size'",
-            ));
-        }
+        ensure!(max_page_size <= MAX_PAGE_MAX_SIZE, StdError::generic_err(
+            "'max_page_size' cannot exceed 'u32::MAX - 1'"
+        ));
+        ensure_ne!(default_page_size, 0, StdError::generic_err("'default_page_size' cannot be zero"));
+        ensure!(default_page_size <= max_page_size, StdError::generic_err(
+            "'default_page_size' cannot exceed 'max_page_size'"
+        ));
 
         Ok(Pagination {
             max_page_size,

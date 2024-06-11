@@ -26,7 +26,7 @@ pub fn instantiate(
     let bucket = Bucket::try_new(
         info.sender,
         msg.bucket,
-        msg.config.into(),
+        msg.config.try_into()?,
         msg.limits.try_into()?,
         msg.pagination.try_into()?,
     )?;
@@ -429,7 +429,11 @@ mod tests {
     use crate::compress;
     use crate::crypto::Hash;
     use crate::error::BucketError;
-    use crate::msg::{BucketConfig, BucketConfigBuilder, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm, HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfigBuilder};
+    use crate::msg::{
+        BucketConfig, BucketConfigBuilder, BucketLimitsBuilder, BucketResponse,
+        CompressionAlgorithm, HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse,
+        PageInfo, PaginationConfigBuilder,
+    };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::StdError::NotFound;
@@ -1248,16 +1252,6 @@ mod tests {
                     BucketError::CompressionAlgorithmNotAccepted(
                         CompressionAlgorithm::Passthrough,
                         vec![CompressionAlgorithm::Snappy],
-                    ),
-                )),
-            },
-            TC {
-                accepted_compression_algorithms: vec![],
-                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
-                expected_result: Either::Left(ContractError::Bucket(
-                    BucketError::CompressionAlgorithmNotAccepted(
-                        CompressionAlgorithm::Passthrough,
-                        vec![],
                     ),
                 )),
             },

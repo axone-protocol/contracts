@@ -140,16 +140,35 @@ pub struct BucketConfig {
     pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
 }
 
-impl From<msg::BucketConfig> for BucketConfig {
-    fn from(config: msg::BucketConfig) -> Self {
-        BucketConfig {
-            hash_algorithm: config.hash_algorithm.into(),
-            accepted_compression_algorithms: config
+impl BucketConfig {
+    fn try_new(
+        hash_algorithm: HashAlgorithm,
+        accepted_compression_algorithms: Vec<CompressionAlgorithm>,
+    ) -> StdResult<BucketConfig> {
+        ensure!(
+            !accepted_compression_algorithms.is_empty(),
+            StdError::generic_err("'accepted_compression_algorithms' cannot be empty")
+        );
+
+        Ok(BucketConfig {
+            hash_algorithm,
+            accepted_compression_algorithms,
+        })
+    }
+}
+
+impl TryFrom<msg::BucketConfig> for BucketConfig {
+    type Error = StdError;
+
+    fn try_from(config: msg::BucketConfig) -> StdResult<BucketConfig> {
+        BucketConfig::try_new(
+            config.hash_algorithm.into(),
+            config
                 .accepted_compression_algorithms
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-        }
+        )
     }
 }
 

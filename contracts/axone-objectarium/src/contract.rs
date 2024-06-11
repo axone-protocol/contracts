@@ -26,8 +26,8 @@ pub fn instantiate(
     let bucket = Bucket::try_new(
         info.sender,
         msg.bucket,
-        msg.config.into(),
-        msg.limits.into(),
+        msg.config.try_into()?,
+        msg.limits.try_into()?,
         msg.pagination.try_into()?,
     )?;
 
@@ -430,8 +430,9 @@ mod tests {
     use crate::crypto::Hash;
     use crate::error::BucketError;
     use crate::msg::{
-        BucketConfig, BucketLimitsBuilder, BucketResponse, CompressionAlgorithm, HashAlgorithm,
-        ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo, PaginationConfigBuilder,
+        BucketConfig, BucketConfigBuilder, BucketLimitsBuilder, BucketResponse,
+        CompressionAlgorithm, HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse,
+        PageInfo, PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -582,34 +583,151 @@ mod tests {
     }
 
     #[test]
-    fn invalid_pagination_initialization() {
+    fn invalid_initialization() {
         let cases = vec![
             (
+                Default::default(),
+                Default::default(),
                 PaginationConfigBuilder::default()
                     .max_page_size(u32::MAX)
                     .build()
                     .unwrap(),
-                StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'"),
+                Some(StdError::generic_err(
+                    "'max_page_size' cannot exceed 'u32::MAX - 1'",
+                )),
             ),
             (
+                Default::default(),
+                Default::default(),
                 PaginationConfigBuilder::default()
                     .default_page_size(31)
                     .build()
                     .unwrap(),
-                StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'"),
+                Some(StdError::generic_err(
+                    "'default_page_size' cannot exceed 'max_page_size'",
+                )),
+            ),
+            (
+                Default::default(),
+                Default::default(),
+                PaginationConfigBuilder::default()
+                    .default_page_size(701)
+                    .max_page_size(700)
+                    .build()
+                    .unwrap(),
+                Some(StdError::generic_err(
+                    "'default_page_size' cannot exceed 'max_page_size'",
+                )),
+            ),
+            (
+                Default::default(),
+                Default::default(),
+                PaginationConfigBuilder::default()
+                    .default_page_size(20)
+                    .max_page_size(20)
+                    .build()
+                    .unwrap(),
+                None,
+            ),
+            (
+                Default::default(),
+                Default::default(),
+                PaginationConfigBuilder::default()
+                    .default_page_size(0)
+                    .build()
+                    .unwrap(),
+                Some(StdError::generic_err("'default_page_size' cannot be zero")),
+            ),
+            (
+                Default::default(),
+                BucketLimitsBuilder::default()
+                    .max_objects(0u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                Some(StdError::generic_err("'max_objects' cannot be zero")),
+            ),
+            (
+                Default::default(),
+                BucketLimitsBuilder::default()
+                    .max_object_size(0u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                Some(StdError::generic_err("'max_object_size' cannot be zero")),
+            ),
+            (
+                Default::default(),
+                BucketLimitsBuilder::default()
+                    .max_total_size(0u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                Some(StdError::generic_err("'max_total_size' cannot be zero")),
+            ),
+            (
+                Default::default(),
+                BucketLimitsBuilder::default()
+                    .max_total_size(10u128)
+                    .max_object_size(20u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                Some(StdError::generic_err(
+                    "'max_total_size' cannot be less than 'max_object_size'",
+                )),
+            ),
+            (
+                Default::default(),
+                BucketLimitsBuilder::default()
+                    .max_total_size(20u128)
+                    .max_object_size(20u128)
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                None,
+            ),
+            (
+                BucketConfigBuilder::default()
+                    .accepted_compression_algorithms(vec![CompressionAlgorithm::Passthrough])
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                Default::default(),
+                None,
+            ),
+            (
+                BucketConfigBuilder::default()
+                    .accepted_compression_algorithms(vec![])
+                    .build()
+                    .unwrap(),
+                Default::default(),
+                Default::default(),
+                Some(StdError::generic_err(
+                    "'accepted_compression_algorithms' cannot be empty",
+                )),
+            ),
+            (
+                Default::default(),
+                Default::default(),
+                Default::default(),
+                None,
             ),
         ];
         for case in cases {
             let mut deps = mock_dependencies();
             let msg = InstantiateMsg {
                 bucket: "bar".to_string(),
-                config: Default::default(),
-                limits: Default::default(),
-                pagination: case.0,
+                config: case.0,
+                limits: case.1,
+                pagination: case.2,
             };
             match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
-                Err(err) => assert_eq!(err, ContractError::Std(case.1)),
-                _ => panic!("assertion failure!"),
+                Err(err) => {
+                    assert!(case.3.is_some());
+                    assert_eq!(err, ContractError::Std(case.3.unwrap()))
+                }
+                _ => assert!(case.3.is_none()),
             }
         }
     }

@@ -4,7 +4,7 @@ use crate::error::BucketError;
 use crate::error::BucketError::EmptyName;
 use crate::msg;
 use crate::msg::{ObjectResponse, PaginationConfig};
-use cosmwasm_std::{Addr, StdError, StdResult, Uint128};
+use cosmwasm_std::{ensure, ensure_ne, Addr, StdError, StdResult, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -46,9 +46,7 @@ impl Bucket {
         pagination: Pagination,
     ) -> Result<Self, BucketError> {
         let n: String = name.split_whitespace().collect();
-        if n.is_empty() {
-            return Err(EmptyName);
-        }
+        ensure!(!n.is_empty(), EmptyName);
 
         Ok(Self {
             owner,
@@ -142,16 +140,35 @@ pub struct BucketConfig {
     pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
 }
 
-impl From<msg::BucketConfig> for BucketConfig {
-    fn from(config: msg::BucketConfig) -> Self {
-        BucketConfig {
-            hash_algorithm: config.hash_algorithm.into(),
-            accepted_compression_algorithms: config
+impl BucketConfig {
+    fn try_new(
+        hash_algorithm: HashAlgorithm,
+        accepted_compression_algorithms: Vec<CompressionAlgorithm>,
+    ) -> StdResult<BucketConfig> {
+        ensure!(
+            !accepted_compression_algorithms.is_empty(),
+            StdError::generic_err("'accepted_compression_algorithms' cannot be empty")
+        );
+
+        Ok(BucketConfig {
+            hash_algorithm,
+            accepted_compression_algorithms,
+        })
+    }
+}
+
+impl TryFrom<msg::BucketConfig> for BucketConfig {
+    type Error = StdError;
+
+    fn try_from(config: msg::BucketConfig) -> StdResult<BucketConfig> {
+        BucketConfig::try_new(
+            config.hash_algorithm.into(),
+            config
                 .accepted_compression_algorithms
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-        }
+        )
     }
 }
 
@@ -183,17 +200,6 @@ pub struct BucketLimits {
     pub max_object_pins: Option<Uint128>,
 }
 
-impl From<msg::BucketLimits> for BucketLimits {
-    fn from(limits: msg::BucketLimits) -> Self {
-        BucketLimits {
-            max_total_size: limits.max_total_size,
-            max_objects: limits.max_objects,
-            max_object_size: limits.max_object_size,
-            max_object_pins: limits.max_object_pins,
-        }
-    }
-}
-
 impl From<BucketLimits> for msg::BucketLimits {
     fn from(limits: BucketLimits) -> Self {
         msg::BucketLimits {
@@ -202,6 +208,58 @@ impl From<BucketLimits> for msg::BucketLimits {
             max_object_size: limits.max_object_size,
             max_object_pins: limits.max_object_pins,
         }
+    }
+}
+
+impl BucketLimits {
+    fn try_new(
+        max_total_size: Option<Uint128>,
+        max_objects: Option<Uint128>,
+        max_object_size: Option<Uint128>,
+        max_object_pins: Option<Uint128>,
+    ) -> StdResult<BucketLimits> {
+        ensure_ne!(
+            max_total_size,
+            Some(Uint128::zero()),
+            StdError::generic_err("'max_total_size' cannot be zero")
+        );
+        ensure_ne!(
+            max_objects,
+            Some(Uint128::zero()),
+            StdError::generic_err("'max_objects' cannot be zero")
+        );
+        ensure_ne!(
+            max_object_size,
+            Some(Uint128::zero()),
+            StdError::generic_err("'max_object_size' cannot be zero")
+        );
+        ensure!(
+            !matches!(
+                (max_total_size, max_object_size),
+                (Some(max_total_size), Some(max_object_size)) if max_total_size < max_object_size
+            ),
+            StdError::generic_err("'max_total_size' cannot be less than 'max_object_size'")
+        );
+
+        Ok(BucketLimits {
+            max_total_size,
+            max_objects,
+            max_object_size,
+            max_object_pins,
+        })
+    }
+}
+
+impl TryFrom<msg::BucketLimits> for BucketLimits {
+    type Error = StdError;
+
+    fn try_from(limits: msg::BucketLimits) -> StdResult<BucketLimits> {
+        BucketLimits::try_new(
+            limits.max_total_size,
+            limits.max_objects,
+            limits.max_object_size,
+            limits.max_object_pins,
+        )
     }
 }
 
@@ -218,17 +276,19 @@ const MAX_PAGE_MAX_SIZE: u32 = u32::MAX - 1;
 
 impl Pagination {
     fn try_new(max_page_size: u32, default_page_size: u32) -> StdResult<Pagination> {
-        if max_page_size > MAX_PAGE_MAX_SIZE {
-            return Err(StdError::generic_err(
-                "'max_page_size' cannot exceed 'u32::MAX - 1'",
-            ));
-        }
-
-        if default_page_size > max_page_size {
-            return Err(StdError::generic_err(
-                "'default_page_size' cannot exceed 'max_page_size'",
-            ));
-        }
+        ensure!(
+            max_page_size <= MAX_PAGE_MAX_SIZE,
+            StdError::generic_err("'max_page_size' cannot exceed 'u32::MAX - 1'")
+        );
+        ensure_ne!(
+            default_page_size,
+            0,
+            StdError::generic_err("'default_page_size' cannot be zero")
+        );
+        ensure!(
+            default_page_size <= max_page_size,
+            StdError::generic_err("'default_page_size' cannot exceed 'max_page_size'")
+        );
 
         Ok(Pagination {
             max_page_size,

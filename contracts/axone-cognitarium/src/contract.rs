@@ -159,7 +159,7 @@ pub mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Store => to_json_binary(&query::store(deps)?),
+        QueryMsg::Store {} => to_json_binary(&query::store(deps)?),
         QueryMsg::Select { query } => to_json_binary(&query::select(deps, query)?),
         QueryMsg::Describe { query, format } => {
             to_json_binary(&query::describe(deps, query, format.unwrap_or_default())?)
@@ -1249,7 +1249,7 @@ mod tests {
             )
             .unwrap();
 
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Store);
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Store {});
         assert!(res.is_ok());
         assert_eq!(
             from_json::<StoreResponse>(&res.unwrap()).unwrap(),

@@ -85,7 +85,7 @@ pub enum QueryMsg {
     ///
     /// Returns information about the triple store.
     #[returns(StoreResponse)]
-    Store,
+    Store {},
 
     /// # Select
     ///

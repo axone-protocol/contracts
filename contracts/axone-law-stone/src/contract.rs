@@ -61,7 +61,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
     match msg {
-        ExecuteMsg::BreakStone => execute::break_stone(deps, env, info),
+        ExecuteMsg::BreakStone {} => execute::break_stone(deps, env, info),
     }
 }
 
@@ -125,8 +125,8 @@ pub mod execute {
 pub fn query(deps: Deps<'_, LogicCustomQuery>, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ask { query } => to_json_binary(&query::ask(deps, env, query)?),
-        QueryMsg::Program => to_json_binary(&query::program(deps)?),
-        QueryMsg::ProgramCode => to_json_binary(&query::program_code(deps)?),
+        QueryMsg::Program {} => to_json_binary(&query::program(deps)?),
+        QueryMsg::ProgramCode {} => to_json_binary(&query::program_code(deps)?),
     }
 }
 
@@ -886,7 +886,7 @@ mod tests {
             deps.as_mut(),
             env.clone(),
             info.clone(),
-            ExecuteMsg::BreakStone,
+            ExecuteMsg::BreakStone {},
         );
         assert!(result.is_err());
         assert_eq!(
@@ -979,7 +979,7 @@ mod tests {
                 deps.as_mut(),
                 mock_env(),
                 info.clone(),
-                ExecuteMsg::BreakStone,
+                ExecuteMsg::BreakStone {},
             )
             .unwrap();
 
@@ -1089,7 +1089,7 @@ mod tests {
                 deps.as_mut(),
                 mock_env(),
                 mock_info(case.0, &[]),
-                ExecuteMsg::BreakStone,
+                ExecuteMsg::BreakStone {},
             );
 
             match case.3 {
@@ -1141,7 +1141,7 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             mock_info("creator", &[]),
-            ExecuteMsg::BreakStone,
+            ExecuteMsg::BreakStone {},
         );
         assert!(res.is_ok());
         assert_eq!(res.ok().unwrap().messages.len(), 0);

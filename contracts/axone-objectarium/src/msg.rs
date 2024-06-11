@@ -81,7 +81,7 @@ pub enum QueryMsg {
     /// # Bucket
     /// Bucket returns the bucket information.
     #[returns(BucketResponse)]
-    Bucket {},
+    Bucket,
 
     /// # Object
     /// Object returns the object information with the given id.

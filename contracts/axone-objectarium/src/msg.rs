@@ -266,7 +266,7 @@ pub struct BucketConfig {
     #[serde(default)]
     pub hash_algorithm: HashAlgorithm,
     /// The acceptable compression algorithms for the objects in the bucket.
-    /// If this parameter is not set (none or empty array), then all compression algorithms are accepted.
+    /// If this parameter is not set, then all compression algorithms are accepted.
     /// If this parameter is set, then only the compression algorithms in the array are accepted.
     ///
     /// When an object is stored in the bucket without a specified compression algorithm, the first

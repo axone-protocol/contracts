@@ -212,9 +212,9 @@ Query messages
 
 Bucket returns the bucket information.
 
-| parameter | description                |
-| --------- | -------------------------- |
-| `bucket`  | _(Required.) _ **object**. |
+| literal    |
+| ---------- |
+| `"bucket"` |
 
 ### QueryMsg::Object
 
@@ -511,4 +511,4 @@ A string containing a 128-bit integer in decimal representation.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`7767f03132c85cdd`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`b5ee98f050799330`)_

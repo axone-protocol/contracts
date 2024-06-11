@@ -147,6 +147,8 @@ pub struct BucketResponse {
     pub limits: BucketLimits,
     /// The configuration for paginated query.
     pub pagination: PaginationConfig,
+    /// The statistics of the bucket.
+    pub stat: BucketStat,
 }
 
 /// CompressionAlgorithm is an enumeration that defines the different compression algorithms
@@ -349,6 +351,20 @@ impl Default for PaginationConfig {
             default_page_size: Self::default_page_default_size(),
         }
     }
+}
+
+/// # BucketStat
+///
+/// BucketStat is the type of the statistics of a bucket.
+#[cw_serde]
+#[derive(Default, Builder)]
+pub struct BucketStat {
+    /// The total size of the objects contained in the bucket.
+    pub size: Uint128,
+    /// The total size of the objects contained in the bucket after compression.
+    pub compressed_size: Uint128,
+    /// The number of objects in the bucket.
+    pub object_count: Uint128,
 }
 
 /// # ObjectResponse

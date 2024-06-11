@@ -315,6 +315,7 @@ pub mod query {
             config: bucket.config.into(),
             limits: bucket.limits.into(),
             pagination: bucket.pagination.into(),
+            stat: bucket.stat.into(),
         })
     }
 

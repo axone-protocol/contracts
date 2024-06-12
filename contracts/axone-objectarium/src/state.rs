@@ -211,6 +211,15 @@ impl From<BucketLimits> for msg::BucketLimits {
     }
 }
 
+impl From<BucketStat> for msg::BucketStat {
+    fn from(stat: BucketStat) -> Self {
+        msg::BucketStat {
+            size: stat.size,
+            compressed_size: stat.compressed_size,
+            object_count: stat.object_count,
+        }
+    }
+}
 impl BucketLimits {
     fn try_new(
         max_total_size: Option<Uint128>,
@@ -262,7 +271,6 @@ impl TryFrom<msg::BucketLimits> for BucketLimits {
         )
     }
 }
-
 /// Pagination is the type carrying configuration for paginated queries.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Pagination {

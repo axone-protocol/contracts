@@ -315,6 +315,7 @@ pub mod query {
             config: bucket.config.into(),
             limits: bucket.limits.into(),
             pagination: bucket.pagination.into(),
+            stat: bucket.stat.into(),
         })
     }
 
@@ -430,9 +431,9 @@ mod tests {
     use crate::crypto::Hash;
     use crate::error::BucketError;
     use crate::msg::{
-        BucketConfig, BucketConfigBuilder, BucketLimitsBuilder, BucketResponse,
-        CompressionAlgorithm, HashAlgorithm, ObjectPinsResponse, ObjectResponse, ObjectsResponse,
-        PageInfo, PaginationConfigBuilder,
+        BucketConfig, BucketConfigBuilder, BucketLimitsBuilder, BucketResponse, BucketStat,
+        BucketStatBuilder, CompressionAlgorithm, HashAlgorithm, ObjectPinsResponse, ObjectResponse,
+        ObjectsResponse, PageInfo, PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -546,19 +547,30 @@ mod tests {
                 .unwrap(),
         };
         let info = mock_info("creator", &[]);
-
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        // it worked, let's query the state
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
-        let value: BucketResponse = from_json(&res).unwrap();
-        assert_eq!("bar", value.name);
-        assert_eq!(Uint128::new(20000), value.limits.max_total_size.unwrap());
-        assert_eq!(Uint128::new(10), value.limits.max_objects.unwrap());
-        assert_eq!(Uint128::new(2000), value.limits.max_object_size.unwrap());
-        assert_eq!(Uint128::new(1), value.limits.max_object_pins.unwrap());
-        assert_eq!(value.pagination.max_page_size, 50);
-        assert_eq!(value.pagination.default_page_size, 30);
+        let response: BucketResponse = from_json(&res).unwrap();
+        assert_eq!(response.name, "bar");
+        assert_eq!(
+            response.limits,
+            BucketLimitsBuilder::default()
+                .max_total_size(Uint128::new(20000))
+                .max_objects(Uint128::new(10))
+                .max_object_size(Uint128::new(2000))
+                .max_object_pins(Uint128::new(1))
+                .build()
+                .unwrap(),
+        );
+        assert_eq!(
+            response.pagination,
+            PaginationConfigBuilder::default()
+                .max_page_size(50)
+                .default_page_size(30)
+                .build()
+                .unwrap(),
+        );
+        assert_eq!(response.stat, BucketStat::default());
     }
 
     #[test]
@@ -2621,7 +2633,17 @@ mod tests {
                     .count(),
                 case.expected_count
             );
-            let bucket = BUCKET.load(&deps.storage).unwrap();
+
+            let bucket = query::bucket(deps.as_ref()).unwrap();
+            assert_eq!(
+                bucket.stat,
+                BucketStatBuilder::default()
+                    .object_count(Uint128::from(case.expected_count as u128))
+                    .size(case.expected_total_size)
+                    .compressed_size(case.expected_compressed_size)
+                    .build()
+                    .unwrap()
+            );
             assert_eq!(
                 bucket.stat.object_count,
                 Uint128::from(case.expected_count as u128)

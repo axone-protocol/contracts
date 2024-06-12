@@ -22,7 +22,7 @@ pub enum ExecuteMsg {
     /// - Forget the main program (i.e. or at least unpin it).
     /// Only the contract admin is authorized to break it, if any.
     /// If already broken, this is a no-op.
-    BreakStone,
+    BreakStone {},
 }
 
 /// Query messages
@@ -44,7 +44,7 @@ pub enum QueryMsg {
     /// This includes the contract address of the `objectarium` and the program object ID,
     /// where the law program's code can be accessed.
     #[returns(ProgramResponse)]
-    Program,
+    Program {},
 
     /// # ProgramCode
     /// Fetches the raw code of the law program tied to this contract.
@@ -52,7 +52,7 @@ pub enum QueryMsg {
     /// If the law stone is broken, the query may fail if the program is no longer available in the
     /// `Objectarium`.
     #[returns(Binary)]
-    ProgramCode,
+    ProgramCode {},
 }
 
 /// # ProgramResponse

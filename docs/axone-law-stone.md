@@ -31,9 +31,9 @@ Execute messages
 
 Break the stone making this contract unusable, by clearing all the related resources: - Unpin all the pinned objects on `axone-objectarium` contracts, if any. - Forget the main program (i.e. or at least unpin it). Only the contract admin is authorized to break it, if any. If already broken, this is a no-op.
 
-| literal         |
-| --------------- |
-| `"break_stone"` |
+| parameter     | description                |
+| ------------- | -------------------------- |
+| `break_stone` | _(Required.) _ **object**. |
 
 ## QueryMsg
 
@@ -56,9 +56,9 @@ Retrieves the location metadata of the law program bound to this contract.
 
 This includes the contract address of the `objectarium` and the program object ID, where the law program's code can be accessed.
 
-| literal     |
-| ----------- |
-| `"program"` |
+| parameter | description                |
+| --------- | -------------------------- |
+| `program` | _(Required.) _ **object**. |
 
 ### QueryMsg::ProgramCode
 
@@ -66,9 +66,9 @@ Fetches the raw code of the law program tied to this contract.
 
 If the law stone is broken, the query may fail if the program is no longer available in the `Objectarium`.
 
-| literal          |
-| ---------------- |
-| `"program_code"` |
+| parameter      | description                |
+| -------------- | -------------------------- |
+| `program_code` | _(Required.) _ **object**. |
 
 ## Responses
 
@@ -134,4 +134,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-law-stone.json` (`96a9a3b253c6a3fc`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-law-stone.json` (`a0a965a7234a8b34`)_

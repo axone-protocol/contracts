@@ -430,9 +430,9 @@ Query messages
 
 Returns information about the triple store.
 
-| literal   |
-| --------- |
-| `"store"` |
+| parameter | description                |
+| --------- | -------------------------- |
+| `store`   | _(Required.) _ **object**. |
 
 ### QueryMsg::Select
 
@@ -876,4 +876,4 @@ Represents a condition in a [WhereClause].
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-cognitarium.json` (`ddcfdef446357b86`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-cognitarium.json` (`72125c91d0c7acd2`)_

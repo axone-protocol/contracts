@@ -80,9 +80,19 @@ jobs:
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.29.0"
 
       - name: Publish crates to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          cargo smart-release --dry-run-cargo-publish axone-rdf axone-wasm axone-objectarium-client axone-logic-bindings axone-cognitarium-client axone-objectarium axone-cognitarium axone-law-stone axone-dataverse
+          cargo smart-release --dry-run-cargo-publish \
+          axone-rdf axone-wasm \
+          axone-objectarium-client \
+          axone-logic-bindings \
+          axone-cognitarium-client \
+          axone-objectarium \
+          axone-cognitarium \
+          axone-law-stone \
+          axone-dataverse

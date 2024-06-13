@@ -89,5 +89,5 @@ done
 crate_dependency_graph=("${filtered_crate_dependency_graph[@]}")
 
 for crate in $(topological_sort_crates); do
-    cargo publish -p $crate
+    cargo publish -n -p $crate
 done

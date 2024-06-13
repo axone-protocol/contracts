@@ -78,8 +78,11 @@ jobs:
           GIT_COMMITTER_NAME: ${{ vars.BOT_GIT_COMMITTER_NAME }}
           GIT_COMMITTER_EMAIL: ${{ vars.BOT_GIT_COMMITTER_EMAIL }}
 
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v2
+
       - name: Publish crates to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          ./scripts/cargo-publish.sh
+          cargo smart-release --dry-run-cargo-publish axone-rdf axone-wasm axone-objectarium-client axone-logic-bindings axone-cognitarium-client axone-objectarium axone-cognitarium axone-law-stone axone-dataverse

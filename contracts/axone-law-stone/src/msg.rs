@@ -20,7 +20,9 @@ pub enum ExecuteMsg {
     /// Break the stone making this contract unusable, by clearing all the related resources:
     /// - Unpin all the pinned objects on `axone-objectarium` contracts, if any.
     /// - Forget the main program (i.e. or at least unpin it).
-    /// Only the contract admin is authorized to break it, if any.
+    ///
+    /// Only the creator address (the address that instantiated the contract) is authorized to invoke
+    /// this message.
     /// If already broken, this is a no-op.
     BreakStone {},
 }

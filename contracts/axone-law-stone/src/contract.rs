@@ -68,21 +68,20 @@ pub fn execute(
 pub mod execute {
     use super::*;
     use crate::state::{DEPENDENCIES, PROGRAM};
-    use cosmwasm_std::Order;
+    use cosmwasm_std::{ensure_eq, Order};
 
     pub fn break_stone(
         deps: DepsMut<'_>,
         env: Env,
         info: MessageInfo,
     ) -> Result<Response, ContractError> {
-        match deps
-            .querier
-            .query_wasm_contract_info(env.contract.address)?
-            .admin
-        {
-            Some(admin_addr) if admin_addr != info.sender => Err(ContractError::Unauthorized),
-            _ => Ok(()),
-        }?;
+        ensure_eq!(
+            deps.querier
+                .query_wasm_contract_info(env.contract.address)?
+                .creator,
+            info.sender,
+            ContractError::Unauthorized
+        );
 
         let resp = Response::new().add_attribute("action", "break_stone");
 
@@ -927,7 +926,7 @@ mod tests {
             deps.querier.update_wasm(move |req| match req {
                 WasmQuery::ContractInfo { .. } => {
                     let mut contract_info = ContractInfoResponse::default();
-                    contract_info.admin = Some("creator".to_string());
+                    contract_info.creator = "creator".to_string();
                     SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
                 WasmQuery::Smart { contract_addr, msg }
@@ -1040,28 +1039,33 @@ mod tests {
     }
 
     #[test]
-    fn break_stone_admin() {
+    fn break_stone_creator() {
         let cases = vec![
-            ("not-admin", true, false, Some(ContractError::Unauthorized)),
-            ("not-admin", true, true, Some(ContractError::Unauthorized)),
-            ("admin", true, false, None),
-            ("anyone", false, false, None),
+            // creator, sender, broken, Error
+            (
+                "creator",
+                "sender",
+                false,
+                Some(ContractError::Unauthorized),
+            ),
+            ("creator", "sender", true, Some(ContractError::Unauthorized)),
+            ("creator", "creator", false, None),
+            ("creator", "creator", true, None),
         ];
 
         for case in cases {
             let mut deps = mock_dependencies();
+
             deps.querier.update_wasm(move |req| match req {
                 WasmQuery::ContractInfo { .. } => {
                     let mut contract_info = ContractInfoResponse::default();
-                    contract_info.admin = match case.1 {
-                        true => Some("admin".to_string()),
-                        false => None,
-                    };
+                    contract_info.creator = case.0.to_string();
+
                     SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
                 WasmQuery::Smart { .. } => SystemResult::Ok(ContractResult::Ok(
                     to_json_binary(&ObjectPinsResponse {
-                        data: vec!["creator".to_string()],
+                        data: vec![case.1.to_string()],
                         page_info: PageInfo {
                             has_next_page: false,
                             cursor: "".to_string(),
@@ -1088,7 +1092,7 @@ mod tests {
             let res = execute(
                 deps.as_mut(),
                 mock_env(),
-                mock_info(case.0, &[]),
+                mock_info(case.1, &[]),
                 ExecuteMsg::BreakStone {},
             );
 
@@ -1108,7 +1112,7 @@ mod tests {
         deps.querier.update_wasm(|req| match req {
             WasmQuery::ContractInfo { .. } => {
                 let mut contract_info = ContractInfoResponse::default();
-                contract_info.admin = Some("creator".to_string());
+                contract_info.creator = "creator".to_string();
                 SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
             }
             _ => SystemResult::Err(SystemError::Unknown {}),

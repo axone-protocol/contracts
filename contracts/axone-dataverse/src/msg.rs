@@ -61,7 +61,7 @@ pub enum ExecuteMsg {
         metadata: Binary,
         /// RDF format in which the metadata is represented.
         /// If not provided, the default format is [N-Quads](https://www.w3.org/TR/n-quads/) format.
-        format: Option<RdfFormat>,
+        format: Option<RdfDatasetFormat>,
     },
 
     /// # RevokeClaims
@@ -154,7 +154,7 @@ impl From<TripleStoreLimitsInput> for axone_cognitarium::msg::StoreLimitsInput {
 /// `RdfFormat` represents the various serialization formats for RDF (Resource Description Framework) data.
 #[cw_serde]
 #[derive(Default)]
-pub enum RdfFormat {
+pub enum RdfDatasetFormat {
     /// # NQuads
     /// N-Quads Format
     ///

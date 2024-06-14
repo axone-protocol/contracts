@@ -138,7 +138,9 @@ pub mod query {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msg::{DataverseResponse, RdfFormat, TripleStoreConfig, TripleStoreLimitsInput};
+    use crate::msg::{
+        DataverseResponse, RdfDatasetFormat, TripleStoreConfig, TripleStoreLimitsInput,
+    };
     use crate::testutil::testutil::read_test_data;
     use axone_cognitarium::msg::{
         DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse,
@@ -271,7 +273,7 @@ mod tests {
 
         let msg = ExecuteMsg::SubmitClaims {
             metadata: Binary::from("data".as_bytes()),
-            format: Some(RdfFormat::NQuads),
+            format: Some(RdfDatasetFormat::NQuads),
         };
 
         let result = execute(deps.as_mut(), env, info, msg);
@@ -338,7 +340,7 @@ mod tests {
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(read_test_data("vc-eddsa-2020-ok.nq")),
-                format: Some(RdfFormat::NQuads),
+                format: Some(RdfDatasetFormat::NQuads),
             },
         );
 
@@ -400,7 +402,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary("notrdf".as_bytes().to_vec()),
-                format: Some(RdfFormat::NQuads),
+                format: Some(RdfDatasetFormat::NQuads),
             },
         );
 
@@ -416,7 +418,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(vec![]),
-                format: Some(RdfFormat::NQuads),
+                format: Some(RdfDatasetFormat::NQuads),
             },
         );
 
@@ -435,7 +437,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(read_test_data("vc-eddsa-2020-ok-unsecured.nq")),
-                format: Some(RdfFormat::NQuads),
+                format: Some(RdfDatasetFormat::NQuads),
             },
         );
 
@@ -454,7 +456,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(read_test_data("vc-unsupported-1.nq")),
-                format: Some(RdfFormat::NQuads),
+                format: Some(RdfDatasetFormat::NQuads),
             },
         );
 
@@ -502,7 +504,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
                 metadata: Binary(read_test_data("vc-eddsa-2020-ok.nq")),
-                format: Some(RdfFormat::NQuads),
+                format: Some(RdfDatasetFormat::NQuads),
             },
         );
 

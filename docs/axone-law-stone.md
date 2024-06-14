@@ -29,7 +29,9 @@ Execute messages
 
 ### ExecuteMsg::BreakStone
 
-Break the stone making this contract unusable, by clearing all the related resources: - Unpin all the pinned objects on `axone-objectarium` contracts, if any. - Forget the main program (i.e. or at least unpin it). Only the contract admin is authorized to break it, if any. If already broken, this is a no-op.
+Break the stone making this contract unusable, by clearing all the related resources: - Unpin all the pinned objects on `axone-objectarium` contracts, if any. - Forget the main program (i.e. or at least unpin it).
+
+Only the creator address (the address that instantiated the contract) is authorized to invoke this message. If already broken, this is a no-op.
 
 | parameter     | description                |
 | ------------- | -------------------------- |
@@ -134,4 +136,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-law-stone.json` (`a0a965a7234a8b34`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-law-stone.json` (`58a14576c3c1d7fe`)_

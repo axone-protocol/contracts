@@ -96,11 +96,11 @@ To maintain integrity and coherence in the dataverse, several preconditions are 
 
 - `DataIntegrity` with the following cryptosuites: `eddsa-2022`, `eddsa-rdfc-2022`.
 
-| parameter                | description                                                                                                                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `submit_claims`          | _(Required.) _ **object**.                                                                                                                                                   |
-| `submit_claims.format`   | **[RdfFormat](#rdfformat)\|null**. RDF format in which the metadata is represented. If not provided, the default format is [N-Quads](https://www.w3.org/TR/n-quads/) format. |
-| `submit_claims.metadata` | _(Required.) _ **[Binary](#binary)**. The serialized metadata intended for attachment. This metadata should adhere to the format specified in the `format` field.            |
+| parameter                | description                                                                                                                                                                                  |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `submit_claims`          | _(Required.) _ **object**.                                                                                                                                                                   |
+| `submit_claims.format`   | **[RdfDatasetFormat](#rdfdatasetformat)\|null**. RDF dataset serialization format for the metadata. If not provided, the default format is [N-Quads](https://www.w3.org/TR/n-quads/) format. |
+| `submit_claims.metadata` | _(Required.) _ **[Binary](#binary)**. The serialized metadata intended for attachment. This metadata should adhere to the format specified in the `format` field.                            |
 
 ### ExecuteMsg::RevokeClaims
 
@@ -174,9 +174,9 @@ N-Quads is an extension of N-Triples to support RDF datasets by adding an option
 | ----------- |
 | `"n_quads"` |
 
-### RdfFormat
+### RdfDatasetFormat
 
-`RdfFormat` represents the various serialization formats for RDF (Resource Description Framework) data.
+Represents the various serialization formats for an RDF dataset, i.e. a collection of RDF graphs ([RDF Dataset](https://www.w3.org/TR/rdf11-concepts/#section-dataset)).
 
 | variant           | description                                                                                                                                                                                                                                               |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -238,5 +238,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`daa1f5839f39568e`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`6c036ea055d1bbb8`)*
 ````

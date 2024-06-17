@@ -601,9 +601,9 @@ dependencies = [
 
 [[package]]
 name = "cucumber"
-version = "0.21.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2940c675f8b0dd864bfedb4283d5fa07b8799eed59a4f7b09fb1257b18c88a1e"
+checksum = "6cd12917efc3a8b069a4975ef3cb2f2d835d42d04b3814d90838488f9dd9bf69"
 dependencies = [
  "anyhow",
  "clap",
@@ -618,7 +618,7 @@ dependencies = [
  "globwalk",
  "humantime",
  "inventory",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "lazy-regex",
  "linked-hash-map",
  "once_cell",
@@ -630,13 +630,13 @@ dependencies = [
 
 [[package]]
 name = "cucumber-codegen"
-version = "0.21.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5c9c7e0af8103f81ab300a21be3df1d57a003a151cf0bf41fdd343f85d14552"
+checksum = "9e19cd9e8e7cfd79fbf844eb6a7334117973c01f6bad35571262b00891e60f1c"
 dependencies = [
  "cucumber-expressions",
  "inflections",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "regex",

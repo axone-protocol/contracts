@@ -11,4 +11,4 @@ schemars.workspace = true
 serde.workspace = true
 serde-json-wasm.workspace = true
 thiserror.workspace = true
-url = "2.5.1"
+url = "2.5.2"

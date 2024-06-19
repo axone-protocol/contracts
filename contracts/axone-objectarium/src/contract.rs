@@ -120,6 +120,10 @@ pub mod execute {
 
         // store object data
         let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.0);
+        let mut res = Response::new()
+            .add_attribute("action", "store_object")
+            .add_attribute("id", id.to_string());
+
         let data_path = DATA.key(id.clone());
 
         let (old_obj, mut new_obj) = if !data_path.has(deps.storage) {
@@ -137,6 +141,9 @@ pub mod execute {
                 Ok(bucket)
             })?;
 
+            res = res.add_attribute("size", size)
+                .add_attribute("compressed_size", compressed_size);
+
             (
                 None,
                 Object {
@@ -153,15 +160,15 @@ pub mod execute {
             (Some(old.clone()), old)
         };
 
+        let mut pinned = false;
         if pin {
-            may_pin_object(deps.storage, info.sender, &mut new_obj)?;
+            pinned = may_pin_object(deps.storage, info.sender, &mut new_obj)?;
         }
+
 
         objects().replace(deps.storage, id.clone(), Some(&new_obj), old_obj.as_ref())?;
 
-        Ok(Response::new()
-            .add_attribute("action", "store_object")
-            .add_attribute("id", id.to_string()))
+        Ok(res.add_attribute("pinned", pinned.to_string()))
     }
 
     pub fn pin_object(

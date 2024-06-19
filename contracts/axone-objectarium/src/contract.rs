@@ -855,6 +855,14 @@ mod tests {
                         "5d41402abc4b2a76b9719d911017c592"
                             .to_string(),
                         5,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "5d41402abc4b2a76b9719d911017c592"
+                                .to_string()),
+                            Attribute::new("size", "5"),
+                            Attribute::new("compressed_size", "5"),
+                            Attribute::new("pinned", "true"),
+                        ]
                     ),
                     (
                         obj2_content,
@@ -862,6 +870,14 @@ mod tests {
                         "33f41d49353ad1a876e36918f64eac4d"
                             .to_string(),
                         4,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "33f41d49353ad1a876e36918f64eac4d"
+                                .to_string()),
+                            Attribute::new("size", "4"),
+                            Attribute::new("compressed_size", "4"),
+                            Attribute::new("pinned", "false"),
+                        ]
                     ),
                 ],
             ),
@@ -874,6 +890,14 @@ mod tests {
                         "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
                             .to_string(),
                         5,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
+                                .to_string()),
+                            Attribute::new("size", "5"),
+                            Attribute::new("compressed_size", "5"),
+                            Attribute::new("pinned", "true"),
+                        ]
                     ),
                     (
                         obj2_content,
@@ -881,6 +905,14 @@ mod tests {
                         "fe798aa30e560c57d69c46982b2bb1320dc86813730bb7c6406ce84b"
                             .to_string(),
                         4,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "fe798aa30e560c57d69c46982b2bb1320dc86813730bb7c6406ce84b"
+                                .to_string()),
+                            Attribute::new("size", "4"),
+                            Attribute::new("compressed_size", "4"),
+                            Attribute::new("pinned", "false"),
+                        ]
                     ),
                 ],
             ),
@@ -893,6 +925,14 @@ mod tests {
                         "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
                             .to_string(),
                         5,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                                .to_string()),
+                            Attribute::new("size", "5"),
+                            Attribute::new("compressed_size", "5"),
+                            Attribute::new("pinned", "true"),
+                        ]
                     ),
                     (
                         obj2_content,
@@ -900,6 +940,14 @@ mod tests {
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
                             .to_string(),
                         4,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
+                                .to_string()),
+                            Attribute::new("size", "4"),
+                            Attribute::new("compressed_size", "4"),
+                            Attribute::new("pinned", "false"),
+                        ]
                     ),
                 ],
             ),
@@ -912,6 +960,14 @@ mod tests {
                         "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90125a3c79f90397bdf5f6a13de828684f"
                             .to_string(),
                         5,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90125a3c79f90397bdf5f6a13de828684f"
+                                .to_string()),
+                            Attribute::new("size", "5"),
+                            Attribute::new("compressed_size", "5"),
+                            Attribute::new("pinned", "true"),
+                        ]
                     ),
                     (
                         obj2_content,
@@ -919,6 +975,14 @@ mod tests {
                         "e700b122a81f64ce34ab67c6a815987536a05b0590bbeb32cf5e88963edd8c6e69c9e43b0f957f242d984f09f91bcaf2"
                             .to_string(),
                         4,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "e700b122a81f64ce34ab67c6a815987536a05b0590bbeb32cf5e88963edd8c6e69c9e43b0f957f242d984f09f91bcaf2"
+                                .to_string()),
+                            Attribute::new("size", "4"),
+                            Attribute::new("compressed_size", "4"),
+                            Attribute::new("pinned", "false"),
+                        ]
                     ),
                 ],
             ),
@@ -931,6 +995,14 @@ mod tests {
                         "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
                             .to_string(),
                         5,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
+                                .to_string()),
+                            Attribute::new("size", "5"),
+                            Attribute::new("compressed_size", "5"),
+                            Attribute::new("pinned", "true"),
+                        ]
                     ),
                     (
                         obj2_content,
@@ -938,6 +1010,14 @@ mod tests {
                         "e4f4025e1e28abb473c89bcae03ded972e91b4427e8970be87f645cc34b9b203d633c12760e32c97011439640cba159f60992e10aac8023fa2577cadc1be3b55"
                             .to_string(),
                         4,
+                        vec![
+                            Attribute::new("action", "store_object"),
+                            Attribute::new("id", "e4f4025e1e28abb473c89bcae03ded972e91b4427e8970be87f645cc34b9b203d633c12760e32c97011439640cba159f60992e10aac8023fa2577cadc1be3b55"
+                                .to_string()),
+                            Attribute::new("size", "4"),
+                            Attribute::new("compressed_size", "4"),
+                            Attribute::new("pinned", "false"),
+                        ]
                     ),
                 ],
             ),
@@ -963,7 +1043,7 @@ mod tests {
             )
             .unwrap();
 
-            for (content, pin, expected_hash, expected_size) in &objs {
+            for (content, pin, expected_hash, expected_size, expected_attr) in &objs {
                 let msg = ExecuteMsg::StoreObject {
                     data: Binary::from_base64(content).unwrap(),
                     pin: *pin,
@@ -972,10 +1052,7 @@ mod tests {
                 let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
                 assert_eq!(
                     res.attributes,
-                    vec![
-                        Attribute::new("action", "store_object"),
-                        Attribute::new("id", expected_hash.clone()),
-                    ]
+                    *expected_attr
                 );
 
                 assert_eq!(

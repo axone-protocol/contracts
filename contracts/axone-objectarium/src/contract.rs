@@ -141,7 +141,8 @@ pub mod execute {
                 Ok(bucket)
             })?;
 
-            res = res.add_attribute("size", size)
+            res = res
+                .add_attribute("size", size)
                 .add_attribute("compressed_size", compressed_size);
 
             (
@@ -165,8 +166,7 @@ pub mod execute {
             pinned = may_pin_object(deps.storage, info.sender, &mut new_obj)?;
         }
 
-
-        objects().replace(deps.storage, id.clone(), Some(&new_obj), old_obj.as_ref())?;
+        objects().replace(deps.storage, id, Some(&new_obj), old_obj.as_ref())?;
 
         Ok(res.add_attribute("pinned", pinned.to_string()))
     }
@@ -448,6 +448,7 @@ mod tests {
     use cosmwasm_std::{coins, from_json, Addr, Attribute, Order, StdError, Uint128};
     use cw_utils::PaymentError;
 
+    use crate::msg::CompressionAlgorithm::{Passthrough, Snappy};
     use std::any::type_name;
 
     fn decode_hex(hex: &str) -> Vec<u8> {
@@ -1050,10 +1051,7 @@ mod tests {
                     compression_algorithm: Some(CompressionAlgorithm::Passthrough),
                 };
                 let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-                assert_eq!(
-                    res.attributes,
-                    *expected_attr
-                );
+                assert_eq!(res.attributes, *expected_attr);
 
                 assert_eq!(
                     Binary::from_base64(content).unwrap(),
@@ -1410,6 +1408,164 @@ mod tests {
                     assert_eq!(res_object_data, data.as_bytes().to_vec());
                 }
             }
+        }
+    }
+
+    #[test]
+    fn store_object_check_attributes() {
+        let obj_content = &general_purpose::STANDARD.encode("hello");
+        let obj_exist_content = &general_purpose::STANDARD.encode("axone");
+        let obj_exist_pinned_content = &general_purpose::STANDARD.encode("protocol");
+        let obj_large_content = &general_purpose::STANDARD.encode("In a world of interconnected systems, there were countless realms, one of which was known as AXONE. Within this realm, AI researchers harnessed the power to create collaborative AI models. As the realm expanded, the researchers used their expertise to power collaborative systems, bringing innovation and advancement to all who sought their knowledge. And so, the legend of the AI researchers and their collaborative AI models lived on, inspiring future generations to unlock the potential of the digital realm with AI.");
+
+        let test_cases = vec![
+            (
+                obj_content,
+                true,
+                Passthrough,
+                vec![
+                    Attribute::new("action", "store_object"),
+                    Attribute::new(
+                        "id",
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                            .to_string(),
+                    ),
+                    Attribute::new("size", "5"),
+                    Attribute::new("compressed_size", "5"),
+                    Attribute::new("pinned", "true"),
+                ],
+            ),
+            (
+                obj_content,
+                false,
+                Passthrough,
+                vec![
+                    Attribute::new("action", "store_object"),
+                    Attribute::new(
+                        "id",
+                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                            .to_string(),
+                    ),
+                    Attribute::new("size", "5"),
+                    Attribute::new("compressed_size", "5"),
+                    Attribute::new("pinned", "false"),
+                ],
+            ),
+            (
+                obj_large_content,
+                true,
+                Snappy,
+                vec![
+                    Attribute::new("action", "store_object"),
+                    Attribute::new(
+                        "id",
+                        "afb9c7804a3515714a3ec2313c990df31d54000b890ae677dcaaa1060b437660"
+                            .to_string(),
+                    ),
+                    Attribute::new("size", "519"),
+                    Attribute::new("compressed_size", "453"),
+                    Attribute::new("pinned", "true"),
+                ],
+            ),
+            (
+                obj_exist_content,
+                true,
+                Passthrough,
+                vec![
+                    Attribute::new("action", "store_object"),
+                    Attribute::new(
+                        "id",
+                        "45a8243ff863a08531c666569ce9997b63df94c2e2aeedaed3d32656ee1ae622"
+                            .to_string(),
+                    ),
+                    Attribute::new("pinned", "true"),
+                ],
+            ),
+            (
+                obj_exist_content,
+                false,
+                Passthrough,
+                vec![
+                    Attribute::new("action", "store_object"),
+                    Attribute::new(
+                        "id",
+                        "45a8243ff863a08531c666569ce9997b63df94c2e2aeedaed3d32656ee1ae622"
+                            .to_string(),
+                    ),
+                    Attribute::new("pinned", "false"),
+                ],
+            ),
+            (
+                obj_exist_pinned_content,
+                false,
+                Passthrough,
+                vec![
+                    Attribute::new("action", "store_object"),
+                    Attribute::new(
+                        "id",
+                        "2ea88c7a30351b12a4dcfc06cdce2af6eab18416176466c2500cb6ef74f745bf"
+                            .to_string(),
+                    ),
+                    Attribute::new("pinned", "false"),
+                ],
+            ),
+            (
+                obj_exist_pinned_content,
+                true,
+                Passthrough,
+                vec![
+                    Attribute::new("action", "store_object"),
+                    Attribute::new(
+                        "id",
+                        "2ea88c7a30351b12a4dcfc06cdce2af6eab18416176466c2500cb6ef74f745bf"
+                            .to_string(),
+                    ),
+                    Attribute::new("pinned", "false"),
+                ],
+            ),
+        ];
+
+        for (content, pin, compression_algorithm, expected_attr) in &test_cases {
+            let mut deps = mock_dependencies();
+            let info = mock_info("creator", &[]);
+            let msg = InstantiateMsg {
+                bucket: String::from("test"),
+                config: Default::default(),
+                limits: Default::default(),
+                pagination: Default::default(),
+            };
+            instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+            _ = execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                ExecuteMsg::StoreObject {
+                    data: Binary::from_base64(obj_exist_content).unwrap(),
+                    pin: false,
+                    compression_algorithm: Some(Passthrough),
+                },
+            );
+
+            _ = execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                ExecuteMsg::StoreObject {
+                    data: Binary::from_base64(obj_exist_pinned_content).unwrap(),
+                    pin: true,
+                    compression_algorithm: Some(Passthrough),
+                },
+            );
+
+            let msg = ExecuteMsg::StoreObject {
+                data: Binary::from_base64(content).unwrap(),
+                pin: *pin,
+                compression_algorithm: Some(*compression_algorithm),
+            };
+
+            let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+            assert_eq!(res.attributes, *expected_attr);
         }
     }
 

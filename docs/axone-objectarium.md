@@ -166,7 +166,7 @@ Execute messages
 
 StoreObject store an object to the bucket and make the sender the owner of the object. The object is referenced by the hash of its content and this value is returned. If the object is already stored, it is a no-op. It may be pinned though.
 
-The "pin" parameter specifies if the object should be pinned for the sender. In such case, the object cannot be removed (forget) from the storage.
+The "pin" parameter specifies whether the object should be pinned for the sender. Pinning an object ensures it is protected from being removed from storage, making it persistent and guaranteeing its indefinite accessibility. It’s important to note that pinning is optional; objects can be stored without pinning. However, be aware that non-pinned objects can be removed from the storage by anyone at any time, making them no longer accessible.
 
 The "compression_algorithm" parameter specifies the algorithm for compressing the object before storing it in the storage, which is optional. If no algorithm is specified, the algorithm used is the first algorithm of the bucket configuration limits. Note that the chosen algorithm can save storage space, but it will increase CPU usage. Depending on the chosen compression algorithm and the achieved compression ratio, the gas cost of the operation will vary, either increasing or decreasing.
 
@@ -175,11 +175,11 @@ The "compression_algorithm" parameter specifies the algorithm for compressing th
 | `store_object`                       | _(Required.) _ **object**.                                                                                                                                                                                                                                                                      |
 | `store_object.compression_algorithm` | **[CompressionAlgorithm](#compressionalgorithm)\|null**. Specifies the compression algorithm to use when storing the object. If None, the first algorithm specified in the list of accepted compression algorithms of the bucket is used (see [BucketLimits::accepted_compression_algorithms]). |
 | `store_object.data`                  | _(Required.) _ **[Binary](#binary)**. The content of the object to store.                                                                                                                                                                                                                       |
-| `store_object.pin`                   | _(Required.) _ **boolean**. Specifies if the object should be pinned for the sender.                                                                                                                                                                                                            |
+| `store_object.pin`                   | _(Required.) _ **boolean**. Specifies whether the object should be pinned for the sender. Pinning ensures the object remains persistent and cannot be removed from storage by anyone.                                                                                                           |
 
 ### ExecuteMsg::ForgetObject
 
-ForgetObject first unpin the object from the bucket for the considered sender, then remove it from the storage if it is not pinned anymore. If the object is pinned for other senders, it is not removed from the storage and an error is returned. If the object is not pinned for the sender, this is a no-op.
+ForgetObject first unpins the object from the bucket for the sender, then removes it from storage if it is no longer pinned by anyone. If the object is still pinned by other senders, it is not removed from storage and an error is returned. If the object is not pinned for the sender, this operation is a no-op.
 
 | parameter          | description                |
 | ------------------ | -------------------------- |
@@ -188,7 +188,7 @@ ForgetObject first unpin the object from the bucket for the considered sender, t
 
 ### ExecuteMsg::PinObject
 
-PinObject pins the object in the bucket for the considered sender. If the object is already pinned for the sender, this is a no-op. While an object is pinned, it cannot be removed from the storage.
+PinObject pins the object in the bucket for the sender. If the object is already pinned for the sender, this operation is a no-op. While an object is pinned, it cannot be removed from storage.
 
 | parameter       | description                |
 | --------------- | -------------------------- |
@@ -197,7 +197,7 @@ PinObject pins the object in the bucket for the considered sender. If the object
 
 ### ExecuteMsg::UnpinObject
 
-UnpinObject unpins the object in the bucket for the considered sender. If the object is not pinned for the sender, this is a no-op. The object can be removed from the storage if it is not pinned anymore.
+UnpinObject unpins the object in the bucket for the sender. If the object is not pinned for the sender, this operation is a no-op. The object can be removed from storage if it is no longer pinned by anyone.
 
 | parameter         | description                |
 | ----------------- | -------------------------- |
@@ -525,4 +525,4 @@ A string containing a 128-bit integer in decimal representation.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`3a727fbaea0f27bc`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`2fd2aff74a052bde`)_

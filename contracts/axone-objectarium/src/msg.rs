@@ -35,8 +35,11 @@ pub enum ExecuteMsg {
     /// The object is referenced by the hash of its content and this value is returned.
     /// If the object is already stored, it is a no-op. It may be pinned though.
     ///
-    /// The "pin" parameter specifies if the object should be pinned for the sender. In such case,
-    /// the object cannot be removed (forget) from the storage.
+    /// The "pin" parameter specifies whether the object should be pinned for the sender. Pinning an
+    /// object ensures it is protected from being removed from storage, making it persistent and
+    /// guaranteeing its indefinite accessibility. It’s important to note that pinning is optional;
+    /// objects can be stored without pinning. However, be aware that non-pinned objects can be removed
+    /// from the storage by anyone at any time, making them no longer accessible.
     ///
     /// The "compression_algorithm" parameter specifies the algorithm for compressing the object before
     /// storing it in the storage, which is optional. If no algorithm is specified, the algorithm used
@@ -46,7 +49,8 @@ pub enum ExecuteMsg {
     StoreObject {
         /// The content of the object to store.
         data: Binary,
-        /// Specifies if the object should be pinned for the sender.
+        /// Specifies whether the object should be pinned for the sender.
+        /// Pinning ensures the object remains persistent and cannot be removed from storage by anyone.
         pin: bool,
         /// Specifies the compression algorithm to use when storing the object.
         /// If None, the first algorithm specified in the list of accepted compression algorithms of the bucket
@@ -55,22 +59,22 @@ pub enum ExecuteMsg {
     },
 
     /// # ForgetObject
-    /// ForgetObject first unpin the object from the bucket for the considered sender, then remove
-    /// it from the storage if it is not pinned anymore.
-    /// If the object is pinned for other senders, it is not removed from the storage and an error is returned.
-    /// If the object is not pinned for the sender, this is a no-op.
+    /// ForgetObject first unpins the object from the bucket for the sender, then removes
+    /// it from storage if it is no longer pinned by anyone.
+    /// If the object is still pinned by other senders, it is not removed from storage and an error is returned.
+    /// If the object is not pinned for the sender, this operation is a no-op.
     ForgetObject { id: ObjectId },
 
     /// # PinObject
-    /// PinObject pins the object in the bucket for the considered sender. If the object is already pinned
-    /// for the sender, this is a no-op.
-    /// While an object is pinned, it cannot be removed from the storage.
+    /// PinObject pins the object in the bucket for the sender. If the object is already pinned
+    /// for the sender, this operation is a no-op.
+    /// While an object is pinned, it cannot be removed from storage.
     PinObject { id: ObjectId },
 
     /// # UnpinObject
-    /// UnpinObject unpins the object in the bucket for the considered sender. If the object is not pinned
-    /// for the sender, this is a no-op.
-    /// The object can be removed from the storage if it is not pinned anymore.
+    /// UnpinObject unpins the object in the bucket for the sender. If the object is not pinned
+    /// for the sender, this operation is a no-op.
+    /// The object can be removed from storage if it is no longer pinned by anyone.
     UnpinObject { id: ObjectId },
 }
 

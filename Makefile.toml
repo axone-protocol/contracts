@@ -600,6 +600,19 @@ docker run --rm \
           | jq -r '.'
 '''
 
+[tasks.update-workspace-dependency-versions]
+dependencies = ["install-toml-cli"]
+script = '''
+next_version=$1
+toml set Cargo.toml workspace.dependencies.axone-cognitarium.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+toml set Cargo.toml workspace.dependencies.axone-rdf.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+toml set Cargo.toml workspace.dependencies.axone-wasm.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+toml set Cargo.toml workspace.dependencies.axone-cognitarium-client.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+toml set Cargo.toml workspace.dependencies.axone-logic-bindings.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+toml set Cargo.toml workspace.dependencies.axone-objectarium.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+toml set Cargo.toml workspace.dependencies.axone-objectarium-client.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+'''
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 
@@ -636,6 +649,9 @@ fi
 
 [tasks.install-cargo-hack]
 install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
+
+[tasks.install-toml-cli]
+install_crate = { crate_name = "toml-cli", min_version = "0.2.3" }
 
 [config]
 default_to_workspace = false

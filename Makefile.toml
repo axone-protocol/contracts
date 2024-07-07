@@ -604,13 +604,20 @@ docker run --rm \
 dependencies = ["install-toml-cli"]
 script = '''
 next_version=$1
-toml set Cargo.toml workspace.dependencies.axone-cognitarium.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
-toml set Cargo.toml workspace.dependencies.axone-rdf.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
-toml set Cargo.toml workspace.dependencies.axone-wasm.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
-toml set Cargo.toml workspace.dependencies.axone-cognitarium-client.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
-toml set Cargo.toml workspace.dependencies.axone-logic-bindings.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
-toml set Cargo.toml workspace.dependencies.axone-objectarium.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
-toml set Cargo.toml workspace.dependencies.axone-objectarium-client.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+
+workspace_dependencies=( \
+  axone-cognitarium \
+  axone-rdf \
+  axone-wasm \
+  axone-cognitarium-client \
+  axone-logic-bindings \
+  axone-objectarium \
+  axone-objectarium-client \
+)
+
+for workspace_dependency in ${workspace_dependencies[@]}; do
+  toml set Cargo.toml workspace.dependencies.$workspace_dependency.version $next_version > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+done
 '''
 
 [tasks.install-llvm-tools-preview]

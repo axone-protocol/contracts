@@ -620,6 +620,10 @@ for workspace_dependency in ${workspace_dependencies[@]}; do
 done
 '''
 
+[tasks.publish-crates]
+dependencies = ["install-cargo-workspaces"]
+script = "cargo workspaces publish --publish-as-is"
+
 [tasks.install-llvm-tools-preview]
 install_crate = { rustup_component_name = "llvm-tools-preview" }
 
@@ -659,6 +663,9 @@ install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
 
 [tasks.install-toml-cli]
 install_crate = { crate_name = "toml-cli", min_version = "0.2.3" }
+
+[tasks.install-cargo-workspaces]
+install_crate = { crate_name = "cargo-workspaces", min_version = "0.3.2" }
 
 [config]
 default_to_workspace = false

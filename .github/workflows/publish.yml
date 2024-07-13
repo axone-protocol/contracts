@@ -41,4 +41,4 @@ jobs:
       - name: Publish crates to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo workspaces publish --publish-as-is --allow-branch main
+        run: cargo make publish-crates

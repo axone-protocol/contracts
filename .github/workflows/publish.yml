@@ -38,25 +38,7 @@ jobs:
           default: true
           override: true
 
-      - name: Setup cmake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: "3.29.0"
-
-      - name: Cargo install smart-release
-        run: cargo install cargo-smart-release
-
       - name: Publish crates to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: |
-          cargo smart-release --execute --update-crates-index --no-push --no-changelog --no-changelog-github-release \
-          axone-rdf \
-          axone-wasm \
-          axone-objectarium-client \
-          axone-logic-bindings \
-          axone-cognitarium-client \
-          axone-objectarium \
-          axone-cognitarium \
-          axone-law-stone \
-          axone-dataverse
+        run: cargo workspaces publish --publish-as-is --allow-branch main

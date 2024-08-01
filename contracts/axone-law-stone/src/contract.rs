@@ -288,10 +288,7 @@ mod tests {
         mock_dependencies, mock_env, mock_info, MockApi, MockQuerier,
         MockQuerierCustomHandlerResult, MockStorage,
     };
-    use cosmwasm_std::{
-        coins, from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event,
-        Order, OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
-    };
+    use cosmwasm_std::{coins, from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event, Order, OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery, Api};
     use cw_utils::ParseReplyError::SubMsgFailure;
     use cw_utils::PaymentError;
     use cw_utils::PaymentError::NonPayable;
@@ -694,10 +691,13 @@ mod tests {
 
             let reply = Reply {
                 id: STORE_PROGRAM_REPLY_ID,
+                payload: Binary::default(),
+                gas_used: 0,
                 result: SubMsgResult::Ok(SubMsgResponse {
                     events: vec![Event::new("e".to_string())
                         .add_attribute("id".to_string(), case.clone().object_id)],
                     data: None,
+                    msg_responses: vec![],
                 }),
             };
 
@@ -790,10 +790,13 @@ mod tests {
             (
                 Reply {
                     id: 404,
+                    payload: Binary::default(),
+                    gas_used: 0,
                     result: SubMsgResult::Ok(SubMsgResponse {
                         events: vec![Event::new("e".to_string())
                             .add_attribute("id".to_string(), object_id.to_string())],
                         data: None,
+                        msg_responses: vec![],
                     }),
                 },
                 Err(ContractError::UnknownReplyID),
@@ -801,9 +804,12 @@ mod tests {
             (
                 Reply {
                     id: 1,
+                    payload: Binary::default(),
+                    gas_used: 0,
                     result: SubMsgResult::Ok(SubMsgResponse {
                         events: vec![Event::new("e".to_string())],
                         data: None,
+                        msg_responses: vec![],
                     }),
                 },
                 Err(ContractError::ParseReplyError(SubMsgFailure(
@@ -923,11 +929,10 @@ mod tests {
 
         for case in cases {
             let mut deps = mock_dependencies();
+            let creator = deps.api.addr_make("creator");
             deps.querier.update_wasm(move |req| match req {
                 WasmQuery::ContractInfo { .. } => {
-                    let mut contract_info = ContractInfoResponse::default();
-                    contract_info.creator = "creator".to_string();
-                    SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
+                    SystemResult::Ok(ContractResult::Ok(to_json_binary(&ContractInfoResponse::new(0, creator.clone(), None, false, None)).unwrap()))
                 }
                 WasmQuery::Smart { contract_addr, msg }
                     if contract_addr == "axone-objectarium1" =>
@@ -1055,11 +1060,10 @@ mod tests {
 
         for case in cases {
             let mut deps = mock_dependencies();
-
+            let creator = deps.api.addr_make(case.0);
             deps.querier.update_wasm(move |req| match req {
                 WasmQuery::ContractInfo { .. } => {
-                    let mut contract_info = ContractInfoResponse::default();
-                    contract_info.creator = case.0.to_string();
+                    let  contract_info = ContractInfoResponse::new(0, creator.clone(), None, false, None);
 
                     SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
@@ -1109,11 +1113,15 @@ mod tests {
     #[test]
     fn break_broken_stone() {
         let mut deps = mock_dependencies();
-        deps.querier.update_wasm(|req| match req {
+        let creator = deps.api.addr_make("creator");
+        deps.querier.update_wasm(move |req| match req {
             WasmQuery::ContractInfo { .. } => {
-                let mut contract_info = ContractInfoResponse::default();
-                contract_info.creator = "creator".to_string();
-                SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
+                SystemResult::Ok(ContractResult::Ok(to_json_binary(&ContractInfoResponse::new(
+                    0,
+                    creator.clone(),
+                    None,
+                    false,
+                    None)).unwrap()))
             }
             _ => SystemResult::Err(SystemError::Unknown {}),
         });

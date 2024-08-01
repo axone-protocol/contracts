@@ -147,13 +147,22 @@ mod tests {
         SimpleWhereCondition, TriplePattern, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
         WhereCondition, IRI,
     };
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{
-        coins, from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg,
-        SystemError, SystemResult, Uint128, Uint64, WasmQuery,
-    };
+    use cosmwasm_std::testing::{message_info, MOCK_CONTRACT_ADDR, mock_dependencies, mock_env, MockApi};
+    use cosmwasm_std::{coins, from_json, Addr, Attribute, ContractResult, CosmosMsg, HexBinary, SubMsg, SystemError, SystemResult, Uint128, Uint64, WasmQuery, Checksum, BlockInfo, Timestamp, TransactionInfo, ContractInfo, OwnedDeps};
     use cw_utils::PaymentError::NonPayable;
     use std::collections::BTreeMap;
+
+    const CREATOR: &str = "creator";
+
+    fn addr(input: &str) -> Addr {
+        MockApi::default().addr_make(input)
+    }
+
+    fn mock_env_addr() -> Env {
+        let mut env = mock_env();
+        env.contract.address = addr(MOCK_CONTRACT_ADDR);
+        env
+    }
 
     #[test]
     fn proper_instantiate() {
@@ -162,11 +171,8 @@ mod tests {
             WasmQuery::CodeInfo { code_id, .. } => {
                 let resp = CodeInfoResponse::new(
                     code_id.clone(),
-                    "creator".to_string(),
-                    HexBinary::from_hex(
-                        "3B94AAF0B7D804B5B458DED0D20CACF95D2A1C8DF78ED3C89B61291760454AEC",
-                    )
-                    .unwrap(),
+                    addr(CREATOR),
+                    Checksum::from_hex("3B94AAF0B7D804B5B458DED0D20CACF95D2A1C8DF78ED3C89B61291760454AEC").unwrap(),
                 );
                 SystemResult::Ok(ContractResult::Ok(to_json_binary(&resp).unwrap()))
             }
@@ -186,8 +192,10 @@ mod tests {
             },
         };
 
-        let env = mock_env();
-        let res = instantiate(deps.as_mut(), env.clone(), mock_info("creator", &[]), msg).unwrap();
+        let env = mock_env_addr();
+        let creator = deps.api.addr_make(CREATOR);
+        let info = message_info(&creator, &[]);
+        let res = instantiate(deps.as_mut(), env.clone(), info, msg).unwrap();
 
         assert_eq!(
             res.attributes,
@@ -220,7 +228,7 @@ mod tests {
     fn funds_initialization() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("sender", &coins(10, "uaxone"));
+        let info = message_info(&addr("sender"), &coins(10, "uaxone"));
 
         let msg = InstantiateMsg {
             name: "my-dataverse".to_string(),
@@ -339,7 +347,7 @@ mod tests {
             mock_env(),
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary(read_test_data("vc-eddsa-2020-ok.nq")),
+                metadata: Binary::new(read_test_data("vc-eddsa-2020-ok.nq")),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -385,7 +393,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
                 match exec_msg.unwrap() {
                     axone_cognitarium::msg::ExecuteMsg::InsertData { format, data } => {
                         assert_eq!(format, Some(DataFormat::NTriples));
-                        assert_eq!(String::from_utf8(data.0).unwrap(), expected_data);
+                        assert_eq!(String::from_utf8(data.to_vec()).unwrap(), expected_data);
                     }
                     _ => assert!(false),
                 }
@@ -401,7 +409,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_env(),
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary("notrdf".as_bytes().to_vec()),
+                metadata: Binary::new("notrdf".as_bytes().to_vec()),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -417,7 +425,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_env(),
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary(vec![]),
+                metadata: Binary::new(vec![]),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -436,7 +444,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_env(),
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary(read_test_data("vc-eddsa-2020-ok-unsecured.nq")),
+                metadata: Binary::new(read_test_data("vc-eddsa-2020-ok-unsecured.nq")),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -455,7 +463,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_env(),
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary(read_test_data("vc-unsupported-1.nq")),
+                metadata: Binary::new(read_test_data("vc-unsupported-1.nq")),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -503,7 +511,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             mock_env(),
             mock_info("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0", &[]),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary(read_test_data("vc-eddsa-2020-ok.nq")),
+                metadata: Binary::new(read_test_data("vc-eddsa-2020-ok.nq")),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );

@@ -268,7 +268,7 @@ _:c0 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/de
         assert!(serialization_res.is_ok());
 
         assert_eq!(
-            String::from_utf8(serialization_res.unwrap().0).unwrap(),
+            String::from_utf8(serialization_res.unwrap().to_vec()).unwrap(),
             expected
         );
     }
@@ -301,7 +301,7 @@ _:a0 <dataverse:claim#original-node> <test:named-link> .
         assert!(serialization_res.is_ok());
 
         assert_eq!(
-            String::from_utf8(serialization_res.unwrap().0).unwrap(),
+            String::from_utf8(serialization_res.unwrap().to_vec()).unwrap(),
             expected
         );
     }

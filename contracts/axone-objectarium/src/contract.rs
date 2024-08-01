@@ -1613,7 +1613,7 @@ mod tests {
             response.id,
             ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
         );
-        assert_eq!(response.owner, info.sender);
+        assert_eq!(response.owner, info.sender.as_str());
         assert!(response.is_pinned);
         assert_eq!(response.size.u128(), 5u128);
 
@@ -1634,7 +1634,7 @@ mod tests {
             response.id,
             ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")
         );
-        assert_eq!(response.owner, info.sender);
+        assert_eq!(response.owner, info.sender.as_str());
         assert!(!response.is_pinned);
         assert_eq!(response.size.u128(), 4u128);
     }

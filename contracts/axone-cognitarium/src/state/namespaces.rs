@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 /// Store a key increment used a unique key for referencing a namespace. Given the size of an `u128`
 /// there is no need to implement a garbage collector mechanism in case some namespaces are removed.
-pub const NAMESPACE_KEY_INCREMENT: Item<'_, u128> = Item::new("namespace_key");
+pub const NAMESPACE_KEY_INCREMENT: Item<u128> = Item::new("namespace_key");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Namespace {
@@ -32,7 +32,7 @@ impl IndexList<Namespace> for NamespaceIndexes<'_> {
     }
 }
 
-pub fn namespaces<'a>() -> IndexedMap<'a, String, Namespace, NamespaceIndexes<'a>> {
+pub fn namespaces<'a>() -> IndexedMap<String, Namespace, NamespaceIndexes<'a>> {
     IndexedMap::new(
         "NAMESPACE",
         NamespaceIndexes {

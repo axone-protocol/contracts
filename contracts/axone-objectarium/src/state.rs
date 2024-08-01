@@ -9,7 +9,7 @@ use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub const DATA: Map<'_, Hash, Vec<u8>> = Map::new("DATA");
+pub const DATA: Map<Hash, Vec<u8>> = Map::new("DATA");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Bucket {
@@ -322,7 +322,7 @@ impl TryFrom<PaginationConfig> for Pagination {
     }
 }
 
-pub const BUCKET: Item<'_, Bucket> = Item::new("bucket");
+pub const BUCKET: Item<Bucket> = Item::new("bucket");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Object {
@@ -364,7 +364,7 @@ impl IndexList<Object> for ObjectIndexes<'_> {
     }
 }
 
-pub fn objects<'a>() -> IndexedMap<'a, Hash, Object, ObjectIndexes<'a>> {
+pub fn objects<'a>() -> IndexedMap<Hash, Object, ObjectIndexes<'a>> {
     IndexedMap::new(
         "OBJECT",
         ObjectIndexes {
@@ -392,7 +392,7 @@ impl IndexList<Pin> for PinIndexes<'_> {
     }
 }
 
-pub fn pins<'a>() -> IndexedMap<'a, (Hash, Addr), Pin, PinIndexes<'a>> {
+pub fn pins<'a>() -> IndexedMap<(Hash, Addr), Pin, PinIndexes<'a>> {
     IndexedMap::new(
         "PIN",
         PinIndexes {

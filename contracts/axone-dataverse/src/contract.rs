@@ -31,7 +31,7 @@ pub fn instantiate(
         .query_wasm_code_info(msg.triplestore_config.code_id.u64())?;
     let salt = Binary::from(msg.name.as_bytes());
 
-    let _triplestore_address = instantiate2_address(&checksum, &creator, &salt)?;
+    let _triplestore_address = instantiate2_address(&checksum.as_slice(), &creator, &salt)?;
 
     // Necessary stuff for testing purposes, see: https://github.com/CosmWasm/cosmwasm/issues/1648
     let triplestore_address = {

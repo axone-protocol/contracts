@@ -119,7 +119,7 @@ pub mod execute {
         }
 
         // store object data
-        let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.0);
+        let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.to_vec());
         let mut res = Response::new()
             .add_attribute("action", "store_object")
             .add_attribute("id", id.to_string());
@@ -127,7 +127,7 @@ pub mod execute {
         let data_path = DATA.key(id.clone());
 
         let (old_obj, mut new_obj) = if !data_path.has(deps.storage) {
-            let compressed_data = compression.compress(&data.0)?;
+            let compressed_data = compression.compress(&data.to_vec())?;
             data_path.save(deps.storage, &compressed_data)?;
 
             let compressed_size = (compressed_data.len() as u128).into();

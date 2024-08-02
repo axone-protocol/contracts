@@ -1,3 +1,49 @@
+# AXONE contracts
+
+## [6.0.0](https://github.com/axone-protocol/contracts/compare/v5.0.0...v6.0.0) (2024-08-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **dataverse:** change RdfFormat to  RdfDatasetFormat
+* **law-stone:** ensure only the creator can break the stone (was admin)
+* **renaming:** rebrand from `okp4` to `axone`
+* **objectarium:** avoid failing on already stored object
+
+### Features
+
+* **cognitarium:** do not allow funds on instantiate ([035e8a6](https://github.com/axone-protocol/contracts/commit/035e8a61e919f980ae72db9f913e2606edd99150))
+* **cognitarium:** prevent contract execution with funds ([9ea2c50](https://github.com/axone-protocol/contracts/commit/9ea2c5090bbb03f802368b9e6493cfc37321a578))
+* **dataverse:** do not allow funds on instantiate ([952e727](https://github.com/axone-protocol/contracts/commit/952e727d35d1f3ee5e2048942047b12a916ff97f))
+* **dataverse:** prevent contract execution with funds ([b25ca2a](https://github.com/axone-protocol/contracts/commit/b25ca2a3a84c3a1b41530034cd25db9207eec282))
+* **law-stone:** do not allow funds on instantiate ([474823e](https://github.com/axone-protocol/contracts/commit/474823e1ad59905975c21f41fecee2f1e8598ea8))
+* **law-stone:** prevent contract execution with funds ([116ff78](https://github.com/axone-protocol/contracts/commit/116ff7807e71b675c1f8039e7a9405cbbc4252c7))
+* **objectarium:** add check for pagination default_page_size cannot be zero ([c993e22](https://github.com/axone-protocol/contracts/commit/c993e22873d42e91ef3207e13e18125dbf5a92de))
+* **objectarium:** add mora validation control for BucketLimits ([fc3fd4a](https://github.com/axone-protocol/contracts/commit/fc3fd4add0ac9cfc1b3c7a04c85dd44c1236219a))
+* **objectarium:** add validation for accepted_compression_algorithms ([ce89427](https://github.com/axone-protocol/contracts/commit/ce894277420e088bb24a314ae7f5471e617d6dd5))
+* **objectarium:** avoid failing on already stored object ([7e56d22](https://github.com/axone-protocol/contracts/commit/7e56d22e659d6ed036d16386a3eeb3bd6e4729a6))
+* **objectarium:** do not allow funds on instantiate ([d068844](https://github.com/axone-protocol/contracts/commit/d068844817de6ff3a5b7f5aa983d1e28f8dcba62))
+* **objectarium:** include bucket statistics in bucket information query ([8728049](https://github.com/axone-protocol/contracts/commit/87280490216fdad23d1a345bbb097eb0170e5eb0))
+* **objectarium:** include compressed_size, size and pinned attribute when store object ([4a39965](https://github.com/axone-protocol/contracts/commit/4a39965fb0555398b817dbdac947acde19cfadb5))
+* **objectarium:** prevent contract execution with funds ([816a0e5](https://github.com/axone-protocol/contracts/commit/816a0e5dea619b160742e3f193177a03a9a04ebf))
+
+
+### Bug Fixes
+
+* **law-stone:** ensure only the creator can break the stone (was admin) ([a5a4847](https://github.com/axone-protocol/contracts/commit/a5a4847e77d22ccd3957ca72424cc1212d62d231))
+* **objectarium:** decrement total compression size when forgot object ([#559](https://github.com/axone-protocol/contracts/issues/559)) ([2aaba9f](https://github.com/axone-protocol/contracts/commit/2aaba9f280e2e2e11a7482139514b027cca72c08))
+* **objectarium:** ensure pin on storing already exists object ([4612b51](https://github.com/axone-protocol/contracts/commit/4612b516676b226a3d7ce00c288069103e312a23))
+* **renaming:** denom used after chain-init ([39f1810](https://github.com/axone-protocol/contracts/commit/39f1810c5b941ef23389d55677c36f0a30d8fd47))
+* **renaming:** format import ([08f7b01](https://github.com/axone-protocol/contracts/commit/08f7b01436f2af30be26416a9c119a031e62ff78))
+* **renaming:** format linter issue ([0b38aa8](https://github.com/axone-protocol/contracts/commit/0b38aa89a1df7f621f56d0e37a1d96b7035c8cab))
+* **renaming:** linter issues ([a066df6](https://github.com/axone-protocol/contracts/commit/a066df68e9618bc3ecfac53d26fe94bce954946f))
+
+
+### Code Refactoring
+
+* **dataverse:** change RdfFormat to  RdfDatasetFormat ([d62c72e](https://github.com/axone-protocol/contracts/commit/d62c72ebaba900fbcad77a8503726fe12974dff2))
+* **renaming:** rebrand from `okp4` to `axone` ([3dcd870](https://github.com/axone-protocol/contracts/commit/3dcd870275a3c56fcd9dbda40196254c8aa46dc1))
+
 # ØKP4 contracts
 
 ## [5.0.0](https://github.com/axone-protocol/contracts/compare/v4.1.0...v5.0.0) (2024-04-02)

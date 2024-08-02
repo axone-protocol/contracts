@@ -86,7 +86,7 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
 name = "axone-cognitarium"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "axone-rdf",
  "base64 0.22.1",
@@ -114,7 +114,7 @@ dependencies = [
 
 [[package]]
 name = "axone-cognitarium-client"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "axone-cognitarium",
  "cosmwasm-std",
@@ -123,7 +123,7 @@ dependencies = [
 
 [[package]]
 name = "axone-dataverse"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "axone-cognitarium",
  "axone-cognitarium-client",
@@ -151,7 +151,7 @@ dependencies = [
 
 [[package]]
 name = "axone-law-stone"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "axone-logic-bindings",
  "axone-objectarium",
@@ -173,7 +173,7 @@ dependencies = [
 
 [[package]]
 name = "axone-logic-bindings"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "axone-wasm",
  "cosmwasm-std",
@@ -187,7 +187,7 @@ dependencies = [
 
 [[package]]
 name = "axone-objectarium"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "base16ct",
  "base64 0.22.1",
@@ -213,7 +213,7 @@ dependencies = [
 
 [[package]]
 name = "axone-objectarium-client"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "axone-objectarium",
  "axone-wasm",
@@ -224,7 +224,7 @@ dependencies = [
 
 [[package]]
 name = "axone-rdf"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "base16ct",
  "cosmwasm-std",
@@ -238,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "axone-wasm"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "cosmwasm-std",
  "form_urlencoded",

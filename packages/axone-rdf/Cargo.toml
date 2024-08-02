@@ -2,7 +2,7 @@
 authors = ["AXONE"]
 edition = "2021"
 name = "axone-rdf"
-version = "5.0.0"
+version = "6.0.0"
 
 [dependencies]
 base16ct = { version = "0.2.0", features = ["alloc"] }

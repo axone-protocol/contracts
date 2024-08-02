@@ -2,7 +2,7 @@
 authors = ["AXONE"]
 edition = "2021"
 name = "axone-cognitarium-client"
-version = "5.0.0"
+version = "6.0.0"
 
 [dependencies]
 axone-cognitarium.workspace = true

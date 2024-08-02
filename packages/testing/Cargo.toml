@@ -1,0 +1,7 @@
+[package]
+edition = "2021"
+name = "testing"
+version = "0.1.0"
+
+[dependencies]
+cosmwasm-std.workspace = true

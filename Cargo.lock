@@ -248,6 +248,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "testing",
  "thiserror",
 ]
 
@@ -307,6 +308,7 @@ dependencies = [
  "itertools 0.13.0",
  "schemars",
  "serde",
+ "testing",
  "thiserror",
  "url",
 ]
@@ -348,6 +350,7 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "snap",
+ "testing",
  "thiserror",
 ]
 
@@ -2436,7 +2439,7 @@ dependencies = [
 
 [[package]]
 name = "testing"
-version = "0.1.0"
+version = "5.0.0"
 dependencies = [
  "cosmwasm-std 2.1.1",
 ]

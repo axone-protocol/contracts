@@ -3,7 +3,7 @@ use axone_cognitarium::ContractError;
 use base64::engine::general_purpose;
 use base64::Engine;
 use cosmwasm_std::testing::{
-    mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage,
+    message_info, mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage,
 };
 use cosmwasm_std::{MessageInfo, OwnedDeps, Response};
 use cucumber::parser::{Basic, Error};
@@ -13,6 +13,7 @@ use serde_yaml::Value;
 use std::fmt::Debug;
 use std::path::Path;
 use std::vec;
+use testing::addr::addr;
 
 #[derive(World)]
 #[world(init = Self::new)]
@@ -26,7 +27,7 @@ impl SmartContractWorld {
     fn new() -> Self {
         SmartContractWorld {
             deps: mock_dependencies(),
-            info: mock_info("owner", &[]),
+            info: message_info(&addr("owner"), &[]),
             response: Ok(Response::new()),
         }
     }

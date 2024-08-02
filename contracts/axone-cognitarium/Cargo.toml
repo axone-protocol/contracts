@@ -41,6 +41,7 @@ cw-multi-test.workspace = true
 futures = "0.3.30"
 serde_json = "1.0.121"
 serde_yaml = "0.9.34"
+testing.workspace = true
 
 [features]
 # use library feature to disable all instantiate/execute/query exports

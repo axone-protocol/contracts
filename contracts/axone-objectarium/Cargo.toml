@@ -39,6 +39,7 @@ thiserror.workspace = true
 [dev-dependencies]
 base64 = "0.22.1"
 cw-multi-test.workspace = true
+testing.workspace = true
 
 [features]
 # use library feature to disable all instantiate/execute/query exports

@@ -34,6 +34,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true
+testing.workspace = true
 url = "2.5.2"
 
 [features]

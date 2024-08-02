@@ -156,18 +156,8 @@ mod tests {
     };
     use cw_utils::PaymentError::NonPayable;
     use std::collections::BTreeMap;
-
-    const CREATOR: &str = "creator";
-
-    fn addr(input: &str) -> Addr {
-        MockApi::default().addr_make(input)
-    }
-
-    fn mock_env_addr() -> Env {
-        let mut env = mock_env();
-        env.contract.address = addr(MOCK_CONTRACT_ADDR);
-        env
-    }
+    use testing::addr::{addr, CREATOR, SENDER};
+    use testing::mock::mock_env_addr;
 
     #[test]
     fn proper_instantiate() {
@@ -201,8 +191,7 @@ mod tests {
         };
 
         let env = mock_env_addr();
-        let creator = deps.api.addr_make(CREATOR);
-        let info = message_info(&creator, &[]);
+        let info = message_info(&addr(CREATOR), &[]);
         let res = instantiate(deps.as_mut(), env.clone(), info, msg).unwrap();
 
         assert_eq!(
@@ -236,7 +225,7 @@ mod tests {
     fn funds_initialization() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = message_info(&addr("sender"), &coins(10, "uaxone"));
+        let info = message_info(&addr(SENDER), &coins(10, "uaxone"));
 
         let msg = InstantiateMsg {
             name: "my-dataverse".to_string(),
@@ -285,7 +274,7 @@ mod tests {
     fn execute_fail_with_funds() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = message_info(&addr("sender"), &coins(10, "uaxone"));
+        let info = message_info(&addr(SENDER), &coins(10, "uaxone"));
 
         let msg = ExecuteMsg::SubmitClaims {
             metadata: Binary::from("data".as_bytes()),

@@ -3,7 +3,7 @@ use axone_cognitarium::ContractError;
 use base64::engine::general_purpose;
 use base64::Engine;
 use cosmwasm_std::testing::{
-    message_info, mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage,
+    message_info, mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage,
 };
 use cosmwasm_std::{MessageInfo, OwnedDeps, Response};
 use cucumber::parser::{Basic, Error};

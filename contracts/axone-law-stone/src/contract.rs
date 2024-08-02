@@ -285,13 +285,12 @@ mod tests {
     use axone_objectarium::msg::PageInfo;
     use axone_wasm::uri::CosmwasmUri;
     use cosmwasm_std::testing::{
-        message_info, mock_dependencies, mock_env, mock_info, MockApi, MockQuerier,
+        message_info, mock_dependencies, mock_env, MockApi, MockQuerier,
         MockQuerierCustomHandlerResult, MockStorage,
     };
     use cosmwasm_std::{
-        coins, from_json, to_json_binary, Api, ContractInfoResponse, ContractResult, CosmosMsg,
-        Event, Order, OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult,
-        WasmQuery,
+        coins, from_json, to_json_binary, ContractInfoResponse, ContractResult, CosmosMsg, Event,
+        Order, OwnedDeps, SubMsgResponse, SubMsgResult, SystemError, SystemResult, WasmQuery,
     };
     use cw_utils::ParseReplyError::SubMsgFailure;
     use cw_utils::PaymentError;

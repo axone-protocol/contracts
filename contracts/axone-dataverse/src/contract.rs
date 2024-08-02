@@ -147,9 +147,7 @@ mod tests {
         SimpleWhereCondition, TriplePattern, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
         WhereCondition, IRI,
     };
-    use cosmwasm_std::testing::{
-        message_info, mock_dependencies, mock_env, MockApi, MOCK_CONTRACT_ADDR,
-    };
+    use cosmwasm_std::testing::{message_info, mock_dependencies, mock_env};
     use cosmwasm_std::{
         coins, from_json, Addr, Attribute, Checksum, ContractResult, CosmosMsg, SubMsg,
         SystemError, SystemResult, Uint128, Uint64, WasmQuery,

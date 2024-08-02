@@ -25,8 +25,8 @@ axone-objectarium = { path = "contracts/axone-objectarium", features = [
 axone-objectarium-client = { path = "packages/axone-objectarium-client" }
 axone-rdf = { path = "packages/axone-rdf" }
 axone-wasm = { path = "packages/axone-wasm" }
-cosmwasm-schema = "2.0.4"
-cosmwasm-std = { version = "2.0.4", features = ["cosmwasm_2_0"] }
+cosmwasm-schema = "2.1.1"
+cosmwasm-std = { version = "2.1.1", features = ["cosmwasm_2_1"] }
 cosmwasm-storage = "1.5.2"
 cw-multi-test = "2.1.0"
 cw-storage-plus = "2.0.0"

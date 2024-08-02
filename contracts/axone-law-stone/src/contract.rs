@@ -1065,11 +1065,10 @@ mod tests {
 
         for case in cases {
             let mut deps = mock_dependencies();
-            let creator = deps.api.addr_make(case.0);
             deps.querier.update_wasm(move |req| match req {
                 WasmQuery::ContractInfo { .. } => {
                     let contract_info =
-                        ContractInfoResponse::new(0, creator.clone(), None, false, None);
+                        ContractInfoResponse::new(0, addr(case.0), None, false, None);
 
                     SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }

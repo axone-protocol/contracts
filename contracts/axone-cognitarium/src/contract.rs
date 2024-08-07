@@ -443,7 +443,7 @@ mod tests {
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
     };
     use crate::{msg, state};
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::testing::{message_info, mock_dependencies, mock_env};
     use cosmwasm_std::{coins, from_json, Addr, Attribute, Order, Uint128};
     use cw_utils::PaymentError;
     use cw_utils::PaymentError::NonPayable;
@@ -452,6 +452,7 @@ mod tests {
     use std::io::Read;
     use std::path::Path;
     use std::{env, u128};
+    use testing::addr::{addr, OWNER, SENDER};
 
     #[test]
     fn proper_initialization() {
@@ -469,7 +470,7 @@ mod tests {
             },
         };
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
         assert_eq!(0, res.messages.len());
 
@@ -507,7 +508,7 @@ mod tests {
     fn funds_initialization() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("sender", &coins(10, "uaxone"));
+        let info = message_info(&addr(SENDER), &coins(10, "uaxone"));
 
         let msg = InstantiateMsg::default();
 
@@ -520,7 +521,7 @@ mod tests {
     fn execute_fail_with_funds() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("sender", &coins(10, "uaxone"));
+        let info = message_info(&addr("sender"), &coins(10, "uaxone"));
 
         let messages = vec![
             InsertData {
@@ -572,7 +573,7 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
 
-            let info = mock_info("owner", &[]);
+            let info = message_info(&addr(OWNER), &[]);
             instantiate(
                 deps.as_mut(),
                 mock_env(),
@@ -667,7 +668,7 @@ mod tests {
     fn proper_insert_blank_nodes() {
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -701,7 +702,7 @@ mod tests {
     fn insert_existing_triples() {
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -763,7 +764,7 @@ mod tests {
         instantiate(
             deps.as_mut(),
             mock_env(),
-            mock_info("owner", &[]),
+            message_info(&addr(OWNER), &[]),
             InstantiateMsg::default(),
         )
         .unwrap();
@@ -771,7 +772,7 @@ mod tests {
         let res = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info("not-owner", &[]),
+            message_info(&addr("not-owner"), &[]),
             InsertData {
                 format: Some(DataFormat::RDFXml),
                 data: read_test_data("sample.rdf.xml"),
@@ -870,7 +871,7 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
 
-            let info = mock_info("owner", &[]);
+            let info = message_info(&addr(OWNER), &[]);
             instantiate(
                 deps.as_mut(),
                 mock_env(),
@@ -1086,7 +1087,7 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
 
-            let info = mock_info("owner", &[]);
+            let info = message_info(&addr(OWNER), &[]);
             instantiate(
                 deps.as_mut(),
                 mock_env(),
@@ -1196,7 +1197,7 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
 
-            let info = mock_info("owner", &[]);
+            let info = message_info(&addr(OWNER), &[]);
             instantiate(
                 deps.as_mut(),
                 mock_env(),
@@ -1230,7 +1231,7 @@ mod tests {
             .save(
                 deps.as_mut().storage,
                 &Store {
-                    owner: Addr::unchecked("owner"),
+                    owner: Addr::unchecked(OWNER),
                     limits: StoreLimits {
                         max_triple_count: 1u128.into(),
                         max_byte_size: 2u128.into(),
@@ -1254,7 +1255,7 @@ mod tests {
         assert_eq!(
             from_json::<StoreResponse>(&res.unwrap()).unwrap(),
             StoreResponse {
-                owner: "owner".to_string(),
+                owner: OWNER.to_string(),
                 limits: msg::StoreLimits {
                     max_triple_count: 1u128.into(),
                     max_byte_size: 2u128.into(),
@@ -1455,7 +1456,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -1676,7 +1677,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -1776,7 +1777,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -1928,7 +1929,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -1998,7 +1999,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -2063,7 +2064,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -2128,7 +2129,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -2197,7 +2198,7 @@ mod tests {
 
         let mut deps = mock_dependencies();
 
-        let info = mock_info("owner", &[]);
+        let info = message_info(&addr(OWNER), &[]);
         instantiate(
             deps.as_mut(),
             mock_env(),
@@ -2374,7 +2375,7 @@ mod tests {
         for (data, q, expected) in cases {
             let mut deps = mock_dependencies();
 
-            let info = mock_info("owner", &[]);
+            let info = message_info(&addr(OWNER), &[]);
             instantiate(
                 deps.as_mut(),
                 mock_env(),

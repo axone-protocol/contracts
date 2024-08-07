@@ -20,7 +20,7 @@ impl IndexList<Triple> for TripleIndexes<'_> {
     }
 }
 
-pub fn triples<'a>() -> IndexedMap<'a, TriplePK<'a>, Triple, TripleIndexes<'a>> {
+pub fn triples<'a>() -> IndexedMap<TriplePK<'a>, Triple, TripleIndexes<'a>> {
     IndexedMap::new(
         "TRIPLE",
         TripleIndexes {

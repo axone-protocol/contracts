@@ -285,7 +285,7 @@ mod tests {
     use axone_objectarium::msg::PageInfo;
     use axone_wasm::uri::CosmwasmUri;
     use cosmwasm_std::testing::{
-        mock_dependencies, mock_env, mock_info, MockApi, MockQuerier,
+        message_info, mock_dependencies, mock_env, MockApi, MockQuerier,
         MockQuerierCustomHandlerResult, MockStorage,
     };
     use cosmwasm_std::{
@@ -297,6 +297,7 @@ mod tests {
     use cw_utils::PaymentError::NonPayable;
     use std::collections::VecDeque;
     use std::marker::PhantomData;
+    use testing::addr::{addr, CREATOR, SENDER};
 
     fn custom_logic_handler_with_dependencies(
         dependencies: Vec<String>,
@@ -353,7 +354,7 @@ mod tests {
             storage_address: "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv"
                 .to_string(),
         };
-        let info = mock_info("creator", &[]);
+        let info = message_info(&addr(CREATOR), &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -393,7 +394,7 @@ mod tests {
         let mut deps =
             mock_dependencies_with_logic_handler(|_| SystemResult::Err(SystemError::Unknown {}));
         let env = mock_env();
-        let info = mock_info("sender", &coins(10, "uaxone"));
+        let info = message_info(&addr(SENDER), &coins(10, "uaxone"));
 
         let msg = InstantiateMsg {
             program: to_json_binary("foo(_) :- true.").unwrap(),
@@ -694,10 +695,13 @@ mod tests {
 
             let reply = Reply {
                 id: STORE_PROGRAM_REPLY_ID,
+                payload: Binary::default(),
+                gas_used: 0,
                 result: SubMsgResult::Ok(SubMsgResponse {
                     events: vec![Event::new("e".to_string())
                         .add_attribute("id".to_string(), case.clone().object_id)],
                     data: None,
+                    msg_responses: vec![],
                 }),
             };
 
@@ -790,10 +794,13 @@ mod tests {
             (
                 Reply {
                     id: 404,
+                    payload: Binary::default(),
+                    gas_used: 0,
                     result: SubMsgResult::Ok(SubMsgResponse {
                         events: vec![Event::new("e".to_string())
                             .add_attribute("id".to_string(), object_id.to_string())],
                         data: None,
+                        msg_responses: vec![],
                     }),
                 },
                 Err(ContractError::UnknownReplyID),
@@ -801,9 +808,12 @@ mod tests {
             (
                 Reply {
                     id: 1,
+                    payload: Binary::default(),
+                    gas_used: 0,
                     result: SubMsgResult::Ok(SubMsgResponse {
                         events: vec![Event::new("e".to_string())],
                         data: None,
+                        msg_responses: vec![],
                     }),
                 },
                 Err(ContractError::ParseReplyError(SubMsgFailure(
@@ -879,7 +889,7 @@ mod tests {
     fn execute_fail_with_funds() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("sender", &coins(10, "uaxone"));
+        let info = message_info(&addr(SENDER), &coins(10, "uaxone"));
 
         let result = execute(
             deps.as_mut(),
@@ -924,11 +934,16 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
             deps.querier.update_wasm(move |req| match req {
-                WasmQuery::ContractInfo { .. } => {
-                    let mut contract_info = ContractInfoResponse::default();
-                    contract_info.creator = "creator".to_string();
-                    SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
-                }
+                WasmQuery::ContractInfo { .. } => SystemResult::Ok(ContractResult::Ok(
+                    to_json_binary(&ContractInfoResponse::new(
+                        0,
+                        addr(CREATOR),
+                        None,
+                        false,
+                        None,
+                    ))
+                    .unwrap(),
+                )),
                 WasmQuery::Smart { contract_addr, msg }
                     if contract_addr == "axone-objectarium1" =>
                 {
@@ -973,7 +988,7 @@ mod tests {
                     .unwrap();
             }
 
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
             let res = execute(
                 deps.as_mut(),
                 mock_env(),
@@ -1042,24 +1057,18 @@ mod tests {
     fn break_stone_creator() {
         let cases = vec![
             // creator, sender, broken, Error
-            (
-                "creator",
-                "sender",
-                false,
-                Some(ContractError::Unauthorized),
-            ),
-            ("creator", "sender", true, Some(ContractError::Unauthorized)),
-            ("creator", "creator", false, None),
-            ("creator", "creator", true, None),
+            (CREATOR, SENDER, false, Some(ContractError::Unauthorized)),
+            (CREATOR, SENDER, true, Some(ContractError::Unauthorized)),
+            (CREATOR, CREATOR, false, None),
+            (CREATOR, CREATOR, true, None),
         ];
 
         for case in cases {
             let mut deps = mock_dependencies();
-
             deps.querier.update_wasm(move |req| match req {
                 WasmQuery::ContractInfo { .. } => {
-                    let mut contract_info = ContractInfoResponse::default();
-                    contract_info.creator = case.0.to_string();
+                    let contract_info =
+                        ContractInfoResponse::new(0, addr(case.0), None, false, None);
 
                     SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
@@ -1092,7 +1101,7 @@ mod tests {
             let res = execute(
                 deps.as_mut(),
                 mock_env(),
-                mock_info(case.1, &[]),
+                message_info(&addr(case.1), &[]),
                 ExecuteMsg::BreakStone {},
             );
 
@@ -1110,11 +1119,16 @@ mod tests {
     fn break_broken_stone() {
         let mut deps = mock_dependencies();
         deps.querier.update_wasm(|req| match req {
-            WasmQuery::ContractInfo { .. } => {
-                let mut contract_info = ContractInfoResponse::default();
-                contract_info.creator = "creator".to_string();
-                SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
-            }
+            WasmQuery::ContractInfo { .. } => SystemResult::Ok(ContractResult::Ok(
+                to_json_binary(&ContractInfoResponse::new(
+                    0,
+                    addr(CREATOR),
+                    None,
+                    false,
+                    None,
+                ))
+                .unwrap(),
+            )),
             _ => SystemResult::Err(SystemError::Unknown {}),
         });
 
@@ -1144,7 +1158,7 @@ mod tests {
         let res = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info("creator", &[]),
+            message_info(&addr(CREATOR), &[]),
             ExecuteMsg::BreakStone {},
         );
         assert!(res.is_ok());

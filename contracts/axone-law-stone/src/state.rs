@@ -5,7 +5,7 @@ use axone_objectarium_client::ObjectRef;
 use cw_storage_plus::{Item, Map};
 
 /// State to store context during contract instantiation
-pub const INSTANTIATE_CONTEXT: Item<'_, String> = Item::new("instantiate");
+pub const INSTANTIATE_CONTEXT: Item<String> = Item::new("instantiate");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct LawStone {
@@ -22,6 +22,6 @@ impl From<LawStone> for ProgramResponse {
     }
 }
 
-pub const PROGRAM: Item<'_, LawStone> = Item::new("program");
+pub const PROGRAM: Item<LawStone> = Item::new("program");
 
-pub const DEPENDENCIES: Map<'_, &str, ObjectRef> = Map::new("dependencies");
+pub const DEPENDENCIES: Map<&str, ObjectRef> = Map::new("dependencies");

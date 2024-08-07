@@ -119,7 +119,7 @@ pub mod execute {
         }
 
         // store object data
-        let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.0);
+        let id = crypto::hash(&bucket.config.hash_algorithm.into(), &data.to_vec());
         let mut res = Response::new()
             .add_attribute("action", "store_object")
             .add_attribute("id", id.to_string());
@@ -127,7 +127,7 @@ pub mod execute {
         let data_path = DATA.key(id.clone());
 
         let (old_obj, mut new_obj) = if !data_path.has(deps.storage) {
-            let compressed_data = compression.compress(&data.0)?;
+            let compressed_data = compression.compress(&data)?;
             data_path.save(deps.storage, &compressed_data)?;
 
             let compressed_size = (compressed_data.len() as u128).into();
@@ -443,13 +443,15 @@ mod tests {
         ObjectsResponse, PageInfo, PaginationConfigBuilder,
     };
     use base64::{engine::general_purpose, Engine as _};
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::testing::{message_info, mock_dependencies, mock_env};
     use cosmwasm_std::StdError::NotFound;
     use cosmwasm_std::{coins, from_json, Addr, Attribute, Order, StdError, Uint128};
     use cw_utils::PaymentError;
 
     use crate::msg::CompressionAlgorithm::{Passthrough, Snappy};
     use std::any::type_name;
+    use testing::addr::{addr, CREATOR, SENDER};
+    use testing::mock::mock_env_addr;
 
     fn decode_hex(hex: &str) -> Vec<u8> {
         base16ct::lower::decode_vec(hex).unwrap()
@@ -479,7 +481,7 @@ mod tests {
             limits: Default::default(),
             pagination: Default::default(),
         };
-        let info = mock_info("creator", &[]);
+        let info = message_info(&addr(CREATOR), &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
@@ -494,7 +496,7 @@ mod tests {
 
         // check internal state too
         let bucket = BUCKET.load(&deps.storage).unwrap();
-        assert_eq!("creator", bucket.owner.into_string());
+        assert_eq!(addr(CREATOR), bucket.owner);
         assert_eq!(Uint128::zero(), bucket.stat.size);
         assert_eq!(Uint128::zero(), bucket.stat.object_count);
     }
@@ -522,7 +524,7 @@ mod tests {
                 limits: Default::default(),
                 pagination: Default::default(),
             };
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
 
             let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -554,7 +556,7 @@ mod tests {
                 .build()
                 .unwrap(),
         };
-        let info = mock_info("creator", &[]);
+        let info = message_info(&addr(CREATOR), &[]);
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
@@ -594,7 +596,13 @@ mod tests {
                 .build()
                 .unwrap(),
         };
-        instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&addr(CREATOR), &[]),
+            msg,
+        )
+        .unwrap();
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Bucket {}).unwrap();
         let value: BucketResponse = from_json(&res).unwrap();
@@ -742,7 +750,12 @@ mod tests {
                 limits: case.1,
                 pagination: case.2,
             };
-            match instantiate(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg) {
+            match instantiate(
+                deps.as_mut(),
+                mock_env(),
+                message_info(&addr(CREATOR), &[]),
+                msg,
+            ) {
                 Err(err) => {
                     assert!(case.3.is_some());
                     assert_eq!(err, ContractError::Std(case.3.unwrap()))
@@ -762,7 +775,7 @@ mod tests {
             limits: Default::default(),
             pagination: Default::default(),
         };
-        let info = mock_info("creator", &[]);
+        let info = message_info(&addr(CREATOR), &[]);
 
         let err = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap_err();
 
@@ -779,7 +792,7 @@ mod tests {
             limits: Default::default(),
             pagination: Default::default(),
         };
-        let info = mock_info("creator", &[]);
+        let info = message_info(&addr(CREATOR), &[]);
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
@@ -798,7 +811,7 @@ mod tests {
             limits: Default::default(),
             pagination: Default::default(),
         };
-        let info = mock_info("creator", &coins(10, "uaxone"));
+        let info = message_info(&addr(CREATOR), &coins(10, "uaxone"));
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg);
         assert!(res.is_err());
@@ -812,7 +825,7 @@ mod tests {
     fn execute_fail_with_funds() {
         let mut deps = mock_dependencies();
         let env = mock_env();
-        let info = mock_info("sender", &coins(10, "uaxone"));
+        let info = message_info(&addr(SENDER), &coins(10, "uaxone"));
 
         let messages = vec![
             ExecuteMsg::StoreObject {
@@ -1026,7 +1039,7 @@ mod tests {
 
         for (hash_algorithm, objs) in test_cases {
             let mut deps = mock_dependencies();
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
 
             instantiate(
                 deps.as_mut(),
@@ -1112,7 +1125,7 @@ mod tests {
     #[test]
     fn store_object_already_stored() {
         let mut deps = mock_dependencies();
-        let info = mock_info("creator", &[]);
+        let info = message_info(&addr(CREATOR), &[]);
         let msg = InstantiateMsg {
             bucket: String::from("test"),
             config: Default::default(),
@@ -1242,7 +1255,7 @@ mod tests {
 
         for case in cases {
             let mut deps = mock_dependencies();
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
                 config: Default::default(),
@@ -1362,7 +1375,7 @@ mod tests {
         for case in cases {
             // Arrange
             let mut deps = mock_dependencies();
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
                 config: BucketConfig {
@@ -1398,7 +1411,7 @@ mod tests {
                         res_object_info,
                         ObjectResponse {
                             id: obj_id.to_string(),
-                            owner: "creator".to_string(),
+                            owner: addr(CREATOR).to_string(),
                             is_pinned: false,
                             size: Uint128::from(data.len() as u128),
                             compressed_size: expected.compressed_size.into(),
@@ -1527,7 +1540,7 @@ mod tests {
 
         for (content, pin, compression_algorithm, expected_attr) in &test_cases {
             let mut deps = mock_dependencies();
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
             let msg = InstantiateMsg {
                 bucket: String::from("test"),
                 config: Default::default(),
@@ -1572,7 +1585,7 @@ mod tests {
     #[test]
     fn object() {
         let mut deps = mock_dependencies();
-        let info = mock_info("creator", &[]);
+        let info = message_info(&addr(CREATOR), &[]);
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
@@ -1613,7 +1626,7 @@ mod tests {
             response.id,
             ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
         );
-        assert_eq!(response.owner, info.sender);
+        assert_eq!(response.owner, info.sender.as_str());
         assert!(response.is_pinned);
         assert_eq!(response.size.u128(), 5u128);
 
@@ -1634,7 +1647,7 @@ mod tests {
             response.id,
             ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")
         );
-        assert_eq!(response.owner, info.sender);
+        assert_eq!(response.owner, info.sender.as_str());
         assert!(!response.is_pinned);
         assert_eq!(response.size.u128(), 4u128);
     }
@@ -1659,7 +1672,7 @@ mod tests {
 
         for case in cases {
             let mut deps = mock_dependencies();
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
             let data =
                 Binary::from_base64(general_purpose::STANDARD.encode("okp4").as_str()).unwrap();
 
@@ -1752,7 +1765,7 @@ mod tests {
                 objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                senders: vec![mock_info("bob", &[])],
+                senders: vec![message_info(&addr("bob"), &[])],
                 expected_count: 1,
                 expected_error: None,
                 expected_object_pin_count: vec![(
@@ -1772,7 +1785,10 @@ mod tests {
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                     ),
                 ],
-                senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("alice"), &[]),
+                ],
                 expected_count: 2,
                 expected_error: None,
                 expected_object_pin_count: vec![(
@@ -1792,7 +1808,10 @@ mod tests {
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                     ),
                 ],
-                senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
+                senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("bob"), &[]),
+                ],
                 expected_count: 1,
                 expected_error: None,
                 expected_object_pin_count: vec![(
@@ -1812,7 +1831,10 @@ mod tests {
                         "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
                     ),
                 ],
-                senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
+                senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("bob"), &[]),
+                ],
                 expected_count: 2,
                 expected_error: None,
                 expected_object_pin_count: vec![
@@ -1840,7 +1862,10 @@ mod tests {
                         "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
                     ),
                 ],
-                senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("alice"), &[]),
+                ],
                 expected_count: 2,
                 expected_error: None,
                 expected_object_pin_count: vec![
@@ -1872,9 +1897,9 @@ mod tests {
                     ),
                 ],
                 senders: vec![
-                    mock_info("bob", &[]),
-                    mock_info("alice", &[]),
-                    mock_info("alice", &[]),
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("alice"), &[]),
+                    message_info(&addr("alice"), &[]),
                 ],
                 expected_count: 2,
                 expected_error: None,
@@ -1910,10 +1935,10 @@ mod tests {
                     ),
                 ],
                 senders: vec![
-                    mock_info("bob", &[]),
-                    mock_info("alice", &[]),
-                    mock_info("martin", &[]),
-                    mock_info("pierre", &[]),
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("alice"), &[]),
+                    message_info(&addr("martin"), &[]),
+                    message_info(&addr("pierre"), &[]),
                 ],
                 expected_count: 3,
                 expected_error: Some(ContractError::Bucket(
@@ -1939,7 +1964,7 @@ mod tests {
                 objects: vec![ObjectId::from(
                     "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
                 )],
-                senders: vec![mock_info("bob", &[])],
+                senders: vec![message_info(&addr("bob"), &[])],
                 expected_count: 0,
                 expected_error: Some(ContractError::Std(StdError::not_found(
                     not_found_object_info::<Object>(
@@ -1956,7 +1981,7 @@ mod tests {
             TC {
                 // Invalid object id
                 objects: vec![ObjectId::from("invalid id")],
-                senders: vec![mock_info("bob", &[])],
+                senders: vec![message_info(&addr("bob"), &[])],
                 expected_count: 0,
                 expected_error: Some(ContractError::Std(StdError::parse_err(
                     type_name::<Vec<u8>>(),
@@ -1973,7 +1998,7 @@ mod tests {
 
         for case in cases {
             let mut deps = mock_dependencies();
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
 
             instantiate(
                 deps.as_mut(),
@@ -2070,11 +2095,11 @@ mod tests {
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                pin_senders: vec![mock_info("bob", &[])],
+                pin_senders: vec![message_info(&addr("bob"), &[])],
                 unpin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                unpin_senders: vec![mock_info("bob", &[])],
+                unpin_senders: vec![message_info(&addr("bob"), &[])],
                 expected_count: 0,
                 expected_error: None,
                 expected_object_pin_count: vec![(
@@ -2088,11 +2113,11 @@ mod tests {
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                pin_senders: vec![mock_info("bob", &[])],
+                pin_senders: vec![message_info(&addr("bob"), &[])],
                 unpin: vec![ObjectId::from(
                     "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
                 )],
-                unpin_senders: vec![mock_info("bob", &[])],
+                unpin_senders: vec![message_info(&addr("bob"), &[])],
                 expected_count: 1,
                 expected_error: None,
                 expected_object_pin_count: vec![
@@ -2119,11 +2144,14 @@ mod tests {
                         "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
                     ),
                 ],
-                pin_senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
+                pin_senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("bob"), &[]),
+                ],
                 unpin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                unpin_senders: vec![mock_info("bob", &[])],
+                unpin_senders: vec![message_info(&addr("bob"), &[])],
                 expected_count: 1,
                 expected_error: None,
                 expected_object_pin_count: vec![
@@ -2147,7 +2175,7 @@ mod tests {
                 unpin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                unpin_senders: vec![mock_info("bob", &[])],
+                unpin_senders: vec![message_info(&addr("bob"), &[])],
                 expected_count: 0,
                 expected_error: None,
                 expected_object_pin_count: vec![(
@@ -2173,15 +2201,15 @@ mod tests {
                     ),
                 ],
                 pin_senders: vec![
-                    mock_info("bob", &[]),
-                    mock_info("alice", &[]),
-                    mock_info("martin", &[]),
-                    mock_info("pierre", &[]),
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("alice"), &[]),
+                    message_info(&addr("martin"), &[]),
+                    message_info(&addr("pierre"), &[]),
                 ],
                 unpin: vec![ObjectId::from(
                     "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
                 )],
-                unpin_senders: vec![mock_info("martin", &[])],
+                unpin_senders: vec![message_info(&addr("martin"), &[])],
                 expected_count: 3,
                 expected_error: None,
                 expected_object_pin_count: vec![
@@ -2204,11 +2232,11 @@ mod tests {
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                pin_senders: vec![mock_info("bob", &[])],
+                pin_senders: vec![message_info(&addr("bob"), &[])],
                 unpin: vec![ObjectId::from(
                     "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
                 )],
-                unpin_senders: vec![mock_info("martin", &[])],
+                unpin_senders: vec![message_info(&addr("martin"), &[])],
                 expected_count: 1,
                 expected_error: Some(ContractError::Std(StdError::not_found(
                     not_found_object_info::<Object>(
@@ -2227,9 +2255,9 @@ mod tests {
                 pin: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                pin_senders: vec![mock_info("bob", &[])],
+                pin_senders: vec![message_info(&addr("bob"), &[])],
                 unpin: vec![ObjectId::from("invalid id")],
-                unpin_senders: vec![mock_info("martin", &[])],
+                unpin_senders: vec![message_info(&addr("martin"), &[])],
                 expected_count: 1,
                 expected_error: Some(ContractError::Std(StdError::parse_err(
                     type_name::<Vec<u8>>(),
@@ -2246,7 +2274,7 @@ mod tests {
 
         for case in cases {
             let mut deps = mock_dependencies();
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
 
             instantiate(
                 deps.as_mut(),
@@ -2339,8 +2367,8 @@ mod tests {
     #[test]
     fn fetch_objects() {
         let mut deps = mock_dependencies();
-        let info1 = mock_info("creator1", &[]);
-        let info2 = mock_info("creator2", &[]);
+        let info1 = message_info(&addr("creator1"), &[]);
+        let info2 = message_info(&addr("creator2"), &[]);
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
@@ -2403,7 +2431,7 @@ mod tests {
             ),
             (
                 QueryMsg::Objects {
-                    address: Some("unknown".to_string()),
+                    address: Some(addr("unknown").to_string()),
                     first: None,
                     after: None,
                 },
@@ -2415,7 +2443,7 @@ mod tests {
             ),
             (
                 QueryMsg::Objects {
-                    address: Some("creator1".to_string()),
+                    address: Some(addr("creator1").to_string()),
                     first: None,
                     after: None,
                 },
@@ -2427,7 +2455,7 @@ mod tests {
             ),
             (
                 QueryMsg::Objects {
-                    address: Some("creator1".to_string()),
+                    address: Some(addr("creator1").to_string()),
                     first: Some(1),
                     after: None,
                 },
@@ -2439,7 +2467,7 @@ mod tests {
             ),
             (
                 QueryMsg::Objects {
-                    address: Some("creator1".to_string()),
+                    address: Some(addr("creator1").to_string()),
                     first: Some(1),
                     after: Some("5bfWM6UF5MowkQVp16q5pnXvwc9SVkS4xZkFeVLdswjU".to_string()),
                 },
@@ -2460,7 +2488,7 @@ mod tests {
         }
 
         let msg = QueryMsg::Objects {
-            address: Some("creator2".to_string()),
+            address: Some(addr("creator2").to_string()),
             first: None,
             after: None,
         };
@@ -2470,7 +2498,7 @@ mod tests {
             response.data.first().unwrap(),
             &ObjectResponse {
                 id: "0a6d95579ba3dd2f79c870906fd894007ce449020d111d358894cfbbcd9a03a4".to_string(),
-                owner: "creator2".to_string(),
+                owner: addr("creator2").to_string(),
                 is_pinned: false,
                 size: 7u128.into(),
                 compressed_size: 7u128.into(),
@@ -2482,8 +2510,8 @@ mod tests {
     #[test]
     fn object_pins() {
         let mut deps = mock_dependencies();
-        let info1 = mock_info("creator1", &[]);
-        let info2 = mock_info("creator2", &[]);
+        let info1 = message_info(&addr("creator1"), &[]);
+        let info2 = message_info(&addr("creator2"), &[]);
 
         let msg = InstantiateMsg {
             bucket: String::from("test"),
@@ -2522,7 +2550,7 @@ mod tests {
                     first: None,
                     after: None,
                 },
-                Vec::<String>::new(),
+                Vec::<Addr>::new(),
                 PageInfo {
                     has_next_page: false,
                     cursor: "".to_string(),
@@ -2535,10 +2563,10 @@ mod tests {
                     first: None,
                     after: None,
                 },
-                vec!["creator1".to_string(), "creator2".to_string()],
+                vec![addr("creator2"), addr("creator1")],
                 PageInfo {
                     has_next_page: false,
-                    cursor: "Hdm2eF21ryF".to_string(),
+                    cursor: "3wwsaS9LwRtjTvYihWjb64ph5BdBrkTrt8f2sG6vBiE774tMxX31Rs9Mqn91NGQ6MzUow4Gi5iBR6STw68tuG2esLAdK".to_string(),
                 },
             ),
             (
@@ -2548,10 +2576,10 @@ mod tests {
                     first: Some(1),
                     after: None,
                 },
-                vec!["creator1".to_string()],
+                vec![addr("creator2")],
                 PageInfo {
                     has_next_page: true,
-                    cursor: "Hdm2eF21ryE".to_string(),
+                    cursor: "3wwsaS9LwRtjTrrGpg2qSGEo3gFkR53R2hUNX2PapfytooQuGcPiyF4zRneMECgJiZXS336Cd7pZU4CJ96nt3mcoQR8g".to_string(),
                 },
             ),
             (
@@ -2559,20 +2587,27 @@ mod tests {
                     id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
                         .to_string(),
                     first: Some(1),
-                    after: Some("Hdm2eF21ryE".to_string()),
+                    after: Some("3wwsaS9LwRtjTrrGpg2qSGEo3gFkR53R2hUNX2PapfytooQuGcPiyF4zRneMECgJiZXS336Cd7pZU4CJ96nt3mcoQR8g".to_string()),
                 },
-                vec!["creator2".to_string()],
+                vec![addr("creator1")],
                 PageInfo {
                     has_next_page: false,
-                    cursor: "Hdm2eF21ryF".to_string(),
+                    cursor: "3wwsaS9LwRtjTvYihWjb64ph5BdBrkTrt8f2sG6vBiE774tMxX31Rs9Mqn91NGQ6MzUow4Gi5iBR6STw68tuG2esLAdK".to_string(),
                 },
             ),
         ];
 
         for case in cases {
-            let result = query(deps.as_ref(), mock_env(), case.0).unwrap();
+            let result = query(deps.as_ref(), mock_env_addr(), case.0).unwrap();
             let response: ObjectPinsResponse = from_json(&result).unwrap();
-            assert_eq!(response.data, case.1);
+            assert_eq!(
+                response
+                    .data
+                    .iter()
+                    .map(|a| Addr::unchecked(a))
+                    .collect::<Vec<Addr>>(),
+                case.1
+            );
             assert_eq!(response.page_info, case.2);
         }
     }
@@ -2587,7 +2622,13 @@ mod tests {
             limits: Default::default(),
             pagination: Default::default(),
         };
-        instantiate(deps.as_mut(), mock_env(), mock_info("creator1", &[]), msg).unwrap();
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&addr("creator1"), &[]),
+            msg,
+        )
+        .unwrap();
 
         let cases = vec![
             (
@@ -2640,7 +2681,7 @@ mod tests {
                 forget_objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                forget_senders: vec![mock_info("bob", &[])],
+                forget_senders: vec![message_info(&addr("bob"), &[])],
                 expected_count: 3,
                 expected_total_size: Uint128::new(474),
                 expected_compressed_size: Uint128::new(418),
@@ -2657,7 +2698,10 @@ mod tests {
                         "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
                     ),
                 ],
-                forget_senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
+                forget_senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("bob"), &[]),
+                ],
                 expected_count: 2,
                 expected_total_size: Uint128::new(469),
                 expected_compressed_size: Uint128::new(413),
@@ -2669,7 +2713,10 @@ mod tests {
                 forget_objects: vec![ObjectId::from(
                     "d1abcabb14dd23d2cf60472dffb4823be10ac20148e8ef7b9644cc14fcf8a073",
                 )],
-                forget_senders: vec![mock_info("bob", &[]), mock_info("bob", &[])],
+                forget_senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("bob"), &[]),
+                ],
                 expected_count: 3,
                 expected_total_size: Uint128::new(13),
                 expected_compressed_size: Uint128::new(13),
@@ -2679,11 +2726,11 @@ mod tests {
                 pins: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                pins_senders: vec![mock_info("bob", &[])],
+                pins_senders: vec![message_info(&addr("bob"), &[])],
                 forget_objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                forget_senders: vec![mock_info("alice", &[])], // the sender is different from the pinner, so error
+                forget_senders: vec![message_info(&addr("alice"), &[])], // the sender is different from the pinner, so error
                 expected_count: 4,
                 expected_total_size: Uint128::new(478),
                 expected_compressed_size: Uint128::new(422),
@@ -2693,11 +2740,11 @@ mod tests {
                 pins: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                pins_senders: vec![mock_info("bob", &[])],
+                pins_senders: vec![message_info(&addr("bob"), &[])],
                 forget_objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, so forget should work
+                forget_senders: vec![message_info(&addr("bob"), &[])], // the sender is the same as the pinner, so forget should work
                 expected_count: 3,
                 expected_total_size: Uint128::new(474),
                 expected_compressed_size: Uint128::new(418),
@@ -2712,11 +2759,14 @@ mod tests {
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                     ),
                 ],
-                pins_senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                pins_senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("alice"), &[]),
+                ],
                 forget_objects: vec![ObjectId::from(
                     "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                 )],
-                forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
+                forget_senders: vec![message_info(&addr("bob"), &[])], // the sender is the same as the pinner, but another pinner is on it so error
                 expected_count: 4,
                 expected_total_size: Uint128::new(478),
                 expected_compressed_size: Uint128::new(422),
@@ -2731,11 +2781,14 @@ mod tests {
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                     ),
                 ],
-                pins_senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                pins_senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("alice"), &[]),
+                ],
                 forget_objects: vec![ObjectId::from(
                     "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56",
                 )],
-                forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
+                forget_senders: vec![message_info(&addr("bob"), &[])], // the sender is the same as the pinner, but another pinner is on it so error
                 expected_count: 4,
                 expected_total_size: Uint128::new(478),
                 expected_compressed_size: Uint128::new(422),
@@ -2754,9 +2807,12 @@ mod tests {
                         "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6",
                     ),
                 ],
-                pins_senders: vec![mock_info("bob", &[]), mock_info("alice", &[])],
+                pins_senders: vec![
+                    message_info(&addr("bob"), &[]),
+                    message_info(&addr("alice"), &[]),
+                ],
                 forget_objects: vec![ObjectId::from("invalid id")],
-                forget_senders: vec![mock_info("bob", &[])], // the sender is the same as the pinner, but another pinner is on it so error
+                forget_senders: vec![message_info(&addr("bob"), &[])], // the sender is the same as the pinner, but another pinner is on it so error
                 expected_count: 4,
                 expected_total_size: Uint128::new(478),
                 expected_compressed_size: Uint128::new(422),
@@ -2769,7 +2825,7 @@ mod tests {
 
         for case in cases {
             let mut deps = mock_dependencies();
-            let info = mock_info("creator", &[]);
+            let info = message_info(&addr(CREATOR), &[]);
 
             instantiate(
                 deps.as_mut(),
@@ -2896,7 +2952,7 @@ mod tests {
     #[test]
     fn store_forgotten_object() {
         let mut deps = mock_dependencies();
-        let info = mock_info("creator", &[]);
+        let info = message_info(&addr(CREATOR), &[]);
 
         instantiate(
             deps.as_mut(),

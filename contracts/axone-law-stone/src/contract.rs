@@ -1,7 +1,3 @@
-use axone_logic_bindings::LogicCustomQuery;
-use axone_objectarium::msg::{
-    ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery,
-};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -11,9 +7,14 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw_utils::nonpayable;
 
+use axone_logic_bindings::LogicCustomQuery;
+use axone_objectarium::msg::{
+    ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery,
+};
+use axone_objectarium_client::ObjectRef;
+
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use axone_objectarium_client::ObjectRef;
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
@@ -63,9 +64,11 @@ pub fn execute(
 }
 
 pub mod execute {
-    use super::*;
-    use crate::state::{DEPENDENCIES, PROGRAM};
     use cosmwasm_std::{ensure_eq, Order};
+
+    use crate::state::{DEPENDENCIES, PROGRAM};
+
+    use super::*;
 
     pub fn break_stone(
         deps: DepsMut<'_>,
@@ -127,12 +130,15 @@ pub fn query(deps: Deps<'_, LogicCustomQuery>, env: Env, msg: QueryMsg) -> StdRe
 }
 
 pub mod query {
-    use super::*;
+    use cosmwasm_std::QueryRequest;
+
+    use axone_logic_bindings::{Answer, AskResponse};
+
     use crate::helper::object_ref_to_uri;
     use crate::msg::ProgramResponse;
     use crate::state::PROGRAM;
-    use axone_logic_bindings::{Answer, AskResponse};
-    use cosmwasm_std::QueryRequest;
+
+    use super::*;
 
     const ERR_STONE_BROKEN: &str = "system_error(broken_law_stone)";
 
@@ -197,10 +203,12 @@ pub fn reply(
 }
 
 pub mod reply {
-    use super::*;
+    use cw_utils::ParseReplyError;
+
     use crate::helper::{ask_response_to_objects, get_reply_event_attribute, object_ref_to_uri};
     use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
-    use cw_utils::ParseReplyError;
+
+    use super::*;
 
     pub fn store_program_reply(
         deps: DepsMut<'_, LogicCustomQuery>,
@@ -242,17 +250,14 @@ pub mod reply {
                 let res = deps.querier.query(&req).map_err(ContractError::from)?;
 
                 let objects = ask_response_to_objects(res, "Files".to_string())?;
-                let mut msgs = Vec::with_capacity(objects.len());
-                for obj in objects {
-                    if obj.object_id == stone.law.object_id {
-                        continue;
-                    }
-                    DEPENDENCIES.save(deps.storage, obj.object_id.as_str(), &obj)?;
-
-                    msgs.push(SubMsg::new(obj.to_exec_pin_msg(vec![])?));
-                }
-
-                Ok(msgs)
+                objects
+                    .into_iter()
+                    .filter(|obj| obj.object_id != stone.law.object_id)
+                    .map(|obj| {
+                        DEPENDENCIES.save(deps.storage, obj.object_id.as_str(), &obj)?;
+                        Ok(SubMsg::new(obj.to_exec_pin_msg(vec![])?))
+                    })
+                    .collect()
             })
             .map(|msg| Response::new().add_submessages(msg))
     }
@@ -274,15 +279,9 @@ pub mod reply {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::msg::ProgramResponse;
-    use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
-    use axone_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
-    use axone_logic_bindings::{
-        Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
-    };
-    use axone_objectarium::msg::PageInfo;
-    use axone_wasm::uri::CosmwasmUri;
+    use std::collections::VecDeque;
+    use std::marker::PhantomData;
+
     use cosmwasm_std::testing::{
         message_info, mock_dependencies, mock_env, MockApi, MockQuerier,
         MockQuerierCustomHandlerResult, MockStorage,
@@ -294,9 +293,19 @@ mod tests {
     use cw_utils::ParseReplyError::SubMsgFailure;
     use cw_utils::PaymentError;
     use cw_utils::PaymentError::NonPayable;
-    use std::collections::VecDeque;
-    use std::marker::PhantomData;
+
+    use axone_logic_bindings::testing::mock::mock_dependencies_with_logic_handler;
+    use axone_logic_bindings::{
+        Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
+    };
+    use axone_objectarium::msg::PageInfo;
+    use axone_wasm::uri::CosmwasmUri;
     use testing::addr::{addr, CREATOR, SENDER};
+
+    use crate::msg::ProgramResponse;
+    use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
+
+    use super::*;
 
     fn custom_logic_handler_with_dependencies(
         dependencies: Vec<String>,
@@ -693,6 +702,7 @@ mod tests {
                 )
             });
 
+            #[allow(deprecated)]
             let reply = Reply {
                 id: STORE_PROGRAM_REPLY_ID,
                 payload: Binary::from(
@@ -779,6 +789,7 @@ mod tests {
     #[test]
     fn program_reply_errors() {
         let object_id = "axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd";
+        #[allow(deprecated)]
         let cases = vec![
             (
                 Reply {

@@ -74,10 +74,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
     match msg {
-        ExecuteMsg::SubmitClaims {
-            metadata,
-            format: _,
-        } => execute::submit_claims(deps, info, metadata),
+        ExecuteMsg::SubmitClaims { claims, format: _ } => {
+            execute::submit_claims(deps, info, claims)
+        }
         _ => Err(StdError::generic_err("Not implemented").into()),
     }
 }
@@ -94,9 +93,9 @@ pub mod execute {
     pub fn submit_claims(
         deps: DepsMut<'_>,
         info: MessageInfo,
-        data: Binary,
+        claims: Binary,
     ) -> Result<Response, ContractError> {
-        let buf = BufReader::new(data.as_slice());
+        let buf = BufReader::new(claims.as_slice());
         let mut reader = NQuadsReader::new(buf);
         let rdf_quads = reader.read_all()?;
         let vc_dataset = Dataset::from(rdf_quads.as_slice());
@@ -275,7 +274,7 @@ mod tests {
         let info = message_info(&addr(SENDER), &coins(10, "uaxone"));
 
         let msg = ExecuteMsg::SubmitClaims {
-            metadata: Binary::from("data".as_bytes()),
+            claims: Binary::from("data".as_bytes()),
             format: Some(RdfDatasetFormat::NQuads),
         };
 
@@ -345,7 +344,7 @@ mod tests {
                 &[],
             ),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary::new(read_test_data("vc-eddsa-2020-ok.nq")),
+                claims: Binary::new(read_test_data("vc-eddsa-2020-ok.nq")),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -410,7 +409,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
                 &[],
             ),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary::new("notrdf".as_bytes().to_vec()),
+                claims: Binary::new("notrdf".as_bytes().to_vec()),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -429,7 +428,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
                 &[],
             ),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary::new(vec![]),
+                claims: Binary::new(vec![]),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -451,7 +450,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
                 &[],
             ),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary::new(read_test_data("vc-eddsa-2020-ok-unsecured.nq")),
+                claims: Binary::new(read_test_data("vc-eddsa-2020-ok-unsecured.nq")),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -473,7 +472,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
                 &[],
             ),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary::new(read_test_data("vc-unsupported-1.nq")),
+                claims: Binary::new(read_test_data("vc-unsupported-1.nq")),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );
@@ -524,7 +523,7 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
                 &[],
             ),
             ExecuteMsg::SubmitClaims {
-                metadata: Binary::new(read_test_data("vc-eddsa-2020-ok.nq")),
+                claims: Binary::new(read_test_data("vc-eddsa-2020-ok.nq")),
                 format: Some(RdfDatasetFormat::NQuads),
             },
         );

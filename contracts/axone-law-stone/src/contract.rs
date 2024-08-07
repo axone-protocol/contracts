@@ -702,6 +702,7 @@ mod tests {
                 )
             });
 
+            #[allow(deprecated)]
             let reply = Reply {
                 id: STORE_PROGRAM_REPLY_ID,
                 payload: Binary::from(
@@ -788,6 +789,7 @@ mod tests {
     #[test]
     fn program_reply_errors() {
         let object_id = "axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd";
+        #[allow(deprecated)]
         let cases = vec![
             (
                 Reply {

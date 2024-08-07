@@ -4,9 +4,6 @@ use crate::msg::ProgramResponse;
 use axone_objectarium_client::ObjectRef;
 use cw_storage_plus::{Item, Map};
 
-/// State to store context during contract instantiation
-pub const INSTANTIATE_CONTEXT: Item<String> = Item::new("instantiate");
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct LawStone {
     pub broken: bool,

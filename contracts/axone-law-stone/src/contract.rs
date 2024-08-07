@@ -13,7 +13,6 @@ use cw_utils::nonpayable;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::INSTANTIATE_CONTEXT;
 use axone_objectarium_client::ObjectRef;
 
 // version info for migration info
@@ -44,12 +43,10 @@ pub fn instantiate(
         funds: vec![],
     };
 
-    INSTANTIATE_CONTEXT.save(deps.storage, &msg.storage_address)?;
-
     Ok(Response::new().add_submessage(SubMsg::reply_on_success(
         store_program_msg,
         STORE_PROGRAM_REPLY_ID,
-    )))
+    ).with_payload(Binary::from(msg.storage_address.as_bytes()))))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -210,8 +207,6 @@ pub mod reply {
         _env: Env,
         msg: Reply,
     ) -> Result<Response, ContractError> {
-        let context = INSTANTIATE_CONTEXT.load(deps.storage)?;
-
         msg.result
             .into_result()
             .map_err(ParseReplyError::SubMsgFailure)
@@ -224,20 +219,18 @@ pub mod reply {
                     .into()
                 })
             })
-            .map(|obj_id| LawStone {
+            .and_then(|obj_id| Ok(LawStone {
                 broken: false,
                 law: ObjectRef {
                     object_id: obj_id,
-                    storage_address: context.clone(),
+                    storage_address: String::from_utf8(msg.payload.to_vec())
+                        .map_err(|e| ParseReplyError::SubMsgFailure(format!("could not convert reply payload into string address: {}", e)))?
                 },
-            })
+            }))
             .and_then(|stone| -> Result<Vec<SubMsg>, ContractError> {
                 PROGRAM
                     .save(deps.storage, &stone)
                     .map_err(ContractError::from)?;
-
-                // Clean instantiate context
-                INSTANTIATE_CONTEXT.remove(deps.storage);
 
                 let req = build_source_files_query(stone.law.clone())?.into();
                 let res = deps.querier.query(&req).map_err(ContractError::from)?;
@@ -358,10 +351,12 @@ mod tests {
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        // Check if a message is send to the axone-objectarium to store the logic program.
+        // Check if a message is sent to the axone-objectarium to store the logic program.
         assert_eq!(1, res.messages.len());
         let sub_msg = res.messages.first().unwrap();
         assert_eq!(STORE_PROGRAM_REPLY_ID, sub_msg.id);
+        assert_eq!("axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv", String::from_utf8(sub_msg.payload.to_vec()).unwrap());
+
         match &sub_msg.msg {
             CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
                 WasmMsg::Execute { msg, .. } => {
@@ -383,10 +378,6 @@ mod tests {
             },
             _ => panic!("cosmos sub message should be a Wasm message execute"),
         }
-        assert_eq!(
-            "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv".to_string(),
-            INSTANTIATE_CONTEXT.load(&deps.storage).unwrap()
-        );
     }
 
     #[test]
@@ -695,7 +686,7 @@ mod tests {
 
             let reply = Reply {
                 id: STORE_PROGRAM_REPLY_ID,
-                payload: Binary::default(),
+                payload: Binary::from("axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".as_bytes()),
                 gas_used: 0,
                 result: SubMsgResult::Ok(SubMsgResponse {
                     events: vec![Event::new("e".to_string())
@@ -704,14 +695,6 @@ mod tests {
                     msg_responses: vec![],
                 }),
             };
-
-            // Configure the instantiate context
-            INSTANTIATE_CONTEXT
-                .save(
-                    deps.as_mut().storage,
-                    &"axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".to_string(),
-                )
-                .unwrap();
 
             let response = reply::store_program_reply(deps.as_mut(), mock_env(), reply);
             let res = response.unwrap();
@@ -779,11 +762,6 @@ mod tests {
                     "each dependencies should be pinned by a PinObject message"
                 )
             }
-
-            assert!(
-                INSTANTIATE_CONTEXT.load(&deps.storage).is_err(),
-                "the instantiate context should be cleaned at the end"
-            )
         }
     }
 
@@ -794,7 +772,7 @@ mod tests {
             (
                 Reply {
                     id: 404,
-                    payload: Binary::default(),
+                    payload: Binary::from("axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".as_bytes()),
                     gas_used: 0,
                     result: SubMsgResult::Ok(SubMsgResponse {
                         events: vec![Event::new("e".to_string())
@@ -808,7 +786,7 @@ mod tests {
             (
                 Reply {
                     id: 1,
-                    payload: Binary::default(),
+                    payload: Binary::from("axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".as_bytes()),
                     gas_used: 0,
                     result: SubMsgResult::Ok(SubMsgResponse {
                         events: vec![Event::new("e".to_string())],
@@ -829,13 +807,6 @@ mod tests {
                 querier: MockQuerier::default(),
                 custom_query_type: PhantomData,
             };
-
-            INSTANTIATE_CONTEXT
-                .save(
-                    deps.as_mut().storage,
-                    &"axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".to_string(),
-                )
-                .unwrap();
 
             let response = reply(deps.as_mut(), mock_env(), case.0);
 

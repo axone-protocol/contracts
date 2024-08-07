@@ -57,6 +57,7 @@ command = "cargo"
 args = ["test", "--lib", "--tests", "--workspace", "--locked"]
 command = "cargo"
 description = "Run all unit tests."
+env = { RUSTFLAGS = "-D warnings" }
 
 [tasks.test-coverage]
 args = ["llvm-cov", "--workspace", "--lcov", "--output-path", "lcov.info"]

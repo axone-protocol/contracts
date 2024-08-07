@@ -798,6 +798,21 @@ mod tests {
                     "reply event doesn't contains object id".to_string(),
                 ))),
             ),
+            (
+                Reply {
+                    id: 1,
+                    payload: Binary::from(vec![0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89]),
+                    gas_used: 0,
+                    result: SubMsgResult::Ok(SubMsgResponse {
+                        events: vec![Event::new("e".to_string()).add_attribute("id".to_string(), "some_object_id".to_string())],
+                        data: None,
+                        msg_responses: vec![],
+                    }),
+                },
+                Err(ContractError::ParseReplyError(SubMsgFailure(
+                    "could not convert reply payload into string address: invalid utf-8 sequence of 1 bytes from index 0".to_string(),
+                ))),
+            ),
         ];
 
         for case in cases {

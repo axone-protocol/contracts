@@ -43,10 +43,10 @@ pub fn instantiate(
         funds: vec![],
     };
 
-    Ok(Response::new().add_submessage(SubMsg::reply_on_success(
-        store_program_msg,
-        STORE_PROGRAM_REPLY_ID,
-    ).with_payload(Binary::from(msg.storage_address.as_bytes()))))
+    Ok(Response::new().add_submessage(
+        SubMsg::reply_on_success(store_program_msg, STORE_PROGRAM_REPLY_ID)
+            .with_payload(Binary::from(msg.storage_address.as_bytes())),
+    ))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -219,14 +219,20 @@ pub mod reply {
                     .into()
                 })
             })
-            .and_then(|obj_id| Ok(LawStone {
-                broken: false,
-                law: ObjectRef {
-                    object_id: obj_id,
-                    storage_address: String::from_utf8(msg.payload.to_vec())
-                        .map_err(|e| ParseReplyError::SubMsgFailure(format!("could not convert reply payload into string address: {}", e)))?
-                },
-            }))
+            .and_then(|obj_id| {
+                Ok(LawStone {
+                    broken: false,
+                    law: ObjectRef {
+                        object_id: obj_id,
+                        storage_address: String::from_utf8(msg.payload.to_vec()).map_err(|e| {
+                            ParseReplyError::SubMsgFailure(format!(
+                                "could not convert reply payload into string address: {}",
+                                e
+                            ))
+                        })?,
+                    },
+                })
+            })
             .and_then(|stone| -> Result<Vec<SubMsg>, ContractError> {
                 PROGRAM
                     .save(deps.storage, &stone)
@@ -355,7 +361,10 @@ mod tests {
         assert_eq!(1, res.messages.len());
         let sub_msg = res.messages.first().unwrap();
         assert_eq!(STORE_PROGRAM_REPLY_ID, sub_msg.id);
-        assert_eq!("axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv", String::from_utf8(sub_msg.payload.to_vec()).unwrap());
+        assert_eq!(
+            "axone1ffzp0xmjhwkltuxcvccl0z9tyfuu7txp5ke0tpkcjpzuq9fcj3pq85yqlv",
+            String::from_utf8(sub_msg.payload.to_vec()).unwrap()
+        );
 
         match &sub_msg.msg {
             CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
@@ -686,7 +695,9 @@ mod tests {
 
             let reply = Reply {
                 id: STORE_PROGRAM_REPLY_ID,
-                payload: Binary::from("axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".as_bytes()),
+                payload: Binary::from(
+                    "axone1dclchlcttf2uektxyryg0c6yau63eml5q9uq03myg44ml8cxpxnqen9apd".as_bytes(),
+                ),
                 gas_used: 0,
                 result: SubMsgResult::Ok(SubMsgResponse {
                     events: vec![Event::new("e".to_string())

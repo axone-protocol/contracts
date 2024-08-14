@@ -53,10 +53,8 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::msg::{
-        DataFormat, Prefix, SimpleWhereCondition, TripleDeleteTemplate, WhereClause, WhereCondition,
-    };
-    use crate::querier::{PlanBuilder, QueryEngine, ResolvedVariables};
+    use crate::msg::{DataFormat, Prefix, TripleDeleteTemplate, WhereClause};
+    use crate::querier::{PlanBuilder, QueryEngine, QueryPlan, ResolvedVariables};
     use crate::rdf::PrefixMap;
     use crate::state::{HasCachedNamespaces, Triple};
     use crate::storer::StoreEngine;
@@ -95,21 +93,18 @@ pub mod execute {
         info: MessageInfo,
         prefixes: Vec<Prefix>,
         delete: Vec<TripleDeleteTemplate>,
-        r#where: WhereClause,
+        r#where: Option<WhereClause>,
     ) -> Result<Response, ContractError> {
         verify_owner(&deps, &info)?;
 
         let delete = if delete.is_empty() {
-            Left(
-                r#where
+            Left(match r#where {
+                Some(WhereClause::Bgp { ref patterns }) => patterns
                     .iter()
-                    .map(|c| match c {
-                        WhereCondition::Simple(SimpleWhereCondition::TriplePattern(t)) => {
-                            (t.subject.clone(), t.predicate.clone(), t.object.clone())
-                        }
-                    })
+                    .map(|p| (p.subject.clone(), p.predicate.clone(), p.object.clone()))
                     .collect(),
-            )
+                _ => Err(StdError::generic_err("Missing triple templates to delete"))?,
+            })
         } else {
             Right(
                 delete
@@ -121,7 +116,10 @@ pub mod execute {
 
         let prefix_map = <PrefixMap>::from(prefixes).into_inner();
         let mut plan_builder = PlanBuilder::new(deps.storage, &prefix_map, None);
-        let plan = plan_builder.build_plan(&r#where)?;
+        let plan = match r#where {
+            Some(ref w) => plan_builder.build_plan(w)?,
+            None => QueryPlan::empty_plan(),
+        };
 
         let query_engine = QueryEngine::new(deps.storage);
         let delete_templates = query_engine.make_triple_templates(
@@ -131,7 +129,7 @@ pub mod execute {
             plan_builder.cached_namespaces(),
         )?;
 
-        let triples = if r#where.is_empty() {
+        let triples = if r#where.is_none() {
             let empty_vars = ResolvedVariables::with_capacity(0);
             delete_templates
                 .into_iter()
@@ -176,8 +174,8 @@ pub mod query {
     use super::*;
     use crate::msg::{
         ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectQuery,
-        SelectResponse, SimpleWhereCondition, StoreResponse, TripleConstructTemplate,
-        TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        SelectResponse, StoreResponse, TripleConstructTemplate, TriplePattern, VarOrNamedNode,
+        VarOrNode, VarOrNodeOrLiteral, WhereClause,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::PrefixMap;
@@ -227,10 +225,17 @@ pub mod query {
                     object: VarOrNodeOrLiteral::Variable(format!("{var}{o}")),
                 };
 
-                let mut r#where = query.r#where;
-                r#where.push(WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
-                    select.clone(),
-                )));
+                let r#where = match query.r#where {
+                    Some(c) => WhereClause::LateralJoin {
+                        left: Box::new(c),
+                        right: Box::new(WhereClause::Bgp {
+                            patterns: vec![select.clone()],
+                        }),
+                    },
+                    None => WhereClause::Bgp {
+                        patterns: vec![select.clone()],
+                    },
+                };
 
                 (vec![select], r#where)
             }
@@ -243,9 +248,9 @@ pub mod query {
 
                 (
                     vec![select.clone()],
-                    vec![WhereCondition::Simple(SimpleWhereCondition::TriplePattern(
-                        select,
-                    ))],
+                    WhereClause::Bgp {
+                        patterns: vec![select.clone()],
+                    },
                 )
             }
         };
@@ -279,18 +284,17 @@ pub mod query {
         } = query;
 
         let construct = if construct.is_empty() {
-            r#where
-                .iter()
-                .map(|t| match t {
-                    WhereCondition::Simple(SimpleWhereCondition::TriplePattern(t)) => {
-                        TripleConstructTemplate {
-                            subject: t.subject.clone(),
-                            predicate: t.predicate.clone(),
-                            object: t.object.clone(),
-                        }
-                    }
-                })
-                .collect()
+            match &r#where {
+                WhereClause::Bgp { patterns } => patterns
+                    .iter()
+                    .map(|p| TripleConstructTemplate {
+                        subject: p.subject.clone(),
+                        predicate: p.predicate.clone(),
+                        object: p.object.clone(),
+                    })
+                    .collect(),
+                _ => Err(StdError::generic_err("missing triples to construct"))?,
+            }
         } else {
             construct
         };
@@ -431,14 +435,14 @@ mod tests {
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::{DeleteData, InsertData};
     use crate::msg::Node::{BlankNode, NamedNode};
-    use crate::msg::SimpleWhereCondition::TriplePattern;
     use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
         ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Head, Literal, Prefix,
         Results, SelectItem, SelectQuery, SelectResponse, StoreLimitsInput,
         StoreLimitsInputBuilder, StoreResponse, Value, VarOrNamedNode, VarOrNamedNodeOrLiteral,
-        VarOrNode, VarOrNodeOrLiteral, WhereCondition,
+        VarOrNode, VarOrNodeOrLiteral,
     };
+    use crate::msg::{TriplePattern, WhereClause};
     use crate::state::{
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
     };
@@ -531,7 +535,7 @@ mod tests {
             DeleteData {
                 prefixes: vec![],
                 delete: vec![],
-                r#where: vec![],
+                r#where: None,
             },
         ];
 
@@ -910,18 +914,21 @@ mod tests {
                             "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         )),
                     }],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(
-                            "https://ontology.axone.space/dataverse/dataspace/metadata/unknown"
-                                .to_string(),
-                        ))),
-                        predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.axone.space/core/hasTopic".to_string(),
-                        )),
-                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
-                        ))),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.axone.space/dataverse/dataspace/metadata/unknown"
+                                    .to_string(),
+                            ))),
+                            predicate: VarOrNamedNode::NamedNode(Full(
+                                "https://ontology.axone.space/core/hasTopic".to_string(),
+                            )),
+                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                                "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
+                            ))),
+                        }],
+                    }
+                    .into(),
                 },
                 0,
                 0,
@@ -939,15 +946,18 @@ mod tests {
                             "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         )),
                     }],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                        predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.axone.space/core/hasTopic".to_string(),
-                        )),
-                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
-                        ))),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNamedNode::NamedNode(Full(
+                                "https://ontology.axone.space/core/hasTopic".to_string(),
+                            )),
+                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                                "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
+                            ))),
+                        }],
+                    }
+                    .into(),
                 },
                 1,
                 0,
@@ -972,13 +982,18 @@ mod tests {
                             "thesaurus:Test".to_string(),
                         )),
                     }],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                        predicate: VarOrNamedNode::NamedNode(Prefixed("core:hasTopic".to_string())),
-                        object: VarOrNodeOrLiteral::Node(NamedNode(Prefixed(
-                            "thesaurus:Test".to_string(),
-                        ))),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNamedNode::NamedNode(Prefixed(
+                                "core:hasTopic".to_string(),
+                            )),
+                            object: VarOrNodeOrLiteral::Node(NamedNode(Prefixed(
+                                "thesaurus:Test".to_string(),
+                            ))),
+                        }],
+                    }
+                    .into(),
                 },
                 1,
                 0,
@@ -1001,11 +1016,16 @@ mod tests {
                         predicate: VarOrNamedNode::NamedNode(Prefixed("core:hasTopic".to_string())),
                         object: VarOrNamedNodeOrLiteral::Variable("o".to_string()),
                     }],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                        predicate: VarOrNamedNode::NamedNode(Prefixed("core:hasTopic".to_string())),
-                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNamedNode::NamedNode(Prefixed(
+                                "core:hasTopic".to_string(),
+                            )),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        }],
+                    }
+                    .into(),
                 },
                 1,
                 0,
@@ -1019,11 +1039,14 @@ mod tests {
                         predicate: VarOrNamedNode::Variable("p".to_string()),
                         object: VarOrNamedNodeOrLiteral::Variable("o".to_string()),
                     }],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                        predicate: VarOrNamedNode::Variable("p".to_string()),
-                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNamedNode::Variable("p".to_string()),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        }],
+                    }
+                    .into(),
                 },
                 11,
                 2,
@@ -1033,11 +1056,14 @@ mod tests {
                 DeleteData {
                     prefixes: vec![],
                     delete: vec![],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
-                        predicate: VarOrNamedNode::Variable("p".to_string()),
-                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
+                            predicate: VarOrNamedNode::Variable("p".to_string()),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        }],
+                    }
+                    .into(),
                 },
                 11,
                 2,
@@ -1047,11 +1073,14 @@ mod tests {
                 DeleteData {
                     prefixes: vec![],
                     delete: vec![],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Variable("s".to_string()),
-                        predicate: VarOrNamedNode::Variable("p".to_string()),
-                        object: VarOrNodeOrLiteral::Variable("0".to_string()),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Variable("s".to_string()),
+                            predicate: VarOrNamedNode::Variable("p".to_string()),
+                            object: VarOrNodeOrLiteral::Variable("0".to_string()),
+                        }],
+                    }
+                    .into(),
                 },
                 40,
                 17,
@@ -1076,7 +1105,7 @@ mod tests {
                             "thesaurus:Test".to_string(),
                         )),
                     }],
-                    r#where: vec![],
+                    r#where: None,
                 },
                 1,
                 0,
@@ -1160,15 +1189,18 @@ mod tests {
                             "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         )),
                     }],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
-                        predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.axone.space/core/hasTopic".to_string(),
-                        )),
-                        object: VarOrNodeOrLiteral::Node(NamedNode(Full(
-                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
-                        ))),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Prefixed("foo:bar".to_string()))),
+                            predicate: VarOrNamedNode::NamedNode(Full(
+                                "https://ontology.axone.space/core/hasTopic".to_string(),
+                            )),
+                            object: VarOrNodeOrLiteral::Node(NamedNode(Full(
+                                "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
+                            ))),
+                        }],
+                    }
+                    .into(),
                 },
                 expected: StdError::generic_err("Prefix not found: foo").into(),
             },
@@ -1182,13 +1214,16 @@ mod tests {
                         predicate: VarOrNamedNode::Variable("z".to_string()),
                         object: VarOrNamedNodeOrLiteral::Variable("o".to_string()),
                     }],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Node(NamedNode(Full(
-                            "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
-                        ))),
-                        predicate: VarOrNamedNode::Variable("p".to_string()),
-                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(NamedNode(Full(
+                                "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
+                            ))),
+                            predicate: VarOrNamedNode::Variable("p".to_string()),
+                            object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                        }],
+                    }
+                    .into(),
                 },
                 expected: StdError::generic_err("Selected variable not found in query").into(),
             },
@@ -1299,15 +1334,14 @@ mod tests {
                         SelectItem::Variable("a".to_string()),
                         SelectItem::Variable("b".to_string()),
                     ],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
+                    r#where: WhereClause::Bgp{patterns:vec![TriplePattern {
                             subject: VarOrNode::Variable("a".to_string()),
                             predicate: VarOrNamedNode::NamedNode(Full(
                                 "https://ontology.axone.space/core/hasDescription".to_string(),
                             )),
                             object: VarOrNodeOrLiteral::Variable("b".to_string()),
                         },
-                    ))],
+                    ]},
                     limit: None,
                 },
                 SelectResponse {
@@ -1390,15 +1424,14 @@ mod tests {
                     select: vec![
                         SelectItem::Variable("a".to_string()),
                     ],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
+                    r#where: WhereClause::Bgp{patterns:vec![TriplePattern {
                             subject: VarOrNode::Variable("a".to_string()),
                             predicate: VarOrNamedNode::NamedNode(Prefixed(
                                 "core:hasDescription".to_string(),
                             )),
                             object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
                         },
-                    ))],
+                    ]},
                     limit: None,
                 },
                 SelectResponse {
@@ -1425,13 +1458,12 @@ mod tests {
                     select: vec![
                         SelectItem::Variable("a".to_string()),
                     ],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(
-                        msg::TriplePattern {
+                    r#where: WhereClause::Bgp{patterns:vec![TriplePattern {
                             subject: VarOrNode::Node(NamedNode(Full("https://ontology.axone.space/dataverse/dataset/metadata/d1615703-4ee1-4e2f-997e-15aecf1eea4e".to_string()))),
                             predicate: VarOrNamedNode::Variable("a".to_string()),
                             object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
                         },
-                    ))],
+                    ]},
                     limit: None,
                 },
                 SelectResponse {
@@ -1492,25 +1524,22 @@ mod tests {
                 SelectQuery {
                     prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
-                    r#where: vec![
-                        WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                    r#where: WhereClause::Bgp{patterns:vec![
+                        TriplePattern {
                                 subject: VarOrNode::Variable("a".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasTemporalCoverage".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Node(BlankNode("a".to_string())),
                             },
-                        )),
-                        WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                        TriplePattern {
                                 subject: VarOrNode::Node(BlankNode("a".to_string())),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasStartDate".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("b".to_string()),
                             },
-                        ))],
+                        ]},
                     limit: None,
                 },
                 SelectResponse {
@@ -1541,25 +1570,22 @@ mod tests {
                 SelectQuery {
                     prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
-                    r#where: vec![
-                        WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                    r#where: WhereClause::Bgp{patterns:vec![
+                        TriplePattern {
                                 subject: VarOrNode::Variable("a".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasTemporalCoverage".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("blank".to_string()),
                             },
-                        )),
-                        WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                        TriplePattern {
                                 subject: VarOrNode::Variable("blank".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasStartDate".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("b".to_string()),
-                            },
-                        ))],
+                            }
+                    ]},
                     limit: None,
                 },
                 SelectResponse {
@@ -1590,25 +1616,22 @@ mod tests {
                 SelectQuery {
                     prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
-                    r#where: vec![
-                        WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                    r#where: WhereClause::Bgp{patterns:vec![
+                        TriplePattern {
                                 subject: VarOrNode::Variable("a".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasTemporalCoverage".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Node(BlankNode("blank1".to_string())),
                             },
-                        )),
-                        WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                        TriplePattern {
                                 subject: VarOrNode::Node(BlankNode("blank2".to_string())),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasInformation".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("b".to_string()),
                             },
-                        ))],
+                    ]},
                     limit: None,
                 },
                 SelectResponse {
@@ -1639,16 +1662,15 @@ mod tests {
                 SelectQuery {
                     prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                     select: vec![SelectItem::Variable("a".to_string()), SelectItem::Variable("b".to_string())],
-                    r#where: vec![
-                        WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                    r#where: WhereClause::Bgp{patterns:vec![
+                        TriplePattern {
                                 subject: VarOrNode::Variable("a".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasTemporalCoverage".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("b".to_string()),
                             },
-                        ))],
+                        ]},
                     limit: None,
                 },
                 SelectResponse {
@@ -1716,7 +1738,7 @@ mod tests {
                         SelectItem::Variable("a".to_string()),
                         SelectItem::Variable("b".to_string()),
                     ],
-                    r#where: vec![],
+                    r#where: WhereClause::Bgp { patterns: vec![] },
                     limit: None,
                 },
                 Err(StdError::generic_err(
@@ -1727,7 +1749,7 @@ mod tests {
                 SelectQuery {
                     prefixes: vec![],
                     select: vec![],
-                    r#where: vec![],
+                    r#where: WhereClause::Bgp { patterns: vec![] },
                     limit: Some(8000),
                 },
                 Err(StdError::generic_err("Maximum query limit exceeded")),
@@ -1739,16 +1761,18 @@ mod tests {
                         namespace: "https://ontology.axone.space/core/".to_string(),
                     }],
                     select: vec![SelectItem::Variable("a".to_string())],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Variable("a".to_string()),
-                        predicate: VarOrNamedNode::NamedNode(Prefixed(
-                            "invalid:hasDescription".to_string(),
-                        )),
-                        object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString {
-                            value: "A test Dataset.".to_string(),
-                            language: "en".to_string(),
-                        }),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Variable("a".to_string()),
+                            predicate: VarOrNamedNode::NamedNode(Prefixed(
+                                "invalid:hasDescription".to_string(),
+                            )),
+                            object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString {
+                                value: "A test Dataset.".to_string(),
+                                language: "en".to_string(),
+                            }),
+                        }],
+                    },
                     limit: None,
                 },
                 Err(StdError::generic_err("Prefix not found: invalid")),
@@ -1757,16 +1781,18 @@ mod tests {
                 SelectQuery {
                     prefixes: vec![],
                     select: vec![SelectItem::Variable("u".to_string())],
-                    r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
-                        subject: VarOrNode::Variable("a".to_string()),
-                        predicate: VarOrNamedNode::NamedNode(Full(
-                            "https://ontology.axone.space/core/hasDescription".to_string(),
-                        )),
-                        object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString {
-                            value: "A test Dataset.".to_string(),
-                            language: "en".to_string(),
-                        }),
-                    }))],
+                    r#where: WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Variable("a".to_string()),
+                            predicate: VarOrNamedNode::NamedNode(Full(
+                                "https://ontology.axone.space/core/hasDescription".to_string(),
+                            )),
+                            object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString {
+                                value: "A test Dataset.".to_string(),
+                                language: "en".to_string(),
+                            }),
+                        }],
+                    },
                     limit: None,
                 },
                 Err(StdError::generic_err(
@@ -1816,7 +1842,7 @@ mod tests {
                     query: DescribeQuery {
                         prefixes: vec![],
                         resource: VarOrNamedNode::NamedNode(Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                        r#where: vec![],
+                        r#where: None,
                     },
                     format: Some(DataFormat::Turtle),
                 },
@@ -1839,7 +1865,7 @@ mod tests {
                     query: DescribeQuery {
                         prefixes: vec![],
                         resource: VarOrNamedNode::NamedNode(Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                        r#where: vec![],
+                        r#where: None,
                     },
                     format: Some(DataFormat::RDFXml),
                 },
@@ -1868,15 +1894,15 @@ mod tests {
                     query: DescribeQuery {
                         prefixes: vec![],
                         resource: VarOrNamedNode::NamedNode(Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                        r#where: vec![WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                        r#where: WhereClause::Bgp { patterns: vec![
+                            TriplePattern {
                                 subject: VarOrNode::Variable("a".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Full(
                                     "https://ontology.axone.space/core/hasDescription".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("b".to_string()),
                             },
-                        ))],
+                        ]}.into(),
                     },
                     format: Some(DataFormat::NTriples),
                 },
@@ -1903,7 +1929,7 @@ mod tests {
                     query: DescribeQuery {
                         prefixes: vec![],
                         resource: VarOrNamedNode::NamedNode(Full("https://ontology.axone.space/dataverse/dataspace/metadata/dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                        r#where: vec![],
+                        r#where: None,
                     },
                     format: Some(DataFormat::NQuads),
                 },
@@ -1977,7 +2003,7 @@ mod tests {
                             },
                         ],
                         resource: VarOrNamedNode::NamedNode(Prefixed("metadata:dcf48417-01c5-4b43-9bc7-49e54c028473".to_string())),
-                        r#where: vec![],
+                        r#where: None,
                     },
                     format: Some(DataFormat::Turtle),
                 },
@@ -2042,15 +2068,15 @@ mod tests {
                     query: DescribeQuery {
                         prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                         resource: VarOrNamedNode::Variable("a".to_string()),
-                        r#where: vec![WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                        r#where: WhereClause::Bgp {patterns: vec![
+                            TriplePattern {
                                 subject: VarOrNode::Variable("a".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasDescription".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Literal(Literal::LanguageTaggedString { value: "A test Dataset.".to_string(), language: "en".to_string() }),
                             },
-                        ))],
+                        ]}.into(),
                     },
                     format: Some(DataFormat::Turtle),
                 },
@@ -2100,22 +2126,22 @@ mod tests {
     }
 
     #[test]
-    fn variable_mutiple_resources_describe() {
+    fn variable_multiple_resources_describe() {
         let cases = vec![
             (
                 QueryMsg::Describe {
                     query: DescribeQuery {
                         prefixes: vec![Prefix { prefix: "core".to_string(), namespace: "https://ontology.axone.space/core/".to_string() }],
                         resource: VarOrNamedNode::Variable("a".to_string()),
-                        r#where: vec![WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                        r#where: WhereClause::Bgp {patterns: vec![
+                            TriplePattern {
                                 subject: VarOrNode::Variable("a".to_string()),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasPublisher".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Literal(Literal::Simple("AXONE".to_string())),
                             },
-                        ))],
+                        ]}.into(),
                     },
                     format: Some(DataFormat::Turtle),
                 },
@@ -2175,16 +2201,15 @@ mod tests {
                             Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.axone.space/dataverse/dataset/metadata/".to_string() },
                         ],
                         resource: VarOrNamedNode::Variable("x".to_string()),
-                        r#where: vec![WhereCondition::Simple(TriplePattern(
-                            msg::TriplePattern {
+                        r#where: WhereClause::Bgp {patterns: vec![
+                            TriplePattern {
                                 subject: VarOrNode::Node(NamedNode(Prefixed("metadata-dataset:80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string()))),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasTemporalCoverage".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("x".to_string()),
                             },
-                        )),
-                        ],
+                        ]}.into(),
                     },
                     format: Some(DataFormat::Turtle),
                 },
@@ -2246,13 +2271,13 @@ mod tests {
                     query: ConstructQuery {
                         prefixes: vec![],
                         construct: vec![],
-                        r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        r#where: WhereClause::Bgp{patterns:vec![TriplePattern {
                             subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
                             predicate: VarOrNamedNode::NamedNode(Full(
                                 "https://ontology.axone.space/core/hasTag".to_string(),
                             )),
                             object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                        }))],
+                        }]},
                     },
                     format: None,
                 },
@@ -2282,13 +2307,13 @@ mod tests {
                                 object: VarOrNodeOrLiteral::Variable("o".to_string()),
                             }
                         ],
-                        r#where: vec![WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        r#where: WhereClause::Bgp{patterns:vec![TriplePattern {
                             subject: VarOrNode::Node(NamedNode(Full(id.to_string()))),
                             predicate: VarOrNamedNode::NamedNode(Full(
                                 "https://ontology.axone.space/core/hasTag".to_string(),
                             )),
                             object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                        }))],
+                        }]},
                     },
                     format: Some(DataFormat::NTriples),
                 },
@@ -2335,32 +2360,32 @@ mod tests {
                                 object: VarOrNodeOrLiteral::Variable("info_o".to_string()),
                             }
                         ],
-                        r#where: vec![
-                            WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                        r#where: WhereClause::Bgp {patterns:vec![
+                            TriplePattern {
                                 subject: VarOrNode::Node(NamedNode(Prefixed("metadata-dataset:80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string()))),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasTemporalCoverage".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("tcov".to_string()),
-                            })),
-                            WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                            },
+                            TriplePattern {
                                 subject: VarOrNode::Node(NamedNode(Prefixed("metadata-dataset:80b1f84e-86dc-4730-b54f-701ad9b1888a".to_string()))),
                                 predicate: VarOrNamedNode::NamedNode(Prefixed(
                                     "core:hasInformations".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("info".to_string()),
-                            })),
-                            WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                            },
+                            TriplePattern {
                                 subject: VarOrNode::Variable("tcov".to_string()),
                                 predicate: VarOrNamedNode::Variable("tcov_p".to_string()),
                                 object: VarOrNodeOrLiteral::Variable("tcov_o".to_string()),
-                            })),
-                            WhereCondition::Simple(TriplePattern(msg::TriplePattern {
+                            },
+                            TriplePattern {
                                 subject: VarOrNode::Variable("info".to_string()),
                                 predicate: VarOrNamedNode::Variable("info_p".to_string()),
                                 object: VarOrNodeOrLiteral::Variable("info_o".to_string()),
-                            }))
-                        ],
+                            }
+                        ]},
                     },
                     format: Some(DataFormat::NTriples),
                 },

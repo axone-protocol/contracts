@@ -20,6 +20,13 @@ pub enum PlanVariable {
 }
 
 impl QueryPlan {
+    pub fn empty_plan() -> Self {
+        Self {
+            entrypoint: QueryNode::noop(),
+            variables: Vec::new(),
+        }
+    }
+
     /// Resolve the index corresponding to the variable name, if not attached to a blank node.
     pub fn get_var_index(&self, var_name: &str) -> Option<usize> {
         self.variables.iter().enumerate().find_map(|(index, it)| {
@@ -74,6 +81,12 @@ pub enum QueryNode {
 }
 
 impl QueryNode {
+    pub fn noop() -> Self {
+        QueryNode::Noop {
+            bound_variables: Vec::new(),
+        }
+    }
+
     pub fn bound_variables(&self) -> BTreeSet<usize> {
         let mut vars = BTreeSet::new();
         self.lookup_bound_variables(&mut |v| {

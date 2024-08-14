@@ -1,11 +1,8 @@
-use crate::msg::{
-    Node, SimpleWhereCondition, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
-    WhereClause, WhereCondition,
-};
+use crate::msg::{Node, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause};
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
 use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
-use cosmwasm_std::{StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
@@ -45,15 +42,7 @@ impl<'a> PlanBuilder<'a> {
     }
 
     pub fn build_plan(&mut self, where_clause: &WhereClause) -> StdResult<QueryPlan> {
-        let bgp: Vec<QueryNode> = where_clause
-            .iter()
-            .map(|cond| {
-                let WhereCondition::Simple(SimpleWhereCondition::TriplePattern(pattern)) = cond;
-                self.build_triple_pattern(pattern)
-            })
-            .collect::<StdResult<Vec<QueryNode>>>()?;
-
-        let mut node = Self::build_from_bgp(bgp);
+        let mut node = self.build_node(where_clause)?;
 
         if let Some(skip) = self.skip {
             node = QueryNode::Skip {
@@ -73,28 +62,40 @@ impl<'a> PlanBuilder<'a> {
         })
     }
 
-    fn build_from_bgp(bgp: Vec<QueryNode>) -> QueryNode {
-        bgp.into_iter()
-            .reduce(|left: QueryNode, right: QueryNode| -> QueryNode {
-                if left
+    fn build_node(&mut self, where_clause: &WhereClause) -> StdResult<QueryNode> {
+        match where_clause {
+            WhereClause::Bgp { patterns } => self.build_from_bgp(patterns.iter()),
+            WhereClause::LateralJoin { .. } => Err(StdError::generic_err("not implemented")),
+        }
+    }
+
+    fn build_from_bgp<'b>(
+        &mut self,
+        bgp: impl Iterator<Item = &'b TriplePattern>,
+    ) -> StdResult<QueryNode> {
+        bgp.map(|pattern| self.build_triple_pattern(pattern))
+            .reduce(|acc, item| {
+                let acc = acc?;
+                let item = item?;
+
+                if acc
                     .bound_variables()
-                    .intersection(&right.bound_variables())
+                    .intersection(&item.bound_variables())
                     .next()
                     .is_some()
                 {
-                    return QueryNode::ForLoopJoin {
-                        left: Box::new(left),
-                        right: Box::new(right),
-                    };
-                }
-                QueryNode::CartesianProductJoin {
-                    left: Box::new(left),
-                    right: Box::new(right),
+                    Ok(QueryNode::ForLoopJoin {
+                        left: Box::new(acc),
+                        right: Box::new(item),
+                    })
+                } else {
+                    Ok(QueryNode::CartesianProductJoin {
+                        left: Box::new(acc),
+                        right: Box::new(item),
+                    })
                 }
             })
-            .unwrap_or(QueryNode::Noop {
-                bound_variables: vec![],
-            })
+            .unwrap_or(Ok(QueryNode::noop()))
     }
 
     fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {
@@ -716,14 +717,7 @@ mod test {
             }
 
             assert_eq!(
-                builder.build_plan(
-                    &case
-                        .2
-                        .into_iter()
-                        .map(SimpleWhereCondition::TriplePattern)
-                        .map(WhereCondition::Simple)
-                        .collect()
-                ),
+                builder.build_plan(&WhereClause::Bgp { patterns: case.2 }),
                 case.3
             )
         }

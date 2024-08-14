@@ -65,7 +65,10 @@ impl<'a> PlanBuilder<'a> {
     fn build_node(&mut self, where_clause: &WhereClause) -> StdResult<QueryNode> {
         match where_clause {
             WhereClause::Bgp { patterns } => self.build_from_bgp(patterns.iter()),
-            WhereClause::LateralJoin { .. } => Err(StdError::generic_err("not implemented")),
+            WhereClause::LateralJoin { left, right } => Ok(QueryNode::ForLoopJoin {
+                left: Box::new(self.build_node(left)?),
+                right: Box::new(self.build_node(right)?),
+            }),
         }
     }
 

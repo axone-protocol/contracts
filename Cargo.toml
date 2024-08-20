@@ -28,7 +28,7 @@ axone-wasm = { path = "packages/axone-wasm" }
 cosmwasm-schema = "2.1.3"
 cosmwasm-std = { version = "2.1.3", features = ["cosmwasm_2_1"] }
 cosmwasm-storage = "1.5.2"
-cw-multi-test = "2.1.0"
+cw-multi-test = "2.1.1"
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
 cw2 = "2.0.0"

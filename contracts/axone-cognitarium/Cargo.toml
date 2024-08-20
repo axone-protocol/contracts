@@ -18,7 +18,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 axone-rdf.workspace = true
-blake3 = "1.5.3"
+blake3 = "1.5.4"
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cosmwasm-storage.workspace = true

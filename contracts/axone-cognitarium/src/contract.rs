@@ -121,13 +121,8 @@ pub mod execute {
             None => QueryPlan::empty_plan(),
         };
 
-        let query_engine = QueryEngine::new(deps.storage);
-        let delete_templates = query_engine.make_triple_templates(
-            &plan,
-            &prefix_map,
-            delete,
-            plan_builder.cached_namespaces(),
-        )?;
+        let query_engine = QueryEngine::new(deps.storage, plan_builder.cached_namespaces());
+        let delete_templates = query_engine.make_triple_templates(&plan, &prefix_map, delete)?;
 
         let triples = if r#where.is_none() {
             let empty_vars = ResolvedVariables::with_capacity(0);
@@ -205,7 +200,7 @@ pub mod query {
             PlanBuilder::new(deps.storage, &prefix_map, None).with_limit(count as usize);
         let plan = plan_builder.build_plan(&query.r#where)?;
 
-        QueryEngine::new(deps.storage)
+        QueryEngine::new(deps.storage, plan_builder.cached_namespaces())
             .select(plan, query.select)
             .and_then(|res| util::map_select_solutions(deps, res, plan_builder.cached_namespaces()))
     }
@@ -356,7 +351,7 @@ pub mod util {
         res: SelectResults<'_>,
         ns_cache: Vec<Namespace>,
     ) -> StdResult<SelectResponse> {
-        let mut ns_resolver: NamespaceResolver = ns_cache.into();
+        let mut ns_solver = NamespaceResolver::new(deps.storage, ns_cache);
         let mut id_issuer = IdentifierIssuer::new("b", 0u128);
 
         let mut bindings: Vec<BTreeMap<String, Value>> = vec![];
@@ -365,17 +360,7 @@ pub mod util {
             let resolved = vars
                 .into_iter()
                 .map(|(name, var)| -> StdResult<(String, Value)> {
-                    Ok((
-                        name,
-                        var.as_value(
-                            &mut |ns_key| {
-                                let res = ns_resolver.resolve_from_key(deps.storage, ns_key);
-                                res.and_then(NamespaceResolver::none_as_error_middleware)
-                                    .map(|ns| ns.value)
-                            },
-                            &mut id_issuer,
-                        )?,
-                    ))
+                    Ok((name, var.as_value(&mut ns_solver, &mut id_issuer)?))
                 })
                 .collect::<StdResult<BTreeMap<String, Value>>>()?;
             bindings.push(resolved);
@@ -401,13 +386,8 @@ pub mod util {
             .with_limit(store.limits.max_query_limit as usize);
         let plan = plan_builder.build_plan(&r#where)?;
 
-        let atoms = QueryEngine::new(storage)
-            .construct_atoms(
-                plan,
-                &prefix_map,
-                construct,
-                plan_builder.cached_namespaces(),
-            )?
+        let atoms = QueryEngine::new(storage, plan_builder.cached_namespaces())
+            .construct_atoms(plan, &prefix_map, construct)?
             .collect::<StdResult<Vec<Atom>>>()?;
 
         let out: Vec<u8> = Vec::default();

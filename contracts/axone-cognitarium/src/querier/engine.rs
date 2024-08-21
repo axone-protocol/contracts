@@ -5,7 +5,9 @@ use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
 use crate::rdf::Atom;
-use crate::state::{triples, Namespace, NamespaceResolver, Object, Predicate, Subject, Triple};
+use crate::state::{
+    triples, Namespace, NamespaceResolver, NamespaceSolver, Object, Predicate, Subject, Triple,
+};
 use crate::{rdf, state};
 use axone_rdf::normalize::IdentifierIssuer;
 use cosmwasm_std::{Order, StdError, StdResult, Storage};
@@ -16,6 +18,7 @@ use std::rc::Rc;
 
 pub struct QueryEngine<'a> {
     storage: &'a dyn Storage,
+    ns_cache: Vec<Namespace>,
 }
 
 pub struct SelectResults<'a> {
@@ -24,8 +27,8 @@ pub struct SelectResults<'a> {
 }
 
 impl<'a> QueryEngine<'a> {
-    pub fn new(storage: &'a dyn Storage) -> Self {
-        Self { storage }
+    pub fn new(storage: &'a dyn Storage, ns_cache: Vec<Namespace>) -> Self {
+        Self { storage, ns_cache }
     }
 
     pub fn select(
@@ -59,7 +62,6 @@ impl<'a> QueryEngine<'a> {
         plan: QueryPlan,
         prefixes: &HashMap<String, String>,
         templates: Vec<(VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral)>,
-        ns_cache: Vec<Namespace>,
     ) -> StdResult<ResolvedAtomIterator<'_>> {
         let templates = templates
             .into_iter()
@@ -68,7 +70,7 @@ impl<'a> QueryEngine<'a> {
 
         Ok(ResolvedAtomIterator::new(
             self.storage,
-            ns_cache.into(),
+            self.ns_cache.clone().into(),
             IdentifierIssuer::new("b", 0u128),
             self.eval_plan(plan),
             templates,
@@ -88,28 +90,17 @@ impl<'a> QueryEngine<'a> {
         plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
         templates: Either<Vec<TripleTemplateWithBlankNode>, Vec<TripleTemplateNoBlankNode>>,
-        ns_cache: Vec<Namespace>,
     ) -> StdResult<Vec<TripleTemplate>> {
-        let mut ns_resolver: NamespaceResolver = ns_cache.into();
+        let mut ns_resolver = NamespaceResolver::new(self.storage, self.ns_cache.clone());
 
         match templates {
             Left(tpl) => tpl
                 .into_iter()
-                .map(|t| {
-                    TripleTemplate::try_new(self.storage, &mut ns_resolver, plan, prefixes, Left(t))
-                })
+                .map(|t| TripleTemplate::try_new(&mut ns_resolver, plan, prefixes, Left(t)))
                 .collect::<StdResult<Vec<TripleTemplate>>>(),
             Right(tpl) => tpl
                 .into_iter()
-                .map(|t| {
-                    TripleTemplate::try_new(
-                        self.storage,
-                        &mut ns_resolver,
-                        plan,
-                        prefixes,
-                        Right(t),
-                    )
-                })
+                .map(|t| TripleTemplate::try_new(&mut ns_resolver, plan, prefixes, Right(t)))
                 .collect::<StdResult<Vec<TripleTemplate>>>(),
         }
     }
@@ -181,6 +172,26 @@ impl<'a> QueryEngine<'a> {
 }
 
 type ResolvedVariablesIterator<'a> = Box<dyn Iterator<Item = StdResult<ResolvedVariables>> + 'a>;
+
+impl<'a> Iterator for FilterIterator<'a> {
+    type Item = StdResult<ResolvedVariables>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.upstream.next()? {
+            Ok(vars) => match self.expr.evaluate(&vars, &mut self.ns_resolver) {
+                Ok(t) => {
+                    if t.as_bool() {
+                        Some(Ok(vars))
+                    } else {
+                        None
+                    }
+                }
+                Err(e) => Some(Err(e)),
+            },
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
 
 struct ForLoopJoinIterator<'a> {
     left: ResolvedVariablesIterator<'a>,
@@ -592,8 +603,7 @@ pub type TripleTemplateNoBlankNode = (VarOrNamedNode, VarOrNamedNode, VarOrNamed
 
 impl TripleTemplate {
     fn try_new(
-        storage: &dyn Storage,
-        ns_resolver: &mut NamespaceResolver,
+        ns_solver: &mut dyn NamespaceSolver,
         plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
         template: Either<TripleTemplateWithBlankNode, TripleTemplateNoBlankNode>,
@@ -604,9 +614,9 @@ impl TripleTemplate {
         };
 
         Ok(TripleTemplate {
-            subject: Self::build_subject_template(storage, ns_resolver, plan, prefixes, s_tpl)?,
-            predicate: Self::build_predicate_template(storage, ns_resolver, plan, prefixes, p_tpl)?,
-            object: Self::build_object_template(storage, ns_resolver, plan, prefixes, o_tpl)?,
+            subject: Self::build_subject_template(ns_solver, plan, prefixes, s_tpl)?,
+            predicate: Self::build_predicate_template(ns_solver, plan, prefixes, p_tpl)?,
+            object: Self::build_object_template(ns_solver, plan, prefixes, o_tpl)?,
         })
     }
 
@@ -667,8 +677,7 @@ impl TripleTemplate {
     }
 
     fn build_subject_template(
-        storage: &dyn Storage,
-        ns_resolver: &mut NamespaceResolver,
+        ns_solver: &mut dyn NamespaceSolver,
         plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
         value: Either<VarOrNode, VarOrNamedNode>,
@@ -686,19 +695,13 @@ impl TripleTemplate {
                     ))?,
             ),
             Left(VarOrNode::Node(Node::NamedNode(iri))) | Right(VarOrNamedNode::NamedNode(iri)) => {
-                Left(Subject::Named(iri_as_node(
-                    ns_resolver,
-                    storage,
-                    prefixes,
-                    iri,
-                )?))
+                Left(Subject::Named(iri_as_node(ns_solver, prefixes, iri)?))
             }
         })
     }
 
     fn build_predicate_template(
-        storage: &dyn Storage,
-        ns_resolver: &mut NamespaceResolver,
+        ns_solver: &mut dyn NamespaceSolver,
         plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
         value: VarOrNamedNode,
@@ -707,15 +710,12 @@ impl TripleTemplate {
             VarOrNamedNode::Variable(v) => Right(plan.get_var_index(v.as_str()).ok_or(
                 StdError::generic_err("Selected variable not found in query"),
             )?),
-            VarOrNamedNode::NamedNode(iri) => {
-                Left(iri_as_node(ns_resolver, storage, prefixes, iri)?)
-            }
+            VarOrNamedNode::NamedNode(iri) => Left(iri_as_node(ns_solver, prefixes, iri)?),
         })
     }
 
     fn build_object_template(
-        storage: &dyn Storage,
-        ns_resolver: &mut NamespaceResolver,
+        ns_solver: &mut dyn NamespaceSolver,
         plan: &QueryPlan,
         prefixes: &HashMap<String, String>,
         value: Either<VarOrNodeOrLiteral, VarOrNamedNodeOrLiteral>,
@@ -733,22 +733,18 @@ impl TripleTemplate {
                     ))?,
             ),
             Left(VarOrNodeOrLiteral::Node(Node::NamedNode(iri)))
-            | Right(VarOrNamedNodeOrLiteral::NamedNode(iri)) => Left(Object::Named(iri_as_node(
-                ns_resolver,
-                storage,
-                prefixes,
-                iri,
-            )?)),
+            | Right(VarOrNamedNodeOrLiteral::NamedNode(iri)) => {
+                Left(Object::Named(iri_as_node(ns_solver, prefixes, iri)?))
+            }
             Left(VarOrNodeOrLiteral::Literal(l)) | Right(VarOrNamedNodeOrLiteral::Literal(l)) => {
-                Left(literal_as_object(ns_resolver, storage, prefixes, l)?)
+                Left(literal_as_object(ns_solver, prefixes, l)?)
             }
         })
     }
 }
 
 pub struct ResolvedAtomIterator<'a> {
-    storage: &'a dyn Storage,
-    ns_resolver: NamespaceResolver,
+    ns_resolver: NamespaceResolver<'a>,
     id_issuer: IdentifierIssuer,
     upstream_iter: ResolvedVariablesIterator<'a>,
     templates: Vec<AtomTemplate>,
@@ -758,14 +754,13 @@ pub struct ResolvedAtomIterator<'a> {
 impl<'a> ResolvedAtomIterator<'a> {
     pub fn new(
         storage: &'a dyn Storage,
-        ns_resolver: NamespaceResolver,
+        ns_cache: Vec<Namespace>,
         id_issuer: IdentifierIssuer,
         upstream_iter: ResolvedVariablesIterator<'a>,
         templates: Vec<AtomTemplate>,
     ) -> Self {
         Self {
-            storage,
-            ns_resolver,
+            ns_resolver: NamespaceResolver::new(storage, ns_cache.into()),
             id_issuer,
             upstream_iter,
             templates,
@@ -794,12 +789,7 @@ impl<'a> Iterator for ResolvedAtomIterator<'a> {
                 }
                 Ok(vars) => {
                     for res in self.templates.iter().map(|template| {
-                        template.resolve(
-                            self.storage,
-                            &mut self.ns_resolver,
-                            &mut self.id_issuer,
-                            &vars,
-                        )
+                        template.resolve(&mut self.ns_resolver, &mut self.id_issuer, &vars)
                     }) {
                         match res {
                             Ok(Some(atom)) => self.buffer.push_back(Ok(atom)),
@@ -853,28 +843,21 @@ impl AtomTemplate {
 
     pub fn resolve(
         &self,
-        storage: &dyn Storage,
-        ns_resolver: &mut NamespaceResolver,
+        ns_solver: &mut dyn NamespaceSolver,
         id_issuer: &mut IdentifierIssuer,
         vars: &ResolvedVariables,
     ) -> StdResult<Option<Atom>> {
-        let resolve_ns_fn = &mut |ns_key| {
-            let res = ns_resolver.resolve_from_key(storage, ns_key);
-            res.and_then(NamespaceResolver::none_as_error_middleware)
-                .map(|ns| ns.value)
-        };
-
-        let subject = match self.resolve_atom_subject(resolve_ns_fn, id_issuer, vars)? {
+        let subject = match self.resolve_atom_subject(ns_solver, id_issuer, vars)? {
             Some(s) => s,
             None => return Ok(None),
         };
 
-        let property = match self.resolve_atom_property(resolve_ns_fn, vars)? {
+        let property = match self.resolve_atom_property(ns_solver, vars)? {
             Some(p) => p,
             None => return Ok(None),
         };
 
-        let value = match self.resolve_atom_value(resolve_ns_fn, id_issuer, vars)? {
+        let value = match self.resolve_atom_value(ns_solver, id_issuer, vars)? {
             Some(v) => v,
             None => return Ok(None),
         };
@@ -886,22 +869,19 @@ impl AtomTemplate {
         }))
     }
 
-    fn resolve_atom_subject<F>(
+    fn resolve_atom_subject(
         &self,
-        resolve_ns_fn: &mut F,
+        ns_solver: &mut dyn NamespaceSolver,
         id_issuer: &mut IdentifierIssuer,
         vars: &ResolvedVariables,
-    ) -> StdResult<Option<rdf::Subject>>
-    where
-        F: FnMut(u128) -> StdResult<String>,
-    {
+    ) -> StdResult<Option<rdf::Subject>> {
         Self::resolve_atom_term(
             &self.subject,
             ResolvedVariable::as_subject,
             vars,
             &mut |value| {
                 Ok(match value {
-                    Subject::Named(n) => rdf::Subject::NamedNode(n.as_iri(resolve_ns_fn)?),
+                    Subject::Named(n) => rdf::Subject::NamedNode(n.as_iri(ns_solver)?),
                     Subject::Blank(n) => rdf::Subject::BlankNode(
                         id_issuer.get_str_or_issue(n.to_string()).to_string(),
                     ),
@@ -911,39 +891,33 @@ impl AtomTemplate {
         )
     }
 
-    fn resolve_atom_property<F>(
+    fn resolve_atom_property(
         &self,
-        resolve_ns_fn: &mut F,
+        ns_solver: &mut dyn NamespaceSolver,
         vars: &ResolvedVariables,
-    ) -> StdResult<Option<rdf::Property>>
-    where
-        F: FnMut(u128) -> StdResult<String>,
-    {
+    ) -> StdResult<Option<rdf::Property>> {
         Self::resolve_atom_term(
             &self.property,
             ResolvedVariable::as_predicate,
             vars,
-            &mut |value| value.as_iri(resolve_ns_fn).map(rdf::Property),
+            &mut |value| value.as_iri(ns_solver).map(rdf::Property),
             "predicate",
         )
     }
 
-    fn resolve_atom_value<F>(
+    fn resolve_atom_value(
         &self,
-        resolve_ns_fn: &mut F,
+        ns_solver: &mut dyn NamespaceSolver,
         id_issuer: &mut IdentifierIssuer,
         vars: &ResolvedVariables,
-    ) -> StdResult<Option<rdf::Value>>
-    where
-        F: FnMut(u128) -> StdResult<String>,
-    {
+    ) -> StdResult<Option<rdf::Value>> {
         Self::resolve_atom_term(
             &self.value,
             ResolvedVariable::as_object,
             vars,
             &mut |value| {
                 Ok(match value {
-                    Object::Named(n) => rdf::Value::NamedNode(n.as_iri(resolve_ns_fn)?),
+                    Object::Named(n) => rdf::Value::NamedNode(n.as_iri(ns_solver)?),
                     Object::Blank(n) => {
                         rdf::Value::BlankNode(id_issuer.get_str_or_issue(n.to_string()).to_string())
                     }
@@ -953,7 +927,7 @@ impl AtomTemplate {
                             rdf::Value::LiteralLang(value, language)
                         }
                         state::Literal::Typed { value, datatype } => {
-                            rdf::Value::LiteralDatatype(value, datatype.as_iri(resolve_ns_fn)?)
+                            rdf::Value::LiteralDatatype(value, datatype.as_iri(ns_solver)?)
                         }
                     },
                 })
@@ -1226,7 +1200,7 @@ mod test {
         ];
 
         for case in cases {
-            let engine = QueryEngine::new(&deps.storage);
+            let engine = QueryEngine::new(&deps.storage, vec![]);
             assert_eq!(
                 engine.select(case.plan, case.selection).and_then(|res| Ok((
                     res.head.clone(),
@@ -1369,7 +1343,7 @@ mod test {
             },
         ];
 
-        let engine = QueryEngine::new(&deps.storage);
+        let engine = QueryEngine::new(&deps.storage, vec![]);
         for case in cases {
             assert_eq!(engine.eval_plan(case.plan).count(), case.expects);
         }

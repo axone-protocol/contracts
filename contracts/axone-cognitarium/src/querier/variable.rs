@@ -1,5 +1,5 @@
 use crate::msg::{Value, IRI};
-use crate::state::{Literal, Object, Predicate, Subject};
+use crate::state::{Literal, NamespaceSolver, Object, Predicate, Subject};
 use axone_rdf::normalize::IdentifierIssuer;
 use cosmwasm_std::StdResult;
 
@@ -49,10 +49,11 @@ impl ResolvedVariable {
         })
     }
 
-    pub fn as_value<F>(&self, ns_fn: &mut F, id_issuer: &mut IdentifierIssuer) -> StdResult<Value>
-    where
-        F: FnMut(u128) -> StdResult<String>,
-    {
+    pub fn as_value(
+        &self,
+        ns_fn: &mut dyn NamespaceSolver,
+        id_issuer: &mut IdentifierIssuer,
+    ) -> StdResult<Value> {
         Ok(match self {
             ResolvedVariable::Subject(subject) => match subject {
                 Subject::Named(named) => named.as_iri(ns_fn).map(|iri| Value::URI {
@@ -149,7 +150,7 @@ impl ResolvedVariables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{Literal, Node};
+    use crate::state::{Literal, Namespace, Node};
     use cosmwasm_std::StdError;
 
     #[test]
@@ -206,11 +207,26 @@ mod tests {
         }
     }
 
-    fn ns(i: u128) -> StdResult<String> {
-        match i {
-            0 => Ok("foo".to_string()),
-            1 => Ok("bar".to_string()),
-            _ => Err(StdError::generic_err("namespace not found")),
+    struct TestNamespaceSolver;
+    impl NamespaceSolver for TestNamespaceSolver {
+        fn resolve_from_key(&mut self, key: u128) -> StdResult<Namespace> {
+            match key {
+                0 => Ok(Namespace {
+                    key: 0,
+                    value: "foo".to_string(),
+                    counter: 1,
+                }),
+                1 => Ok(Namespace {
+                    key: 1,
+                    value: "bar".to_string(),
+                    counter: 1,
+                }),
+                _ => Err(StdError::generic_err("namespace not found")),
+            }
+        }
+
+        fn resolve_from_val(&mut self, _value: String) -> StdResult<Namespace> {
+            Err(StdError::generic_err("namespace not found"))
         }
     }
 
@@ -294,8 +310,9 @@ mod tests {
         ];
 
         let mut id_issuer = IdentifierIssuer::new("b", 0u128);
+        let mut ns_solver = TestNamespaceSolver;
         for (var, expected) in cases {
-            assert_eq!(var.as_value(&mut ns, &mut id_issuer), expected)
+            assert_eq!(var.as_value(&mut ns_solver, &mut id_issuer), expected)
         }
     }
 

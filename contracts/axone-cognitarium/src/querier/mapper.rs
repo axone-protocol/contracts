@@ -1,13 +1,12 @@
 use crate::msg::{Literal, IRI};
 use crate::state;
-use crate::state::{NamespaceResolver, Object};
+use crate::state::{NamespaceSolver, Object};
 use axone_rdf::uri::{expand_uri, explode_iri};
-use cosmwasm_std::{StdResult, Storage};
+use cosmwasm_std::StdResult;
 use std::collections::HashMap;
 
 pub fn literal_as_object(
-    ns_resolver: &mut NamespaceResolver,
-    storage: &dyn Storage,
+    ns_solver: &mut dyn NamespaceSolver,
     prefixes: &HashMap<String, String>,
     literal: Literal,
 ) -> StdResult<Object> {
@@ -18,14 +17,13 @@ pub fn literal_as_object(
         }
         Literal::TypedValue { value, datatype } => state::Literal::Typed {
             value,
-            datatype: iri_as_node(ns_resolver, storage, prefixes, datatype)?,
+            datatype: iri_as_node(ns_solver, prefixes, datatype)?,
         },
     }))
 }
 
 pub fn iri_as_node(
-    ns_resolver: &mut NamespaceResolver,
-    storage: &dyn Storage,
+    ns_solver: &mut dyn NamespaceSolver,
     prefixes: &HashMap<String, String>,
     iri: IRI,
 ) -> StdResult<state::Node> {
@@ -35,12 +33,16 @@ pub fn iri_as_node(
     }
     .and_then(|iri| explode_iri(&iri))
     .and_then(|(ns_key, v)| {
-        ns_resolver
-            .resolve_from_val(storage, ns_key)
-            .and_then(NamespaceResolver::none_as_error_middleware)
-            .map(|ns| state::Node {
-                namespace: ns.key,
-                value: v,
-            })
+        ns_solver.resolve_from_val(ns_key).map(|ns| state::Node {
+            namespace: ns.key,
+            value: v,
+        })
     })
+}
+
+pub fn iri_as_string(iri: IRI, prefixes: &HashMap<String, String>) -> StdResult<String> {
+    match iri {
+        IRI::Prefixed(prefixed) => expand_uri(&prefixed, prefixes),
+        IRI::Full(full) => Ok(full),
+    }
 }

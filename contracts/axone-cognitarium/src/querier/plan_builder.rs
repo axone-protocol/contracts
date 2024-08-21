@@ -1,13 +1,14 @@
 use crate::msg::{Node, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause};
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
-use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
-use cosmwasm_std::{StdError, StdResult, Storage};
+use crate::state::{
+    HasCachedNamespaces, Namespace, NamespaceQuerier, NamespaceResolver, Object, Predicate, Subject,
+};
+use cosmwasm_std::{StdResult, Storage};
 use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
-    storage: &'a dyn Storage,
-    ns_resolver: NamespaceResolver,
+    ns_resolver: NamespaceResolver<'a>,
     prefixes: &'a HashMap<String, String>,
     variables: Vec<PlanVariable>,
     limit: Option<usize>,
@@ -21,8 +22,7 @@ impl<'a> PlanBuilder<'a> {
         ns_cache: Option<Vec<Namespace>>,
     ) -> Self {
         Self {
-            storage,
-            ns_resolver: ns_cache.map_or_else(NamespaceResolver::new, Into::into),
+            ns_resolver: NamespaceResolver::new(storage, ns_cache.unwrap_or(vec![]).into()),
             prefixes,
             variables: Vec::new(),
             skip: None,
@@ -133,7 +133,7 @@ impl<'a> PlanBuilder<'a> {
                 value.lookup_bound_variable(&mut |v| bound_variables.push(v));
                 Some(value)
             }
-            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
+            Err(err) if NamespaceQuerier::is_ns_not_found_error(&err) => None,
             _ => Some(pattern_res?),
         })
     }
@@ -145,7 +145,7 @@ impl<'a> PlanBuilder<'a> {
                 PatternValue::BlankVariable(self.resolve_blank_variable(b))
             }
             VarOrNode::Node(Node::NamedNode(iri)) => PatternValue::Constant(Subject::Named(
-                iri_as_node(&mut self.ns_resolver, self.storage, self.prefixes, iri)?,
+                iri_as_node(&mut self.ns_resolver, self.prefixes, iri)?,
             )),
         })
     }
@@ -156,12 +156,9 @@ impl<'a> PlanBuilder<'a> {
     ) -> StdResult<PatternValue<Predicate>> {
         Ok(match value {
             VarOrNamedNode::Variable(v) => PatternValue::Variable(self.resolve_basic_variable(v)),
-            VarOrNamedNode::NamedNode(iri) => PatternValue::Constant(iri_as_node(
-                &mut self.ns_resolver,
-                self.storage,
-                self.prefixes,
-                iri,
-            )?),
+            VarOrNamedNode::NamedNode(iri) => {
+                PatternValue::Constant(iri_as_node(&mut self.ns_resolver, self.prefixes, iri)?)
+            }
         })
     }
 
@@ -176,20 +173,12 @@ impl<'a> PlanBuilder<'a> {
             VarOrNodeOrLiteral::Node(Node::BlankNode(b)) => {
                 PatternValue::BlankVariable(self.resolve_blank_variable(b))
             }
-            VarOrNodeOrLiteral::Node(Node::NamedNode(iri)) => {
-                PatternValue::Constant(Object::Named(iri_as_node(
-                    &mut self.ns_resolver,
-                    self.storage,
-                    self.prefixes,
-                    iri,
-                )?))
+            VarOrNodeOrLiteral::Node(Node::NamedNode(iri)) => PatternValue::Constant(
+                Object::Named(iri_as_node(&mut self.ns_resolver, self.prefixes, iri)?),
+            ),
+            VarOrNodeOrLiteral::Literal(l) => {
+                PatternValue::Constant(literal_as_object(&mut self.ns_resolver, self.prefixes, l)?)
             }
-            VarOrNodeOrLiteral::Literal(l) => PatternValue::Constant(literal_as_object(
-                &mut self.ns_resolver,
-                self.storage,
-                self.prefixes,
-                l,
-            )?),
         })
     }
 

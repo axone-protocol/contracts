@@ -142,9 +142,8 @@ mod tests {
     };
     use crate::testutil::testutil::read_test_data;
     use axone_cognitarium::msg::{
-        DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse,
-        SimpleWhereCondition, TriplePattern, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
-        WhereCondition, IRI,
+        DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse, TriplePattern,
+        Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause, IRI,
     };
     use cosmwasm_std::testing::{message_info, mock_dependencies, mock_env};
     use cosmwasm_std::{
@@ -304,15 +303,15 @@ mod tests {
                             prefixes: vec![],
                             limit: Some(1u32),
                             select: vec![SelectItem::Variable("p".to_string())],
-                            r#where: vec![WhereCondition::Simple(
-                                SimpleWhereCondition::TriplePattern(TriplePattern {
+                            r#where: WhereClause::Bgp {
+                                patterns: vec![TriplePattern {
                                     subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
                                         "http://example.edu/credentials/3732".to_string(),
                                     ))),
                                     predicate: VarOrNamedNode::Variable("p".to_string()),
                                     object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                                })
-                            )],
+                                }]
+                            },
                         }
                     })
                 );

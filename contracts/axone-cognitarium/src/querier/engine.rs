@@ -210,18 +210,18 @@ impl<'a> Iterator for FilterIterator<'a> {
     type Item = StdResult<ResolvedVariables>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.upstream.next()? {
-            Ok(vars) => match self.expr.evaluate(&vars, &mut self.ns_resolver) {
-                Ok(t) => {
-                    if t.as_bool() {
-                        Some(Ok(vars))
-                    } else {
-                        None
+        loop {
+            match self.upstream.next()? {
+                Ok(vars) => match self.expr.evaluate(&vars, &mut self.ns_resolver) {
+                    Ok(t) => {
+                        if t.as_bool() {
+                            return Some(Ok(vars));
+                        }
                     }
-                }
-                Err(e) => Some(Err(e)),
-            },
-            Err(e) => Some(Err(e)),
+                    Err(e) => return Some(Err(e)),
+                },
+                Err(e) => return Some(Err(e)),
+            }
         }
     }
 }
@@ -1001,6 +1001,7 @@ impl AtomTemplate {
 mod test {
     use super::*;
     use crate::msg::StoreLimitsInput;
+    use crate::querier::expression::Term;
     use crate::querier::plan::PlanVariable;
     use crate::state;
     use crate::state::Object::{Literal, Named};
@@ -1379,6 +1380,86 @@ mod test {
         let engine = QueryEngine::new(&deps.storage, vec![]);
         for case in cases {
             assert_eq!(engine.eval_plan(case.plan).count(), case.expects);
+        }
+    }
+
+    #[test]
+    fn filter_iter() {
+        let cases = vec![
+            (
+                Expression::Equal(
+                    Box::new(Expression::Variable(0usize)),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(1usize),
+            ),
+            (
+                Expression::Not(Box::new(Expression::Equal(
+                    Box::new(Expression::Variable(0usize)),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ))),
+                Ok(3usize),
+            ),
+            (
+                Expression::Greater(
+                    Box::new(Expression::Variable(0usize)),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(2usize),
+            ),
+            (
+                Expression::Equal(
+                    Box::new(Expression::Variable(1usize)),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Err(StdError::generic_err("Unbound filter variable")),
+            ),
+            (
+                Expression::Equal(
+                    Box::new(Expression::Variable(3usize)),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Err(StdError::generic_err("Unbound filter variable")),
+            ),
+            (
+                Expression::Equal(
+                    Box::new(Expression::Variable(2usize)),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Err(StdError::not_found("Namespace")),
+            ),
+        ];
+
+        let mut upstream = Vec::with_capacity(4);
+        for i in 0..4 {
+            let mut vars = ResolvedVariables::with_capacity(3);
+            vars.merge_index(
+                0,
+                ResolvedVariable::Object(Object::Literal(state::Literal::Simple {
+                    value: format!("{i}"),
+                })),
+            );
+            vars.merge_index(
+                2,
+                ResolvedVariable::Predicate(Node {
+                    namespace: 0,
+                    value: "foo".to_string(),
+                }),
+            );
+            upstream.push(vars);
+        }
+
+        let deps = mock_dependencies();
+        for (expr, expects) in cases {
+            let result = FilterIterator::new(
+                &deps.storage,
+                Box::new(upstream.iter().map(|v| Ok(v.clone()))),
+                expr,
+                vec![],
+            )
+            .collect::<StdResult<Vec<ResolvedVariables>>>();
+
+            assert_eq!(result.map(|s| s.len()), expects);
         }
     }
 

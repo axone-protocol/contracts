@@ -3,6 +3,7 @@ use crate::querier::expression::Term;
 use crate::state::{Literal, NamespaceSolver, Object, Predicate, Subject};
 use axone_rdf::normalize::IdentifierIssuer;
 use cosmwasm_std::StdResult;
+use std::collections::BTreeSet;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ResolvedVariable {
@@ -171,6 +172,18 @@ impl ResolvedVariables {
     pub fn get(&self, index: usize) -> &Option<ResolvedVariable> {
         self.variables.get(index).unwrap_or(&None)
     }
+}
+
+pub trait HasBoundVariables {
+    fn bound_variables(&self) -> BTreeSet<usize> {
+        let mut vars = BTreeSet::new();
+        self.lookup_bound_variables(&mut |v| {
+            vars.insert(v);
+        });
+        vars
+    }
+
+    fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize));
 }
 
 #[cfg(test)]

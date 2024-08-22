@@ -1,4 +1,5 @@
 use crate::querier::expression::Expression;
+use crate::querier::variable::HasBoundVariables;
 use crate::state::{Object, Predicate, Subject};
 use std::collections::BTreeSet;
 
@@ -90,16 +91,10 @@ impl QueryNode {
             bound_variables: Vec::new(),
         }
     }
+}
 
-    pub fn bound_variables(&self) -> BTreeSet<usize> {
-        let mut vars = BTreeSet::new();
-        self.lookup_bound_variables(&mut |v| {
-            vars.insert(v);
-        });
-        vars
-    }
-
-    pub fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize)) {
+impl HasBoundVariables for QueryNode {
+    fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize)) {
         match self {
             QueryNode::TriplePattern {
                 subject,

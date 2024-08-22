@@ -3,6 +3,7 @@ use crate::msg::{Node, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLite
 use crate::querier::expression::{Expression, Term};
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
+use crate::querier::variable::HasBoundVariables;
 use crate::state::{
     HasCachedNamespaces, Namespace, NamespaceQuerier, NamespaceResolver, Object, Predicate, Subject,
 };

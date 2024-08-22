@@ -1,10 +1,11 @@
 use crate::msg;
 use crate::querier::mapper::iri_as_string;
+use crate::querier::variable::HasBoundVariables;
 use crate::querier::ResolvedVariables;
 use crate::state::NamespaceSolver;
 use cosmwasm_std::{StdError, StdResult};
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum Expression {
@@ -20,36 +21,6 @@ pub enum Expression {
 }
 
 impl Expression {
-    pub fn bound_variables(&self) -> BTreeSet<usize> {
-        let mut vars = BTreeSet::new();
-        self.lookup_bound_variables(&mut |v| {
-            vars.insert(v);
-        });
-        vars
-    }
-
-    pub fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize)) {
-        match self {
-            Expression::Constant(_) => {}
-            Expression::Variable(v) => {
-                callback(*v);
-            }
-            Expression::And(exprs) | Expression::Or(exprs) => {
-                exprs
-                    .iter()
-                    .for_each(|e| e.lookup_bound_variables(callback));
-            }
-            Expression::Equal(left, right)
-            | Expression::Greater(left, right)
-            | Expression::GreaterOrEqual(left, right)
-            | Expression::Less(left, right)
-            | Expression::LessOrEqual(left, right) => {
-                left.lookup_bound_variables(callback);
-                right.lookup_bound_variables(callback);
-            }
-        }
-    }
-
     pub fn evaluate<'a>(
         &self,
         vars: &'a ResolvedVariables,
@@ -93,6 +64,30 @@ impl Expression {
             Expression::LessOrEqual(left, right) => Ok(Term::Boolean(
                 left.evaluate(vars, ns_solver)? <= right.evaluate(vars, ns_solver)?,
             )),
+        }
+    }
+}
+
+impl HasBoundVariables for Expression {
+    fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize)) {
+        match self {
+            Expression::Constant(_) => {}
+            Expression::Variable(v) => {
+                callback(*v);
+            }
+            Expression::And(exprs) | Expression::Or(exprs) => {
+                exprs
+                    .iter()
+                    .for_each(|e| e.lookup_bound_variables(callback));
+            }
+            Expression::Equal(left, right)
+            | Expression::Greater(left, right)
+            | Expression::GreaterOrEqual(left, right)
+            | Expression::Less(left, right)
+            | Expression::LessOrEqual(left, right) => {
+                left.lookup_bound_variables(callback);
+                right.lookup_bound_variables(callback);
+            }
         }
     }
 }

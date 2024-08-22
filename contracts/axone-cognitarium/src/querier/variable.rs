@@ -247,12 +247,12 @@ mod tests {
                     value: "bar".to_string(),
                     counter: 1,
                 }),
-                _ => Err(StdError::generic_err("namespace not found")),
+                _ => Err(StdError::not_found("Namespace")),
             }
         }
 
         fn resolve_from_val(&mut self, _value: String) -> StdResult<Namespace> {
-            Err(StdError::generic_err("namespace not found"))
+            Err(StdError::not_found("Namespace"))
         }
     }
 
@@ -333,6 +333,37 @@ mod tests {
                     datatype: Some(IRI::Full("foobar".to_string())),
                 }),
             ),
+            (
+                ResolvedVariable::Subject(Subject::Named(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Predicate(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                }),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Object(Object::Named(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 12,
+                        value: "unknown".to_string(),
+                    },
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
         ];
 
         let mut id_issuer = IdentifierIssuer::new("b", 0u128);
@@ -377,5 +408,99 @@ mod tests {
         );
         let result2 = vars1.merge_with(&vars3);
         assert_eq!(result2, None);
+    }
+
+    #[test]
+    fn terms() {
+        let cases = vec![
+            (
+                ResolvedVariable::Subject(Subject::Named(Node {
+                    namespace: 0,
+                    value: "bar".to_string(),
+                })),
+                Ok(Term::String("foobar".to_string())),
+            ),
+            (
+                ResolvedVariable::Subject(Subject::Blank(0u128)),
+                Ok(Term::String("_:0".to_string())),
+            ),
+            (
+                ResolvedVariable::Predicate(Node {
+                    namespace: 1,
+                    value: "foo".to_string(),
+                }),
+                Ok(Term::String("barfoo".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Named(Node {
+                    namespace: 1,
+                    value: "foo".to_string(),
+                })),
+                Ok(Term::String("barfoo".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Blank(0u128)),
+                Ok(Term::String("_:0".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Simple {
+                    value: "foo".to_string(),
+                })),
+                Ok(Term::String("foo".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::I18NString {
+                    value: "foo".to_string(),
+                    language: "fr".to_string(),
+                })),
+                Ok(Term::String("foofr".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Typed {
+                    value: "foo".to_string(),
+                    datatype: Node {
+                        namespace: 0,
+                        value: "bar".to_string(),
+                    },
+                })),
+                Ok(Term::String("foofoobar".to_string())),
+            ),
+            (
+                ResolvedVariable::Subject(Subject::Named(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Predicate(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                }),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Object(Object::Named(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 12,
+                        value: "unknown".to_string(),
+                    },
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+        ];
+
+        let mut ns_solver = TestNamespaceSolver;
+        for (var, expected) in cases {
+            assert_eq!(var.as_term(&mut ns_solver), expected)
+        }
     }
 }

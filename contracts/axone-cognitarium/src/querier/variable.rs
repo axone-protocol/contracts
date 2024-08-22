@@ -1,4 +1,5 @@
 use crate::msg::{Value, IRI};
+use crate::querier::expression::Term;
 use crate::state::{Literal, NamespaceSolver, Object, Predicate, Subject};
 use axone_rdf::normalize::IdentifierIssuer;
 use cosmwasm_std::StdResult;
@@ -92,6 +93,31 @@ impl ResolvedVariable {
                         datatype: Some(datatype.as_iri(ns_fn).map(IRI::Full)?),
                     },
                 },
+            },
+        })
+    }
+
+    pub fn as_term(&self, ns_solver: &mut dyn NamespaceSolver) -> StdResult<Term> {
+        Ok(match self {
+            ResolvedVariable::Subject(subject) => match subject {
+                Subject::Named(named) => named.as_iri(ns_solver).map(Term::String)?,
+                Subject::Blank(blank) => Term::String(format!("_:{}", blank)),
+            },
+            ResolvedVariable::Predicate(predicate) => {
+                predicate.as_iri(ns_solver).map(Term::String)?
+            }
+            ResolvedVariable::Object(object) => match object {
+                Object::Named(named) => named.as_iri(ns_solver).map(Term::String)?,
+                Object::Blank(blank) => Term::String(format!("_:{}", blank)),
+                Object::Literal(literal) => Term::String(match literal {
+                    Literal::Simple { value } => value.clone(),
+                    Literal::I18NString { value, language } => {
+                        format!("{}{}", value, language).to_string()
+                    }
+                    Literal::Typed { value, datatype } => {
+                        format!("{}{}", value, datatype.as_iri(ns_solver)?).to_string()
+                    }
+                }),
             },
         })
     }

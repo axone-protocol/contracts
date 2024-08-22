@@ -155,6 +155,8 @@ impl PartialOrd<Term> for Term {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::querier::variable::ResolvedVariable;
+    use crate::state::{InMemoryNamespaceSolver, Node, Object};
     use std::collections::BTreeSet;
 
     #[test]
@@ -213,6 +215,171 @@ mod tests {
 
         for case in cases {
             assert_eq!(case.0.bound_variables(), BTreeSet::from_iter(case.1));
+        }
+    }
+
+    #[test]
+    fn expression_evaluate() {
+        let cases = vec![
+            (
+                Expression::Constant(Term::Boolean(true)),
+                Ok(Term::Boolean(true)),
+            ),
+            (
+                Expression::Variable(0),
+                Ok(Term::String("http:://example.com/foo".to_string())),
+            ),
+            (
+                Expression::Variable(1),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                Expression::Variable(12),
+                Err(StdError::generic_err("Unbound filter variable")),
+            ),
+            (
+                Expression::And(vec![
+                    Expression::Constant(Term::Boolean(true)),
+                    Expression::Constant(Term::Boolean(true)),
+                ]),
+                Ok(Term::Boolean(true)),
+            ),
+            (Expression::And(vec![]), Ok(Term::Boolean(true))),
+            (
+                Expression::And(vec![
+                    Expression::Constant(Term::Boolean(true)),
+                    Expression::Constant(Term::Boolean(false)),
+                ]),
+                Ok(Term::Boolean(false)),
+            ),
+            (
+                Expression::Or(vec![
+                    Expression::Constant(Term::Boolean(true)),
+                    Expression::Constant(Term::Boolean(false)),
+                ]),
+                Ok(Term::Boolean(true)),
+            ),
+            (Expression::Or(vec![]), Ok(Term::Boolean(false))),
+            (
+                Expression::Or(vec![
+                    Expression::Constant(Term::Boolean(false)),
+                    Expression::Constant(Term::Boolean(false)),
+                ]),
+                Ok(Term::Boolean(false)),
+            ),
+            (
+                Expression::Equal(
+                    Box::new(Expression::Constant(Term::String("foo".to_string()))),
+                    Box::new(Expression::Constant(Term::String("foo".to_string()))),
+                ),
+                Ok(Term::Boolean(true)),
+            ),
+            (
+                Expression::Equal(
+                    Box::new(Expression::Constant(Term::String("foo".to_string()))),
+                    Box::new(Expression::Constant(Term::String("bar".to_string()))),
+                ),
+                Ok(Term::Boolean(false)),
+            ),
+            (
+                Expression::Greater(
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(Term::Boolean(false)),
+            ),
+            (
+                Expression::Greater(
+                    Box::new(Expression::Constant(Term::String("2".to_string()))),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(Term::Boolean(true)),
+            ),
+            (
+                Expression::GreaterOrEqual(
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                    Box::new(Expression::Constant(Term::String("2".to_string()))),
+                ),
+                Ok(Term::Boolean(false)),
+            ),
+            (
+                Expression::GreaterOrEqual(
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(Term::Boolean(true)),
+            ),
+            (
+                Expression::GreaterOrEqual(
+                    Box::new(Expression::Constant(Term::String("2".to_string()))),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(Term::Boolean(true)),
+            ),
+            (
+                Expression::Less(
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                    Box::new(Expression::Constant(Term::String("2".to_string()))),
+                ),
+                Ok(Term::Boolean(true)),
+            ),
+            (
+                Expression::Less(
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(Term::Boolean(false)),
+            ),
+            (
+                Expression::LessOrEqual(
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                    Box::new(Expression::Constant(Term::String("2".to_string()))),
+                ),
+                Ok(Term::Boolean(true)),
+            ),
+            (
+                Expression::LessOrEqual(
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(Term::Boolean(true)),
+            ),
+            (
+                Expression::LessOrEqual(
+                    Box::new(Expression::Constant(Term::String("2".to_string()))),
+                    Box::new(Expression::Constant(Term::String("1".to_string()))),
+                ),
+                Ok(Term::Boolean(false)),
+            ),
+            (
+                Expression::Not(Box::new(Expression::Constant(Term::Boolean(true)))),
+                Ok(Term::Boolean(false)),
+            ),
+            (
+                Expression::Not(Box::new(Expression::Constant(Term::Boolean(false)))),
+                Ok(Term::Boolean(true)),
+            ),
+        ];
+
+        let mut vars = ResolvedVariables::with_capacity(2);
+        vars.merge_index(
+            0,
+            ResolvedVariable::Object(Object::Named(Node {
+                namespace: 0,
+                value: "foo".to_string(),
+            })),
+        );
+        vars.merge_index(
+            1,
+            ResolvedVariable::Object(Object::Named(Node {
+                namespace: 12,
+                value: "foo".to_string(),
+            })),
+        );
+
+        let mut ns_solver = InMemoryNamespaceSolver::with(vec![(0, "http:://example.com/")]);
+        for case in cases {
+            assert_eq!(case.0.evaluate(&vars, &mut ns_solver), case.1);
         }
     }
 

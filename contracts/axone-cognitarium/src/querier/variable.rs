@@ -189,7 +189,7 @@ pub trait HasBoundVariables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{Literal, Namespace, Node};
+    use crate::state::{InMemoryNamespaceSolver, Literal, Node};
     use cosmwasm_std::StdError;
 
     #[test]
@@ -243,29 +243,6 @@ mod tests {
                 assert_eq!(object.as_predicate(), p);
                 assert_eq!(object.as_object(), o);
             }
-        }
-    }
-
-    struct TestNamespaceSolver;
-    impl NamespaceSolver for TestNamespaceSolver {
-        fn resolve_from_key(&mut self, key: u128) -> StdResult<Namespace> {
-            match key {
-                0 => Ok(Namespace {
-                    key: 0,
-                    value: "foo".to_string(),
-                    counter: 1,
-                }),
-                1 => Ok(Namespace {
-                    key: 1,
-                    value: "bar".to_string(),
-                    counter: 1,
-                }),
-                _ => Err(StdError::not_found("Namespace")),
-            }
-        }
-
-        fn resolve_from_val(&mut self, _value: String) -> StdResult<Namespace> {
-            Err(StdError::not_found("Namespace"))
         }
     }
 
@@ -380,7 +357,7 @@ mod tests {
         ];
 
         let mut id_issuer = IdentifierIssuer::new("b", 0u128);
-        let mut ns_solver = TestNamespaceSolver;
+        let mut ns_solver = InMemoryNamespaceSolver::with(vec![(0, "foo"), (1, "bar")]);
         for (var, expected) in cases {
             assert_eq!(var.as_value(&mut ns_solver, &mut id_issuer), expected)
         }
@@ -511,7 +488,7 @@ mod tests {
             ),
         ];
 
-        let mut ns_solver = TestNamespaceSolver;
+        let mut ns_solver = InMemoryNamespaceSolver::with(vec![(0, "foo"), (1, "bar")]);
         for (var, expected) in cases {
             assert_eq!(var.as_term(&mut ns_solver), expected)
         }

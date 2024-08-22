@@ -510,6 +510,8 @@ pub enum Expression {
     Less(Box<Self>, Box<Self>),
     /// Less or equal comparison.
     LessOrEqual(Box<Self>, Box<Self>),
+    /// Negation of an expression.
+    Not(Box<Self>),
 }
 
 /// # TripleDeleteTemplate

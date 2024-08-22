@@ -18,6 +18,7 @@ pub enum Expression {
     GreaterOrEqual(Box<Self>, Box<Self>),
     Less(Box<Self>, Box<Self>),
     LessOrEqual(Box<Self>, Box<Self>),
+    Not(Box<Self>),
 }
 
 impl Expression {
@@ -64,6 +65,7 @@ impl Expression {
             Expression::LessOrEqual(left, right) => Ok(Term::Boolean(
                 left.evaluate(vars, ns_solver)? <= right.evaluate(vars, ns_solver)?,
             )),
+            Expression::Not(expr) => Ok(Term::Boolean(!expr.evaluate(vars, ns_solver)?.as_bool())),
         }
     }
 }
@@ -87,6 +89,9 @@ impl HasBoundVariables for Expression {
             | Expression::LessOrEqual(left, right) => {
                 left.lookup_bound_variables(callback);
                 right.lookup_bound_variables(callback);
+            }
+            Expression::Not(expr) => {
+                expr.lookup_bound_variables(callback);
             }
         }
     }
@@ -143,6 +148,200 @@ impl PartialOrd<Term> for Term {
             (Term::String(left), Term::String(right)) => Some(left.cmp(right)),
             (Term::Boolean(left), Term::Boolean(right)) => Some(left.cmp(right)),
             _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn expression_bound_variables() {
+        let cases = vec![
+            (
+                Expression::Constant(Term::String("foo".to_string())),
+                vec![],
+            ),
+            (Expression::Variable(0), vec![0]),
+            (
+                Expression::And(vec![Expression::Variable(0), Expression::Variable(1)]),
+                vec![0, 1],
+            ),
+            (
+                Expression::Or(vec![Expression::Variable(0), Expression::Variable(1)]),
+                vec![0, 1],
+            ),
+            (
+                Expression::Equal(
+                    Box::new(Expression::Variable(0)),
+                    Box::new(Expression::Variable(1)),
+                ),
+                vec![0, 1],
+            ),
+            (
+                Expression::Greater(
+                    Box::new(Expression::Variable(0)),
+                    Box::new(Expression::Variable(1)),
+                ),
+                vec![0, 1],
+            ),
+            (
+                Expression::GreaterOrEqual(
+                    Box::new(Expression::Variable(0)),
+                    Box::new(Expression::Variable(1)),
+                ),
+                vec![0, 1],
+            ),
+            (
+                Expression::Less(
+                    Box::new(Expression::Variable(0)),
+                    Box::new(Expression::Variable(1)),
+                ),
+                vec![0, 1],
+            ),
+            (
+                Expression::LessOrEqual(
+                    Box::new(Expression::Variable(0)),
+                    Box::new(Expression::Variable(1)),
+                ),
+                vec![0, 1],
+            ),
+            (Expression::Not(Box::new(Expression::Variable(0))), vec![0]),
+        ];
+
+        for case in cases {
+            assert_eq!(case.0.bound_variables(), BTreeSet::from_iter(case.1));
+        }
+    }
+
+    #[test]
+    fn term_from_iri() {
+        let cases = vec![
+            (
+                msg::IRI::Prefixed("foo:bar".to_string()),
+                Ok(Term::String("http://example.com/bar".to_string())),
+            ),
+            (
+                msg::IRI::Full("foo:bar".to_string()),
+                Ok(Term::String("foo:bar".to_string())),
+            ),
+            (
+                msg::IRI::Prefixed("unknown:bar".to_string()),
+                Err(StdError::generic_err("Prefix not found: unknown")),
+            ),
+        ];
+
+        let mut prefixes = HashMap::new();
+        prefixes.insert("foo".to_string(), "http://example.com/".to_string());
+
+        for case in cases {
+            assert_eq!(Term::from_iri(case.0, &prefixes), case.1);
+        }
+    }
+
+    #[test]
+    fn term_from_literal() {
+        let cases = vec![
+            (
+                msg::Literal::Simple("foo".to_string()),
+                Ok(Term::String("foo".to_string())),
+            ),
+            (
+                msg::Literal::LanguageTaggedString {
+                    value: "foo".to_string(),
+                    language: "en".to_string(),
+                },
+                Ok(Term::String("fooen".to_string())),
+            ),
+            (
+                msg::Literal::TypedValue {
+                    value: "foo".to_string(),
+                    datatype: msg::IRI::Prefixed("foo:bar".to_string()),
+                },
+                Ok(Term::String("foohttp://example.com/bar".to_string())),
+            ),
+            (
+                msg::Literal::TypedValue {
+                    value: "foo".to_string(),
+                    datatype: msg::IRI::Prefixed("unknown:bar".to_string()),
+                },
+                Err(StdError::generic_err("Prefix not found: unknown")),
+            ),
+        ];
+
+        let mut prefixes = HashMap::new();
+        prefixes.insert("foo".to_string(), "http://example.com/".to_string());
+
+        for case in cases {
+            assert_eq!(Term::from_literal(case.0, &prefixes), case.1);
+        }
+    }
+
+    #[test]
+    fn term_as_string() {
+        let cases = vec![
+            (Term::String("foo".to_string()), "foo"),
+            (Term::Boolean(true), "true"),
+            (Term::Boolean(false), "false"),
+        ];
+        for case in cases {
+            assert_eq!(case.0.as_string(), case.1);
+        }
+    }
+
+    #[test]
+    fn term_as_bool() {
+        let cases = vec![
+            (Term::String("foo".to_string()), true),
+            (Term::String("".to_string()), false),
+            (Term::Boolean(true), true),
+            (Term::Boolean(false), false),
+        ];
+        for case in cases {
+            assert_eq!(case.0.as_bool(), case.1);
+        }
+    }
+
+    #[test]
+    fn term_partial_cmp() {
+        let cases = vec![
+            (
+                Term::String("a".to_string()),
+                Term::String("b".to_string()),
+                Some(Ordering::Less),
+            ),
+            (
+                Term::String("b".to_string()),
+                Term::String("a".to_string()),
+                Some(Ordering::Greater),
+            ),
+            (
+                Term::String("a".to_string()),
+                Term::String("a".to_string()),
+                Some(Ordering::Equal),
+            ),
+            (
+                Term::Boolean(true),
+                Term::Boolean(false),
+                Some(Ordering::Greater),
+            ),
+            (
+                Term::Boolean(false),
+                Term::Boolean(true),
+                Some(Ordering::Less),
+            ),
+            (
+                Term::Boolean(true),
+                Term::Boolean(true),
+                Some(Ordering::Equal),
+            ),
+            (Term::String("a".to_string()), Term::Boolean(true), None),
+            (Term::Boolean(true), Term::String("a".to_string()), None),
+        ];
+        for case in cases {
+            assert_eq!(case.0.partial_cmp(&case.1), case.2);
         }
     }
 }

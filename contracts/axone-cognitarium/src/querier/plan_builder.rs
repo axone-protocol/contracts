@@ -157,6 +157,10 @@ impl<'a> PlanBuilder<'a> {
                 Box::new(self.build_expression(left)?),
                 Box::new(self.build_expression(right)?),
             )),
+            msg::Expression::Not(child) => self
+                .build_expression(child)
+                .map(Box::new)
+                .map(Expression::Not),
         }
     }
 

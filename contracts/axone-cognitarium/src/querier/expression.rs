@@ -22,9 +22,9 @@ pub enum Expression {
 }
 
 impl Expression {
-    pub fn evaluate<'a>(
+    pub fn evaluate(
         &self,
-        vars: &'a ResolvedVariables,
+        vars: &ResolvedVariables,
         ns_solver: &mut dyn NamespaceSolver,
     ) -> StdResult<Term> {
         match self {
@@ -40,7 +40,7 @@ impl Expression {
                         return Ok(Term::Boolean(false));
                     }
                 }
-                return Ok(Term::Boolean(true));
+                Ok(Term::Boolean(true))
             }
             Expression::Or(exprs) => {
                 for expr in exprs {
@@ -48,7 +48,7 @@ impl Expression {
                         return Ok(Term::Boolean(true));
                     }
                 }
-                return Ok(Term::Boolean(false));
+                Ok(Term::Boolean(false))
             }
             Expression::Equal(left, right) => Ok(Term::Boolean(
                 left.evaluate(vars, ns_solver)? == right.evaluate(vars, ns_solver)?,
@@ -115,10 +115,10 @@ impl Term {
         Ok(Term::String(match literal {
             msg::Literal::Simple(value) => value,
             msg::Literal::LanguageTaggedString { value, language } => {
-                format!("{}{}", value, language).to_string()
+                format!("{}{}", value, language)
             }
             msg::Literal::TypedValue { value, datatype } => {
-                format!("{}{}", value, iri_as_string(datatype, prefixes)?).to_string()
+                format!("{}{}", value, iri_as_string(datatype, prefixes)?)
             }
         }))
     }

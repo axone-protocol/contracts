@@ -1,7 +1,6 @@
 use crate::querier::expression::Expression;
 use crate::querier::variable::HasBoundVariables;
 use crate::state::{Object, Predicate, Subject};
-use std::collections::BTreeSet;
 
 /// Represents a querying plan.
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -143,6 +142,7 @@ impl<V> PatternValue<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     #[test]
     fn bound_variables() {

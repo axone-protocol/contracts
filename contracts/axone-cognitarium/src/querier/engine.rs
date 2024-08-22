@@ -71,7 +71,7 @@ impl<'a> QueryEngine<'a> {
 
         Ok(ResolvedAtomIterator::new(
             self.storage,
-            self.ns_cache.clone().into(),
+            self.ns_cache.clone(),
             IdentifierIssuer::new("b", 0u128),
             self.eval_plan(plan),
             templates,
@@ -201,7 +201,7 @@ impl<'a> FilterIterator<'a> {
         Self {
             upstream,
             expr,
-            ns_resolver: NamespaceResolver::new(storage, ns_cache.into()),
+            ns_resolver: NamespaceResolver::new(storage, ns_cache),
         }
     }
 }
@@ -793,7 +793,7 @@ impl<'a> ResolvedAtomIterator<'a> {
         templates: Vec<AtomTemplate>,
     ) -> Self {
         Self {
-            ns_resolver: NamespaceResolver::new(storage, ns_cache.into()),
+            ns_resolver: NamespaceResolver::new(storage, ns_cache),
             id_issuer,
             upstream_iter,
             templates,

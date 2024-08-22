@@ -244,7 +244,7 @@ pub mod query {
                 (
                     vec![select.clone()],
                     WhereClause::Bgp {
-                        patterns: vec![select.clone()],
+                        patterns: vec![select],
                     },
                 )
             }

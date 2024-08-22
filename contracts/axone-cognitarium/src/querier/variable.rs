@@ -113,10 +113,10 @@ impl ResolvedVariable {
                 Object::Literal(literal) => Term::String(match literal {
                     Literal::Simple { value } => value.clone(),
                     Literal::I18NString { value, language } => {
-                        format!("{}{}", value, language).to_string()
+                        format!("{}{}", value, language)
                     }
                     Literal::Typed { value, datatype } => {
-                        format!("{}{}", value, datatype.as_iri(ns_solver)?).to_string()
+                        format!("{}{}", value, datatype.as_iri(ns_solver)?)
                     }
                 }),
             },

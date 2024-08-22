@@ -25,7 +25,7 @@ impl<'a> PlanBuilder<'a> {
         ns_cache: Option<Vec<Namespace>>,
     ) -> Self {
         Self {
-            ns_resolver: NamespaceResolver::new(storage, ns_cache.unwrap_or(vec![]).into()),
+            ns_resolver: NamespaceResolver::new(storage, ns_cache.unwrap_or_default()),
             prefixes,
             variables: Vec::new(),
             skip: None,

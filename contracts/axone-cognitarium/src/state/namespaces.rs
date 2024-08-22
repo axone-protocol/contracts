@@ -218,7 +218,7 @@ impl<'a> HasCachedNamespaces for NamespaceResolver<'a> {
     }
 
     fn clear_cache(&mut self) {
-        self.ns_querier.clear_cache()
+        self.ns_querier.clear_cache();
     }
 }
 

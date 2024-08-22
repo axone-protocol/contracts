@@ -1,6 +1,7 @@
 use crate::msg::{
     Node, SelectItem, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode, VarOrNodeOrLiteral,
 };
+use crate::querier::expression::Expression;
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, QueryNode, QueryPlan};
 use crate::querier::variable::{ResolvedVariable, ResolvedVariables};
@@ -159,6 +160,17 @@ impl<'a> QueryEngine<'a> {
                     Box::new(ForLoopJoinIterator::new(left(vars), right))
                 })
             }
+            QueryNode::Filter { expr, inner } => {
+                let inner = self.eval_node(*inner);
+                Rc::new(move |vars| {
+                    Box::new(FilterIterator::new(
+                        self.storage,
+                        inner(vars),
+                        expr.clone(),
+                        self.ns_cache.clone(),
+                    ))
+                })
+            }
             QueryNode::Skip { child, first } => {
                 let upstream = self.eval_node(*child);
                 Rc::new(move |vars| Box::new(upstream(vars).skip(first)))
@@ -172,6 +184,27 @@ impl<'a> QueryEngine<'a> {
 }
 
 type ResolvedVariablesIterator<'a> = Box<dyn Iterator<Item = StdResult<ResolvedVariables>> + 'a>;
+
+struct FilterIterator<'a> {
+    upstream: ResolvedVariablesIterator<'a>,
+    expr: Expression,
+    ns_resolver: NamespaceResolver<'a>,
+}
+
+impl<'a> FilterIterator<'a> {
+    fn new(
+        storage: &'a dyn Storage,
+        upstream: ResolvedVariablesIterator<'a>,
+        expr: Expression,
+        ns_cache: Vec<Namespace>,
+    ) -> Self {
+        Self {
+            upstream,
+            expr,
+            ns_resolver: NamespaceResolver::new(storage, ns_cache.into()),
+        }
+    }
+}
 
 impl<'a> Iterator for FilterIterator<'a> {
     type Item = StdResult<ResolvedVariables>;

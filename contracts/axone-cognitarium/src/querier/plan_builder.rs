@@ -1,10 +1,12 @@
+use crate::msg;
 use crate::msg::{Node, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause};
+use crate::querier::expression::{Expression, Term};
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
 use crate::state::{
     HasCachedNamespaces, Namespace, NamespaceQuerier, NamespaceResolver, Object, Predicate, Subject,
 };
-use cosmwasm_std::{StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
@@ -69,6 +71,18 @@ impl<'a> PlanBuilder<'a> {
                 left: Box::new(self.build_node(left)?),
                 right: Box::new(self.build_node(right)?),
             }),
+            WhereClause::Filter { expr, inner } => {
+                let inner = Box::new(self.build_node(inner)?);
+                let expr = self.build_expression(expr)?;
+
+                if !expr.bound_variables().is_subset(&inner.bound_variables()) {
+                    return Err(StdError::generic_err(
+                        "Unbound variable in filter expression",
+                    ));
+                }
+
+                Ok(QueryNode::Filter { expr, inner })
+            }
         }
     }
 
@@ -99,6 +113,50 @@ impl<'a> PlanBuilder<'a> {
                 }
             })
             .unwrap_or(Ok(QueryNode::noop()))
+    }
+
+    fn build_expression(&mut self, expr: &msg::Expression) -> StdResult<Expression> {
+        match expr {
+            msg::Expression::NamedNode(iri) => {
+                Term::from_iri(iri.clone(), self.prefixes).map(Expression::Constant)
+            }
+            msg::Expression::Literal(literal) => {
+                Term::from_literal(literal.clone(), self.prefixes).map(Expression::Constant)
+            }
+            msg::Expression::Variable(v) => Ok(Expression::Variable(
+                self.resolve_basic_variable(v.to_string()),
+            )),
+            msg::Expression::And(exprs) => exprs
+                .iter()
+                .map(|e| self.build_expression(e))
+                .collect::<StdResult<Vec<Expression>>>()
+                .map(Expression::And),
+            msg::Expression::Or(exprs) => exprs
+                .iter()
+                .map(|e| self.build_expression(e))
+                .collect::<StdResult<Vec<Expression>>>()
+                .map(Expression::Or),
+            msg::Expression::Equal(left, right) => Ok(Expression::Equal(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::Greater(left, right) => Ok(Expression::Greater(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::GreaterOrEqual(left, right) => Ok(Expression::GreaterOrEqual(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::Less(left, right) => Ok(Expression::Less(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::LessOrEqual(left, right) => Ok(Expression::LessOrEqual(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+        }
     }
 
     fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {

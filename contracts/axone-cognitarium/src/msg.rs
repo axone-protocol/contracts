@@ -464,7 +464,7 @@ pub enum SelectItem {
 }
 
 /// # WhereClause
-/// Represents a WHERE clause in a [SelectQuery], i.e. a set of conditions to filter the results.
+/// Represents a WHERE clause, i.e. a set of conditions to filter the results.
 #[cw_serde]
 pub enum WhereClause {
     /// # Bgp
@@ -474,6 +474,42 @@ pub enum WhereClause {
     /// # LateralJoin
     /// Evaluates right for all result row of left
     LateralJoin { left: Box<Self>, right: Box<Self> },
+
+    /// # Filter
+    /// Filters the inner clause matching the expression.
+    /// The solutions coming from the inner clause that do not match the expression are discarded.
+    /// The variables provided in the inner clause are available in the filter expression.
+    Filter { expr: Expression, inner: Box<Self> },
+}
+
+/// # Expression
+/// Represents a logical combination of operations whose evaluation results in a term.
+#[cw_serde]
+pub enum Expression {
+    /// A named node constant.
+    NamedNode(IRI),
+    /// A literal constant.
+    Literal(Literal),
+    /// A variable that must be bound for evaluation.
+    Variable(String),
+    /// Logical conjunction of expressions.
+    /// All expressions must evaluate to true for the conjunction to be true.
+    /// If the conjunction is empty, it is considered true.
+    And(Vec<Self>),
+    /// Logical disjunction of expressions.
+    /// At least one expression must evaluate to true for the disjunction to be true.
+    /// If the disjunction is empty, it is considered false.
+    Or(Vec<Self>),
+    /// Equality comparison.
+    Equal(Box<Self>, Box<Self>),
+    /// Greater than comparison.
+    Greater(Box<Self>, Box<Self>),
+    /// Greater or equal comparison.
+    GreaterOrEqual(Box<Self>, Box<Self>),
+    /// Less than comparison.
+    Less(Box<Self>, Box<Self>),
+    /// Less or equal comparison.
+    LessOrEqual(Box<Self>, Box<Self>),
 }
 
 /// # TripleDeleteTemplate

@@ -1,12 +1,15 @@
 use crate::credential::rdf_marker::IRI_VC_TYPE;
 use crate::credential::vc::{Claim, VerifiableCredential};
 use crate::ContractError;
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Env, MessageInfo};
 use itertools::Itertools;
 
 #[derive(Debug, PartialEq)]
 pub struct DataverseCredential<'a> {
-    pub submitter_addr: Addr,
+    pub height: String,
+    pub timestamp: String,
+    pub tx_index: Option<String>,
+    pub sender: Addr,
     pub id: &'a str,
     pub issuer: &'a str,
     pub r#type: &'a str,
@@ -38,14 +41,17 @@ impl<'a> DataverseCredential<'a> {
     }
 }
 
-impl<'a> TryFrom<(Addr, &'a VerifiableCredential<'a>)> for DataverseCredential<'a> {
+impl<'a> TryFrom<(Env, MessageInfo, &'a VerifiableCredential<'a>)> for DataverseCredential<'a> {
     type Error = ContractError;
 
     fn try_from(
-        (submitter_addr, vc): (Addr, &'a VerifiableCredential<'a>),
+        (env, info, vc): (Env, MessageInfo, &'a VerifiableCredential<'a>),
     ) -> Result<Self, Self::Error> {
         Ok(DataverseCredential {
-            submitter_addr,
+            height: env.block.height.to_string(),
+            timestamp: env.block.time.seconds().to_string(),
+            tx_index: env.transaction.map(|tx| tx.index.to_string()),
+            sender: info.sender,
             id: vc.id,
             issuer: vc.issuer,
             r#type: DataverseCredential::extract_vc_type(vc)?,
@@ -61,21 +67,25 @@ mod test {
     use super::*;
     use crate::testutil::testutil;
     use axone_rdf::dataset::Dataset;
+    use cosmwasm_std::testing::message_info;
     use rio_api::model::{Literal, NamedNode, Quad};
+    use testing::addr::{addr, SENDER};
+    use testing::mock::mock_env_addr;
 
     #[test]
     fn proper_from_verifiable() {
         let owned_quads = testutil::read_test_quads("vc-valid.nq");
         let dataset = Dataset::from(owned_quads.as_slice());
         let vc = VerifiableCredential::try_from(&dataset).unwrap();
-        let dc_res = DataverseCredential::try_from((
-            Addr::unchecked("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0"),
-            &vc,
-        ));
+        let dc_res =
+            DataverseCredential::try_from((mock_env_addr(), message_info(&addr(SENDER), &[]), &vc));
 
         assert!(dc_res.is_ok());
         assert_eq!(dc_res.unwrap(), DataverseCredential {
-                submitter_addr: Addr::unchecked("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0"),
+            height: "12345".to_string(),
+            timestamp: "1571797419".to_string(),
+            tx_index: Some("3".to_string()),
+            sender: addr(SENDER),
                 id: "https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9",
                 issuer: "did:key:zQ3shs7auhJSmVJpiUbQWco6bxxEhSqWnVEPvaBHBRvBKw6Q3",
                 r#type: "https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/DigitalServiceDescriptionCredential",
@@ -120,7 +130,8 @@ mod test {
             let dataset = Dataset::from(owned_quads.as_slice());
             let vc = VerifiableCredential::try_from(&dataset).unwrap();
             let dc_res = DataverseCredential::try_from((
-                Addr::unchecked("axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0"),
+                mock_env_addr(),
+                message_info(&addr(SENDER), &[]),
                 &vc,
             ));
 

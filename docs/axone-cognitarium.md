@@ -415,12 +415,12 @@ Example: `json { "prefixes": [ { "prefix": "foaf", "namespace": "http://xmlns.co
 
 Only the smart contract owner (i.e. the address who instantiated it) is authorized to perform this action.
 
-| parameter              | description                                                                                                                                                                                                           |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `delete_data`          | _(Required.) _ **object**.                                                                                                                                                                                            |
-| `delete_data.delete`   | _(Required.) _ **Array&lt;[TripleDeleteTemplate](#tripledeletetemplate)&gt;**. Specifies the specific triple templates to delete. If nothing is provided, the patterns from the `where` clause are used for deletion. |
-| `delete_data.prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the operation.                                                                                                                                |
-| `delete_data.where`    | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. Defines the patterns that data (RDF triples) should match in order for it to be considered for deletion.                                           |
+| parameter              | description                                                                                                                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `delete_data`          | _(Required.) _ **object**.                                                                                                                                                                                                           |
+| `delete_data.delete`   | _(Required.) _ **Array&lt;[TripleDeleteTemplate](#tripledeletetemplate)&gt;**. Specifies the specific triple templates to delete. If nothing is provided and the `where` clause is a single Bgp, the patterns are used for deletion. |
+| `delete_data.prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the operation.                                                                                                                                               |
+| `delete_data.where`    | **[WhereClause](#whereclause)\|null**. Defines the patterns that data (RDF triples) should match in order for it to be considered for deletion, if any.                                                                              |
 
 ## QueryMsg
 
@@ -516,6 +516,15 @@ Contains information related to triple store.
 
 ## Definitions
 
+### Bgp
+
+Represents a basic graph pattern expressed as a set of triple patterns.
+
+| property       | description                                                      |
+| -------------- | ---------------------------------------------------------------- |
+| `bgp`          | _(Required.) _ **object**.                                       |
+| `bgp.patterns` | _(Required.) _ **Array&lt;[TriplePattern](#triplepattern)&gt;**. |
+
 ### Binary
 
 A string containing Base64-encoded data.
@@ -536,11 +545,11 @@ An RDF [blank node](https://www.w3.org/TR/rdf11-concepts/#dfn-blank-node).
 
 Represents a CONSTRUCT query over the triple store, allowing to retrieve a set of triples serialized in a specific format.
 
-| property    | description                                                                                                                                                                                            |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `construct` | _(Required.) _ **Array&lt;[TripleConstructTemplate](#tripleconstructtemplate)&gt;**. The triples to construct. If nothing is provided, the patterns from the `where` clause are used for construction. |
-| `prefixes`  | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                                                                     |
-| `where`     | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. The WHERE clause. This clause is used to specify the triples to construct using variable bindings.                                  |
+| property    | description                                                                                                                                                                                                           |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `construct` | _(Required.) _ **Array&lt;[TripleConstructTemplate](#tripleconstructtemplate)&gt;**. The triples to construct. If nothing is provided and the `where` clause is a single Bgp, the patterns are used for construction. |
+| `prefixes`  | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                                                                                    |
+| `where`     | _(Required.) _ **[WhereClause](#whereclause)**. The WHERE clause. This clause is used to specify the triples to construct using variable bindings.                                                                    |
 
 ### DataFormat
 
@@ -557,11 +566,39 @@ Represents the format in which the data are serialized, for example when returne
 
 Represents a DESCRIBE query over the triple store, allowing to retrieve a description of a resource as a set of triples serialized in a specific format.
 
-| property   | description                                                                                                                                                                      |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                                               |
-| `resource` | _(Required.) _ **[VarOrNamedNode](#varornamednode)**. The resource to describe given as a variable or a node.                                                                    |
-| `where`    | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. The WHERE clause. This clause is used to specify the resource identifier to describe using variable bindings. |
+| property   | description                                                                                                                                          |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                   |
+| `resource` | _(Required.) _ **[VarOrNamedNode](#varornamednode)**. The resource to describe given as a variable or a node.                                        |
+| `where`    | **[WhereClause](#whereclause)\|null**. The WHERE clause. This clause is used to specify the resource identifier to describe using variable bindings. |
+
+### Expression
+
+Represents a logical combination of operations whose evaluation results in a term.
+
+| variant   | description                                                                                                                                                                        |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| undefined | **object**. A named node constant.                                                                                                                                                 |
+| undefined | **object**. A literal constant.                                                                                                                                                    |
+| undefined | **object**. A variable that must be bound for evaluation.                                                                                                                          |
+| undefined | **object**. Logical conjunction of expressions. All expressions must evaluate to true for the conjunction to be true. If the conjunction is empty, it is considered true.          |
+| undefined | **object**. Logical disjunction of expressions. At least one expression must evaluate to true for the disjunction to be true. If the disjunction is empty, it is considered false. |
+| undefined | **object**. Equality comparison.                                                                                                                                                   |
+| undefined | **object**. Greater than comparison.                                                                                                                                               |
+| undefined | **object**. Greater or equal comparison.                                                                                                                                           |
+| undefined | **object**. Less than comparison.                                                                                                                                                  |
+| undefined | **object**. Less or equal comparison.                                                                                                                                              |
+| undefined | **object**. Negation of an expression.                                                                                                                                             |
+
+### Filter
+
+Filters the inner clause matching the expression. The solutions coming from the inner clause that do not match the expression are discarded. The variables provided in the inner clause are available in the filter expression.
+
+| property       | description                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| `filter`       | _(Required.) _ **object**.                                                                                 |
+| `filter.expr`  | _(Required.) _ **object\|object\|object\|object\|object\|object\|object\|object\|object\|object\|object**. |
+| `filter.inner` | _(Required.) _ **[Bgp](#bgp)\|[LateralJoin](#lateraljoin)\|[Filter](#filter)**.                            |
 
 ### Full
 
@@ -597,6 +634,16 @@ A [language-tagged string](https://www.w3.org/TR/rdf11-concepts/#dfn-language-ta
 | `language_tagged_string`          | _(Required.) _ **object**.                                                                             |
 | `language_tagged_string.language` | _(Required.) _ **string**. The [language tag](https://www.w3.org/TR/rdf11-concepts/#dfn-language-tag). |
 | `language_tagged_string.value`    | _(Required.) _ **string**. The [lexical form](https://www.w3.org/TR/rdf11-concepts/#dfn-lexical-form). |
+
+### LateralJoin
+
+Evaluates right for all result row of left
+
+| property             | description                                                                     |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `lateral_join`       | _(Required.) _ **object**.                                                      |
+| `lateral_join.left`  | _(Required.) _ **[Bgp](#bgp)\|[LateralJoin](#lateraljoin)\|[Filter](#filter)**. |
+| `lateral_join.right` | _(Required.) _ **[Bgp](#bgp)\|[LateralJoin](#lateraljoin)\|[Filter](#filter)**. |
 
 ### Literal
 
@@ -691,7 +738,7 @@ Represents a SELECT query over the triple store, allowing to select variables to
 | `limit`    | **integer\|null**. The maximum number of results to return. If `None`, there is no limit. Note: the value of the limit cannot exceed the maximum query limit defined in the store limitations.       |
 | `prefixes` | _(Required.) _ **Array&lt;[Prefix](#prefix)&gt;**. The prefixes used in the query.                                                                                                                   |
 | `select`   | _(Required.) _ **Array&lt;[SelectItem](#selectitem)&gt;**. The items to select. Note: the number of items to select cannot exceed the maximum query variable count defined in the store limitations. |
-| `where`    | _(Required.) _ **Array&lt;[WhereCondition](#wherecondition)&gt;**. The WHERE clause. If `None`, there is no WHERE clause, i.e. all triples are returned without filtering.                           |
+| `where`    | _(Required.) _ **[WhereClause](#whereclause)**. The WHERE clause. If `None`, there is no WHERE clause, i.e. all triples are returned without filtering.                                              |
 
 ### Simple
 
@@ -700,14 +747,6 @@ A [simple literal](https://www.w3.org/TR/rdf11-concepts/#dfn-simple-literal) wit
 | property | description                |
 | -------- | -------------------------- |
 | `simple` | _(Required.) _ **string**. |
-
-### SimpleWhereCondition
-
-Represents a simple condition in a [WhereCondition].
-
-| variant                         | description                                                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| [TriplePattern](#triplepattern) | **object**. Represents a triple pattern, i.e. a condition on a triple based on its subject, predicate and object. |
 
 ### StoreLimits
 
@@ -866,14 +905,24 @@ A variable.
 | ---------- | -------------------------- |
 | `variable` | _(Required.) _ **string**. |
 
-### WhereCondition
+### WhereClause
 
-Represents a condition in a [WhereClause].
+Represents a WHERE clause, i.e. a set of conditions to filter the results.
 
-| variant           | description                                |
-| ----------------- | ------------------------------------------ |
-| [Simple](#simple) | **object**. Represents a simple condition. |
+| variant                     | description                                                                                                                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Bgp](#bgp)                 | **object**. Represents a basic graph pattern expressed as a set of triple patterns.                                                                                                                                                         |
+| [LateralJoin](#lateraljoin) | **object**. Evaluates right for all result row of left                                                                                                                                                                                      |
+| [Filter](#filter)           | **object**. Filters the inner clause matching the expression. The solutions coming from the inner clause that do not match the expression are discarded. The variables provided in the inner clause are available in the filter expression. |
+
+### undefined
+
+A named node constant.
+
+| property     | description                                              |
+| ------------ | -------------------------------------------------------- |
+| `named_node` | _(Required.) _ **[Prefixed](#prefixed)\|[Full](#full)**. |
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-cognitarium.json` (`8f8a0452855d9314`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-cognitarium.json` (`a6344c92b24801fb`)_

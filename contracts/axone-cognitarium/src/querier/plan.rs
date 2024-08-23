@@ -1,5 +1,6 @@
+use crate::querier::expression::Expression;
+use crate::querier::variable::HasBoundVariables;
 use crate::state::{Object, Predicate, Subject};
-use std::collections::BTreeSet;
 
 /// Represents a querying plan.
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -20,6 +21,13 @@ pub enum PlanVariable {
 }
 
 impl QueryPlan {
+    pub fn empty_plan() -> Self {
+        Self {
+            entrypoint: QueryNode::noop(),
+            variables: Vec::new(),
+        }
+    }
+
     /// Resolve the index corresponding to the variable name, if not attached to a blank node.
     pub fn get_var_index(&self, var_name: &str) -> Option<usize> {
         self.variables.iter().enumerate().find_map(|(index, it)| {
@@ -66,6 +74,9 @@ pub enum QueryNode {
     /// left node to use them as right node values.
     ForLoopJoin { left: Box<Self>, right: Box<Self> },
 
+    /// Filter the results of the inner node by applying the expression.
+    Filter { expr: Expression, inner: Box<Self> },
+
     /// Skip the specified first elements from the child node.
     Skip { child: Box<Self>, first: usize },
 
@@ -74,15 +85,15 @@ pub enum QueryNode {
 }
 
 impl QueryNode {
-    pub fn bound_variables(&self) -> BTreeSet<usize> {
-        let mut vars = BTreeSet::new();
-        self.lookup_bound_variables(&mut |v| {
-            vars.insert(v);
-        });
-        vars
+    pub fn noop() -> Self {
+        QueryNode::Noop {
+            bound_variables: Vec::new(),
+        }
     }
+}
 
-    pub fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize)) {
+impl HasBoundVariables for QueryNode {
+    fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize)) {
         match self {
             QueryNode::TriplePattern {
                 subject,
@@ -100,6 +111,10 @@ impl QueryNode {
             | QueryNode::ForLoopJoin { left, right } => {
                 left.lookup_bound_variables(callback);
                 right.lookup_bound_variables(callback);
+            }
+            QueryNode::Filter { expr, inner } => {
+                expr.lookup_bound_variables(callback);
+                inner.lookup_bound_variables(callback);
             }
             QueryNode::Skip { child, .. } | QueryNode::Limit { child, .. } => {
                 child.lookup_bound_variables(callback);
@@ -127,6 +142,7 @@ impl<V> PatternValue<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
 
     #[test]
     fn bound_variables() {

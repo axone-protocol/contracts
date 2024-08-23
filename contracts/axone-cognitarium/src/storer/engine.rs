@@ -1,7 +1,7 @@
 use crate::error::StoreError;
 use crate::state::{
-    triples, Literal, NamespaceBatchService, Node, Object, Store, Subject, Triple,
-    BLANK_NODE_IDENTIFIER_COUNTER, BLANK_NODE_SIZE, STORE,
+    triples, Literal, NamespaceBatchService, NamespaceQuerier, Node, Object, Store, Subject,
+    Triple, BLANK_NODE_IDENTIFIER_COUNTER, BLANK_NODE_SIZE, STORE,
 };
 use crate::ContractError;
 use axone_rdf::normalize::IdentifierIssuer;
@@ -280,15 +280,10 @@ impl<'a> StoreEngine<'a> {
     }
 
     fn node_size(&mut self, node: &Node) -> StdResult<usize> {
-        if let Some(ns) = self
-            .ns_batch_svc
-            .resolve_from_key(self.storage, node.namespace)?
-        {
-            return Ok(ns.value.len() + node.value.len());
-        }
-
-        // Should never happen as in its use the namespace should be already cached.
-        Err(StdError::not_found("Namespace"))
+        self.ns_batch_svc
+            .resolve_from_key(self.storage, node.namespace)
+            .and_then(NamespaceQuerier::none_as_error_middleware)
+            .map(|ns| ns.value.len() + node.value.len())
     }
 
     fn object_size(&mut self, object: &Object) -> StdResult<usize> {

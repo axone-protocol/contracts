@@ -41,15 +41,15 @@ pub fn namespaces<'a>() -> IndexedMap<String, Namespace, NamespaceIndexes<'a>> {
     )
 }
 
-/// [NamespaceResolver] is a [Namespace] querying service allowing to resolve namespaces either by
+/// [NamespaceQuerier] is a [Namespace] querying service allowing to resolve namespaces either by
 /// namespace's value or namespace's internal state key. It implements a two way indexed in-memory
 /// cache to mitigate state access.
-pub struct NamespaceResolver {
+pub struct NamespaceQuerier {
     by_val: BTreeMap<String, Rc<RefCell<Namespace>>>,
     by_key: BTreeMap<u128, Rc<RefCell<Namespace>>>,
 }
 
-impl NamespaceResolver {
+impl NamespaceQuerier {
     pub fn new() -> Self {
         Self {
             by_key: BTreeMap::new(),
@@ -138,7 +138,7 @@ impl NamespaceResolver {
     }
 }
 
-impl Default for NamespaceResolver {
+impl Default for NamespaceQuerier {
     fn default() -> Self {
         Self::new()
     }
@@ -154,7 +154,7 @@ pub trait HasCachedNamespaces {
     fn clear_cache(&mut self);
 }
 
-impl HasCachedNamespaces for NamespaceResolver {
+impl HasCachedNamespaces for NamespaceQuerier {
     fn cached_namespaces(&self) -> Vec<Namespace> {
         self.by_key
             .iter()
@@ -168,9 +168,9 @@ impl HasCachedNamespaces for NamespaceResolver {
     }
 }
 
-impl From<Vec<Namespace>> for NamespaceResolver {
+impl From<Vec<Namespace>> for NamespaceQuerier {
     fn from(value: Vec<Namespace>) -> Self {
-        let mut resolver = NamespaceResolver::new();
+        let mut resolver = NamespaceQuerier::new();
         for ns in value {
             resolver.insert(ns);
         }
@@ -179,12 +179,55 @@ impl From<Vec<Namespace>> for NamespaceResolver {
     }
 }
 
+pub trait NamespaceSolver {
+    fn resolve_from_key(&mut self, key: u128) -> StdResult<Namespace>;
+    fn resolve_from_val(&mut self, value: String) -> StdResult<Namespace>;
+}
+
+pub struct NamespaceResolver<'a> {
+    storage: &'a dyn Storage,
+    ns_querier: NamespaceQuerier,
+}
+
+impl<'a> NamespaceResolver<'a> {
+    pub fn new(storage: &'a dyn Storage, ns_cache: Vec<Namespace>) -> Self {
+        Self {
+            storage,
+            ns_querier: ns_cache.into(),
+        }
+    }
+}
+
+impl<'a> NamespaceSolver for NamespaceResolver<'a> {
+    fn resolve_from_key(&mut self, key: u128) -> StdResult<Namespace> {
+        self.ns_querier
+            .resolve_from_key(self.storage, key)
+            .and_then(NamespaceQuerier::none_as_error_middleware)
+    }
+
+    fn resolve_from_val(&mut self, value: String) -> StdResult<Namespace> {
+        self.ns_querier
+            .resolve_from_val(self.storage, value)
+            .and_then(NamespaceQuerier::none_as_error_middleware)
+    }
+}
+
+impl<'a> HasCachedNamespaces for NamespaceResolver<'a> {
+    fn cached_namespaces(&self) -> Vec<Namespace> {
+        self.ns_querier.cached_namespaces()
+    }
+
+    fn clear_cache(&mut self) {
+        self.ns_querier.clear_cache();
+    }
+}
+
 /// Allow to batch write operations on [Namespace] taking care of the [NAMESPACE_KEY_INCREMENT], it
-/// manages insertions/deletions as well as counting references. It internally use a [NamespaceResolver]
+/// manages insertions/deletions as well as counting references. It internally use a [NamespaceQuerier]
 /// as a cache of new/removed/modified namespaces, to finally apply writing to the state when
 /// calling [Self::flush].
 pub struct NamespaceBatchService {
-    ns_resolver: NamespaceResolver,
+    ns_resolver: NamespaceQuerier,
     ns_key_inc: u128,
     ns_count_diff: i128,
 }
@@ -192,7 +235,7 @@ pub struct NamespaceBatchService {
 impl NamespaceBatchService {
     pub fn new(storage: &dyn Storage) -> StdResult<Self> {
         Ok(Self {
-            ns_resolver: NamespaceResolver::new(),
+            ns_resolver: NamespaceQuerier::new(),
             ns_key_inc: NAMESPACE_KEY_INCREMENT.load(storage)?,
             ns_count_diff: 0,
         })

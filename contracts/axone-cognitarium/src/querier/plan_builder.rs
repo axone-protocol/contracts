@@ -1,16 +1,17 @@
-use crate::msg::{
-    Node, SimpleWhereCondition, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
-    WhereClause, WhereCondition,
-};
+use crate::msg;
+use crate::msg::{Node, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause};
+use crate::querier::expression::{Expression, Term};
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
-use crate::state::{HasCachedNamespaces, Namespace, NamespaceResolver, Object, Predicate, Subject};
-use cosmwasm_std::{StdResult, Storage};
+use crate::querier::variable::HasBoundVariables;
+use crate::state::{
+    HasCachedNamespaces, Namespace, NamespaceQuerier, NamespaceResolver, Object, Predicate, Subject,
+};
+use cosmwasm_std::{StdError, StdResult, Storage};
 use std::collections::HashMap;
 
 pub struct PlanBuilder<'a> {
-    storage: &'a dyn Storage,
-    ns_resolver: NamespaceResolver,
+    ns_resolver: NamespaceResolver<'a>,
     prefixes: &'a HashMap<String, String>,
     variables: Vec<PlanVariable>,
     limit: Option<usize>,
@@ -24,8 +25,7 @@ impl<'a> PlanBuilder<'a> {
         ns_cache: Option<Vec<Namespace>>,
     ) -> Self {
         Self {
-            storage,
-            ns_resolver: ns_cache.map_or_else(NamespaceResolver::new, Into::into),
+            ns_resolver: NamespaceResolver::new(storage, ns_cache.unwrap_or_default()),
             prefixes,
             variables: Vec::new(),
             skip: None,
@@ -45,15 +45,7 @@ impl<'a> PlanBuilder<'a> {
     }
 
     pub fn build_plan(&mut self, where_clause: &WhereClause) -> StdResult<QueryPlan> {
-        let bgp: Vec<QueryNode> = where_clause
-            .iter()
-            .map(|cond| {
-                let WhereCondition::Simple(SimpleWhereCondition::TriplePattern(pattern)) = cond;
-                self.build_triple_pattern(pattern)
-            })
-            .collect::<StdResult<Vec<QueryNode>>>()?;
-
-        let mut node = Self::build_from_bgp(bgp);
+        let mut node = self.build_node(where_clause)?;
 
         if let Some(skip) = self.skip {
             node = QueryNode::Skip {
@@ -73,28 +65,103 @@ impl<'a> PlanBuilder<'a> {
         })
     }
 
-    fn build_from_bgp(bgp: Vec<QueryNode>) -> QueryNode {
-        bgp.into_iter()
-            .reduce(|left: QueryNode, right: QueryNode| -> QueryNode {
-                if left
+    fn build_node(&mut self, where_clause: &WhereClause) -> StdResult<QueryNode> {
+        match where_clause {
+            WhereClause::Bgp { patterns } => self.build_from_bgp(patterns.iter()),
+            WhereClause::LateralJoin { left, right } => Ok(QueryNode::ForLoopJoin {
+                left: Box::new(self.build_node(left)?),
+                right: Box::new(self.build_node(right)?),
+            }),
+            WhereClause::Filter { expr, inner } => {
+                let inner = Box::new(self.build_node(inner)?);
+                let expr = self.build_expression(expr)?;
+
+                if !expr.bound_variables().is_subset(&inner.bound_variables()) {
+                    return Err(StdError::generic_err(
+                        "Unbound variable in filter expression",
+                    ));
+                }
+
+                Ok(QueryNode::Filter { expr, inner })
+            }
+        }
+    }
+
+    fn build_from_bgp<'b>(
+        &mut self,
+        bgp: impl Iterator<Item = &'b TriplePattern>,
+    ) -> StdResult<QueryNode> {
+        bgp.map(|pattern| self.build_triple_pattern(pattern))
+            .reduce(|acc, item| {
+                let acc = acc?;
+                let item = item?;
+
+                if acc
                     .bound_variables()
-                    .intersection(&right.bound_variables())
+                    .intersection(&item.bound_variables())
                     .next()
                     .is_some()
                 {
-                    return QueryNode::ForLoopJoin {
-                        left: Box::new(left),
-                        right: Box::new(right),
-                    };
-                }
-                QueryNode::CartesianProductJoin {
-                    left: Box::new(left),
-                    right: Box::new(right),
+                    Ok(QueryNode::ForLoopJoin {
+                        left: Box::new(acc),
+                        right: Box::new(item),
+                    })
+                } else {
+                    Ok(QueryNode::CartesianProductJoin {
+                        left: Box::new(acc),
+                        right: Box::new(item),
+                    })
                 }
             })
-            .unwrap_or(QueryNode::Noop {
-                bound_variables: vec![],
-            })
+            .unwrap_or(Ok(QueryNode::noop()))
+    }
+
+    fn build_expression(&mut self, expr: &msg::Expression) -> StdResult<Expression> {
+        match expr {
+            msg::Expression::NamedNode(iri) => {
+                Term::from_iri(iri.clone(), self.prefixes).map(Expression::Constant)
+            }
+            msg::Expression::Literal(literal) => {
+                Term::from_literal(literal.clone(), self.prefixes).map(Expression::Constant)
+            }
+            msg::Expression::Variable(v) => Ok(Expression::Variable(
+                self.resolve_basic_variable(v.to_string()),
+            )),
+            msg::Expression::And(exprs) => exprs
+                .iter()
+                .map(|e| self.build_expression(e))
+                .collect::<StdResult<Vec<Expression>>>()
+                .map(Expression::And),
+            msg::Expression::Or(exprs) => exprs
+                .iter()
+                .map(|e| self.build_expression(e))
+                .collect::<StdResult<Vec<Expression>>>()
+                .map(Expression::Or),
+            msg::Expression::Equal(left, right) => Ok(Expression::Equal(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::Greater(left, right) => Ok(Expression::Greater(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::GreaterOrEqual(left, right) => Ok(Expression::GreaterOrEqual(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::Less(left, right) => Ok(Expression::Less(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::LessOrEqual(left, right) => Ok(Expression::LessOrEqual(
+                Box::new(self.build_expression(left)?),
+                Box::new(self.build_expression(right)?),
+            )),
+            msg::Expression::Not(child) => self
+                .build_expression(child)
+                .map(Box::new)
+                .map(Expression::Not),
+        }
     }
 
     fn build_triple_pattern(&mut self, pattern: &TriplePattern) -> StdResult<QueryNode> {
@@ -129,7 +196,7 @@ impl<'a> PlanBuilder<'a> {
                 value.lookup_bound_variable(&mut |v| bound_variables.push(v));
                 Some(value)
             }
-            Err(err) if NamespaceResolver::is_ns_not_found_error(&err) => None,
+            Err(err) if NamespaceQuerier::is_ns_not_found_error(&err) => None,
             _ => Some(pattern_res?),
         })
     }
@@ -141,7 +208,7 @@ impl<'a> PlanBuilder<'a> {
                 PatternValue::BlankVariable(self.resolve_blank_variable(b))
             }
             VarOrNode::Node(Node::NamedNode(iri)) => PatternValue::Constant(Subject::Named(
-                iri_as_node(&mut self.ns_resolver, self.storage, self.prefixes, iri)?,
+                iri_as_node(&mut self.ns_resolver, self.prefixes, iri)?,
             )),
         })
     }
@@ -152,12 +219,9 @@ impl<'a> PlanBuilder<'a> {
     ) -> StdResult<PatternValue<Predicate>> {
         Ok(match value {
             VarOrNamedNode::Variable(v) => PatternValue::Variable(self.resolve_basic_variable(v)),
-            VarOrNamedNode::NamedNode(iri) => PatternValue::Constant(iri_as_node(
-                &mut self.ns_resolver,
-                self.storage,
-                self.prefixes,
-                iri,
-            )?),
+            VarOrNamedNode::NamedNode(iri) => {
+                PatternValue::Constant(iri_as_node(&mut self.ns_resolver, self.prefixes, iri)?)
+            }
         })
     }
 
@@ -172,20 +236,12 @@ impl<'a> PlanBuilder<'a> {
             VarOrNodeOrLiteral::Node(Node::BlankNode(b)) => {
                 PatternValue::BlankVariable(self.resolve_blank_variable(b))
             }
-            VarOrNodeOrLiteral::Node(Node::NamedNode(iri)) => {
-                PatternValue::Constant(Object::Named(iri_as_node(
-                    &mut self.ns_resolver,
-                    self.storage,
-                    self.prefixes,
-                    iri,
-                )?))
+            VarOrNodeOrLiteral::Node(Node::NamedNode(iri)) => PatternValue::Constant(
+                Object::Named(iri_as_node(&mut self.ns_resolver, self.prefixes, iri)?),
+            ),
+            VarOrNodeOrLiteral::Literal(l) => {
+                PatternValue::Constant(literal_as_object(&mut self.ns_resolver, self.prefixes, l)?)
             }
-            VarOrNodeOrLiteral::Literal(l) => PatternValue::Constant(literal_as_object(
-                &mut self.ns_resolver,
-                self.storage,
-                self.prefixes,
-                l,
-            )?),
         })
     }
 
@@ -454,6 +510,7 @@ mod test {
         ];
 
         let mut deps = mock_dependencies();
+
         namespaces()
             .save(
                 deps.as_mut().storage,
@@ -474,22 +531,15 @@ mod test {
     }
 
     #[test]
-    fn build_plan() {
+    fn build_bgp() {
         let cases = vec![
             (
-                None,
-                None,
                 vec![],
-                Ok(QueryPlan {
-                    entrypoint: QueryNode::Noop {
-                        bound_variables: vec![],
-                    },
-                    variables: vec![],
+                Ok(QueryNode::Noop {
+                    bound_variables: vec![],
                 }),
             ),
             (
-                None,
-                None,
                 vec![TriplePattern {
                     subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
                         "notexisting#outch".to_string(),
@@ -497,115 +547,35 @@ mod test {
                     predicate: VarOrNamedNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
-                Ok(QueryPlan {
-                    entrypoint: QueryNode::Noop {
-                        bound_variables: vec![0usize, 1usize],
-                    },
-                    variables: vec![
-                        PlanVariable::Basic("predicate".to_string()),
-                        PlanVariable::Basic("object".to_string()),
-                    ],
+                Ok(QueryNode::Noop {
+                    bound_variables: vec![0usize, 1usize],
                 }),
             ),
             (
-                None,
-                None,
                 vec![TriplePattern {
                     subject: VarOrNode::Variable("subject".to_string()),
                     predicate: VarOrNamedNode::Variable("predicate".to_string()),
                     object: VarOrNodeOrLiteral::Variable("object".to_string()),
                 }],
-                Ok(QueryPlan {
-                    entrypoint: QueryNode::TriplePattern {
-                        subject: PatternValue::Variable(0usize),
-                        predicate: PatternValue::Variable(1usize),
-                        object: PatternValue::Variable(2usize),
-                    },
-                    variables: vec![
-                        PlanVariable::Basic("subject".to_string()),
-                        PlanVariable::Basic("predicate".to_string()),
-                        PlanVariable::Basic("object".to_string()),
-                    ],
+                Ok(QueryNode::TriplePattern {
+                    subject: PatternValue::Variable(0usize),
+                    predicate: PatternValue::Variable(1usize),
+                    object: PatternValue::Variable(2usize),
                 }),
             ),
             (
-                Some(20usize),
-                None,
                 vec![TriplePattern {
                     subject: VarOrNode::Variable("subject".to_string()),
-                    predicate: VarOrNamedNode::Variable("predicate".to_string()),
-                    object: VarOrNodeOrLiteral::Variable("object".to_string()),
+                    predicate: VarOrNamedNode::Variable("n".to_string()),
+                    object: VarOrNodeOrLiteral::Variable("n".to_string()),
                 }],
-                Ok(QueryPlan {
-                    entrypoint: QueryNode::Skip {
-                        first: 20usize,
-                        child: Box::new(QueryNode::TriplePattern {
-                            subject: PatternValue::Variable(0usize),
-                            predicate: PatternValue::Variable(1usize),
-                            object: PatternValue::Variable(2usize),
-                        }),
-                    },
-                    variables: vec![
-                        PlanVariable::Basic("subject".to_string()),
-                        PlanVariable::Basic("predicate".to_string()),
-                        PlanVariable::Basic("object".to_string()),
-                    ],
+                Ok(QueryNode::TriplePattern {
+                    subject: PatternValue::Variable(0usize),
+                    predicate: PatternValue::Variable(1usize),
+                    object: PatternValue::Variable(1usize),
                 }),
             ),
             (
-                None,
-                Some(20usize),
-                vec![TriplePattern {
-                    subject: VarOrNode::Variable("subject".to_string()),
-                    predicate: VarOrNamedNode::Variable("predicate".to_string()),
-                    object: VarOrNodeOrLiteral::Variable("object".to_string()),
-                }],
-                Ok(QueryPlan {
-                    entrypoint: QueryNode::Limit {
-                        first: 20usize,
-                        child: Box::new(QueryNode::TriplePattern {
-                            subject: PatternValue::Variable(0usize),
-                            predicate: PatternValue::Variable(1usize),
-                            object: PatternValue::Variable(2usize),
-                        }),
-                    },
-                    variables: vec![
-                        PlanVariable::Basic("subject".to_string()),
-                        PlanVariable::Basic("predicate".to_string()),
-                        PlanVariable::Basic("object".to_string()),
-                    ],
-                }),
-            ),
-            (
-                Some(20usize),
-                Some(50usize),
-                vec![TriplePattern {
-                    subject: VarOrNode::Variable("subject".to_string()),
-                    predicate: VarOrNamedNode::Variable("predicate".to_string()),
-                    object: VarOrNodeOrLiteral::Variable("object".to_string()),
-                }],
-                Ok(QueryPlan {
-                    entrypoint: QueryNode::Limit {
-                        first: 50usize,
-                        child: Box::new(QueryNode::Skip {
-                            first: 20usize,
-                            child: Box::new(QueryNode::TriplePattern {
-                                subject: PatternValue::Variable(0usize),
-                                predicate: PatternValue::Variable(1usize),
-                                object: PatternValue::Variable(2usize),
-                            }),
-                        }),
-                    },
-                    variables: vec![
-                        PlanVariable::Basic("subject".to_string()),
-                        PlanVariable::Basic("predicate".to_string()),
-                        PlanVariable::Basic("object".to_string()),
-                    ],
-                }),
-            ),
-            (
-                None,
-                None,
                 vec![
                     TriplePattern {
                         subject: VarOrNode::Variable("var1".to_string()),
@@ -623,40 +593,27 @@ mod test {
                         object: VarOrNodeOrLiteral::Node(Node::BlankNode("blank".to_string())),
                     },
                 ],
-                Ok(QueryPlan {
-                    entrypoint: QueryNode::ForLoopJoin {
-                        left: Box::new(QueryNode::CartesianProductJoin {
-                            left: Box::new(QueryNode::TriplePattern {
-                                subject: PatternValue::Variable(0usize),
-                                predicate: PatternValue::Variable(1usize),
-                                object: PatternValue::Variable(2usize),
-                            }),
-                            right: Box::new(QueryNode::TriplePattern {
-                                subject: PatternValue::Variable(3usize),
-                                predicate: PatternValue::Variable(4usize),
-                                object: PatternValue::Variable(5usize),
-                            }),
+                Ok(QueryNode::ForLoopJoin {
+                    left: Box::new(QueryNode::CartesianProductJoin {
+                        left: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Variable(0usize),
+                            predicate: PatternValue::Variable(1usize),
+                            object: PatternValue::Variable(2usize),
                         }),
                         right: Box::new(QueryNode::TriplePattern {
-                            subject: PatternValue::Variable(0usize),
+                            subject: PatternValue::Variable(3usize),
                             predicate: PatternValue::Variable(4usize),
-                            object: PatternValue::BlankVariable(6usize),
+                            object: PatternValue::Variable(5usize),
                         }),
-                    },
-                    variables: vec![
-                        PlanVariable::Basic("var1".to_string()),
-                        PlanVariable::Basic("var2".to_string()),
-                        PlanVariable::Basic("var3".to_string()),
-                        PlanVariable::Basic("var4".to_string()),
-                        PlanVariable::Basic("var5".to_string()),
-                        PlanVariable::Basic("var6".to_string()),
-                        PlanVariable::BlankNode("blank".to_string()),
-                    ],
+                    }),
+                    right: Box::new(QueryNode::TriplePattern {
+                        subject: PatternValue::Variable(0usize),
+                        predicate: PatternValue::Variable(4usize),
+                        object: PatternValue::BlankVariable(6usize),
+                    }),
                 }),
             ),
             (
-                None,
-                None,
                 vec![
                     TriplePattern {
                         subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
@@ -669,6 +626,261 @@ mod test {
                         object: VarOrNodeOrLiteral::Variable("2".to_string()),
                     },
                 ],
+                Ok(QueryNode::ForLoopJoin {
+                    left: Box::new(QueryNode::TriplePattern {
+                        subject: PatternValue::BlankVariable(0usize),
+                        predicate: PatternValue::Variable(1usize),
+                        object: PatternValue::BlankVariable(2usize),
+                    }),
+                    right: Box::new(QueryNode::TriplePattern {
+                        subject: PatternValue::BlankVariable(0usize),
+                        predicate: PatternValue::Variable(1usize),
+                        object: PatternValue::Variable(3usize),
+                    }),
+                }),
+            ),
+        ];
+
+        let mut deps = mock_dependencies();
+        namespaces()
+            .save(
+                deps.as_mut().storage,
+                "http://axone.space/".to_string(),
+                &Namespace {
+                    value: "http://axone.space/".to_string(),
+                    key: 0u128,
+                    counter: 1u128,
+                },
+            )
+            .unwrap();
+
+        for case in cases {
+            let prefixes = &PrefixMap::default().into_inner();
+            let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
+
+            assert_eq!(builder.build_from_bgp(case.0.iter()), case.1)
+        }
+    }
+
+    #[test]
+    fn build_expression() {
+        let cases = vec![
+            (
+                msg::Expression::NamedNode(IRI::Full("http://axone.space/test".to_string())),
+                Ok(Expression::Constant(Term::String(
+                    "http://axone.space/test".to_string(),
+                ))),
+            ),
+            (
+                msg::Expression::NamedNode(IRI::Prefixed("oups:test".to_string())),
+                Err(StdError::generic_err("Prefix not found: oups")),
+            ),
+            (
+                msg::Expression::Literal(Literal::Simple("simple".to_string())),
+                Ok(Expression::Constant(Term::String("simple".to_string()))),
+            ),
+            (
+                msg::Expression::Literal(Literal::TypedValue {
+                    value: "typed".to_string(),
+                    datatype: IRI::Prefixed("oups:type".to_string()),
+                }),
+                Err(StdError::generic_err("Prefix not found: oups")),
+            ),
+            (
+                msg::Expression::Variable("variable".to_string()),
+                Ok(Expression::Variable(0usize)),
+            ),
+            (
+                msg::Expression::And(vec![msg::Expression::Variable("variable".to_string())]),
+                Ok(Expression::And(vec![Expression::Variable(0usize)])),
+            ),
+            (
+                msg::Expression::Or(vec![msg::Expression::Variable("variable".to_string())]),
+                Ok(Expression::Or(vec![Expression::Variable(0usize)])),
+            ),
+            (
+                msg::Expression::Equal(
+                    Box::new(msg::Expression::Variable("v1".to_string())),
+                    Box::new(msg::Expression::Variable("v2".to_string())),
+                ),
+                Ok(Expression::Equal(
+                    Box::new(Expression::Variable(0usize)),
+                    Box::new(Expression::Variable(1usize)),
+                )),
+            ),
+            (
+                msg::Expression::Greater(
+                    Box::new(msg::Expression::Variable("v1".to_string())),
+                    Box::new(msg::Expression::Variable("v2".to_string())),
+                ),
+                Ok(Expression::Greater(
+                    Box::new(Expression::Variable(0usize)),
+                    Box::new(Expression::Variable(1usize)),
+                )),
+            ),
+            (
+                msg::Expression::GreaterOrEqual(
+                    Box::new(msg::Expression::Variable("v1".to_string())),
+                    Box::new(msg::Expression::Variable("v2".to_string())),
+                ),
+                Ok(Expression::GreaterOrEqual(
+                    Box::new(Expression::Variable(0usize)),
+                    Box::new(Expression::Variable(1usize)),
+                )),
+            ),
+            (
+                msg::Expression::Less(
+                    Box::new(msg::Expression::Variable("v1".to_string())),
+                    Box::new(msg::Expression::Variable("v2".to_string())),
+                ),
+                Ok(Expression::Less(
+                    Box::new(Expression::Variable(0usize)),
+                    Box::new(Expression::Variable(1usize)),
+                )),
+            ),
+            (
+                msg::Expression::LessOrEqual(
+                    Box::new(msg::Expression::Variable("v1".to_string())),
+                    Box::new(msg::Expression::Variable("v2".to_string())),
+                ),
+                Ok(Expression::LessOrEqual(
+                    Box::new(Expression::Variable(0usize)),
+                    Box::new(Expression::Variable(1usize)),
+                )),
+            ),
+            (
+                msg::Expression::Not(Box::new(msg::Expression::Variable("v1".to_string()))),
+                Ok(Expression::Not(Box::new(Expression::Variable(0usize)))),
+            ),
+        ];
+
+        let deps = mock_dependencies();
+
+        for case in cases {
+            let prefixes = &PrefixMap::default().into_inner();
+            let mut builder = PlanBuilder::new(&deps.storage, prefixes, None);
+
+            assert_eq!(builder.build_expression(&case.0), case.1)
+        }
+    }
+
+    #[test]
+    fn build_plan() {
+        let cases = vec![
+            (
+                None,
+                None,
+                WhereClause::Bgp { patterns: vec![] },
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::Noop {
+                        bound_variables: vec![],
+                    },
+                    variables: vec![],
+                }),
+            ),
+            (
+                Some(10usize),
+                None,
+                WhereClause::Bgp { patterns: vec![] },
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::Skip {
+                        child: Box::new(QueryNode::Noop {
+                            bound_variables: vec![],
+                        }),
+                        first: 10usize,
+                    },
+                    variables: vec![],
+                }),
+            ),
+            (
+                None,
+                Some(10usize),
+                WhereClause::Bgp { patterns: vec![] },
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::Limit {
+                        child: Box::new(QueryNode::Noop {
+                            bound_variables: vec![],
+                        }),
+                        first: 10usize,
+                    },
+                    variables: vec![],
+                }),
+            ),
+            (
+                Some(10usize),
+                Some(20usize),
+                WhereClause::Bgp { patterns: vec![] },
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::Limit {
+                        child: Box::new(QueryNode::Skip {
+                            child: Box::new(QueryNode::Noop {
+                                bound_variables: vec![],
+                            }),
+                            first: 10usize,
+                        }),
+                        first: 20usize,
+                    },
+                    variables: vec![],
+                }),
+            ),
+            (
+                None,
+                None,
+                WhereClause::Bgp {
+                    patterns: vec![TriplePattern {
+                        subject: VarOrNode::Variable("subject".to_string()),
+                        predicate: VarOrNamedNode::Variable("predicate".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("object".to_string()),
+                    }],
+                },
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::TriplePattern {
+                        subject: PatternValue::Variable(0usize),
+                        predicate: PatternValue::Variable(1usize),
+                        object: PatternValue::Variable(2usize),
+                    },
+                    variables: vec![
+                        PlanVariable::Basic("subject".to_string()),
+                        PlanVariable::Basic("predicate".to_string()),
+                        PlanVariable::Basic("object".to_string()),
+                    ],
+                }),
+            ),
+            (
+                None,
+                None,
+                WhereClause::Bgp {
+                    patterns: vec![TriplePattern {
+                        subject: VarOrNode::Variable("subject".to_string()),
+                        predicate: VarOrNamedNode::Variable("n".to_string()),
+                        object: VarOrNodeOrLiteral::Variable("n".to_string()),
+                    }],
+                },
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::TriplePattern {
+                        subject: PatternValue::Variable(0usize),
+                        predicate: PatternValue::Variable(1usize),
+                        object: PatternValue::Variable(1usize),
+                    },
+                    variables: vec![
+                        PlanVariable::Basic("subject".to_string()),
+                        PlanVariable::Basic("n".to_string()),
+                    ],
+                }),
+            ),
+            (
+                None,
+                None,
+                WhereClause::LateralJoin {
+                    left: Box::new(WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Node(Node::BlankNode("1".to_string())),
+                            predicate: VarOrNamedNode::Variable("n".to_string()),
+                            object: VarOrNodeOrLiteral::Node(Node::BlankNode("2".to_string())),
+                        }],
+                    }),
+                    right: Box::new(WhereClause::Bgp { patterns: vec![] }),
+                },
                 Ok(QueryPlan {
                     entrypoint: QueryNode::ForLoopJoin {
                         left: Box::new(QueryNode::TriplePattern {
@@ -676,19 +888,61 @@ mod test {
                             predicate: PatternValue::Variable(1usize),
                             object: PatternValue::BlankVariable(2usize),
                         }),
-                        right: Box::new(QueryNode::TriplePattern {
-                            subject: PatternValue::BlankVariable(0usize),
-                            predicate: PatternValue::Variable(1usize),
-                            object: PatternValue::Variable(3usize),
+                        right: Box::new(QueryNode::Noop {
+                            bound_variables: vec![],
                         }),
                     },
                     variables: vec![
                         PlanVariable::BlankNode("1".to_string()),
-                        PlanVariable::Basic("1".to_string()),
+                        PlanVariable::Basic("n".to_string()),
                         PlanVariable::BlankNode("2".to_string()),
+                    ],
+                }),
+            ),
+            (
+                None,
+                None,
+                WhereClause::Filter {
+                    inner: Box::new(WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Variable("1".to_string()),
+                            predicate: VarOrNamedNode::Variable("2".to_string()),
+                            object: VarOrNodeOrLiteral::Variable("2".to_string()),
+                        }],
+                    }),
+                    expr: msg::Expression::Variable("1".to_string()),
+                },
+                Ok(QueryPlan {
+                    entrypoint: QueryNode::Filter {
+                        inner: Box::new(QueryNode::TriplePattern {
+                            subject: PatternValue::Variable(0usize),
+                            predicate: PatternValue::Variable(1usize),
+                            object: PatternValue::Variable(1usize),
+                        }),
+                        expr: Expression::Variable(0usize),
+                    },
+                    variables: vec![
+                        PlanVariable::Basic("1".to_string()),
                         PlanVariable::Basic("2".to_string()),
                     ],
                 }),
+            ),
+            (
+                None,
+                None,
+                WhereClause::Filter {
+                    inner: Box::new(WhereClause::Bgp {
+                        patterns: vec![TriplePattern {
+                            subject: VarOrNode::Variable("1".to_string()),
+                            predicate: VarOrNamedNode::Variable("2".to_string()),
+                            object: VarOrNodeOrLiteral::Variable("2".to_string()),
+                        }],
+                    }),
+                    expr: msg::Expression::Variable("oups".to_string()),
+                },
+                Err(StdError::generic_err(
+                    "Unbound variable in filter expression",
+                )),
             ),
         ];
 
@@ -715,17 +969,7 @@ mod test {
                 builder = builder.with_limit(limit);
             }
 
-            assert_eq!(
-                builder.build_plan(
-                    &case
-                        .2
-                        .into_iter()
-                        .map(SimpleWhereCondition::TriplePattern)
-                        .map(WhereCondition::Simple)
-                        .collect()
-                ),
-                case.3
-            )
+            assert_eq!(builder.build_plan(&case.2), case.3)
         }
     }
 }

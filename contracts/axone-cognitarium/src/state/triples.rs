@@ -1,3 +1,4 @@
+use crate::state::NamespaceSolver;
 use blake3::Hash;
 use cosmwasm_std::StdResult;
 use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex};
@@ -150,11 +151,8 @@ impl Node {
         key
     }
 
-    pub fn as_iri<F>(&self, ns_fn: &mut F) -> StdResult<String>
-    where
-        F: FnMut(u128) -> StdResult<String>,
-    {
-        Ok(ns_fn(self.namespace)? + &self.value)
+    pub fn as_iri(&self, ns_solver: &mut dyn NamespaceSolver) -> StdResult<String> {
+        Ok(ns_solver.resolve_from_key(self.namespace)?.value + &self.value)
     }
 }
 

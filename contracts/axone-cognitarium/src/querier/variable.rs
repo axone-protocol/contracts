@@ -1,7 +1,9 @@
 use crate::msg::{Value, IRI};
-use crate::state::{Literal, Object, Predicate, Subject};
+use crate::querier::expression::Term;
+use crate::state::{Literal, NamespaceSolver, Object, Predicate, Subject};
 use axone_rdf::normalize::IdentifierIssuer;
 use cosmwasm_std::StdResult;
+use std::collections::BTreeSet;
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ResolvedVariable {
@@ -49,10 +51,11 @@ impl ResolvedVariable {
         })
     }
 
-    pub fn as_value<F>(&self, ns_fn: &mut F, id_issuer: &mut IdentifierIssuer) -> StdResult<Value>
-    where
-        F: FnMut(u128) -> StdResult<String>,
-    {
+    pub fn as_value(
+        &self,
+        ns_fn: &mut dyn NamespaceSolver,
+        id_issuer: &mut IdentifierIssuer,
+    ) -> StdResult<Value> {
         Ok(match self {
             ResolvedVariable::Subject(subject) => match subject {
                 Subject::Named(named) => named.as_iri(ns_fn).map(|iri| Value::URI {
@@ -91,6 +94,31 @@ impl ResolvedVariable {
                         datatype: Some(datatype.as_iri(ns_fn).map(IRI::Full)?),
                     },
                 },
+            },
+        })
+    }
+
+    pub fn as_term(&self, ns_solver: &mut dyn NamespaceSolver) -> StdResult<Term> {
+        Ok(match self {
+            ResolvedVariable::Subject(subject) => match subject {
+                Subject::Named(named) => named.as_iri(ns_solver).map(Term::String)?,
+                Subject::Blank(blank) => Term::String(format!("_:{}", blank)),
+            },
+            ResolvedVariable::Predicate(predicate) => {
+                predicate.as_iri(ns_solver).map(Term::String)?
+            }
+            ResolvedVariable::Object(object) => match object {
+                Object::Named(named) => named.as_iri(ns_solver).map(Term::String)?,
+                Object::Blank(blank) => Term::String(format!("_:{}", blank)),
+                Object::Literal(literal) => Term::String(match literal {
+                    Literal::Simple { value } => value.clone(),
+                    Literal::I18NString { value, language } => {
+                        format!("{}{}", value, language)
+                    }
+                    Literal::Typed { value, datatype } => {
+                        format!("{}{}", value, datatype.as_iri(ns_solver)?)
+                    }
+                }),
             },
         })
     }
@@ -146,10 +174,22 @@ impl ResolvedVariables {
     }
 }
 
+pub trait HasBoundVariables {
+    fn bound_variables(&self) -> BTreeSet<usize> {
+        let mut vars = BTreeSet::new();
+        self.lookup_bound_variables(&mut |v| {
+            vars.insert(v);
+        });
+        vars
+    }
+
+    fn lookup_bound_variables(&self, callback: &mut impl FnMut(usize));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{Literal, Node};
+    use crate::state::{InMemoryNamespaceSolver, Literal, Node};
     use cosmwasm_std::StdError;
 
     #[test]
@@ -203,14 +243,6 @@ mod tests {
                 assert_eq!(object.as_predicate(), p);
                 assert_eq!(object.as_object(), o);
             }
-        }
-    }
-
-    fn ns(i: u128) -> StdResult<String> {
-        match i {
-            0 => Ok("foo".to_string()),
-            1 => Ok("bar".to_string()),
-            _ => Err(StdError::generic_err("namespace not found")),
         }
     }
 
@@ -291,11 +323,43 @@ mod tests {
                     datatype: Some(IRI::Full("foobar".to_string())),
                 }),
             ),
+            (
+                ResolvedVariable::Subject(Subject::Named(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Predicate(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                }),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Object(Object::Named(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 12,
+                        value: "unknown".to_string(),
+                    },
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
         ];
 
         let mut id_issuer = IdentifierIssuer::new("b", 0u128);
+        let mut ns_solver = InMemoryNamespaceSolver::with(vec![(0, "foo"), (1, "bar")]);
         for (var, expected) in cases {
-            assert_eq!(var.as_value(&mut ns, &mut id_issuer), expected)
+            assert_eq!(var.as_value(&mut ns_solver, &mut id_issuer), expected)
         }
     }
 
@@ -334,5 +398,99 @@ mod tests {
         );
         let result2 = vars1.merge_with(&vars3);
         assert_eq!(result2, None);
+    }
+
+    #[test]
+    fn terms() {
+        let cases = vec![
+            (
+                ResolvedVariable::Subject(Subject::Named(Node {
+                    namespace: 0,
+                    value: "bar".to_string(),
+                })),
+                Ok(Term::String("foobar".to_string())),
+            ),
+            (
+                ResolvedVariable::Subject(Subject::Blank(0u128)),
+                Ok(Term::String("_:0".to_string())),
+            ),
+            (
+                ResolvedVariable::Predicate(Node {
+                    namespace: 1,
+                    value: "foo".to_string(),
+                }),
+                Ok(Term::String("barfoo".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Named(Node {
+                    namespace: 1,
+                    value: "foo".to_string(),
+                })),
+                Ok(Term::String("barfoo".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Blank(0u128)),
+                Ok(Term::String("_:0".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Simple {
+                    value: "foo".to_string(),
+                })),
+                Ok(Term::String("foo".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::I18NString {
+                    value: "foo".to_string(),
+                    language: "fr".to_string(),
+                })),
+                Ok(Term::String("foofr".to_string())),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Typed {
+                    value: "foo".to_string(),
+                    datatype: Node {
+                        namespace: 0,
+                        value: "bar".to_string(),
+                    },
+                })),
+                Ok(Term::String("foofoobar".to_string())),
+            ),
+            (
+                ResolvedVariable::Subject(Subject::Named(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Predicate(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                }),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Object(Object::Named(Node {
+                    namespace: 12,
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+            (
+                ResolvedVariable::Object(Object::Literal(Literal::Typed {
+                    datatype: Node {
+                        namespace: 12,
+                        value: "unknown".to_string(),
+                    },
+                    value: "unknown".to_string(),
+                })),
+                Err(StdError::not_found("Namespace")),
+            ),
+        ];
+
+        let mut ns_solver = InMemoryNamespaceSolver::with(vec![(0, "foo"), (1, "bar")]);
+        for (var, expected) in cases {
+            assert_eq!(var.as_term(&mut ns_solver), expected)
+        }
     }
 }

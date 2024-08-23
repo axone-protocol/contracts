@@ -68,14 +68,14 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
     match msg {
         ExecuteMsg::SubmitClaims { claims, format: _ } => {
-            execute::submit_claims(deps, info, claims)
+            execute::submit_claims(deps, env, info, claims)
         }
         _ => Err(StdError::generic_err("Not implemented").into()),
     }
@@ -92,6 +92,7 @@ pub mod execute {
 
     pub fn submit_claims(
         deps: DepsMut<'_>,
+        env: Env,
         info: MessageInfo,
         claims: Binary,
     ) -> Result<Response, ContractError> {
@@ -102,7 +103,7 @@ pub mod execute {
         let vc = VerifiableCredential::try_from(&vc_dataset)?;
         vc.verify(&deps)?;
 
-        let credential = DataverseCredential::try_from((info.sender, &vc))?;
+        let credential = DataverseCredential::try_from((env, info, &vc))?;
         let registrar = ClaimRegistrar::try_new(deps.storage)?;
 
         Ok(Response::default()
@@ -368,16 +369,20 @@ mod tests {
             ]
         );
 
-        let expected_data = "<http://example.edu/credentials/3732> <dataverse:credential#submitterAddress> \"axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0\" .
-<http://example.edu/credentials/3732> <dataverse:credential#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
-<http://example.edu/credentials/3732> <dataverse:credential#type> <https://example.org/examples#UniversityDegreeCredential> .
-<http://example.edu/credentials/3732> <dataverse:credential#validFrom> \"2024-02-16T00:00:00Z\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
-<http://example.edu/credentials/3732> <dataverse:credential#subject> <did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw> .
+        let expected_data = r#"<http://example.edu/credentials/3732> <dataverse:credential:header#height> "12345" .
+<http://example.edu/credentials/3732> <dataverse:credential:header#timestamp> "1571797419" .
+<http://example.edu/credentials/3732> <dataverse:credential:header#sender> "axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0" .
+<http://example.edu/credentials/3732> <dataverse:credential:body#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
+<http://example.edu/credentials/3732> <dataverse:credential:body#type> <https://example.org/examples#UniversityDegreeCredential> .
+<http://example.edu/credentials/3732> <dataverse:credential:body#validFrom> "2024-02-16T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<http://example.edu/credentials/3732> <dataverse:credential:body#subject> <did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw> .
+<http://example.edu/credentials/3732> <dataverse:credential:header#tx_index> "3" .
 _:c0 <https://example.org/examples#degree> _:b0 .
-_:b0 <http://schema.org/name> \"Bachelor of Science and Arts\"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML> .
+_:b0 <http://schema.org/name> "Bachelor of Science and Arts"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML> .
 _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/examples#BachelorDegree> .
-<http://example.edu/credentials/3732> <dataverse:credential#claim> _:c0 .
-<http://example.edu/credentials/3732> <dataverse:credential#validUntil> \"2026-02-16T00:00:00Z\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n";
+<http://example.edu/credentials/3732> <dataverse:credential:body#claim> _:c0 .
+<http://example.edu/credentials/3732> <dataverse:credential:body#validUntil> "2026-02-16T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+"#;
 
         match resp.messages[0].msg.clone() {
             CosmosMsg::Wasm(WasmMsg::Execute {

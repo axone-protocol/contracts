@@ -37,7 +37,7 @@ langtag = "0.3.4"
 rdf-types = "0.18.2"
 rio_api = "0.8.5"
 rio_turtle = "0.8.5"
-rio_xml = "0.8.4"
+rio_xml = "0.8.5"
 schemars = "0.8.21"
 serde = { version = "1.0.209", default-features = false, features = ["derive"] }
 serde-json-wasm = "1.0.1"

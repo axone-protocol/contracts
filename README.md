@@ -404,6 +404,12 @@ git commit -am "docs: update generated documentation"
 
 💫 - Future considerations for additional testing approaches, such as fuzzy testing or end-to-end testing, to further enhance quality.
 
+## 🛡️ Audit
+
+| Date | Auditor | Version | Report |
+|---|---|---|---|
+| 2024/08/08 | [BlockApex](https://blockapex.io/) | [0cae9ec (v6.0.0)](https://github.com/axone-protocol/contracts/tree/0cae9ecf24c4ded86abecd34aec2303e82413672) | [Axone Smart Contract Audit Report.pdf](https://github.com/BlockApex/Audit-Reports/blob/15d8765ac45b4a83bb2f1446fc9bf869c123f8d2/Axone%20Smart%20Contract%20Audit%20Report.pdf)|
+
 ## 📘 Resources
 
 - [CosmWasm Docs](https://docs.cosmwasm.com/)

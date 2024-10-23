@@ -42,4 +42,4 @@ schemars = "0.8.21"
 serde = { version = "1.0.211", default-features = false, features = ["derive"] }
 serde-json-wasm = "1.0.1"
 testing = { path = "packages/testing" }
-thiserror = { version = "1.0.64" }
+thiserror = { version = "1.0.65" }

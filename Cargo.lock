@@ -249,7 +249,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "testing",
- "thiserror 2.0.0",
+ "thiserror 2.0.3",
 ]
 
 [[package]]
@@ -285,7 +285,7 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "testing",
- "thiserror 2.0.0",
+ "thiserror 2.0.3",
  "unsigned-varint",
  "url",
 ]
@@ -309,7 +309,7 @@ dependencies = [
  "schemars",
  "serde",
  "testing",
- "thiserror 2.0.0",
+ "thiserror 2.0.3",
  "url",
 ]
 
@@ -323,7 +323,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde-json-wasm 1.0.1",
- "thiserror 2.0.0",
+ "thiserror 2.0.3",
  "url",
 ]
 
@@ -351,7 +351,7 @@ dependencies = [
  "sha2 0.10.8",
  "snap",
  "testing",
- "thiserror 2.0.0",
+ "thiserror 2.0.3",
 ]
 
 [[package]]
@@ -376,7 +376,7 @@ dependencies = [
  "rio_turtle",
  "rio_xml",
  "sha2 0.10.8",
- "thiserror 2.0.0",
+ "thiserror 2.0.3",
 ]
 
 [[package]]
@@ -388,7 +388,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde-json-wasm 1.0.1",
- "thiserror 2.0.0",
+ "thiserror 2.0.3",
  "url",
 ]
 
@@ -936,7 +936,7 @@ dependencies = [
  "schemars",
  "serde",
  "sha2 0.10.8",
- "thiserror 2.0.0",
+ "thiserror 2.0.3",
 ]
 
 [[package]]
@@ -2629,11 +2629,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.0"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15291287e9bff1bc6f9ff3409ed9af665bec7a5fc8ac079ea96be07bca0e2668"
+checksum = "c006c85c7651b3cf2ada4584faa36773bd07bac24acfb39f3c431b36d7e667aa"
 dependencies = [
- "thiserror-impl 2.0.0",
+ "thiserror-impl 2.0.3",
 ]
 
 [[package]]
@@ -2649,9 +2649,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.0"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22efd00f33f93fa62848a7cab956c3d38c8d43095efda1decfc2b3a5dc0b8972"
+checksum = "f077553d607adc1caf65430528a576c757a71ed73944b66ebb58ef2bbd243568"
 dependencies = [
  "proc-macro2",
  "quote",

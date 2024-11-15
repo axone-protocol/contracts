@@ -322,7 +322,7 @@ jobs:
           node-version: 16
 
       - name: Setup jq
-        uses: dcarbone/install-jq-action@v2
+        uses: dcarbone/install-jq-action@v3
         with:
           version: 1.7
           force: true

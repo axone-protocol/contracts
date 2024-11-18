@@ -39,7 +39,7 @@ base64 = "0.22.1"
 cucumber = "0.21.1"
 cw-multi-test.workspace = true
 futures = "0.3.31"
-serde_json = "1.0.132"
+serde_json = "1.0.133"
 serde_yaml = "0.9.34"
 testing.workspace = true
 

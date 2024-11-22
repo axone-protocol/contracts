@@ -35,7 +35,7 @@ DIDs play a crucial role in the Dataverse by facilitating a trustable and intero
 
 Claims in the Dataverse context are assertions or statements made about a Resource identified by a DID.
 
-Claims play a pivotal role in the governance framework of the Dataverse. By leveraging knowledge derived from verifiable credentials, the governances established by Zones can evaluate the fulfilment of specific rules and compliance. This evaluation is critical in ensuring that the resources within the Dataverse adhere to the established norms, policies, and requirements.
+Claims play a pivotal role in the governance framework of the Dataverse. By leveraging knowledge derived from verifiable credentials, the governances established by Zones can evaluate the fulfillment of specific rules and compliance. This evaluation is critical in ensuring that the resources within the Dataverse adhere to the established norms, policies, and requirements.
 
 Claims are submitted in the form of [Verifiable Presentations (VPs)](https://www.w3.org/TR/vc-data-model/#presentations), which are aggregations of one or more [Verifiable Credentials (VCs)](https://www.w3.org/TR/vc-data-model/#what-is-a-verifiable-credential).
 
@@ -108,7 +108,7 @@ Revoke or withdraw a previously submitted claims.
 
 #### Preconditions:
 
-1. **Identifier Existance**: The identifier of the claims must exist in the dataverse.
+1. **Identifier Existence**: The identifier of the claims must exist in the dataverse.
 
 | parameter                  | description                                                                   |
 | -------------------------- | ----------------------------------------------------------------------------- |
@@ -238,5 +238,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`fc11528d7cda380f`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`e3b26772811bfe51`)*
 ````

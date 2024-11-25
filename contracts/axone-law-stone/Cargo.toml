@@ -35,7 +35,7 @@ thiserror.workspace = true
 [dev-dependencies]
 cw-multi-test.workspace = true
 testing.workspace = true
-url = "2.5.3"
+url = "2.5.4"
 
 [features]
 # use library feature to disable all instantiate/execute/query exports

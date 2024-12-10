@@ -83,6 +83,7 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
+    use crate::credential::error::VerificationError;
     use crate::credential::vc::VerifiableCredential;
     use crate::registrar::credential::DataverseCredential;
     use crate::registrar::registry::ClaimRegistrar;
@@ -101,7 +102,15 @@ pub mod execute {
         let rdf_quads = reader.read_all()?;
         let vc_dataset = Dataset::from(rdf_quads.as_slice());
         let vc = VerifiableCredential::try_from(&vc_dataset)?;
-        vc.verify(&deps)?;
+
+        // check proofs if any.
+        // accept unverified credentials if the issuer matches the sender, as the transaction's
+        // signature serves as proof.
+        if !vc.proof.is_empty() {
+            vc.verify(&deps)?;
+        } else if !vc.is_issued_by(&info.sender) {
+            Err(VerificationError::NoSuitableProof)?;
+        }
 
         let credential = DataverseCredential::try_from((env, info, &vc))?;
         let registrar = ClaimRegistrar::try_new(deps.storage)?;
@@ -442,6 +451,72 @@ _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/exam
             resp.err().unwrap(),
             ContractError::InvalidCredential(_)
         ))
+    }
+
+    #[test]
+    fn submit_unverified_claims_matching_sender() {
+        let mut deps = mock_dependencies();
+        deps.querier.update_wasm(|query| match query {
+            WasmQuery::Smart { contract_addr, msg } => {
+                if contract_addr != "my-dataverse-addr" {
+                    return SystemResult::Err(SystemError::NoSuchContract {
+                        addr: contract_addr.to_string(),
+                    });
+                }
+                let query_msg: StdResult<axone_cognitarium::msg::QueryMsg> = from_json(msg);
+                assert_eq!(
+                    query_msg,
+                    Ok(axone_cognitarium::msg::QueryMsg::Select {
+                        query: SelectQuery {
+                            prefixes: vec![],
+                            limit: Some(1u32),
+                            select: vec![SelectItem::Variable("p".to_string())],
+                            r#where: WhereClause::Bgp {
+                                patterns: vec![TriplePattern {
+                                    subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
+                                        "http://example.edu/credentials/3732".to_string(),
+                                    ))),
+                                    predicate: VarOrNamedNode::Variable("p".to_string()),
+                                    object: VarOrNodeOrLiteral::Variable("o".to_string()),
+                                }]
+                            },
+                        }
+                    })
+                );
+
+                let select_resp = SelectResponse {
+                    results: Results { bindings: vec![] },
+                    head: Head { vars: vec![] },
+                };
+                SystemResult::Ok(ContractResult::Ok(to_json_binary(&select_resp).unwrap()))
+            }
+            _ => SystemResult::Err(SystemError::Unknown {}),
+        });
+
+        DATAVERSE
+            .save(
+                deps.as_mut().storage,
+                &Dataverse {
+                    name: "my-dataverse".to_string(),
+                    triplestore_address: Addr::unchecked("my-dataverse-addr"),
+                },
+            )
+            .unwrap();
+
+        let resp = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(
+                &Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                &[],
+            ),
+            ExecuteMsg::SubmitClaims {
+                claims: Binary::new(read_test_data("vc-eddsa-2020-ok-unsecured-trusted.nq")),
+                format: Some(RdfDatasetFormat::NQuads),
+            },
+        );
+
+        assert!(resp.is_ok());
     }
 
     #[test]

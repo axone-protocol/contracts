@@ -3,9 +3,12 @@ use crate::credential::proof::{Proof, ProofPurpose};
 use crate::credential::rdf_marker::*;
 use axone_rdf::dataset::QuadIterator;
 use axone_rdf::dataset::{Dataset, QuadPattern};
-use cosmwasm_std::DepsMut;
+use bech32::Bech32;
+use cosmwasm_std::{Addr, DepsMut};
 use itertools::Itertools;
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
+use ripemd::Ripemd160;
+use sha2::Digest;
 
 #[derive(Debug, PartialEq)]
 pub struct VerifiableCredential<'a> {
@@ -85,6 +88,46 @@ impl<'a> VerifiableCredential<'a> {
             proof.proof_material(),
             proof.pub_key(),
         )
+    }
+
+    // Tells if the credential was issued by the given address.
+    pub fn is_issued_by(&self, addr: &Addr) -> bool {
+        const SECP256K1PUB_MULTICODEC_PREFIX: [u8; 2] = [0xe7, 0x01];
+        const ED25519PUB_MULTICODEC_PREFIX: [u8; 2] = [0xed, 0x01];
+        const PREFIX: &str = "did:key:";
+
+        if !self.issuer.starts_with(PREFIX) {
+            return false;
+        }
+
+        let encoded = &self.issuer[PREFIX.len()..];
+        let decoded = match multibase::decode(encoded) {
+            Ok((_, bytes)) => bytes,
+            Err(_) => return false,
+        };
+
+        let (prefix, pubkey) = decoded.split_at(2);
+        if prefix != SECP256K1PUB_MULTICODEC_PREFIX && prefix != ED25519PUB_MULTICODEC_PREFIX {
+            return false;
+        }
+
+        let (hrp, _) = match bech32::decode(addr.as_str()) {
+            Ok(decoded) => decoded,
+            Err(_) => return false,
+        };
+
+        let pubkey_hash = {
+            let hash = sha2::Sha256::digest(pubkey);
+
+            Ripemd160::digest(hash)
+        };
+
+        let bech32_addr = match bech32::encode::<Bech32>(hrp, &pubkey_hash) {
+            Ok(addr) => addr,
+            Err(_) => return false,
+        };
+
+        bech32_addr == addr.as_str()
     }
 
     fn extract_identifier(

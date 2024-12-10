@@ -82,7 +82,7 @@ To maintain integrity and coherence in the dataverse, several preconditions are 
 
 2. **Unique Identifier Mandate**: Each Verifiable Credential within the dataverse must possess a unique identifier.
 
-3. **Issuer Signature**: Claims must bear the issuer's signature. This signature must be verifiable, ensuring authenticity and credibility.
+3. **Issuer Verification**: Claims are accepted if they either: - Bear a verifiable issuer's signature to ensure authenticity. - Originate from the transaction sender, in which case the transaction signature serves as proof of authenticity.
 
 4. **Content**: The actual implementation supports the submission of a single Verifiable Credential, containing a single claim.
 
@@ -238,5 +238,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`13c4a7b5af578887`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`2d209bff84484c1c`)*
 ````

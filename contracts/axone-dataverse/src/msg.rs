@@ -41,7 +41,9 @@ pub enum ExecuteMsg {
     ///
     ///   2. **Unique Identifier Mandate**: Each Verifiable Credential within the dataverse must possess a unique identifier.
     ///
-    ///   3. **Issuer Signature**: Claims must bear the issuer's signature. This signature must be verifiable, ensuring authenticity and credibility.
+    ///   3. **Issuer Verification**: Claims are accepted if they either:
+    ///      - Bear a verifiable issuer's signature to ensure authenticity.
+    ///      - Originate from the transaction sender, in which case the transaction signature serves as proof of authenticity.
     ///
     ///   4. **Content**: The actual implementation supports the submission of a single Verifiable Credential, containing a single claim.
     ///

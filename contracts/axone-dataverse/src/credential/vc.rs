@@ -3,9 +3,12 @@ use crate::credential::proof::{Proof, ProofPurpose};
 use crate::credential::rdf_marker::*;
 use axone_rdf::dataset::QuadIterator;
 use axone_rdf::dataset::{Dataset, QuadPattern};
-use cosmwasm_std::DepsMut;
+use bech32::Bech32;
+use cosmwasm_std::{Addr, DepsMut};
 use itertools::Itertools;
 use rio_api::model::{BlankNode, Literal, NamedNode, Subject, Term};
+use ripemd::Ripemd160;
+use sha2::Digest;
 
 #[derive(Debug, PartialEq)]
 pub struct VerifiableCredential<'a> {
@@ -85,6 +88,46 @@ impl<'a> VerifiableCredential<'a> {
             proof.proof_material(),
             proof.pub_key(),
         )
+    }
+
+    // Tells if the credential was issued by the given address.
+    pub fn is_issued_by(&self, addr: &Addr) -> bool {
+        const SECP256K1PUB_MULTICODEC_PREFIX: [u8; 2] = [0xe7, 0x01];
+        const ED25519PUB_MULTICODEC_PREFIX: [u8; 2] = [0xed, 0x01];
+        const PREFIX: &str = "did:key:";
+
+        if !self.issuer.starts_with(PREFIX) {
+            return false;
+        }
+
+        let encoded = &self.issuer[PREFIX.len()..];
+        let decoded = match multibase::decode(encoded) {
+            Ok((_, bytes)) => bytes,
+            Err(_) => return false,
+        };
+
+        let (prefix, pubkey) = decoded.split_at(2);
+        if prefix != SECP256K1PUB_MULTICODEC_PREFIX && prefix != ED25519PUB_MULTICODEC_PREFIX {
+            return false;
+        }
+
+        let (hrp, _) = match bech32::decode(addr.as_str()) {
+            Ok(decoded) => decoded,
+            Err(_) => return false,
+        };
+
+        let pubkey_hash = {
+            let hash = sha2::Sha256::digest(pubkey);
+
+            Ripemd160::digest(hash)
+        };
+
+        let bech32_addr = match bech32::encode::<Bech32>(hrp, &pubkey_hash) {
+            Ok(addr) => addr,
+            Err(_) => return false,
+        };
+
+        bech32_addr == addr.as_str()
     }
 
     fn extract_identifier(
@@ -364,6 +407,66 @@ mod test {
         assert_eq!(vc.status, None);
         assert_eq!(vc.proof.len(), 1usize);
         assert_eq!(vc.unsecured_document, unsecure_dataset);
+    }
+
+    #[test]
+    fn is_issued_by() {
+        struct TC<'a> {
+            issuer: &'a str,
+            addr: Addr,
+            expected: bool,
+        }
+        let cases = vec![
+            TC {
+                issuer: "did:key:zQ3shsoarhrw7SoyUyoCbwv8k2BRRLeqkjRkffGqx7WNpMQgw",
+                addr: Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: true,
+            },
+            TC {
+                issuer: "did:key:z6MkvMXwgwJTJacfBGk5fxr3d4k3uzh4eHTi3oFagNyK55Tt",
+                addr: Addr::unchecked("axone1el0ln38j0qvkr22pwztelv3hxrsc0gx5zjsfky"),
+                expected: true,
+            },
+            TC {
+                issuer: "did:key:zQ3shsoarhrw7SoyUyoCbwv8k2BRRLeqkjRkffGqx7WNpMQgw",
+                addr: Addr::unchecked("axone1hg3htshrh9xnhrmwrxnfnu0dtlx6345lu2c09f"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:foo:zQ3shsoarhrw7SoyUyoCbwv8k2BRRLeqkjRkffGqx7WNpMQgw",
+                addr: Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:key:foo",
+                addr: Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:key:z6LSeu9HkTHSfLLeUs2nnzUSNedgDUevfNQgQjQC23ZCit6F",
+                addr: Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:key:z6MkvMXwgwJTJacfB",
+                addr: Addr::unchecked("axone1el0ln38j0qvkr22pwztelv3hxrsc0gx5zjsfky"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:key:zQ3shsoarhrw7SoyUyoCbwv8k2BRRLeqkjRkffGqx7WNpMQgw",
+                addr: Addr::unchecked("178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: false,
+            },
+        ];
+        for tc in cases {
+            let owned_quads = testutil::read_test_quads("vc-eddsa-2020-ok-unsecured.nq");
+            let dataset = Dataset::from(owned_quads.as_slice());
+
+            let mut vc_res = VerifiableCredential::try_from(&dataset).expect("vc from dataset");
+            vc_res.issuer = tc.issuer;
+
+            assert_eq!(vc_res.is_issued_by(&tc.addr), tc.expected);
+        }
     }
 
     #[test]

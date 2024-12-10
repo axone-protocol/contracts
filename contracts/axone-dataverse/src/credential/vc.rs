@@ -410,6 +410,66 @@ mod test {
     }
 
     #[test]
+    fn is_issued_by() {
+        struct TC<'a> {
+            issuer: &'a str,
+            addr: Addr,
+            expected: bool,
+        }
+        let cases = vec![
+            TC {
+                issuer: "did:key:zQ3shsoarhrw7SoyUyoCbwv8k2BRRLeqkjRkffGqx7WNpMQgw",
+                addr: Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: true,
+            },
+            TC {
+                issuer: "did:key:z6MkvMXwgwJTJacfBGk5fxr3d4k3uzh4eHTi3oFagNyK55Tt",
+                addr: Addr::unchecked("axone1el0ln38j0qvkr22pwztelv3hxrsc0gx5zjsfky"),
+                expected: true,
+            },
+            TC {
+                issuer: "did:key:zQ3shsoarhrw7SoyUyoCbwv8k2BRRLeqkjRkffGqx7WNpMQgw",
+                addr: Addr::unchecked("axone1hg3htshrh9xnhrmwrxnfnu0dtlx6345lu2c09f"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:foo:zQ3shsoarhrw7SoyUyoCbwv8k2BRRLeqkjRkffGqx7WNpMQgw",
+                addr: Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:key:foo",
+                addr: Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:key:z6LSeu9HkTHSfLLeUs2nnzUSNedgDUevfNQgQjQC23ZCit6F",
+                addr: Addr::unchecked("axone178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:key:z6MkvMXwgwJTJacfB",
+                addr: Addr::unchecked("axone1el0ln38j0qvkr22pwztelv3hxrsc0gx5zjsfky"),
+                expected: false,
+            },
+            TC {
+                issuer: "did:key:zQ3shsoarhrw7SoyUyoCbwv8k2BRRLeqkjRkffGqx7WNpMQgw",
+                addr: Addr::unchecked("178mjppxcf3n9q3q7utdwrajdal0tsqvymz0900"),
+                expected: false,
+            },
+        ];
+        for tc in cases {
+            let owned_quads = testutil::read_test_quads("vc-eddsa-2020-ok-unsecured.nq");
+            let dataset = Dataset::from(owned_quads.as_slice());
+
+            let mut vc_res = VerifiableCredential::try_from(&dataset).expect("vc from dataset");
+            vc_res.issuer = tc.issuer;
+
+            assert_eq!(vc_res.is_issued_by(&tc.addr), tc.expected);
+        }
+    }
+
+    #[test]
     fn vc_verify() {
         let cases = vec![
             "vc-eddsa-2018-ok.nq",

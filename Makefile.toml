@@ -627,6 +627,12 @@ install_crate_args = ["--force"]
 [tasks.install-cosmwasm-check]
 install_crate = { crate_name = "cosmwasm-check", min_version = "2.1.1" }
 
+[tasks.install-cargo-workspaces]
+install_crate = { crate_name = "cargo-workspaces", binary = "cargo", test_arg = [
+  "workspaces",
+  "--help",
+], min_version = "0.3.6" }
+
 [tasks.install-ffizer]
 install_script = '''
 if ! [ -x "$(command -v ffizer)" ]; then

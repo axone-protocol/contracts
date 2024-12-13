@@ -645,7 +645,14 @@ fi
 install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
 
 [tasks.publish-crates]
-args = ["workspaces", "publish", "--from-git", "--yes", "--no-git-commit", "skip"]
+args = [
+  "workspaces",
+  "publish",
+  "--from-git",
+  "--yes",
+  "--no-git-commit",
+  "skip",
+]
 command = "cargo"
 condition = { env_set = ["CARGO_REGISTRY_TOKEN"] }
 dependencies = ["install-cargo-workspaces"]

@@ -3,7 +3,8 @@ authors = { workspace = true }
 description = "The Smart Contract overseeing and managing the Dataverse in the AXONE ecosystem."
 edition = { workspace = true }
 homepage = { workspace = true }
-license-file = { workspace = true }
+keywords = { workspace = true }
+license = { workspace = true }
 name = "axone-dataverse"
 repository = { workspace = true }
 rust-version = { workspace = true }

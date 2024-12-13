@@ -3,7 +3,8 @@ authors = { workspace = true }
 description = "A Smart Contract which enables the storage of arbitrary unstructured Objects."
 edition = { workspace = true }
 homepage = { workspace = true }
-license-file = { workspace = true }
+keywords = { workspace = true }
+license = { workspace = true }
 name = "axone-objectarium"
 repository = { workspace = true }
 rust-version = { workspace = true }

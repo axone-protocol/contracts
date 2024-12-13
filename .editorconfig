@@ -12,6 +12,10 @@ charset = utf-8
 trim_trailing_whitespace = false
 indent_size = 2
 
+[*.cjs]
+trim_trailing_whitespace = false
+indent_size = 2
+
 [*.{yml,yaml,json}]
 trim_trailing_whitespace = false
 indent_size = 2

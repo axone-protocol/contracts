@@ -627,6 +627,12 @@ install_crate_args = ["--force"]
 [tasks.install-cosmwasm-check]
 install_crate = { crate_name = "cosmwasm-check", min_version = "2.1.1" }
 
+[tasks.install-cargo-workspaces]
+install_crate = { crate_name = "cargo-workspaces", binary = "cargo", test_arg = [
+  "workspaces",
+  "--help",
+], min_version = "0.3.6" }
+
 [tasks.install-ffizer]
 install_script = '''
 if ! [ -x "$(command -v ffizer)" ]; then
@@ -637,6 +643,20 @@ fi
 
 [tasks.install-cargo-hack]
 install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
+
+[tasks.publish-crates]
+args = [
+  "workspaces",
+  "publish",
+  "--from-git",
+  "--yes",
+  "--no-git-commit",
+  "skip",
+]
+command = "cargo"
+condition = { env_set = ["CARGO_REGISTRY_TOKEN"] }
+dependencies = ["install-cargo-workspaces"]
+description = "Publish all crates to the registry. Requires CARGO_REGISTRY_TOKEN to be set."
 
 [config]
 default_to_workspace = false

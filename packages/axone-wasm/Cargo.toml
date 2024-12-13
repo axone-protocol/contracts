@@ -1,8 +1,13 @@
 [package]
-authors = ["AXONE"]
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
 name = "axone-wasm"
-version = "6.0.0"
+
+description = "A library that defines CosmWasm URIs, enabling the identification of blockchain resources by referencing specific instantiated smart contracts."
+homepage = { workspace = true }
+license-file = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
 cosmwasm-std.workspace = true

@@ -2,6 +2,7 @@
 authors = ["AXONE"]
 edition = "2021"
 name = "testing"
+publish = false
 version = "5.0.0"
 
 [dependencies]

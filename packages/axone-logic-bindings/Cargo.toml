@@ -5,7 +5,7 @@ name = "axone-logic-bindings"
 
 description = "A library defining the bindings for querying the AXONE logic module."
 homepage = { workspace = true }
-license-file = { workspace = true }
+license = { workspace = true }
 repository = { workspace = true }
 version = { workspace = true }
 

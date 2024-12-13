@@ -5,7 +5,7 @@ name = "axone-rdf"
 
 description = "Utility library offering essential components for efficiently handling RDF data within the Axone protocol."
 homepage = { workspace = true }
-license-file = { workspace = true }
+license = { workspace = true }
 repository = { workspace = true }
 version = { workspace = true }
 

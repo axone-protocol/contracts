@@ -3,7 +3,7 @@ authors = { workspace = true }
 description = "The Smart Contract providing Governance as a Service."
 edition = { workspace = true }
 homepage = { workspace = true }
-license-file = { workspace = true }
+license = { workspace = true }
 name = "axone-law-stone"
 repository = { workspace = true }
 rust-version = { workspace = true }

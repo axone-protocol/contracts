@@ -1,9 +1,13 @@
 [package]
-authors = ["AXONE"]
-edition = "2021"
+authors = { workspace = true }
+description = "A CosmWasm Smart Contract which enables the storage and querying of Semantic data using RDF, which represents information as semantic triples."
+edition = { workspace = true }
+homepage = { workspace = true }
+license-file = { workspace = true }
 name = "axone-cognitarium"
-rust-version = "1.75"
-version = "6.0.0"
+repository = { workspace = true }
+rust-version = { workspace = true }
+version = { workspace = true }
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.

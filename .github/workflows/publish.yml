@@ -1,13 +1,12 @@
 name: Publish
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
+  release:
+    types: [published]
 
 concurrency:
   group: publish-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   publish-crates:

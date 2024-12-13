@@ -10,7 +10,7 @@ keywords = ["cosmwasm", "blockchain"]
 license = "BSD-3-Clause"
 repository = "https://github.com/axone-protocol/contracts"
 rust-version = "1.75"
-version = "6.0.0"
+version = "7.0.0"
 
 [profile.release]
 codegen-units = 1
@@ -24,17 +24,17 @@ panic = 'abort'
 rpath = false
 
 [workspace.dependencies]
-axone-cognitarium = { path = "./contracts/axone-cognitarium", version = "6.0.0", features = [
+axone-cognitarium = { path = "./contracts/axone-cognitarium", version = "7.0.0", features = [
   "library",
 ] }
-axone-cognitarium-client = { path = "./packages/axone-cognitarium-client", version = "6.0.0" }
-axone-logic-bindings = { path = "./packages/axone-logic-bindings", version = "6.0.0" }
-axone-objectarium = { path = "./contracts/axone-objectarium", version = "6.0.0", features = [
+axone-cognitarium-client = { path = "./packages/axone-cognitarium-client", version = "7.0.0" }
+axone-logic-bindings = { path = "./packages/axone-logic-bindings", version = "7.0.0" }
+axone-objectarium = { path = "./contracts/axone-objectarium", version = "7.0.0", features = [
   "library",
 ] }
-axone-objectarium-client = { path = "./packages/axone-objectarium-client", version = "6.0.0" }
-axone-rdf = { path = "./packages/axone-rdf", version = "6.0.0" }
-axone-wasm = { path = "./packages/axone-wasm", version = "6.0.0" }
+axone-objectarium-client = { path = "./packages/axone-objectarium-client", version = "7.0.0" }
+axone-rdf = { path = "./packages/axone-rdf", version = "7.0.0" }
+axone-wasm = { path = "./packages/axone-wasm", version = "7.0.0" }
 cosmwasm-schema = "2.1.5"
 cosmwasm-std = { version = "2.1.5", features = ["cosmwasm_2_1"] }
 cosmwasm-storage = "1.5.2"

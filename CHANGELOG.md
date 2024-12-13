@@ -1,5 +1,31 @@
 # AXONE contracts
 
+## [7.0.0](https://github.com/axone-protocol/contracts/compare/v6.0.0...v7.0.0) (2024-12-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* **dataverse:** rework and enhance vc stored context
+* **cognitarium:** rework WhereClause api design
+* **dataverse:** rename the metadata field to claims (SubmitClaims)
+
+### Features
+
+* **cognitarium:** add expression filtering in where clause ([945bc3a](https://github.com/axone-protocol/contracts/commit/945bc3a6c89e4ef90c1ef87294c77219090d5b79))
+* **cognitarium:** add the 'not' expression ([41a0a78](https://github.com/axone-protocol/contracts/commit/41a0a78b1e9082d179f3ad7a8731aeb2c49add20))
+* **cognitarium:** allow to build plan on lateral join based clause ([ac6854b](https://github.com/axone-protocol/contracts/commit/ac6854bed6d3f997f1381febb68e83080cf22fa7))
+* **cognitarium:** allow to issue term from variable ([29b9cf0](https://github.com/axone-protocol/contracts/commit/29b9cf01ec5985dc9dfb9d25cffffcccd46dfd1d))
+* **cognitarium:** introduce core expression design ([2a40d06](https://github.com/axone-protocol/contracts/commit/2a40d0644fb8cddfff30edb80b3d0841ad5198c4))
+* **cognitarium:** rework WhereClause api design ([da76633](https://github.com/axone-protocol/contracts/commit/da76633c3892b4defee99e3ab4c1de0b1618f24f))
+* **dataverse:** align with new cognitarium api ([ec13afa](https://github.com/axone-protocol/contracts/commit/ec13afab736d2d074de2ff3b6ed227fe6867b642))
+* **dataverse:** rework and enhance vc stored context ([eb52ace](https://github.com/axone-protocol/contracts/commit/eb52ace6397a8bac5723e2a731a3ba2c1961626c))
+* **dataverse:** support unverified credentials (tx signatures as proof) ([83c0305](https://github.com/axone-protocol/contracts/commit/83c03057bc090f1f05961bfcff57bffc86c0cb92))
+
+
+### Code Refactoring
+
+* **dataverse:** rename the metadata field to claims (SubmitClaims) ([0febba9](https://github.com/axone-protocol/contracts/commit/0febba9f11f38884af16a76dd755db1bf8ad454d))
+
 ## [6.0.0](https://github.com/axone-protocol/contracts/compare/v5.0.0...v6.0.0) (2024-08-02)
 
 

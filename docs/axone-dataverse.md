@@ -238,5 +238,5 @@ let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`2d209bff84484c1c`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-dataverse.json` (`fc11528d7cda380f`)*
 ````

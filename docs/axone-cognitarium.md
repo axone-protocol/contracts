@@ -925,4 +925,4 @@ A named node constant.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-cognitarium.json` (`a6344c92b24801fb`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-cognitarium.json` (`197d77d83ca86dc6`)_

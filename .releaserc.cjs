@@ -106,9 +106,8 @@ module.exports = {
       {
         assets: [
           "CHANGELOG.md",
-          "contracts/*/Cargo.toml",
-          "packages/*/Cargo.toml",
           "docs/**",
+          "Cargo.toml",
           "Cargo.lock",
         ],
         message: "chore(release): perform release ${nextRelease.version}",

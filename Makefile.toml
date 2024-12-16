@@ -33,6 +33,11 @@ command = "cargo-toml-lint"
 dependencies = ["install-cargo-toml-lint"]
 description = "Check lint of the given toml file"
 
+[tasks.lint-cargo-deps]
+args = ["machete", "--with-metadata"]
+command = "cargo"
+dependencies = ["install-cargo-machete"]
+
 [tasks.format-toml]
 args = ["fmt"]
 command = "taplo"
@@ -643,6 +648,7 @@ fi
 
 [tasks.install-cargo-hack]
 install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
+
 [tasks.install-cargo-machete]
 install_crate = { crate_name = "cargo-machete", min_version = "0.7.0" }
 

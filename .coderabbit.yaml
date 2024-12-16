@@ -1,0 +1,34 @@
+language: "en-US"
+early_access: true
+tone_instructions: >-
+  Maintain a formal tone, highlighting issues, and suggesting production-grade, elegant, and concise solutions.
+reviews:
+  profile: "chill"
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!docs/*.md"
+  path_instructions:
+    - path: "**/*.rs"
+      instructions: >-
+        Review the Rust code, point out issues relative to principles of clean
+        code, expressiveness, and performance.
+
+        Suggest idiomatic solutions and best practices.
+    - path: "**/*.sh"
+      instructions: >-
+        Review the shell scripts, point out issues relative to security,
+        performance, and maintainability.
+    - path: "**/*.toml"
+      instructions: >-
+        Review the TOML configuration files for correctness, maintainability,
+        and adherence to best practices.
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: false # review on demand
+chat:
+  auto_reply: true

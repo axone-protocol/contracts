@@ -26,7 +26,6 @@ base16ct = { version = "0.2.0", features = ["alloc"] }
 bs58 = "0.5.1"
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
-cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
@@ -43,9 +42,11 @@ thiserror.workspace = true
 
 [dev-dependencies]
 base64 = "0.22.1"
-cw-multi-test.workspace = true
 testing.workspace = true
 
 [features]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+
+[package.metadata.cargo-machete]
+ignored = ["md5"]

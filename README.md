@@ -6,6 +6,8 @@
 [![lint](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/lint.yml?label=lint&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/lint.yml)
 [![test](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/test.yml?label=test&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/test.yml)
 [![coverage](https://img.shields.io/codecov/c/github/axone-protocol/contracts?style=for-the-badge)](https://app.codecov.io/gh/axone-protocol/contracts)
+
+[![built with cargo-make](https://img.shields.io/badge/build_with-cargo_make-d39f59?style=for-the-badge)](https://sagiegurari.github.io/cargo-make)
 [![conventional commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg?style=for-the-badge&logo=conventionalcommits)](https://conventionalcommits.org)
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=for-the-badge)](https://github.com/semantic-release/semantic-release)
 [![license](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=for-the-badge)](https://opensource.org/licenses/BSD-3-Clause)
@@ -30,11 +32,14 @@ This repository hosts Smart Contracts that are deployed on the [AXONE network](h
   <tr>
     <td>
       <a href="#---mature-stage">
-      <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
+        <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
       </a>
       <a href="https://github.com/axone-protocol/contracts/releases" target="_blank">
-      <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
-    </a>
+        <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
+      </a>
+      <a href="https://crates.io/crates/axone-objectarium" target="_blank">
+        <img alt="crates" src="https://img.shields.io/crates/v/axone-objectarium.svg?style=for-the-badge&color=orange"/>
+      </a>
     </td>
   </tr>
   <tr>
@@ -63,11 +68,14 @@ This repository hosts Smart Contracts that are deployed on the [AXONE network](h
     <tr>
     <td>
       <a href="#---intermediate-stage">
-      <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
+        <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
       </a>
       <a href="https://github.com/axone-protocol/contracts/releases" target="_blank">
-      <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
-    </a>
+        <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
+      </a>
+      <a href="https://crates.io/crates/axone-cognitarium" target="_blank">
+        <img alt="crates" src="https://img.shields.io/crates/v/axone-cognitarium.svg?style=for-the-badge&color=orange"/>
+      </a>
     </td>
   </tr>
   <tr>
@@ -98,11 +106,14 @@ This repository hosts Smart Contracts that are deployed on the [AXONE network](h
   <tr>
     <td>
       <a href="#---mature-stage">
-      <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
+        <img alt="status: mature" src="https://img.shields.io/badge/status-🐥-black?style=for-the-badge" />
       </a>
       <a href="https://github.com/axone-protocol/contracts/releases" target="_blank">
-      <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
-    </a>
+        <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
+      </a>
+      <a href="https://crates.io/crates/axone-law-stone" target="_blank">
+        <img alt="crates" src="https://img.shields.io/crates/v/axone-law-stone.svg?style=for-the-badge&color=orange"/>
+      </a>
     </td>
   </tr>
   <tr>
@@ -135,11 +146,14 @@ This repository hosts Smart Contracts that are deployed on the [AXONE network](h
   <tr>
     <td>
       <a href="#---genesis-stage">
-      <img alt="status: genesis" src="https://img.shields.io/badge/status-💥-black?style=for-the-badge" />
+        <img alt="status: genesis" src="https://img.shields.io/badge/status-💥-black?style=for-the-badge" />
       </a>
       <a href="https://github.com/axone-protocol/contracts/releases" target="_blank">
-      <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
-    </a>
+        <img alt="version" src="https://img.shields.io/github/v/release/axone-protocol/contracts?style=for-the-badge&logo=github"/>
+      </a>
+      <a href="https://crates.io/crates/axone-dataverse" target="_blank">
+        <img alt="crates" src="https://img.shields.io/crates/v/axone-dataverse.svg?style=for-the-badge&color=orange"/>
+      </a>
     </td>
   </tr>
   <tr>

@@ -28,17 +28,14 @@ axone-objectarium-client.workspace = true
 axone-wasm.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
-cosmwasm-storage.workspace = true
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
 itertools = "0.13.0"
-schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-cw-multi-test.workspace = true
 testing.workspace = true
 url = "2.5.4"
 

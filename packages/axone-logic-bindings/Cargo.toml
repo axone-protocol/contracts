@@ -10,11 +10,7 @@ repository = { workspace = true }
 version = { workspace = true }
 
 [dependencies]
-axone-wasm.workspace = true
 cosmwasm-std.workspace = true
-form_urlencoded = "1.2.1"
 schemars.workspace = true
 serde.workspace = true
-serde-json-wasm.workspace = true
 thiserror.workspace = true
-url = "2.5.4"

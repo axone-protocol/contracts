@@ -73,10 +73,15 @@ jobs:
         if: steps.changed-rust-cargo.outputs.any_changed == 'true'
         uses: davidB/rust-cargo-make@v1
 
-      - name: Lint all Cargo.toml file
+      - name: Lint all Cargo.toml files
         if: steps.changed-rust-cargo.outputs.any_changed == 'true'
         run: |
           cargo make lint-cargo-toml
+
+      - name: Lint all unused dependencies in Cargo.toml files
+        if: steps.changed-rust-cargo.outputs.any_changed == 'true'
+        run: |
+          cargo make lint-cargo-deps
 
   lint-cargo-makefile:
     runs-on: ubuntu-22.04

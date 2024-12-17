@@ -1,4 +1,5 @@
-use axone_cognitarium::msg::{DataFormat, ExecuteMsg, QueryMsg, SelectQuery, SelectResponse};
+use axone_cognitarium::msg::{DataFormat, ExecuteMsg, QueryMsg, SelectResponse};
+use axone_cognitarium::parser::SelectQuery;
 use cosmwasm_std::{
     to_json_binary, Addr, Binary, Coin, CustomQuery, QuerierWrapper, QueryRequest, StdResult,
     WasmMsg, WasmQuery,

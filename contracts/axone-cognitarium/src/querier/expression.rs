@@ -1,4 +1,4 @@
-use crate::msg;
+use crate::parser;
 use crate::querier::mapper::iri_as_string;
 use crate::querier::variable::HasBoundVariables;
 use crate::querier::ResolvedVariables;
@@ -104,20 +104,20 @@ pub enum Term {
 }
 
 impl Term {
-    pub fn from_iri(iri: msg::IRI, prefixes: &HashMap<String, String>) -> StdResult<Self> {
+    pub fn from_iri(iri: parser::IRI, prefixes: &HashMap<String, String>) -> StdResult<Self> {
         Ok(Term::String(iri_as_string(iri, prefixes)?))
     }
 
     pub fn from_literal(
-        literal: msg::Literal,
+        literal: parser::Literal,
         prefixes: &HashMap<String, String>,
     ) -> StdResult<Self> {
         Ok(Term::String(match literal {
-            msg::Literal::Simple(value) => value,
-            msg::Literal::LanguageTaggedString { value, language } => {
+            parser::Literal::Simple(value) => value,
+            parser::Literal::LanguageTaggedString { value, language } => {
                 format!("{}{}", value, language)
             }
-            msg::Literal::TypedValue { value, datatype } => {
+            parser::Literal::TypedValue { value, datatype } => {
                 format!("{}{}", value, iri_as_string(datatype, prefixes)?)
             }
         }))
@@ -387,15 +387,15 @@ mod tests {
     fn term_from_iri() {
         let cases = vec![
             (
-                msg::IRI::Prefixed("foo:bar".to_string()),
+                parser::IRI::Prefixed("foo:bar".to_string()),
                 Ok(Term::String("http://example.com/bar".to_string())),
             ),
             (
-                msg::IRI::Full("foo:bar".to_string()),
+                parser::IRI::Full("foo:bar".to_string()),
                 Ok(Term::String("foo:bar".to_string())),
             ),
             (
-                msg::IRI::Prefixed("unknown:bar".to_string()),
+                parser::IRI::Prefixed("unknown:bar".to_string()),
                 Err(StdError::generic_err("Prefix not found: unknown")),
             ),
         ];
@@ -412,27 +412,27 @@ mod tests {
     fn term_from_literal() {
         let cases = vec![
             (
-                msg::Literal::Simple("foo".to_string()),
+                parser::Literal::Simple("foo".to_string()),
                 Ok(Term::String("foo".to_string())),
             ),
             (
-                msg::Literal::LanguageTaggedString {
+                parser::Literal::LanguageTaggedString {
                     value: "foo".to_string(),
                     language: "en".to_string(),
                 },
                 Ok(Term::String("fooen".to_string())),
             ),
             (
-                msg::Literal::TypedValue {
+                parser::Literal::TypedValue {
                     value: "foo".to_string(),
-                    datatype: msg::IRI::Prefixed("foo:bar".to_string()),
+                    datatype: parser::IRI::Prefixed("foo:bar".to_string()),
                 },
                 Ok(Term::String("foohttp://example.com/bar".to_string())),
             ),
             (
-                msg::Literal::TypedValue {
+                parser::Literal::TypedValue {
                     value: "foo".to_string(),
-                    datatype: msg::IRI::Prefixed("unknown:bar".to_string()),
+                    datatype: parser::IRI::Prefixed("unknown:bar".to_string()),
                 },
                 Err(StdError::generic_err("Prefix not found: unknown")),
             ),

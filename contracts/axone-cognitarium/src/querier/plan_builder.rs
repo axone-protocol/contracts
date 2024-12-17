@@ -1,5 +1,7 @@
-use crate::msg;
-use crate::msg::{Node, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause};
+use crate::parser;
+use crate::parser::{
+    Node, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause,
+};
 use crate::querier::expression::{Expression, Term};
 use crate::querier::mapper::{iri_as_node, literal_as_object};
 use crate::querier::plan::{PatternValue, PlanVariable, QueryNode, QueryPlan};
@@ -116,48 +118,48 @@ impl<'a> PlanBuilder<'a> {
             .unwrap_or(Ok(QueryNode::noop()))
     }
 
-    fn build_expression(&mut self, expr: &msg::Expression) -> StdResult<Expression> {
+    fn build_expression(&mut self, expr: &parser::Expression) -> StdResult<Expression> {
         match expr {
-            msg::Expression::NamedNode(iri) => {
+            parser::Expression::NamedNode(iri) => {
                 Term::from_iri(iri.clone(), self.prefixes).map(Expression::Constant)
             }
-            msg::Expression::Literal(literal) => {
+            parser::Expression::Literal(literal) => {
                 Term::from_literal(literal.clone(), self.prefixes).map(Expression::Constant)
             }
-            msg::Expression::Variable(v) => Ok(Expression::Variable(
+            parser::Expression::Variable(v) => Ok(Expression::Variable(
                 self.resolve_basic_variable(v.to_string()),
             )),
-            msg::Expression::And(exprs) => exprs
+            parser::Expression::And(exprs) => exprs
                 .iter()
                 .map(|e| self.build_expression(e))
                 .collect::<StdResult<Vec<Expression>>>()
                 .map(Expression::And),
-            msg::Expression::Or(exprs) => exprs
+            parser::Expression::Or(exprs) => exprs
                 .iter()
                 .map(|e| self.build_expression(e))
                 .collect::<StdResult<Vec<Expression>>>()
                 .map(Expression::Or),
-            msg::Expression::Equal(left, right) => Ok(Expression::Equal(
+            parser::Expression::Equal(left, right) => Ok(Expression::Equal(
                 Box::new(self.build_expression(left)?),
                 Box::new(self.build_expression(right)?),
             )),
-            msg::Expression::Greater(left, right) => Ok(Expression::Greater(
+            parser::Expression::Greater(left, right) => Ok(Expression::Greater(
                 Box::new(self.build_expression(left)?),
                 Box::new(self.build_expression(right)?),
             )),
-            msg::Expression::GreaterOrEqual(left, right) => Ok(Expression::GreaterOrEqual(
+            parser::Expression::GreaterOrEqual(left, right) => Ok(Expression::GreaterOrEqual(
                 Box::new(self.build_expression(left)?),
                 Box::new(self.build_expression(right)?),
             )),
-            msg::Expression::Less(left, right) => Ok(Expression::Less(
+            parser::Expression::Less(left, right) => Ok(Expression::Less(
                 Box::new(self.build_expression(left)?),
                 Box::new(self.build_expression(right)?),
             )),
-            msg::Expression::LessOrEqual(left, right) => Ok(Expression::LessOrEqual(
+            parser::Expression::LessOrEqual(left, right) => Ok(Expression::LessOrEqual(
                 Box::new(self.build_expression(left)?),
                 Box::new(self.build_expression(right)?),
             )),
-            msg::Expression::Not(child) => self
+            parser::Expression::Not(child) => self
                 .build_expression(child)
                 .map(Box::new)
                 .map(Expression::Not),
@@ -283,7 +285,7 @@ impl<'a> HasCachedNamespaces for PlanBuilder<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::msg::{Literal, Node, Prefix, IRI};
+    use crate::parser::{Literal, Node, Prefix, IRI};
     use crate::rdf::PrefixMap;
     use crate::state;
     use crate::state::{namespaces, Namespace};
@@ -666,42 +668,42 @@ mod test {
     fn build_expression() {
         let cases = vec![
             (
-                msg::Expression::NamedNode(IRI::Full("http://axone.space/test".to_string())),
+                parser::Expression::NamedNode(IRI::Full("http://axone.space/test".to_string())),
                 Ok(Expression::Constant(Term::String(
                     "http://axone.space/test".to_string(),
                 ))),
             ),
             (
-                msg::Expression::NamedNode(IRI::Prefixed("oups:test".to_string())),
+                parser::Expression::NamedNode(IRI::Prefixed("oups:test".to_string())),
                 Err(StdError::generic_err("Prefix not found: oups")),
             ),
             (
-                msg::Expression::Literal(Literal::Simple("simple".to_string())),
+                parser::Expression::Literal(Literal::Simple("simple".to_string())),
                 Ok(Expression::Constant(Term::String("simple".to_string()))),
             ),
             (
-                msg::Expression::Literal(Literal::TypedValue {
+                parser::Expression::Literal(Literal::TypedValue {
                     value: "typed".to_string(),
                     datatype: IRI::Prefixed("oups:type".to_string()),
                 }),
                 Err(StdError::generic_err("Prefix not found: oups")),
             ),
             (
-                msg::Expression::Variable("variable".to_string()),
+                parser::Expression::Variable("variable".to_string()),
                 Ok(Expression::Variable(0usize)),
             ),
             (
-                msg::Expression::And(vec![msg::Expression::Variable("variable".to_string())]),
+                parser::Expression::And(vec![parser::Expression::Variable("variable".to_string())]),
                 Ok(Expression::And(vec![Expression::Variable(0usize)])),
             ),
             (
-                msg::Expression::Or(vec![msg::Expression::Variable("variable".to_string())]),
+                parser::Expression::Or(vec![parser::Expression::Variable("variable".to_string())]),
                 Ok(Expression::Or(vec![Expression::Variable(0usize)])),
             ),
             (
-                msg::Expression::Equal(
-                    Box::new(msg::Expression::Variable("v1".to_string())),
-                    Box::new(msg::Expression::Variable("v2".to_string())),
+                parser::Expression::Equal(
+                    Box::new(parser::Expression::Variable("v1".to_string())),
+                    Box::new(parser::Expression::Variable("v2".to_string())),
                 ),
                 Ok(Expression::Equal(
                     Box::new(Expression::Variable(0usize)),
@@ -709,9 +711,9 @@ mod test {
                 )),
             ),
             (
-                msg::Expression::Greater(
-                    Box::new(msg::Expression::Variable("v1".to_string())),
-                    Box::new(msg::Expression::Variable("v2".to_string())),
+                parser::Expression::Greater(
+                    Box::new(parser::Expression::Variable("v1".to_string())),
+                    Box::new(parser::Expression::Variable("v2".to_string())),
                 ),
                 Ok(Expression::Greater(
                     Box::new(Expression::Variable(0usize)),
@@ -719,9 +721,9 @@ mod test {
                 )),
             ),
             (
-                msg::Expression::GreaterOrEqual(
-                    Box::new(msg::Expression::Variable("v1".to_string())),
-                    Box::new(msg::Expression::Variable("v2".to_string())),
+                parser::Expression::GreaterOrEqual(
+                    Box::new(parser::Expression::Variable("v1".to_string())),
+                    Box::new(parser::Expression::Variable("v2".to_string())),
                 ),
                 Ok(Expression::GreaterOrEqual(
                     Box::new(Expression::Variable(0usize)),
@@ -729,9 +731,9 @@ mod test {
                 )),
             ),
             (
-                msg::Expression::Less(
-                    Box::new(msg::Expression::Variable("v1".to_string())),
-                    Box::new(msg::Expression::Variable("v2".to_string())),
+                parser::Expression::Less(
+                    Box::new(parser::Expression::Variable("v1".to_string())),
+                    Box::new(parser::Expression::Variable("v2".to_string())),
                 ),
                 Ok(Expression::Less(
                     Box::new(Expression::Variable(0usize)),
@@ -739,9 +741,9 @@ mod test {
                 )),
             ),
             (
-                msg::Expression::LessOrEqual(
-                    Box::new(msg::Expression::Variable("v1".to_string())),
-                    Box::new(msg::Expression::Variable("v2".to_string())),
+                parser::Expression::LessOrEqual(
+                    Box::new(parser::Expression::Variable("v1".to_string())),
+                    Box::new(parser::Expression::Variable("v2".to_string())),
                 ),
                 Ok(Expression::LessOrEqual(
                     Box::new(Expression::Variable(0usize)),
@@ -749,7 +751,7 @@ mod test {
                 )),
             ),
             (
-                msg::Expression::Not(Box::new(msg::Expression::Variable("v1".to_string()))),
+                parser::Expression::Not(Box::new(parser::Expression::Variable("v1".to_string()))),
                 Ok(Expression::Not(Box::new(Expression::Variable(0usize)))),
             ),
         ];
@@ -910,7 +912,7 @@ mod test {
                             object: VarOrNodeOrLiteral::Variable("2".to_string()),
                         }],
                     }),
-                    expr: msg::Expression::Variable("1".to_string()),
+                    expr: parser::Expression::Variable("1".to_string()),
                 },
                 Ok(QueryPlan {
                     entrypoint: QueryNode::Filter {
@@ -938,7 +940,7 @@ mod test {
                             object: VarOrNodeOrLiteral::Variable("2".to_string()),
                         }],
                     }),
-                    expr: msg::Expression::Variable("oups".to_string()),
+                    expr: parser::Expression::Variable("oups".to_string()),
                 },
                 Err(StdError::generic_err(
                     "Unbound variable in filter expression",

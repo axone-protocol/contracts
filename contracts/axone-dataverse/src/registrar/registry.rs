@@ -1,9 +1,10 @@
 use crate::registrar::credential::DataverseCredential;
 use crate::state::DATAVERSE;
 use crate::ContractError;
-use axone_cognitarium::msg::{
-    DataFormat, Node, SelectItem, SelectQuery, TriplePattern, VarOrNamedNode, VarOrNode,
-    VarOrNodeOrLiteral, WhereClause, IRI,
+use axone_cognitarium::msg::DataFormat;
+use axone_cognitarium::parser::{
+    Node, SelectItem, SelectQuery, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
+    WhereClause, IRI,
 };
 use axone_cognitarium_client::CognitariumClient;
 use cosmwasm_std::{DepsMut, StdResult, Storage, WasmMsg};

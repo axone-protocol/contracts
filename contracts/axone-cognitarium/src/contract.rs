@@ -53,7 +53,8 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::msg::{DataFormat, Prefix, TripleDeleteTemplate, WhereClause};
+    use crate::msg::DataFormat;
+    use crate::parser::{Prefix, TripleDeleteTemplate, WhereClause};
     use crate::querier::{PlanBuilder, QueryEngine, QueryPlan, ResolvedVariables};
     use crate::rdf::PrefixMap;
     use crate::state::{HasCachedNamespaces, Triple};
@@ -167,10 +168,10 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 pub mod query {
     use super::*;
-    use crate::msg::{
-        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Node, SelectQuery,
-        SelectResponse, StoreResponse, TripleConstructTemplate, TriplePattern, VarOrNamedNode,
-        VarOrNode, VarOrNodeOrLiteral, WhereClause,
+    use crate::msg::{ConstructResponse, DescribeResponse, SelectResponse, StoreResponse};
+    use crate::parser::{ConstructQuery, DescribeQuery, SelectQuery, WhereClause};
+    use crate::parser::{
+        Node, TripleConstructTemplate, TriplePattern, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral,
     };
     use crate::querier::{PlanBuilder, QueryEngine};
     use crate::rdf::PrefixMap;
@@ -334,9 +335,9 @@ pub mod query {
 
 pub mod util {
     use super::*;
-    use crate::msg::{
-        Head, Prefix, Results, SelectResponse, Value, VarOrNamedNode, VarOrNode,
-        VarOrNodeOrLiteral, WhereClause,
+    use crate::msg::{Head, Results, SelectResponse};
+    use crate::parser::{
+        Prefix, Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause,
     };
     use crate::querier::{PlanBuilder, QueryEngine, SelectResults};
     use crate::rdf::{Atom, PrefixMap};
@@ -414,19 +415,21 @@ mod tests {
     use super::*;
     use crate::error::StoreError;
     use crate::msg::ExecuteMsg::{DeleteData, InsertData};
-    use crate::msg::Node::{BlankNode, NamedNode};
-    use crate::msg::IRI::{Full, Prefixed};
     use crate::msg::{
-        ConstructQuery, ConstructResponse, DescribeQuery, DescribeResponse, Head, Literal, Prefix,
-        Results, SelectItem, SelectQuery, SelectResponse, StoreLimitsInput,
-        StoreLimitsInputBuilder, StoreResponse, Value, VarOrNamedNode, VarOrNamedNodeOrLiteral,
-        VarOrNode, VarOrNodeOrLiteral,
+        ConstructResponse, DescribeResponse, Head, Results, SelectResponse, StoreLimitsInput,
+        StoreLimitsInputBuilder, StoreResponse,
     };
-    use crate::msg::{TriplePattern, WhereClause};
+    use crate::parser::Node::{BlankNode, NamedNode};
+    use crate::parser::IRI::{Full, Prefixed};
+    use crate::parser::{ConstructQuery, DescribeQuery, Prefix, SelectQuery, Value, WhereClause};
+    use crate::parser::{
+        Literal, SelectItem, TriplePattern, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode,
+        VarOrNodeOrLiteral,
+    };
     use crate::state::{
         namespaces, triples, Namespace, Node, Object, StoreLimits, StoreStat, Subject, Triple,
     };
-    use crate::{msg, state};
+    use crate::{msg, parser, state};
     use cosmwasm_std::testing::{message_info, mock_dependencies, mock_env};
     use cosmwasm_std::{coins, from_json, Addr, Attribute, Order, Uint128};
     use cw_utils::PaymentError;
@@ -882,7 +885,7 @@ mod tests {
             (
                 DeleteData {
                     prefixes: vec![],
-                    delete: vec![msg::TripleDeleteTemplate {
+                    delete: vec![parser::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(
                             "https://ontology.axone.space/dataverse/dataspace/metadata/unknown"
                                 .to_string(),
@@ -917,7 +920,7 @@ mod tests {
             (
                 DeleteData {
                     prefixes: vec![],
-                    delete: vec![msg::TripleDeleteTemplate {
+                    delete: vec![parser::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(id.to_string())),
                         predicate: VarOrNamedNode::NamedNode(Full(
                             "https://ontology.axone.space/core/hasTopic".to_string(),
@@ -955,7 +958,7 @@ mod tests {
                             namespace: "https://ontology.axone.space/thesaurus/topic/".to_string(),
                         },
                     ],
-                    delete: vec![msg::TripleDeleteTemplate {
+                    delete: vec![parser::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(id.to_string())),
                         predicate: VarOrNamedNode::NamedNode(Prefixed("core:hasTopic".to_string())),
                         object: VarOrNamedNodeOrLiteral::NamedNode(Prefixed(
@@ -991,7 +994,7 @@ mod tests {
                             namespace: "https://ontology.axone.space/thesaurus/topic/".to_string(),
                         },
                     ],
-                    delete: vec![msg::TripleDeleteTemplate {
+                    delete: vec![parser::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(id.to_string())),
                         predicate: VarOrNamedNode::NamedNode(Prefixed("core:hasTopic".to_string())),
                         object: VarOrNamedNodeOrLiteral::Variable("o".to_string()),
@@ -1014,7 +1017,7 @@ mod tests {
             (
                 DeleteData {
                     prefixes: vec![],
-                    delete: vec![msg::TripleDeleteTemplate {
+                    delete: vec![parser::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(id.to_string())),
                         predicate: VarOrNamedNode::Variable("p".to_string()),
                         object: VarOrNamedNodeOrLiteral::Variable("o".to_string()),
@@ -1078,7 +1081,7 @@ mod tests {
                             namespace: "https://ontology.axone.space/thesaurus/topic/".to_string(),
                         },
                     ],
-                    delete: vec![msg::TripleDeleteTemplate {
+                    delete: vec![parser::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(id.to_string())),
                         predicate: VarOrNamedNode::NamedNode(Prefixed("core:hasTopic".to_string())),
                         object: VarOrNamedNodeOrLiteral::NamedNode(Prefixed(
@@ -1160,7 +1163,7 @@ mod tests {
             TC {
                 command: DeleteData {
                     prefixes: vec![],
-                    delete: vec![msg::TripleDeleteTemplate {
+                    delete: vec![parser::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Prefixed("foo:bar".to_string())),
                         predicate: VarOrNamedNode::NamedNode(Full(
                             "https://ontology.axone.space/core/hasTopic".to_string(),
@@ -1187,7 +1190,7 @@ mod tests {
             TC {
                 command: DeleteData {
                     prefixes: vec![],
-                    delete: vec![msg::TripleDeleteTemplate {
+                    delete: vec![parser::TripleDeleteTemplate {
                         subject: VarOrNamedNode::NamedNode(Full(
                             "https://ontology.axone.space/thesaurus/topic/Test".to_string(),
                         )),
@@ -2279,7 +2282,7 @@ mod tests {
                             Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.axone.space/dataverse/dataset/metadata/".to_string() },
                         ],
                         construct: vec![
-                            msg::TripleConstructTemplate {
+                            parser::TripleConstructTemplate {
                                 subject: VarOrNode::Node(NamedNode(Prefixed("my-ns:instance-1".to_string()))),
                                 predicate: VarOrNamedNode::NamedNode(Full(
                                     "https://my-ns/predicate/tag".to_string(),
@@ -2315,26 +2318,26 @@ mod tests {
                             Prefix { prefix: "metadata-dataset".to_string(), namespace: "https://ontology.axone.space/dataverse/dataset/metadata/".to_string() },
                         ],
                         construct: vec![
-                            msg::TripleConstructTemplate {
+                            parser::TripleConstructTemplate {
                                 subject: VarOrNode::Node(BlankNode("my-metadata".to_string())),
                                 predicate: VarOrNamedNode::NamedNode(Full(
                                     "https://my-ns/predicate/tcov".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("tcov".to_string()),
                             },
-                            msg::TripleConstructTemplate {
+                            parser::TripleConstructTemplate {
                                 subject: VarOrNode::Node(BlankNode("my-metadata".to_string())),
                                 predicate: VarOrNamedNode::NamedNode(Full(
                                     "https://my-ns/predicate/info".to_string(),
                                 )),
                                 object: VarOrNodeOrLiteral::Variable("info".to_string()),
                             },
-                            msg::TripleConstructTemplate {
+                            parser::TripleConstructTemplate {
                                 subject: VarOrNode::Variable("tcov".to_string()),
                                 predicate: VarOrNamedNode::Variable("tcov_p".to_string()),
                                 object: VarOrNodeOrLiteral::Variable("tcov_o".to_string()),
                             },
-                            msg::TripleConstructTemplate {
+                            parser::TripleConstructTemplate {
                                 subject: VarOrNode::Variable("info".to_string()),
                                 predicate: VarOrNamedNode::Variable("info_p".to_string()),
                                 object: VarOrNodeOrLiteral::Variable("info_o".to_string()),

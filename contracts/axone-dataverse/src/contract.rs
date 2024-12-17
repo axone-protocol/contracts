@@ -151,9 +151,10 @@ mod tests {
         DataverseResponse, RdfDatasetFormat, TripleStoreConfig, TripleStoreLimitsInput,
     };
     use crate::testutil::testutil::read_test_data;
-    use axone_cognitarium::msg::{
-        DataFormat, Head, Node, Results, SelectItem, SelectQuery, SelectResponse, TriplePattern,
-        Value, VarOrNamedNode, VarOrNode, VarOrNodeOrLiteral, WhereClause, IRI,
+    use axone_cognitarium::msg::{DataFormat, Head, Results, SelectResponse};
+    use axone_cognitarium::parser::{
+        Node, SelectItem, SelectQuery, TriplePattern, Value, VarOrNamedNode, VarOrNode,
+        VarOrNodeOrLiteral, WhereClause, IRI,
     };
     use cosmwasm_std::testing::{message_info, mock_dependencies, mock_env};
     use cosmwasm_std::{

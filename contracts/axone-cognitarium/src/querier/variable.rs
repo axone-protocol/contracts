@@ -1,4 +1,4 @@
-use crate::msg::{Value, IRI};
+use crate::parser::{Value, IRI};
 use crate::querier::expression::Term;
 use crate::state::{Literal, NamespaceSolver, Object, Predicate, Subject};
 use axone_rdf::normalize::IdentifierIssuer;

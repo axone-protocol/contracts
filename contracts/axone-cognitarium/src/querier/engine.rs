@@ -1,4 +1,4 @@
-use crate::msg::{
+use crate::parser::{
     Node, SelectItem, VarOrNamedNode, VarOrNamedNodeOrLiteral, VarOrNode, VarOrNodeOrLiteral,
 };
 use crate::querier::expression::Expression;

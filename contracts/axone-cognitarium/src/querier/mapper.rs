@@ -1,4 +1,4 @@
-use crate::msg::{Literal, IRI};
+use crate::parser::{Literal, IRI};
 use crate::state;
 use crate::state::{NamespaceSolver, Object};
 use axone_rdf::uri::{expand_uri, explode_iri};

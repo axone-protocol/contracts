@@ -213,7 +213,7 @@ pub enum VarOrNode {
     Node(Node),
 }
 
-/// # VarOrNamedNode {
+/// # VarOrNamedNode
 /// Represents either a variable or a named node (IRI).
 #[cw_serde]
 pub enum VarOrNamedNode {

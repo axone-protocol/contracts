@@ -132,7 +132,7 @@ pub fn query(deps: Deps<'_, LogicCustomQuery>, env: Env, msg: QueryMsg) -> StdRe
 pub mod query {
     use cosmwasm_std::QueryRequest;
 
-    use axone_logic_bindings::{Answer, AskResponse};
+    use axone_logic_bindings::{as_prolog_atom, Answer, AskResponse};
 
     use crate::helper::object_ref_to_uri;
     use crate::msg::ProgramResponse;
@@ -184,7 +184,7 @@ pub mod query {
         let program_uri = object_ref_to_uri(program)?;
 
         Ok(LogicCustomQuery::Ask {
-            program: format!(":- consult('{}').", program_uri),
+            program: format!(":- consult({}).", as_prolog_atom(&program_uri.to_string())),
             query,
         })
     }
@@ -203,10 +203,10 @@ pub fn reply(
 }
 
 pub mod reply {
-    use cw_utils::ParseReplyError;
-
     use crate::helper::{ask_response_to_objects, get_reply_event_attribute, object_ref_to_uri};
     use crate::state::{LawStone, DEPENDENCIES, PROGRAM};
+    use axone_logic_bindings::as_prolog_atom;
+    use cw_utils::ParseReplyError;
 
     use super::*;
 
@@ -267,12 +267,10 @@ pub mod reply {
 
         Ok(LogicCustomQuery::Ask {
             program: "source_files(Files) :- bagof(File, source_file(File), Files).".to_string(),
-            query: [
-                "consult('",
-                program_uri.as_str(),
-                "'), source_files(Files).",
-            ]
-            .join(""),
+            query: format!(
+                "consult({}), source_files(Files).",
+                as_prolog_atom(&program_uri)
+            ),
         })
     }
 }

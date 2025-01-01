@@ -71,7 +71,7 @@ pub enum ExecuteMsg {
     ///
     /// #### Preconditions:
     ///
-    ///  1. **Identifier Existance**: The identifier of the claims must exist in the dataverse.
+    ///  1. **Identifier Existence**: The identifier of the claims must exist in the dataverse.
     RevokeClaims {
         /// The unique identifier of the claims to be revoked.
         identifier: Uri,

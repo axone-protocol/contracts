@@ -4,10 +4,10 @@ on:
   workflow_call:
 
   push:
-    branches: [ main ]
+    branches: [main]
 
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -376,6 +376,20 @@ jobs:
           done
           echo "Please generate docs using \`cargo make docs-generate\` then commit this new documentation."
           exit 1
+
+  lint-typos:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install codespell
+        run: |
+          pip install codespell==2.3.0
+      - name: Check for spelling errors
+        run: |
+          codespell --config .codespellrc
+          exit $?
 
   lint-branch-name:
     runs-on: ubuntu-22.04

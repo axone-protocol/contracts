@@ -246,7 +246,7 @@ axoned query wasm contract-state smart $CONTRACT_ADDR \
     '{"select":{"query":{"prefixes":[],"select":[{"variable":"subject"},{"variable":"predicate"},{"variable":"object"}],"where":[{"simple":{"triple_pattern":{"subject":{"variable":"subject"},"predicate":{"variable":"predicate"},"object":{"variable":"object"}}}}],"limit":null}}}'
 ```
 
-Now, let's try something more interresting. Let's retrieve the names of people and their job titles, but only for those who know at least one other person in the network. This query introduces filtering based on relationships.
+Now, let's try something more interesting. Let's retrieve the names of people and their job titles, but only for those who know at least one other person in the network. This query introduces filtering based on relationships.
 
 Here's the query:
 
@@ -925,4 +925,4 @@ A named node constant.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-cognitarium.json` (`330cdbb56c7cee44`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-cognitarium.json` (`cf0ad05cfbb0958c`)_

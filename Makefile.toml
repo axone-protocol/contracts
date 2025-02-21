@@ -94,7 +94,7 @@ workspace = true
 [tasks.check-contracts]
 dependencies = ["install-cosmwasm-check", "wasm"]
 script = '''
-cosmwasm-check ./target/wasm32-unknown-unknown/release/*.wasm
+cosmwasm-check ${DIR_WASM}/*.wasm
 '''
 
 [tasks.docs-clean]

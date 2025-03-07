@@ -89,6 +89,7 @@ pub mod execute {
     use crate::registrar::registry::ClaimRegistrar;
     use axone_rdf::dataset::Dataset;
     use axone_rdf::serde::NQuadsReader;
+    use cosmwasm_std::ensure;
     use std::io::BufReader;
 
     pub fn submit_claims(
@@ -108,8 +109,11 @@ pub mod execute {
         // signature serves as proof.
         if !vc.proof.is_empty() {
             vc.verify(&deps)?;
-        } else if !vc.is_issued_by(&info.sender) {
-            Err(VerificationError::NoSuitableProof)?;
+        } else {
+            ensure!(
+                vc.is_issued_by(&info.sender),
+                VerificationError::NoSuitableProof
+            );
         }
 
         let credential = DataverseCredential::try_from((env, info, &vc))?;

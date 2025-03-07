@@ -51,7 +51,7 @@ impl ClaimRegistrar {
         credential: &DataverseCredential<'_>,
     ) -> Result<WasmMsg, ContractError> {
         ensure!(
-            !self.exists(deps, &credential.id)?,
+            !self.exists(deps, credential.id)?,
             ContractError::CredentialAlreadyExists(credential.id.to_string())
         );
 

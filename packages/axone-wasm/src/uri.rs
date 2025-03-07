@@ -54,9 +54,9 @@ impl CosmwasmUri {
     }
 
     fn encode_query(self) -> String {
-        return form_urlencoded::Serializer::new(String::new())
+        form_urlencoded::Serializer::new(String::new())
             .append_pair(COSMWASM_QUERY_PARAM, self.raw_query.as_str())
-            .finish();
+            .finish()
     }
 }
 

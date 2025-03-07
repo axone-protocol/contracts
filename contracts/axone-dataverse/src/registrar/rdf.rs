@@ -1,4 +1,4 @@
-use crate::credential::rdf_marker::RDF_DATE_TYPE;
+use crate::credential::rdf_marker::{RDF_DATE_TYPE, RDF_UNSIGNED_INT, RDF_UNSIGNED_LONG};
 use crate::registrar::credential::DataverseCredential;
 use crate::ContractError;
 use axone_rdf::dataset::QuadIterator;
@@ -98,15 +98,17 @@ impl<'a> DataverseCredential<'a> {
             Triple {
                 subject: c_subject,
                 predicate: VC_HEADER_HEIGHT,
-                object: Term::Literal(Literal::Simple {
+                object: Term::Literal(Literal::Typed {
                     value: &self.height,
+                    datatype: RDF_UNSIGNED_LONG,
                 }),
             },
             Triple {
                 subject: c_subject,
                 predicate: VC_HEADER_TIMESTAMP,
-                object: Term::Literal(Literal::Simple {
+                object: Term::Literal(Literal::Typed {
                     value: &self.timestamp,
+                    datatype: RDF_UNSIGNED_LONG,
                 }),
             },
             Triple {
@@ -145,7 +147,10 @@ impl<'a> DataverseCredential<'a> {
             triples.push(Triple {
                 subject: c_subject,
                 predicate: VC_HEADER_TX,
-                object: Term::Literal(Literal::Simple { value: tx_index }),
+                object: Term::Literal(Literal::Typed {
+                    value: tx_index,
+                    datatype: RDF_UNSIGNED_INT,
+                }),
             });
         }
 
@@ -288,14 +293,14 @@ mod test {
             DataverseCredential::try_from((mock_env_addr(), message_info(&addr(SENDER), &[]), &vc))
                 .unwrap();
 
-        let expected = r#"<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#height> "12345" .
-<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#timestamp> "1571797419" .
+        let expected = r#"<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#height> "12345"^^<http://www.w3.org/2001/XMLSchema#unsignedLong> .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#timestamp> "1571797419"^^<http://www.w3.org/2001/XMLSchema#unsignedLong> .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#sender> "cosmwasm1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qlm3aqg" .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#issuer> <did:key:zQ3shs7auhJSmVJpiUbQWco6bxxEhSqWnVEPvaBHBRvBKw6Q3> .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#type> <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/DigitalServiceDescriptionCredential> .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#validFrom> "2024-01-22T00:00:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#subject> <did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB> .
-<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#tx_index> "3" .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#tx_index> "3"^^<http://www.w3.org/2001/XMLSchema#unsignedInt> .
 _:c0 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/hasCategory> <https://w3id.org/axone/ontology/vnext/thesaurus/digital-service-category/Storage> .
 _:c0 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/hasTag> "Cloud" .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#claim> _:c0 .
@@ -320,14 +325,14 @@ _:c0 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/de
             DataverseCredential::try_from((mock_env_addr(), message_info(&addr(SENDER), &[]), &vc))
                 .unwrap();
 
-        let expected = r#"<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#height> "12345" .
-<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#timestamp> "1571797419" .
+        let expected = r#"<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#height> "12345"^^<http://www.w3.org/2001/XMLSchema#unsignedLong> .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#timestamp> "1571797419"^^<http://www.w3.org/2001/XMLSchema#unsignedLong> .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#sender> "cosmwasm1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qlm3aqg" .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#issuer> <did:key:zQ3shs7auhJSmVJpiUbQWco6bxxEhSqWnVEPvaBHBRvBKw6Q3> .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#type> <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/DigitalServiceDescriptionCredential> .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#validFrom> "2024-01-22T00:00:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:body#subject> <did:key:zQ3shhb4SvzBRLbBonsvKb3WX6WoDeKWHpsXXXMhAJETqXAfB> .
-<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#tx_index> "3" .
+<https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/72cab400-5bd6-4eb4-8605-a5ee8c1a45c9> <dataverse:credential:header#tx_index> "3"^^<http://www.w3.org/2001/XMLSchema#unsignedInt> .
 _:c0 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/hasCategory> <https://w3id.org/axone/ontology/vnext/thesaurus/digital-service-category/Storage> .
 _:c0 <https://w3id.org/axone/ontology/vnext/schema/credential/digital-service/description/hasTag> "Cloud" .
 _:c0 <test:claim#named-hierarchy> _:a0 .

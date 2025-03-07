@@ -36,7 +36,7 @@ impl<'a> QueryEngine<'a> {
         &'a self,
         plan: QueryPlan,
         selection: Vec<SelectItem>,
-    ) -> StdResult<SelectResults<'_>> {
+    ) -> StdResult<SelectResults<'a>> {
         let bindings = selection
             .iter()
             .map(|item| match item {
@@ -63,7 +63,7 @@ impl<'a> QueryEngine<'a> {
         plan: QueryPlan,
         prefixes: &HashMap<String, String>,
         templates: Vec<(VarOrNode, VarOrNamedNode, VarOrNodeOrLiteral)>,
-    ) -> StdResult<ResolvedAtomIterator<'_>> {
+    ) -> StdResult<ResolvedAtomIterator<'a>> {
         let templates = templates
             .into_iter()
             .map(|t| AtomTemplate::try_new(&plan, prefixes, t))
@@ -82,7 +82,7 @@ impl<'a> QueryEngine<'a> {
         &'a self,
         plan: QueryPlan,
         templates: Vec<TripleTemplate>,
-    ) -> ResolvedTripleIterator<'_> {
+    ) -> ResolvedTripleIterator<'a> {
         ResolvedTripleIterator::new(self.eval_plan(plan), templates)
     }
 
@@ -106,7 +106,7 @@ impl<'a> QueryEngine<'a> {
         }
     }
 
-    pub fn eval_plan(&'a self, plan: QueryPlan) -> ResolvedVariablesIterator<'_> {
+    pub fn eval_plan(&'a self, plan: QueryPlan) -> ResolvedVariablesIterator<'a> {
         return self.eval_node(plan.entrypoint)(ResolvedVariables::with_capacity(
             plan.variables.len(),
         ));

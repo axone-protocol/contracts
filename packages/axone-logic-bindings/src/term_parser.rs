@@ -14,7 +14,7 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(slice: &'a [u8]) -> Parser<'_> {
+    pub fn new(slice: &'a [u8]) -> Parser<'a> {
         Parser { slice, index: 0 }
     }
 

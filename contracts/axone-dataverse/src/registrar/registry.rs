@@ -7,7 +7,7 @@ use axone_cognitarium::parser::{
     WhereClause, IRI,
 };
 use axone_cognitarium_client::CognitariumClient;
-use cosmwasm_std::{DepsMut, StdResult, Storage, WasmMsg};
+use cosmwasm_std::{ensure, DepsMut, StdResult, Storage, WasmMsg};
 
 /// ClaimRegistrar is the entity responsible to manage claims (i.e. submission and revocation) into
 /// the Dataverse, ensuring that any pre-condition criteria to an action is met, and any attached
@@ -20,10 +20,29 @@ impl ClaimRegistrar {
     const RDF_DATA_FORMAT: DataFormat = DataFormat::NTriples;
 
     pub fn try_new(storage: &dyn Storage) -> StdResult<Self> {
-        let dataverse = DATAVERSE.load(storage)?;
-        Ok(Self {
+        DATAVERSE.load(storage).map(|dataverse| Self {
             triplestore: CognitariumClient::new(dataverse.triplestore_address),
         })
+    }
+
+    /// Checks if a credential exists in the triplestore by ID.
+    /// Returns `true` if at least one triple is found, `false` otherwise.
+    pub fn exists(&self, deps: &DepsMut<'_>, credential_id: &str) -> Result<bool, ContractError> {
+        let query = SelectQuery {
+            prefixes: Vec::new(),
+            limit: Some(1),
+            select: vec![SelectItem::Variable("p".into())],
+            r#where: WhereClause::Bgp {
+                patterns: vec![TriplePattern {
+                    subject: VarOrNode::Node(Node::NamedNode(IRI::Full(credential_id.into()))),
+                    predicate: VarOrNamedNode::Variable("p".into()),
+                    object: VarOrNodeOrLiteral::Variable("o".into()),
+                }],
+            },
+        };
+
+        let response = self.triplestore.select(deps.querier, query)?;
+        Ok(!response.results.bindings.is_empty())
     }
 
     pub fn submit_claim(
@@ -31,29 +50,10 @@ impl ClaimRegistrar {
         deps: &DepsMut<'_>,
         credential: &DataverseCredential<'_>,
     ) -> Result<WasmMsg, ContractError> {
-        let resp = self.triplestore.select(
-            deps.querier,
-            SelectQuery {
-                prefixes: vec![],
-                limit: Some(1u32),
-                select: vec![SelectItem::Variable("p".to_string())],
-                r#where: WhereClause::Bgp {
-                    patterns: vec![TriplePattern {
-                        subject: VarOrNode::Node(Node::NamedNode(IRI::Full(
-                            credential.id.to_string(),
-                        ))),
-                        predicate: VarOrNamedNode::Variable("p".to_string()),
-                        object: VarOrNodeOrLiteral::Variable("o".to_string()),
-                    }],
-                },
-            },
-        )?;
-
-        if !resp.results.bindings.is_empty() {
-            Err(ContractError::CredentialAlreadyExists(
-                credential.id.to_string(),
-            ))?;
-        }
+        ensure!(
+            !self.exists(deps, credential.id)?,
+            ContractError::CredentialAlreadyExists(credential.id.to_string())
+        );
 
         self.triplestore
             .insert_data(

@@ -89,6 +89,7 @@ pub mod execute {
     use crate::registrar::registry::ClaimRegistrar;
     use axone_rdf::dataset::Dataset;
     use axone_rdf::serde::NQuadsReader;
+    use cosmwasm_std::ensure;
     use std::io::BufReader;
 
     pub fn submit_claims(
@@ -108,8 +109,11 @@ pub mod execute {
         // signature serves as proof.
         if !vc.proof.is_empty() {
             vc.verify(&deps)?;
-        } else if !vc.is_issued_by(&info.sender) {
-            Err(VerificationError::NoSuitableProof)?;
+        } else {
+            ensure!(
+                vc.is_issued_by(&info.sender),
+                VerificationError::NoSuitableProof
+            );
         }
 
         let credential = DataverseCredential::try_from((env, info, &vc))?;
@@ -378,14 +382,14 @@ mod tests {
             ]
         );
 
-        let expected_data = r#"<http://example.edu/credentials/3732> <dataverse:credential:header#height> "12345" .
-<http://example.edu/credentials/3732> <dataverse:credential:header#timestamp> "1571797419" .
+        let expected_data = r#"<http://example.edu/credentials/3732> <dataverse:credential:header#height> "12345"^^<http://www.w3.org/2001/XMLSchema#unsignedLong> .
+<http://example.edu/credentials/3732> <dataverse:credential:header#timestamp> "1571797419"^^<http://www.w3.org/2001/XMLSchema#unsignedLong> .
 <http://example.edu/credentials/3732> <dataverse:credential:header#sender> "axone1072nc6egexqr2v6vpp7yxwm68plvqnkf5uemr0" .
 <http://example.edu/credentials/3732> <dataverse:credential:body#issuer> <did:key:z6MkpwdnLPAm4apwcrRYQ6fZ3rAcqjLZR4AMk14vimfnozqY> .
 <http://example.edu/credentials/3732> <dataverse:credential:body#type> <https://example.org/examples#UniversityDegreeCredential> .
 <http://example.edu/credentials/3732> <dataverse:credential:body#validFrom> "2024-02-16T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <http://example.edu/credentials/3732> <dataverse:credential:body#subject> <did:key:zDnaeUm3QkcyZWZTPttxB711jgqRDhkwvhF485SFw1bDZ9AQw> .
-<http://example.edu/credentials/3732> <dataverse:credential:header#tx_index> "3" .
+<http://example.edu/credentials/3732> <dataverse:credential:header#tx_index> "3"^^<http://www.w3.org/2001/XMLSchema#unsignedInt> .
 _:c0 <https://example.org/examples#degree> _:b0 .
 _:b0 <http://schema.org/name> "Bachelor of Science and Arts"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML> .
 _:b0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.org/examples#BachelorDegree> .

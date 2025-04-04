@@ -55,7 +55,7 @@ jobs:
 
       - name: Find changed rust Cargo files
         id: changed-rust-cargo
-        uses: tj-actions/changed-files@v46.0.3
+        uses: tj-actions/changed-files@v46.0.4
         with:
           files: |
             **/Cargo.toml
@@ -91,7 +91,7 @@ jobs:
 
       - name: Find changed Cargo makefile
         id: changed-cargo-makefile
-        uses: tj-actions/changed-files@v46.0.3
+        uses: tj-actions/changed-files@v46.0.4
         with:
           files: |
             Makefile.toml
@@ -125,7 +125,7 @@ jobs:
 
       - name: Find changed rust files
         id: changed-rust-files
-        uses: tj-actions/changed-files@v46.0.3
+        uses: tj-actions/changed-files@v46.0.4
         with:
           files: |
             **/*.rs
@@ -208,7 +208,7 @@ jobs:
 
       - name: Find changed toml files
         id: changed-toml-files
-        uses: tj-actions/changed-files@v46.0.3
+        uses: tj-actions/changed-files@v46.0.4
         with:
           files: |
             **/*.toml

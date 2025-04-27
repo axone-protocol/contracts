@@ -20,7 +20,7 @@ const COSMWASM_QUERY_PARAM: &str = "query";
 /// - `{contract_name}`: Only informative, represents the corresponding smart contract name or type (e.g. `axone-objectarium`);
 /// - `{contract_address}`: The address of the smart contract to query;
 /// - `{contract_query}`: The JSON query to perform on the targeted smart contract, URL encoded;
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CosmwasmUri {
     pub contract_name: Option<String>,
     pub contract_address: String,
@@ -211,7 +211,7 @@ mod tests {
         }
     }
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     struct TestQuery {
         pub content: String,
     }

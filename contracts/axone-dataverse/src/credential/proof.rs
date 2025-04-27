@@ -297,7 +297,7 @@ impl<'a> TryFrom<(&'a Dataset<'a>, GraphName<'a>)> for Proof<'a> {
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ProofPurpose {
     AssertionMethod,
     Unused,
@@ -449,7 +449,7 @@ pub struct DataIntegrityProof<'a> {
     options: Dataset<'a>,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DataIntegrityCryptoSuite {
     EddsaRdfc2022,
 }

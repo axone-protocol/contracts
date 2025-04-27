@@ -85,7 +85,7 @@ impl<'a> Dataset<'a> {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy)]
 pub struct QuadPattern<'a> {
     subject: Option<Subject<'a>>,
     predicate: Option<NamedNode<'a>>,

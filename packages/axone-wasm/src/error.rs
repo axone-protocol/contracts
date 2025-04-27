@@ -1,7 +1,7 @@
 use thiserror::Error;
 use url::ParseError;
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum CosmwasmUriError {
     #[error("{0}")]
     ParseURI(#[from] ParseError),

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub const DATAVERSE: Item<Dataverse> = Item::new("dataverse");
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Dataverse {
     pub name: String,
     pub triplestore_address: Addr,

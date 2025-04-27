@@ -9,7 +9,7 @@ use thiserror::Error;
 
 /// CompressionAlgorithm is an enumeration that defines the different compression algorithms
 /// supported for compressing the content of objects.
-#[derive(Serialize, Copy, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema, Sequence)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, PartialEq, Sequence, Serialize)]
 pub enum CompressionAlgorithm {
     /// Represents the "No compression" algorithm.
     Passthrough,
@@ -42,7 +42,7 @@ impl CompressionAlgorithm {
     }
 }
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum CompressionError {
     #[error("{0}")]
     Error(String),

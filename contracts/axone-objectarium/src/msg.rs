@@ -305,7 +305,7 @@ impl CompressionAlgorithm {
 ///
 /// The limits are optional and if not set, there is no limit.
 #[cw_serde]
-#[derive(Default, Builder)]
+#[derive(Builder, Default)]
 #[builder(default, setter(into, strip_option))]
 pub struct BucketLimits {
     /// The maximum total size of the objects in the bucket.
@@ -361,7 +361,7 @@ impl Default for PaginationConfig {
 ///
 /// BucketStat is the type of the statistics of a bucket.
 #[cw_serde]
-#[derive(Default, Builder)]
+#[derive(Builder, Default)]
 pub struct BucketStat {
     /// The total size of the objects contained in the bucket.
     pub size: Uint128,

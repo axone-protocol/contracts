@@ -18,7 +18,7 @@ pub struct NQuadsReader<R: BufRead> {
     parser: NQuadsParser<R>,
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug, Error)]
 pub enum NQuadsReadError {
     #[error("RDF Star notation not supported")]
     RDFStarUnsupported,

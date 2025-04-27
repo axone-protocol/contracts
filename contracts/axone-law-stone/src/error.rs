@@ -4,7 +4,7 @@ use cosmwasm_std::StdError;
 use cw_utils::{ParseReplyError, PaymentError};
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
@@ -28,7 +28,7 @@ pub enum ContractError {
     Payment(#[from] PaymentError),
 }
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum LogicAskResponseError {
     #[error("Could not parse term: {0}")]
     Parse(TermParseError),

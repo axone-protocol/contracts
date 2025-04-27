@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 pub const DATA: Map<Hash, Vec<u8>> = Map::new("DATA");
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub struct Bucket {
     /// The owner of the bucket.
     pub owner: Addr,
@@ -27,7 +27,7 @@ pub struct Bucket {
     pub stat: BucketStat,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub struct BucketStat {
     /// The total size of the objects contained in the bucket.
     pub size: Uint128,
@@ -65,7 +65,7 @@ impl Bucket {
 
 /// HashAlgorithm is an enumeration that defines the different hash algorithms
 /// supported for hashing the content of objects.
-#[derive(Serialize, Copy, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub enum HashAlgorithm {
     /// Represents the MD5 algorithm.
     MD5,
@@ -127,7 +127,7 @@ impl From<CompressionAlgorithm> for msg::CompressionAlgorithm {
 /// BucketConfig is the type of the configuration of a bucket.
 ///
 /// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub struct BucketConfig {
     /// The algorithm used to hash the content of the objects to generate the id of the objects.
     /// The algorithm is optional and if not set, the default algorithm is used.
@@ -188,7 +188,7 @@ impl From<BucketConfig> for msg::BucketConfig {
 /// BucketLimits is the type of the limits of a bucket.
 ///
 /// The limits are optional and if not set, there is no limit.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub struct BucketLimits {
     /// The maximum total size of the objects in the bucket.
     pub max_total_size: Option<Uint128>,
@@ -272,7 +272,7 @@ impl TryFrom<msg::BucketLimits> for BucketLimits {
     }
 }
 /// Pagination is the type carrying configuration for paginated queries.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub struct Pagination {
     /// The maximum elements a page can contain.
     pub max_page_size: u32,
@@ -324,7 +324,7 @@ impl TryFrom<PaginationConfig> for Pagination {
 
 pub const BUCKET: Item<Bucket> = Item::new("bucket");
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub struct Object {
     /// The id of the object.
     pub id: Hash,
@@ -373,7 +373,7 @@ pub fn objects<'a>() -> IndexedMap<Hash, Object, ObjectIndexes<'a>> {
     )
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Pin {
     /// The id of the object.
     pub id: Hash,

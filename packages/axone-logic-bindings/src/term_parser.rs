@@ -1,7 +1,7 @@
 use crate::error::TermParseError;
 
 /// Represents a Prolog response term element which can be a tuple, an array or a string value.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TermValue {
     Tuple(Vec<TermValue>),
     Array(Vec<TermValue>),

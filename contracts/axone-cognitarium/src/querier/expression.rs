@@ -7,7 +7,7 @@ use cosmwasm_std::{StdError, StdResult};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expression {
     Constant(Term),
     Variable(usize),
@@ -97,7 +97,7 @@ impl HasBoundVariables for Expression {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Term {
     String(String),
     Boolean(bool),

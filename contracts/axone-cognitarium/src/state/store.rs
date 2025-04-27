@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 pub const STORE: Item<Store> = Item::new("store");
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Store {
     pub owner: Addr,
     pub limits: StoreLimits,
@@ -33,7 +33,7 @@ impl From<Store> for StoreResponse {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct StoreLimits {
     pub max_triple_count: Uint128,
     pub max_byte_size: Uint128,
@@ -72,7 +72,7 @@ impl From<StoreLimits> for msg::StoreLimits {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct StoreStat {
     pub triple_count: Uint128,
     pub namespace_count: Uint128,

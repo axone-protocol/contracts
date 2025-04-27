@@ -4,7 +4,7 @@ use crate::msg::ProgramResponse;
 use axone_objectarium_client::ObjectRef;
 use cw_storage_plus::{Item, Map};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct LawStone {
     pub broken: bool,
     pub law: ObjectRef,

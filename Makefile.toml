@@ -1,14 +1,12 @@
 [tasks.format-rust]
-args = ["fmt"]
-command = "cargo"
-dependencies = ["install-rustfmt"]
+dependencies = ["install-rustfmt", "install-cargo-sort-derives"]
 description = "Format rust sources files."
+script = ["cargo fmt", "cargo sort-derives"]
 
 [tasks.lint-rust-format]
-args = ["fmt", "--all", "--", "--check"]
-command = "cargo"
-dependencies = ["install-rustfmt"]
-description = "Check format of sources files."
+dependencies = ["install-rustfmt", "install-cargo-sort-derives"]
+description = "Check formatting and derives order of rust source files."
+script = ["cargo fmt --all -- --check", "cargo sort-derives --check"]
 
 [tasks.lint-rust]
 args = ["cranky"]
@@ -651,6 +649,9 @@ install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
 
 [tasks.install-cargo-machete]
 install_crate = { crate_name = "cargo-machete", min_version = "0.7.0" }
+
+[tasks.install-cargo-sort-derives]
+install_crate = { crate_name = "cargo-sort-derives", min_version = "0.10.0" }
 
 [tasks.publish-crates]
 args = [

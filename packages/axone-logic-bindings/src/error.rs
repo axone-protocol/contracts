@@ -1,7 +1,7 @@
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum TermParseError {
     #[error("Value is not UTF-8 encoded: {0}")]
     NotUtf8Value(FromUtf8Error),

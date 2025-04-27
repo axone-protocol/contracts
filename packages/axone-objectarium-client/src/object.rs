@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 const CONTRACT_NAME: &str = "axone-objectarium";
 
 /// Represents a reference to an Object stored in the `axone-objectarium` contract.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ObjectRef {
     /// The object id in the `axone-objectarium` contract.
     pub object_id: String,

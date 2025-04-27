@@ -5,7 +5,7 @@ use axone_rdf::normalize::IdentifierIssuer;
 use cosmwasm_std::StdResult;
 use std::collections::BTreeSet;
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ResolvedVariable {
     Subject(Subject),
     Predicate(Predicate),
@@ -124,7 +124,7 @@ impl ResolvedVariable {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ResolvedVariables {
     variables: Vec<Option<ResolvedVariable>>,
 }

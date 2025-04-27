@@ -3,7 +3,7 @@ use crate::querier::variable::HasBoundVariables;
 use crate::state::{Object, Predicate, Subject};
 
 /// Represents a querying plan.
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct QueryPlan {
     /// References the ending node of the plan, when evaluated others nodes will be invoked in
     /// cascade.
@@ -14,7 +14,7 @@ pub struct QueryPlan {
     pub variables: Vec<PlanVariable>,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PlanVariable {
     Basic(String),
     BlankNode(String),
@@ -45,7 +45,7 @@ impl QueryPlan {
 
 /// Represents a single part of the query plan processing. Each node is intended to provide a
 /// specific behavior given an evaluation context.
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum QueryNode {
     /// Match the triple pattern against the state. The triple elements can be either a variable or
     /// a constant value, in the case of a variable it'll be either provided by the context of
@@ -123,7 +123,7 @@ impl HasBoundVariables for QueryNode {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PatternValue<V> {
     Constant(V),
     Variable(usize),

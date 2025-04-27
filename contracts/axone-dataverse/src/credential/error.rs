@@ -1,7 +1,7 @@
 use axone_rdf::normalize::NormalizationError;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum InvalidCredentialError {
     #[error("Missing identifier")]
     MissingIdentifier,
@@ -19,7 +19,7 @@ pub enum InvalidCredentialError {
     Malformed(String),
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum InvalidProofError {
     #[error("Missing proof type")]
     MissingProofType,
@@ -53,7 +53,7 @@ pub enum InvalidProofError {
     Unsupported,
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug, Error)]
 pub enum VerificationError {
     #[error("Couldn't canonicalize document: {0}")]
     RdfCanonError(#[from] NormalizationError),

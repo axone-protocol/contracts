@@ -4,7 +4,7 @@ use rio_turtle::TurtleError;
 use rio_xml::RdfXmlError;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
@@ -37,7 +37,7 @@ impl From<TurtleError> for ContractError {
     }
 }
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum StoreError {
     #[error("Maximum triples number exceeded: {0}")]
     TripleCount(Uint128),
@@ -55,7 +55,7 @@ pub enum StoreError {
     InsertDataTripleCount(Uint128),
 }
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum RDFParseError {
     #[error("Error parsing XML RDF: {0}")]
     Xml(String),

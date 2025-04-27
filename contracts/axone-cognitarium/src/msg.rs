@@ -261,7 +261,7 @@ pub struct StoreResponse {
 /// # StoreLimits
 /// Contains limitations regarding store usages.
 #[cw_serde]
-#[derive(Default, Builder)]
+#[derive(Builder, Default)]
 #[builder(default, setter(into, strip_option))]
 pub struct StoreLimits {
     /// The maximum number of triples the store can contain.

@@ -34,7 +34,7 @@ pub fn triples<'a>() -> IndexedMap<TriplePK<'a>, Triple, TripleIndexes<'a>> {
     )
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Triple {
     pub subject: Subject,
     pub predicate: Predicate,
@@ -60,7 +60,7 @@ impl Triple {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Subject {
     Named(Node),
     Blank(BlankNode),
@@ -91,7 +91,7 @@ impl Subject {
 
 pub type Predicate = Node;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Object {
     Named(Node),
     Blank(BlankNode),
@@ -135,7 +135,7 @@ impl Object {
 pub const BLANK_NODE_SIZE: usize = 16usize;
 pub type BlankNode = u128;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Node {
     pub namespace: u128,
     pub value: String,
@@ -156,7 +156,7 @@ impl Node {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Literal {
     Simple { value: String },
     I18NString { value: String, language: String },

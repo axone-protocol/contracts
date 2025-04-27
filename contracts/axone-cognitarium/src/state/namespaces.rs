@@ -9,7 +9,7 @@ use std::rc::Rc;
 /// there is no need to implement a garbage collector mechanism in case some namespaces are removed.
 pub const NAMESPACE_KEY_INCREMENT: Item<u128> = Item::new("namespace_key");
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Namespace {
     /// The namespace value.
     pub value: String,

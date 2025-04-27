@@ -1,7 +1,7 @@
 use rio_api::model::{Literal, NamedNode, Triple};
 use std::fmt;
 
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Subject {
     NamedNode(String),
     BlankNode(String),
@@ -15,7 +15,7 @@ impl fmt::Display for Subject {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Property(pub String);
 
 impl fmt::Display for Property {
@@ -24,7 +24,7 @@ impl fmt::Display for Property {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Value {
     NamedNode(String),
     BlankNode(String),
@@ -43,7 +43,7 @@ impl fmt::Display for Value {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Atom {
     pub subject: Subject,
     pub property: Property,

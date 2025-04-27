@@ -4,7 +4,7 @@ use cosmwasm_std::{StdError, Uint128};
 use cw_utils::PaymentError;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
@@ -22,7 +22,7 @@ pub enum ContractError {
     Payment(#[from] PaymentError),
 }
 
-#[derive(Error, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum BucketError {
     #[error("Name of bucket could not be empty")]
     EmptyName,

@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, HashMap};
 use thiserror::Error;
 
 /// A RDF normalizer allowing to canonicalize RDF data, following the https://www.w3.org/TR/rdf-canon specification.
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Normalizer<'a> {
     blank_node_to_quads: HashMap<String, Vec<Quad<'a>>>,
     hash_to_blank_nodes: BTreeMap<String, Vec<String>>,
@@ -15,7 +15,7 @@ pub struct Normalizer<'a> {
     canonical_issuer: IdentifierIssuer,
 }
 
-#[derive(Error, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, Error, PartialEq)]
 pub enum NormalizationError {
     /// An unexpected error denotes an error that should never occur.  
     #[error("An unexpected error occurred: {0}")]
@@ -329,7 +329,7 @@ impl<'a> Default for Normalizer<'a> {
 }
 
 /// Canonical blank node identifier issuer, specified by: https://www.w3.org/TR/rdf-canon/#issue-identifier.
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IdentifierIssuer {
     prefix: String,
     pub counter: u128,

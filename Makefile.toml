@@ -1,8 +1,10 @@
 [tasks.format-rust]
-args = ["fmt"]
-command = "cargo"
-dependencies = ["install-rustfmt"]
+dependencies = ["install-rustfmt", "install-cargo-sort-derives"]
 description = "Format rust sources files."
+script = [
+    "cargo fmt",
+    "cargo sort-derives"
+]
 
 [tasks.lint-rust-format]
 args = ["fmt", "--all", "--", "--check"]

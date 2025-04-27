@@ -652,6 +652,9 @@ install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
 [tasks.install-cargo-machete]
 install_crate = { crate_name = "cargo-machete", min_version = "0.7.0" }
 
+[tasks.install-cargo-sort-derives]
+install_crate = { crate_name = "cargo-sort-derives", min_version = "0.10.0" }
+
 [tasks.publish-crates]
 args = [
   "workspaces",

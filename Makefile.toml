@@ -1,16 +1,12 @@
 [tasks.format-rust]
 dependencies = ["install-rustfmt", "install-cargo-sort-derives"]
 description = "Format rust sources files."
-script = [
-    "cargo fmt",
-    "cargo sort-derives"
-]
+script = ["cargo fmt", "cargo sort-derives"]
 
 [tasks.lint-rust-format]
-args = ["fmt", "--all", "--", "--check"]
-command = "cargo"
-dependencies = ["install-rustfmt"]
-description = "Check format of sources files."
+dependencies = ["install-rustfmt", "install-cargo-sort-derives"]
+description = "Check formatting and derives order of rust source files."
+script = ["cargo fmt --all -- --check", "cargo sort-derives --check"]
 
 [tasks.lint-rust]
 args = ["cranky"]

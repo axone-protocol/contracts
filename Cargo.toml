@@ -9,7 +9,7 @@ homepage = "https://axone.xyz/"
 keywords = ["cosmwasm", "blockchain"]
 license = "BSD-3-Clause"
 repository = "https://github.com/axone-protocol/contracts"
-rust-version = "1.75"
+rust-version = "1.81"
 version = "7.0.0"
 
 [profile.release]

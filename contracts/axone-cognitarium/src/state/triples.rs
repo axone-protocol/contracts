@@ -104,23 +104,23 @@ impl Object {
         match self {
             Object::Named(n) => {
                 hasher
-                    .update(&[b'n'])
+                    .update(b"n")
                     .update(n.namespace.to_be_bytes().as_slice())
                     .update(n.value.as_bytes());
             }
             Object::Blank(n) => {
-                hasher.update(&[b'b']).update(n.to_be_bytes().as_slice());
+                hasher.update(b"b").update(n.to_be_bytes().as_slice());
             }
             Object::Literal(l) => {
-                hasher.update(&[b'l']);
+                hasher.update(b"l");
                 match l {
-                    Literal::Simple { value } => hasher.update(&[b's']).update(value.as_bytes()),
+                    Literal::Simple { value } => hasher.update(b"s").update(value.as_bytes()),
                     Literal::I18NString { value, language } => hasher
-                        .update(&[b'i'])
+                        .update(b"i")
                         .update(value.as_bytes())
                         .update(language.as_bytes()),
                     Literal::Typed { value, datatype } => hasher
-                        .update(&[b't'])
+                        .update(b"t")
                         .update(value.as_bytes())
                         .update(datatype.namespace.to_be_bytes().as_slice())
                         .update(datatype.value.as_bytes()),

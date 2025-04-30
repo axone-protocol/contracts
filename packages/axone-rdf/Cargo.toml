@@ -16,5 +16,5 @@ itertools = "0.14.0"
 rio_api.workspace = true
 rio_turtle.workspace = true
 rio_xml.workspace = true
-sha2 = "0.10.8"
+sha2 = "0.10.9"
 thiserror.workspace = true

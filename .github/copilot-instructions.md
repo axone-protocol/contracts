@@ -18,11 +18,10 @@ This is a **CosmWasm smart contract ecosystem** for the AXONE protocol, comprisi
 ### Build System
 
 - **Primary tool**: `cargo make` (NOT standard cargo commands)
-- **WASM compilation**: `cargo make wasm` (produces optimized WASM in `target/wasm32-unknown-unknown/`)
+- **WASM compilation**: `cargo make wasm` (produces optimized WASM in `target/wasm32-unknown-unknown/release` — i.e. ${DIR_WASM}, or the configured output directory)
 - **Testing**: `cargo make test-coverage`
 - **Linting**: `cargo make lint` (uses cranky + custom linters)
 - **Schema generation**: `cargo make schema` (generates JSON schemas for each contract)
-
 ### Local Development Chain
 
 ```bash

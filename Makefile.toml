@@ -285,7 +285,7 @@ for entry in "${keys[@]}" ; do
     | docker run --rm -i \
         -v `pwd`:/app \
         -w /app \
-        ${DOCKER_IMAGE_AXONED} \
+        ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
           keys add ${name} \
             --recover \
             --keyring-backend ${KEYRING_BACKEND} \
@@ -303,7 +303,7 @@ echo "🛠️ Initializing chain ${CHAIN} under ${CHAIN_HOME}"
 docker run --rm \
   -v `pwd`:/app \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     init ${CHAIN_MONIKER} \
       --chain-id=${CHAIN} \
       --home ${CHAIN_HOME}
@@ -320,7 +320,7 @@ for entry in "${balances[@]}" ; do
     docker run --rm -i \
       -v `pwd`:/app \
       -w /app \
-      ${DOCKER_IMAGE_AXONED} \
+      ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
          genesis add-genesis-account ${name} "${balance}"  \
           --keyring-backend ${KEYRING_BACKEND} \
           --home ${CHAIN_HOME}
@@ -330,14 +330,14 @@ NODE_ID=$(
   docker run --rm \
     -v `pwd`:/app \
     -w /app \
-    ${DOCKER_IMAGE_AXONED} \
+    ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
       comet show-node-id \
         --home ${CHAIN_HOME}
 )
 docker run --rm \
   -v `pwd`:/app \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     genesis gentx validator 1000000uaxone \
       --node-id ${NODE_ID} \
       --chain-id=${CHAIN} \
@@ -347,7 +347,7 @@ docker run --rm \
 docker run --rm \
   -v `pwd`:/app \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
 	  genesis collect-gentxs \
 	    --home ${CHAIN_HOME}
 
@@ -372,7 +372,7 @@ docker run -d \
   -v `pwd`:/app \
   -w /app \
   --name ${CHAIN} \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     start \
       --moniker ${CHAIN} \
       --home ${CHAIN_HOME}
@@ -400,7 +400,7 @@ docker logs -f ${CHAIN}
 [tasks.chain]
 description = "Run the axoned CLI using the chain's home directory under a Docker container."
 script = '''
-echo "⌨️ Executing ${DOCKER_IMAGE_AXONED} ${@}..."
+echo "⌨️ Executing ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} ${@}..."
 
 docker run \
   --network host \
@@ -408,7 +408,7 @@ docker run \
   -w /app \
   -ti \
   --rm \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     ${@}
 '''
 
@@ -428,7 +428,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     tx wasm store ${DIR_WASM}/${contract}.wasm \
       --from validator \
       --keyring-backend test \
@@ -441,7 +441,7 @@ docker run --rm \
         --network host \
         -v `pwd`:/app:ro \
         -w /app \
-        ${DOCKER_IMAGE_AXONED} query wait-tx
+        ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx
 '''
 
 [tasks.chain-deploy-contracts]
@@ -462,7 +462,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm list-code \
       --limit 1000 \
       --home ${CHAIN_HOME}
@@ -481,7 +481,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm code-info $code_id \
       --home ${CHAIN_HOME}
 '''
@@ -516,7 +516,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     tx wasm instantiate ${code} "${json}" \
       --from validator \
       --keyring-backend test \
@@ -531,7 +531,7 @@ docker run --rm \
         --network host \
         -v `pwd`:/app:ro \
         -w /app \
-        ${DOCKER_IMAGE_AXONED} query wait-tx
+        ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx
 '''
 
 [tasks.chain-query-contract]
@@ -557,7 +557,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm contract-state smart ${addr} "${query}" \
       --output json \
       | jq -r '.'
@@ -586,7 +586,7 @@ docker run --rm \
   --network host \
   -v `pwd`:/app:ro \
   -w /app \
-  ${DOCKER_IMAGE_AXONED} \
+  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     tx wasm execute ${addr} "${msgs}" \
       --from validator \
       --keyring-backend test \
@@ -599,7 +599,7 @@ docker run --rm \
         --network host \
         -v `pwd`:/app:ro \
         -w /app \
-        ${DOCKER_IMAGE_AXONED} query wait-tx \
+        ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx \
           --output json \
           | jq -r '.'
 '''
@@ -687,7 +687,7 @@ CHAIN_MONIKER = "local-node"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
 DIR_TARGET = "./target"
 DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
-DOCKER_IMAGE_AXONED = "axoneprotocol/axoned:8.0.0"
+DOCKER_IMAGE_AXONEPROTOCOL_AXONED = "axoneprotocol/axoned:8.0.0"
 DOCKER_IMAGE_COSMWASM_OPTIMIZER = "cosmwasm/optimizer:0.15.1"
 KEYRING_BACKEND = "test"
 MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"

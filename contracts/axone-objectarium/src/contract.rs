@@ -1181,6 +1181,52 @@ mod tests {
     }
 
     #[test]
+    fn test_current_compression_behavior() {
+        let mut deps = mock_dependencies();
+        let info = message_info(&addr(CREATOR), &[]);
+        let msg = InstantiateMsg {
+            bucket: String::from("test"),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let object_data = general_purpose::STANDARD.encode("test data for compression");
+        
+        // First, store object with Passthrough (no compression)
+        let res1 = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::StoreObject {
+                data: Binary::from_base64(object_data.as_str()).unwrap(),
+                pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Passthrough),
+            },
+        );
+        println!("First store result: {:?}", res1);
+
+        // Try to store the same object with Snappy compression
+        let res2 = execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::StoreObject {
+                data: Binary::from_base64(object_data.as_str()).unwrap(),
+                pin: false,
+                compression_algorithm: Some(CompressionAlgorithm::Snappy),
+            },
+        );
+        println!("Second store result: {:?}", res2);
+        
+        // Check what compression algorithm is actually stored
+        let object_id = crypto::hash(&crypto::HashAlgorithm::Sha256, &Binary::from_base64(object_data.as_str()).unwrap().to_vec());
+        let stored_object = objects().load(&deps.storage, object_id).unwrap();
+        println!("Stored object compression: {:?}", stored_object.compression);
+    }
+
+    #[test]
     fn store_object_limits() {
         let cases = vec![
             (

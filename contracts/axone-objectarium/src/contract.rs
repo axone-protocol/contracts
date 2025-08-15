@@ -158,7 +158,7 @@ pub mod execute {
             )
         } else {
             let old = objects().load(deps.storage, id.clone())?;
-            
+
             // Check if the existing object has a different compression algorithm
             if old.compression != compression {
                 return Err(ContractError::ObjectAlreadyExistsWithDifferentCompression {
@@ -166,7 +166,7 @@ pub mod execute {
                     requested: compression.into(),
                 });
             }
-            
+
             (Some(old.clone()), old)
         };
 
@@ -1202,7 +1202,7 @@ mod tests {
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let object_data = general_purpose::STANDARD.encode("test data for compression");
-        
+
         // First, store object with Passthrough (no compression)
         let res1 = execute(
             deps.as_mut(),
@@ -1235,7 +1235,7 @@ mod tests {
                 requested: CompressionAlgorithm::Snappy,
             }
         );
-        
+
         // Try to store the same object with Lzma compression - should also fail
         let res3 = execute(
             deps.as_mut(),
@@ -1255,12 +1255,18 @@ mod tests {
                 requested: CompressionAlgorithm::Lzma,
             }
         );
-        
+
         // Verify the object still has the original compression
-        let object_id = crypto::hash(&crypto::HashAlgorithm::Sha256, &Binary::from_base64(object_data.as_str()).unwrap().to_vec());
+        let object_id = crypto::hash(
+            &crypto::HashAlgorithm::Sha256,
+            &Binary::from_base64(object_data.as_str()).unwrap().to_vec(),
+        );
         let stored_object = objects().load(&deps.storage, object_id).unwrap();
-        assert_eq!(stored_object.compression, crate::compress::CompressionAlgorithm::Passthrough);
-        
+        assert_eq!(
+            stored_object.compression,
+            crate::compress::CompressionAlgorithm::Passthrough
+        );
+
         // Try to store the same object with the same compression - should succeed
         let res4 = execute(
             deps.as_mut(),
@@ -1288,7 +1294,7 @@ mod tests {
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let object_data = general_purpose::STANDARD.encode("test data for compression scenarios");
-        
+
         // First, store object with Snappy compression
         let res1 = execute(
             deps.as_mut(),
@@ -1321,11 +1327,17 @@ mod tests {
                 requested: CompressionAlgorithm::Passthrough,
             }
         );
-        
+
         // Verify the object still has the original compression
-        let object_id = crypto::hash(&crypto::HashAlgorithm::Sha256, &Binary::from_base64(object_data.as_str()).unwrap().to_vec());
+        let object_id = crypto::hash(
+            &crypto::HashAlgorithm::Sha256,
+            &Binary::from_base64(object_data.as_str()).unwrap().to_vec(),
+        );
         let stored_object = objects().load(&deps.storage, object_id).unwrap();
-        assert_eq!(stored_object.compression, crate::compress::CompressionAlgorithm::Snappy);
+        assert_eq!(
+            stored_object.compression,
+            crate::compress::CompressionAlgorithm::Snappy
+        );
     }
 
     #[test]
@@ -1341,7 +1353,7 @@ mod tests {
         instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let object_data = general_purpose::STANDARD.encode("test data for default compression");
-        
+
         // First, store object without specifying compression (defaults to Passthrough)
         let res1 = execute(
             deps.as_mut(),
@@ -1374,12 +1386,18 @@ mod tests {
                 requested: CompressionAlgorithm::Snappy,
             }
         );
-        
+
         // Verify the object has the default compression (Passthrough)
-        let object_id = crypto::hash(&crypto::HashAlgorithm::Sha256, &Binary::from_base64(object_data.as_str()).unwrap().to_vec());
+        let object_id = crypto::hash(
+            &crypto::HashAlgorithm::Sha256,
+            &Binary::from_base64(object_data.as_str()).unwrap().to_vec(),
+        );
         let stored_object = objects().load(&deps.storage, object_id).unwrap();
-        assert_eq!(stored_object.compression, crate::compress::CompressionAlgorithm::Passthrough);
-        
+        assert_eq!(
+            stored_object.compression,
+            crate::compress::CompressionAlgorithm::Passthrough
+        );
+
         // Try to store the same object without specifying compression - should succeed
         let res3 = execute(
             deps.as_mut(),

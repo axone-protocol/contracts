@@ -15,6 +15,12 @@ pub enum ContractError {
     #[error("Object is pinned and cannot be forgotten")]
     ObjectPinned {},
 
+    #[error("Object already exists with different compression: existing={existing:?}, requested={requested:?}")]
+    ObjectAlreadyExistsWithDifferentCompression {
+        existing: CompressionAlgorithm,
+        requested: CompressionAlgorithm,
+    },
+
     #[error("Compression error: {0}")]
     CompressionError(String),
 
@@ -91,6 +97,13 @@ fn test_bucket_error_messages() {
             "Compression algorithm is not accepted: Snappy (accepted: \"[Passthrough]\")",
         ),
         (ContractError::ObjectPinned {}, "Object is pinned and cannot be forgotten"),
+        (
+            ContractError::ObjectAlreadyExistsWithDifferentCompression {
+                existing: CompressionAlgorithm::Passthrough,
+                requested: CompressionAlgorithm::Snappy,
+            },
+            "Object already exists with different compression: existing=Passthrough, requested=Snappy",
+        ),
         (
             ContractError::CompressionError("Insufficient ch'i to compress file".to_string()),
             "Compression error: Insufficient ch'i to compress file",

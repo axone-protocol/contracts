@@ -1,18 +1,18 @@
 [tasks.format-rust]
-dependencies = ["install-rustfmt", "install-cargo-sort-derives"]
-description = "Format rust sources files."
+dependencies = ["install-cargo-sort-derives"]
+description = "Format rust sources files. (rustfmt provided by rust-toolchain.toml)"
 script = ["cargo fmt", "cargo sort-derives"]
 
 [tasks.lint-rust-format]
-dependencies = ["install-rustfmt", "install-cargo-sort-derives"]
-description = "Check formatting and derives order of rust source files."
+dependencies = ["install-cargo-sort-derives"]
+description = "Check formatting and derives order (rustfmt via rust-toolchain.toml)."
 script = ["cargo fmt --all -- --check", "cargo sort-derives --check"]
 
 [tasks.lint-rust]
 args = ["cranky"]
 command = "cargo"
-dependencies = ["install-clippy"]
-description = "Check lint of all sources files."
+dependencies = ["install-cranky"]
+description = "Check lint of all sources files (clippy via rust-toolchain.toml)."
 
 [tasks.lint-toml]
 args = ["lint"]
@@ -60,17 +60,11 @@ command = "cargo"
 args = ["test", "--lib", "--tests", "--workspace", "--locked"]
 command = "cargo"
 description = "Run all unit tests."
-env = { RUSTFLAGS = "-D warnings" }
 
 [tasks.test-coverage]
 args = ["llvm-cov", "--workspace", "--lcov", "--output-path", "lcov.info"]
 command = "cargo"
-dependencies = ["install-llvm-tools-preview", "install-llvm-cov"]
-
-[tasks.install-wasm]
-script = '''
-rustup target add wasm32-unknown-unknown
-'''
+dependencies = ["install-llvm-cov"]
 
 [tasks.wasm]
 args = [
@@ -83,8 +77,7 @@ args = [
   "--locked",
 ]
 command = "cargo"
-dependencies = ["install-wasm", "install-cargo-hack"]
-env = { RUSTFLAGS = "-C link-arg=-s" }
+dependencies = ["install-cargo-hack"]
 
 [tasks.schema]
 workspace = true
@@ -604,18 +597,8 @@ docker run --rm \
           | jq -r '.'
 '''
 
-[tasks.install-llvm-tools-preview]
-install_crate = { rustup_component_name = "llvm-tools-preview" }
-
-[tasks.install-clippy]
-install_crate = { rustup_component_name = "clippy" }
-
-[tasks.intall-cranky]
-dependencies = ["install-clippy"]
+[tasks.install-cranky]
 install_crate = { crate_name = "cranky", min_version = "0.3.0" }
-
-[tasks.install-rustfmt]
-install_crate = { rustup_component_name = "rustfmt" }
 
 [tasks.install-taplo-cli]
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help", min_version = "0.9.0" }

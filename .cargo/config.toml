@@ -1,0 +1,5 @@
+[build]
+rustflags = ["-Dwarnings"]
+
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=-s"]

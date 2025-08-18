@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
+use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use derive_builder::Builder;
 
 /// ObjectId is the type of identifier of an object in the bucket.
@@ -11,6 +12,9 @@ pub type Cursor = String;
 /// Instantiate messages
 #[cw_serde]
 pub struct InstantiateMsg {
+    /// The contract owner.
+    /// If not set, the contract starts without an owner (ownerless).
+    pub owner: Option<String>,
     /// The name of the bucket.
     /// The name could not be empty or contains whitespaces.
     /// If name contains whitespace, they will be removed.
@@ -27,6 +31,7 @@ pub struct InstantiateMsg {
 }
 
 /// Execute messages
+#[cw_ownable_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
     /// # StoreObject
@@ -71,6 +76,7 @@ pub enum ExecuteMsg {
 }
 
 /// Query messages
+#[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
@@ -195,7 +201,7 @@ pub enum HashAlgorithm {
     /// See [the MD5 Wikipedia page](https://en.wikipedia.org/wiki/MD5) for more information.
     MD5,
 
-    /// # SHA1
+    /// # Sha224
     /// Represents the SHA-224 algorithm.
     /// SHA-224 is a variant of the SHA-2 family of hash functions that produces a 224-bit hash value.
     /// It is similar to SHA-256, but with a shorter output size.

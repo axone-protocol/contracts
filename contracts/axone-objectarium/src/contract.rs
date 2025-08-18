@@ -23,8 +23,8 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
+    cw_ownable::initialize_owner(deps.storage, deps.api, msg.owner.as_deref())?;
     let bucket = Bucket::try_new(
-        info.sender,
         msg.bucket,
         msg.config.into(),
         msg.limits.try_into()?,
@@ -40,7 +40,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -51,6 +51,10 @@ pub fn execute(
         ExecuteMsg::PinObject { id } => execute::pin_object(deps, info, id),
         ExecuteMsg::UnpinObject { id } => execute::unpin_object(deps, info, id),
         ExecuteMsg::ForgetObject { id } => execute::forget_object(deps, info, id),
+        ExecuteMsg::UpdateOwnership(action) => {
+            cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
+            Ok(Response::new())
+        }
     }
 }
 
@@ -279,6 +283,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::ObjectPins { id, after, first } => {
             to_json_binary(&query::object_pins(deps, id, after, first)?)
         }
+        QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
     }
 }
 
@@ -454,6 +459,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "foo".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -474,7 +480,6 @@ mod tests {
 
         // check internal state too
         let bucket = BUCKET.load(&deps.storage).unwrap();
-        assert_eq!(addr(CREATOR), bucket.owner);
         assert_eq!(Uint128::zero(), bucket.stat.size);
         assert_eq!(Uint128::zero(), bucket.stat.object_count);
     }
@@ -494,6 +499,7 @@ mod tests {
 
         for (hash_algorithm, expected_hash_algorithm) in test_cases {
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: "bar".to_string(),
                 config: BucketConfig {
                     hash_algorithm,
@@ -519,6 +525,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "bar".to_string(),
             config: Default::default(),
             limits: BucketLimitsBuilder::default()
@@ -565,6 +572,7 @@ mod tests {
     fn proper_pagination_initialization() {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "bar".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -712,6 +720,7 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: "bar".to_string(),
                 config: case.0,
                 limits: case.1,
@@ -737,6 +746,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -754,6 +764,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "foo bar".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -773,6 +784,7 @@ mod tests {
     fn funds_initialization() {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "foo".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -1012,6 +1024,7 @@ mod tests {
                 mock_env(),
                 info.clone(),
                 InstantiateMsg {
+                    owner: None,
                     bucket: "test".to_string(),
                     config: BucketConfig {
                         hash_algorithm,
@@ -1092,6 +1105,7 @@ mod tests {
         let mut deps = mock_dependencies();
         let info = message_info(&addr(CREATOR), &[]);
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -1220,6 +1234,7 @@ mod tests {
             let mut deps = mock_dependencies();
             let info = message_info(&addr(CREATOR), &[]);
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: String::from("test"),
                 config: Default::default(),
                 limits: case.0,
@@ -1258,6 +1273,7 @@ mod tests {
 
             // Initialize bucket with specific compression algorithm
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: String::from("test"),
                 config: BucketConfig {
                     hash_algorithm: HashAlgorithm::Sha256,
@@ -1408,6 +1424,7 @@ mod tests {
             let mut deps = mock_dependencies();
             let info = message_info(&addr(CREATOR), &[]);
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: String::from("test"),
                 config: Default::default(),
                 limits: Default::default(),
@@ -1451,6 +1468,7 @@ mod tests {
         let info = message_info(&addr(CREATOR), &[]);
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -1528,6 +1546,7 @@ mod tests {
                 Binary::from_base64(general_purpose::STANDARD.encode("okp4").as_str()).unwrap();
 
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: String::from("test"),
                 config: BucketConfig {
                     hash_algorithm: HashAlgorithm::Sha256,
@@ -1858,6 +1877,7 @@ mod tests {
                 mock_env(),
                 info.clone(),
                 InstantiateMsg {
+                    owner: None,
                     bucket: "test".to_string(),
                     config: Default::default(),
                     limits: BucketLimitsBuilder::default()
@@ -2131,6 +2151,7 @@ mod tests {
                 mock_env(),
                 info.clone(),
                 InstantiateMsg {
+                    owner: None,
                     bucket: "test".to_string(),
                     config: Default::default(),
                     limits: Default::default(),
@@ -2218,6 +2239,7 @@ mod tests {
         let info2 = message_info(&addr("creator2"), &[]);
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -2357,6 +2379,7 @@ mod tests {
         let info2 = message_info(&addr("creator2"), &[]);
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -2458,6 +2481,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -2673,6 +2697,7 @@ mod tests {
                 mock_env(),
                 info.clone(),
                 InstantiateMsg {
+                    owner: None,
                     bucket: "test".to_string(),
                     config: Default::default(),
                     limits: Default::default(),
@@ -2796,6 +2821,7 @@ mod tests {
             mock_env(),
             info.clone(),
             InstantiateMsg {
+                owner: None,
                 bucket: "test".to_string(),
                 config: Default::default(),
                 limits: Default::default(),
@@ -2841,5 +2867,168 @@ mod tests {
             None,
             "Object should successfully restored after a forgot"
         );
+    }
+
+    #[test]
+    fn proper_ownership_initialization_with_none() {
+        let mut deps = mock_dependencies();
+        let info = message_info(&addr(CREATOR), &[]);
+
+        let msg = InstantiateMsg {
+            owner: None,
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+
+        instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert!(ownership.owner.is_none());
+        assert!(ownership.pending_owner.is_none());
+        assert!(ownership.pending_expiry.is_none());
+    }
+
+    #[test]
+    fn proper_ownership_initialization_with_specific_owner() {
+        let mut deps = mock_dependencies();
+        let info = message_info(&addr(CREATOR), &[]);
+        let designated_owner = addr("designated_owner");
+
+        let msg = InstantiateMsg {
+            owner: Some(designated_owner.to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+
+        instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert_eq!(ownership.owner, Some(designated_owner));
+        assert!(ownership.pending_owner.is_none());
+        assert!(ownership.pending_expiry.is_none());
+    }
+
+    #[test]
+    fn update_ownership_transfer_success() {
+        let mut deps = mock_dependencies();
+        let info = message_info(&addr(CREATOR), &[]);
+        let new_owner = addr("new_owner");
+
+        let msg = InstantiateMsg {
+            owner: Some(addr(CREATOR).to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let transfer_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::TransferOwnership {
+            new_owner: new_owner.to_string(),
+            expiry: None,
+        });
+
+        let res = execute(deps.as_mut(), mock_env(), info, transfer_msg).unwrap();
+        assert_eq!(res.messages.len(), 0);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert_eq!(ownership.owner, Some(addr(CREATOR)));
+        assert_eq!(ownership.pending_owner, Some(new_owner));
+        assert!(ownership.pending_expiry.is_none());
+    }
+
+    #[test]
+    fn update_ownership_accept_success() {
+        let mut deps = mock_dependencies();
+        let creator_info = message_info(&addr(CREATOR), &[]);
+        let new_owner = addr("new_owner");
+        let new_owner_info = message_info(&new_owner, &[]);
+
+        let msg = InstantiateMsg {
+            owner: Some(addr(CREATOR).to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), creator_info.clone(), msg).unwrap();
+
+        let transfer_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::TransferOwnership {
+            new_owner: new_owner.to_string(),
+            expiry: None,
+        });
+        execute(deps.as_mut(), mock_env(), creator_info, transfer_msg).unwrap();
+
+        let accept_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::AcceptOwnership);
+        let res = execute(deps.as_mut(), mock_env(), new_owner_info, accept_msg).unwrap();
+        assert_eq!(res.messages.len(), 0);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert_eq!(ownership.owner, Some(new_owner));
+        assert!(ownership.pending_owner.is_none());
+        assert!(ownership.pending_expiry.is_none());
+    }
+
+    #[test]
+    fn update_ownership_unauthorized_fails() {
+        let mut deps = mock_dependencies();
+        let creator_info = message_info(&addr(CREATOR), &[]);
+        let unauthorized_info = message_info(&addr(SENDER), &[]);
+
+        let msg = InstantiateMsg {
+            owner: Some(addr(CREATOR).to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), creator_info, msg).unwrap();
+
+        let transfer_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::TransferOwnership {
+            new_owner: addr("someone_else").to_string(),
+            expiry: None,
+        });
+
+        let err = execute(deps.as_mut(), mock_env(), unauthorized_info, transfer_msg).unwrap_err();
+
+        assert!(matches!(err, ContractError::Ownership(_)));
+    }
+
+    #[test]
+    fn update_ownership_renounce_success() {
+        let mut deps = mock_dependencies();
+        let creator_info = message_info(&addr(CREATOR), &[]);
+
+        let msg = InstantiateMsg {
+            owner: Some(addr(CREATOR).to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), creator_info.clone(), msg).unwrap();
+
+        let renounce_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::RenounceOwnership);
+        let res = execute(deps.as_mut(), mock_env(), creator_info, renounce_msg).unwrap();
+        assert_eq!(res.messages.len(), 0);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert!(ownership.owner.is_none());
+        assert!(ownership.pending_owner.is_none());
+        assert!(ownership.pending_expiry.is_none());
     }
 }

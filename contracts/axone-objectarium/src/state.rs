@@ -13,8 +13,6 @@ pub const DATA: Map<Hash, Vec<u8>> = Map::new("DATA");
 
 #[derive(Clone, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
 pub struct Bucket {
-    /// The owner of the bucket.
-    pub owner: Addr,
     /// The name of the bucket.
     pub name: String,
     /// The configuration for the bucket.
@@ -39,7 +37,6 @@ pub struct BucketStat {
 
 impl Bucket {
     pub fn try_new(
-        owner: Addr,
         name: String,
         config: BucketConfig,
         limits: BucketLimits,
@@ -49,7 +46,6 @@ impl Bucket {
         ensure!(!n.is_empty(), EmptyName);
 
         Ok(Self {
-            owner,
             name: n,
             config,
             limits,

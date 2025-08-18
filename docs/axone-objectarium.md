@@ -154,6 +154,7 @@ Instantiate messages
 | `limits.max_object_size`       | **[Uint128](#uint128)\|null**. The maximum size of the objects in the bucket.                                                                                                                                                                                                              |
 | `limits.max_objects`           | **[Uint128](#uint128)\|null**. The maximum number of objects in the bucket.                                                                                                                                                                                                                |
 | `limits.max_total_size`        | **[Uint128](#uint128)\|null**. The maximum total size of the objects in the bucket.                                                                                                                                                                                                        |
+| `owner`                        | **string\|null**. The contract owner. If not set, the contract starts without an owner (ownerless).                                                                                                                                                                                        |
 | `pagination`                   | **[PaginationConfig](#paginationconfig)**. The configuration for paginated query.                                                                                                                                                                                                          |
 | `pagination.default_page_size` | **integer**. The default number of elements in a page.<br /><br />Shall be less or equal than `max_page_size`. Default to '10' if not set.<br />**Default:** `10`                                                                                                                          |
 | `pagination.max_page_size`     | **integer**. The maximum elements a page can contain.<br /><br />Shall be less than `u32::MAX - 1`. Default to '30' if not set.<br />**Default:** `30`                                                                                                                                     |
@@ -202,6 +203,14 @@ UnpinObject unpins the object in the bucket for the sender. If the object is not
 | ----------------- | -------------------------- |
 | `unpin_object`    | _(Required.) _ **object**. |
 | `unpin_object.id` | _(Required.) _ **string**. |
+
+### ExecuteMsg::undefined
+
+Update the contract's ownership. The `action` to be provided can be either to propose transferring ownership to an account, accept a pending ownership transfer, or renounce the ownership permanently.
+
+| parameter          | description                                |
+| ------------------ | ------------------------------------------ |
+| `update_ownership` | _(Required.) _ **object\|string\|string**. |
 
 ## QueryMsg
 
@@ -254,6 +263,14 @@ ObjectPins returns the list of addresses that pinned the object with the given i
 | `object_pins.after` | **string\|null**. The point in the sequence to start returning pins. |
 | `object_pins.first` | **integer\|null**. The number of pins to return.                     |
 | `object_pins.id`    | _(Required.) _ **string**. The id of the object to get the pins for. |
+
+### QueryMsg::undefined
+
+Query the contract's ownership information
+
+| parameter   | description                |
+| ----------- | -------------------------- |
+| `ownership` | _(Required.) _ **object**. |
 
 ## Responses
 
@@ -324,7 +341,27 @@ ObjectsResponse is the response of the Objects query.
 | `page_info.cursor`        | **string**. The cursor to the next page.                                                              |
 | `page_info.has_next_page` | **boolean**. Tells if there is a next page.                                                           |
 
+### ownership
+
+The contract's ownership info
+
+| property         | description                                                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `owner`          | **string\|null**. The contract's current owner. `None` if the ownership has been renounced.                                                                                                                  |
+| `pending_expiry` | **[Expiration](#expiration)\|null**. The deadline for the pending owner to accept the ownership. `None` if there isn't a pending ownership transfer, or if a transfer exists and it doesn't have a deadline. |
+| `pending_owner`  | **string\|null**. The account who has been proposed to take over the ownership. `None` if there isn't a pending ownership transfer.                                                                          |
+
 ## Definitions
+
+### Action
+
+Actions that can be taken to alter the contract's ownership
+
+| variant   | description                                                                                                                                                                                                                                       |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| undefined | **object**. Propose to transfer the contract's ownership to another account, optionally with an expiry time.<br /><br />Can only be called by the contract's current owner.<br /><br />Any existing pending ownership transfer is overwritten.    |
+| undefined | **string**: `accept_ownership`. Accept the pending ownership transfer.<br /><br />Can only be called by the pending owner.                                                                                                                        |
+| undefined | **string**: `renounce_ownership`. Give up the contract's ownership and the possibility of appointing a new owner.<br /><br />Can only be invoked by the contract's current owner.<br /><br />Any existing pending ownership transfer is canceled. |
 
 ### Binary
 
@@ -380,6 +417,16 @@ The order of the compression algorithms is based on their estimated computationa
 | [Snappy](#snappy)           | **string**: `snappy`. Represents the Snappy algorithm. Snappy is a compression/decompression algorithm that does not aim for maximum compression. Instead, it aims for very high speeds and reasonable compression.<br /><br />See [the snappy web page](https://google.github.io/snappy/) for more information.                                        |
 | [Lzma](#lzma)               | **string**: `lzma`. Represents the LZMA algorithm. LZMA is a lossless data compression/decompression algorithm that features a high compression ratio and a variable compression-dictionary size up to 4 GB.<br /><br />See [the LZMA wiki page](https://en.wikipedia.org/wiki/Lempel%E2%80%93Ziv%E2%80%93Markov_chain_algorithm) for more information. |
 
+### Expiration
+
+Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)
+
+| variant   | description                                                            |
+| --------- | ---------------------------------------------------------------------- |
+| undefined | **object**. AtHeight will expire when `env.block.height` &gt;= height  |
+| undefined | **object**. AtTime will expire when `env.block.time` &gt;= time        |
+| undefined | **object**. Never will never expire. Used to express the empty variant |
+
 ### HashAlgorithm
 
 HashAlgorithm is an enumeration that defines the different hash algorithms supported for hashing the content of objects.
@@ -387,7 +434,7 @@ HashAlgorithm is an enumeration that defines the different hash algorithms suppo
 | variant           | description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [MD5](#md5)       | **string**: `m_d5`. Represents the MD5 algorithm. MD5 is a widely used cryptographic hash function that produces a 128-bit hash value. The computational cost of MD5 is relatively low compared to other hash functions, but its short hash length makes it easier to find hash collisions. It is now considered insecure for cryptographic purposes, but can still used in non-security contexts.<br /><br />MD5 hashes are stored on-chain as 32 hexadecimal characters.<br /><br />See [the MD5 Wikipedia page](https://en.wikipedia.org/wiki/MD5) for more information. |
-| [SHA1](#sha1)     | **string**: `sha224`. Represents the SHA-224 algorithm. SHA-224 is a variant of the SHA-2 family of hash functions that produces a 224-bit hash value. It is similar to SHA-256, but with a shorter output size. The computational cost of SHA-224 is moderate, and its relatively short hash length makes it easier to store and transmit.<br /><br />SHA-224 hashes are stored on-chain as 56 hexadecimal characters.<br /><br />See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.                                                |
+| [Sha224](#sha224) | **string**: `sha224`. Represents the SHA-224 algorithm. SHA-224 is a variant of the SHA-2 family of hash functions that produces a 224-bit hash value. It is similar to SHA-256, but with a shorter output size. The computational cost of SHA-224 is moderate, and its relatively short hash length makes it easier to store and transmit.<br /><br />SHA-224 hashes are stored on-chain as 56 hexadecimal characters.<br /><br />See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.                                                |
 | [SHA256](#sha256) | **string**: `sha256`. Represents the SHA-256 algorithm. SHA-256 is a member of the SHA-2 family of hash functions that produces a 256-bit hash value. It is widely used in cryptography and other security-related applications. The computational cost of SHA-256 is moderate, and its hash length strikes a good balance between security and convenience.<br /><br />SHA-256 hashes are stored on-chain as 64 hexadecimal characters.<br /><br />See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.                               |
 | [SHA384](#sha384) | **string**: `sha384`. Represents the SHA-384 algorithm. SHA-384 is a variant of the SHA-2 family of hash functions that produces a 384-bit hash value. It is similar to SHA-512, but with a shorter output size. The computational cost of SHA-384 is relatively high, but its longer hash length provides better security against hash collisions.<br /><br />SHA-384 hashes are stored on-chain as 96 hexadecimal characters.<br /><br />See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.                                        |
 | [SHA512](#sha512) | **string**: `sha512`. Represents the SHA-512 algorithm. SHA-512 is a member of the SHA-2 family of hash functions that produces a 512-bit hash value. It is widely used in cryptography and other security-related applications. The computational cost of SHA-512 is relatively high, but its longer hash length provides better security against hash collisions.<br /><br />SHA-512 hashes are stored on-chain as 128 hexadecimal characters.<br /><br />See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.                       |
@@ -454,18 +501,6 @@ Represents no compression algorithm. The object is stored as is without any comp
 | --------------- |
 | `"passthrough"` |
 
-### SHA1
-
-Represents the SHA-224 algorithm. SHA-224 is a variant of the SHA-2 family of hash functions that produces a 224-bit hash value. It is similar to SHA-256, but with a shorter output size. The computational cost of SHA-224 is moderate, and its relatively short hash length makes it easier to store and transmit.
-
-SHA-224 hashes are stored on-chain as 56 hexadecimal characters.
-
-See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
-
-| literal    |
-| ---------- |
-| `"sha224"` |
-
 ### SHA256
 
 Represents the SHA-256 algorithm. SHA-256 is a member of the SHA-2 family of hash functions that produces a 256-bit hash value. It is widely used in cryptography and other security-related applications. The computational cost of SHA-256 is moderate, and its hash length strikes a good balance between security and convenience.
@@ -502,6 +537,18 @@ See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more inf
 | ---------- |
 | `"sha512"` |
 
+### Sha224
+
+Represents the SHA-224 algorithm. SHA-224 is a variant of the SHA-2 family of hash functions that produces a 224-bit hash value. It is similar to SHA-256, but with a shorter output size. The computational cost of SHA-224 is moderate, and its relatively short hash length makes it easier to store and transmit.
+
+SHA-224 hashes are stored on-chain as 56 hexadecimal characters.
+
+See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
+
+| literal    |
+| ---------- |
+| `"sha224"` |
+
 ### Snappy
 
 Represents the Snappy algorithm. Snappy is a compression/decompression algorithm that does not aim for maximum compression. Instead, it aims for very high speeds and reasonable compression.
@@ -512,14 +559,59 @@ See [the snappy web page](https://google.github.io/snappy/) for more information
 | ---------- |
 | `"snappy"` |
 
+### Timestamp
+
+A point in time in nanosecond precision.
+
+This type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.
+
+## Examples
+
+````# use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);
+
+let ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```
+
+
+
 ### Uint128
 
 A string containing a 128-bit integer in decimal representation.
 
-| type        |
-| ----------- |
-| **string**. |
+|type|
+|----|
+|**string**.|
+
+### Uint64
+
+A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.
+
+# Examples
+
+Use `from` to create instances of this and `u64` to get the value out:
+
+``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);
+
+let b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```
+
+|type|
+|----|
+|**string**.|
+
+### undefined
+
+Propose to transfer the contract's ownership to another account, optionally with an expiry time.
+
+Can only be called by the contract's current owner.
+
+Any existing pending ownership transfer is overwritten.
+
+|property|description|
+|----------|-----------|
+|`transfer_ownership`|*(Required.) * **object**. |
+|`transfer_ownership.expiry`|**[Expiration](#expiration)\|null**. |
+|`transfer_ownership.new_owner`|*(Required.) * **string**. |
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`bd275d839ab4b49d`)_
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`882a9cdfaa1f0b39`)*
+````

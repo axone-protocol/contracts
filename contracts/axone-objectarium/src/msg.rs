@@ -201,7 +201,7 @@ pub enum HashAlgorithm {
     /// See [the MD5 Wikipedia page](https://en.wikipedia.org/wiki/MD5) for more information.
     MD5,
 
-    /// # SHA1
+    /// # Sha224
     /// Represents the SHA-224 algorithm.
     /// SHA-224 is a variant of the SHA-2 family of hash functions that produces a 224-bit hash value.
     /// It is similar to SHA-256, but with a shorter output size.

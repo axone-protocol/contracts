@@ -23,7 +23,6 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
-    // info.sender,
     cw_ownable::initialize_owner(deps.storage, deps.api, msg.owner.as_deref())?;
     let bucket = Bucket::try_new(
         msg.bucket,
@@ -2868,5 +2867,168 @@ mod tests {
             None,
             "Object should successfully restored after a forgot"
         );
+    }
+
+    #[test]
+    fn proper_ownership_initialization_with_none() {
+        let mut deps = mock_dependencies();
+        let info = message_info(&addr(CREATOR), &[]);
+
+        let msg = InstantiateMsg {
+            owner: None,
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+
+        instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert!(ownership.owner.is_none());
+        assert!(ownership.pending_owner.is_none());
+        assert!(ownership.pending_expiry.is_none());
+    }
+
+    #[test]
+    fn proper_ownership_initialization_with_specific_owner() {
+        let mut deps = mock_dependencies();
+        let info = message_info(&addr(CREATOR), &[]);
+        let designated_owner = addr("designated_owner");
+
+        let msg = InstantiateMsg {
+            owner: Some(designated_owner.to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+
+        instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert_eq!(ownership.owner, Some(designated_owner));
+        assert!(ownership.pending_owner.is_none());
+        assert!(ownership.pending_expiry.is_none());
+    }
+
+    #[test]
+    fn update_ownership_transfer_success() {
+        let mut deps = mock_dependencies();
+        let info = message_info(&addr(CREATOR), &[]);
+        let new_owner = addr("new_owner");
+
+        let msg = InstantiateMsg {
+            owner: Some(addr(CREATOR).to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let transfer_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::TransferOwnership {
+            new_owner: new_owner.to_string(),
+            expiry: None,
+        });
+
+        let res = execute(deps.as_mut(), mock_env(), info, transfer_msg).unwrap();
+        assert_eq!(res.messages.len(), 0);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert_eq!(ownership.owner, Some(addr(CREATOR)));
+        assert_eq!(ownership.pending_owner, Some(new_owner));
+        assert!(ownership.pending_expiry.is_none());
+    }
+
+    #[test]
+    fn update_ownership_accept_success() {
+        let mut deps = mock_dependencies();
+        let creator_info = message_info(&addr(CREATOR), &[]);
+        let new_owner = addr("new_owner");
+        let new_owner_info = message_info(&new_owner, &[]);
+
+        let msg = InstantiateMsg {
+            owner: Some(addr(CREATOR).to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), creator_info.clone(), msg).unwrap();
+
+        let transfer_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::TransferOwnership {
+            new_owner: new_owner.to_string(),
+            expiry: None,
+        });
+        execute(deps.as_mut(), mock_env(), creator_info, transfer_msg).unwrap();
+
+        let accept_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::AcceptOwnership);
+        let res = execute(deps.as_mut(), mock_env(), new_owner_info, accept_msg).unwrap();
+        assert_eq!(res.messages.len(), 0);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert_eq!(ownership.owner, Some(new_owner));
+        assert!(ownership.pending_owner.is_none());
+        assert!(ownership.pending_expiry.is_none());
+    }
+
+    #[test]
+    fn update_ownership_unauthorized_fails() {
+        let mut deps = mock_dependencies();
+        let creator_info = message_info(&addr(CREATOR), &[]);
+        let unauthorized_info = message_info(&addr(SENDER), &[]);
+
+        let msg = InstantiateMsg {
+            owner: Some(addr(CREATOR).to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), creator_info, msg).unwrap();
+
+        let transfer_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::TransferOwnership {
+            new_owner: addr("someone_else").to_string(),
+            expiry: None,
+        });
+
+        let err = execute(deps.as_mut(), mock_env(), unauthorized_info, transfer_msg).unwrap_err();
+
+        assert!(matches!(err, ContractError::Ownership(_)));
+    }
+
+    #[test]
+    fn update_ownership_renounce_success() {
+        let mut deps = mock_dependencies();
+        let creator_info = message_info(&addr(CREATOR), &[]);
+
+        let msg = InstantiateMsg {
+            owner: Some(addr(CREATOR).to_string()),
+            bucket: "test".to_string(),
+            config: Default::default(),
+            limits: Default::default(),
+            pagination: Default::default(),
+        };
+        instantiate(deps.as_mut(), mock_env(), creator_info.clone(), msg).unwrap();
+
+        let renounce_msg = ExecuteMsg::UpdateOwnership(cw_ownable::Action::RenounceOwnership);
+        let res = execute(deps.as_mut(), mock_env(), creator_info, renounce_msg).unwrap();
+        assert_eq!(res.messages.len(), 0);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Ownership {}).unwrap();
+        let ownership: cw_ownable::Ownership<cosmwasm_std::Addr> = from_json(&res).unwrap();
+
+        assert!(ownership.owner.is_none());
+        assert!(ownership.pending_owner.is_none());
+        assert!(ownership.pending_expiry.is_none());
     }
 }

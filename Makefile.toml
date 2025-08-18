@@ -598,7 +598,7 @@ docker run --rm \
 '''
 
 [tasks.install-cranky]
-install_crate = { crate_name = "cranky", min_version = "0.3.0" }
+install_crate = { crate_name = "cargo-cranky", min_version = "0.3.0" }
 
 [tasks.install-taplo-cli]
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help", min_version = "0.9.0" }

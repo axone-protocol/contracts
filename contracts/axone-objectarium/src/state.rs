@@ -134,40 +134,29 @@ pub struct BucketConfig {
     ///
     /// The default algorithm is Sha256.
     pub hash_algorithm: HashAlgorithm,
-    /// The accepted compression algorithms for the objects in the bucket.
-    ///
-    /// The default is all compression algorithms.
-    pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
+    /// The compression algorithm used for all objects in the bucket.
+    /// All objects stored in the bucket will use this compression algorithm.
+    /// The default algorithm is Passthrough.
+    pub compression_algorithm: CompressionAlgorithm,
 }
 
 impl BucketConfig {
-    fn try_new(
+    fn new(
         hash_algorithm: HashAlgorithm,
-        accepted_compression_algorithms: Vec<CompressionAlgorithm>,
-    ) -> StdResult<BucketConfig> {
-        ensure!(
-            !accepted_compression_algorithms.is_empty(),
-            StdError::generic_err("'accepted_compression_algorithms' cannot be empty")
-        );
-
-        Ok(BucketConfig {
+        compression_algorithm: CompressionAlgorithm,
+    ) -> BucketConfig {
+        BucketConfig {
             hash_algorithm,
-            accepted_compression_algorithms,
-        })
+            compression_algorithm,
+        }
     }
 }
 
-impl TryFrom<msg::BucketConfig> for BucketConfig {
-    type Error = StdError;
-
-    fn try_from(config: msg::BucketConfig) -> StdResult<BucketConfig> {
-        BucketConfig::try_new(
+impl From<msg::BucketConfig> for BucketConfig {
+    fn from(config: msg::BucketConfig) -> BucketConfig {
+        BucketConfig::new(
             config.hash_algorithm.into(),
-            config
-                .accepted_compression_algorithms
-                .into_iter()
-                .map(Into::into)
-                .collect(),
+            config.compression_algorithm.into(),
         )
     }
 }
@@ -176,11 +165,7 @@ impl From<BucketConfig> for msg::BucketConfig {
     fn from(config: BucketConfig) -> Self {
         msg::BucketConfig {
             hash_algorithm: config.hash_algorithm.into(),
-            accepted_compression_algorithms: config
-                .accepted_compression_algorithms
-                .into_iter()
-                .map(Into::into)
-                .collect(),
+            compression_algorithm: config.compression_algorithm.into(),
         }
     }
 }
@@ -348,7 +333,6 @@ impl From<&Object> for ObjectResponse {
             owner: object.owner.clone().into(),
             is_pinned: object.pin_count > Uint128::zero(),
             compressed_size: object.compressed_size,
-            compression_algorithm: object.compression.into(),
         }
     }
 }

@@ -26,6 +26,7 @@ base16ct = { version = "0.2.0", features = ["alloc"] }
 bs58 = "0.5.1"
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
+cw-ownable = "2.1.0"
 cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true

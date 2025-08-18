@@ -164,11 +164,12 @@ pub struct BucketResponse {
 /// during both compression and decompression, ranging from the lowest to the highest. This particular
 /// order is utilized to establish the default compression algorithm for storing an object.
 #[cw_serde]
-#[derive(Copy, Eq, PartialOrd, Sequence)]
+#[derive(Copy, Default, Eq, PartialOrd, Sequence)]
 pub enum CompressionAlgorithm {
     /// # Passthrough
     /// Represents no compression algorithm.
     /// The object is stored as is without any compression.
+    #[default]
     Passthrough,
     /// # Snappy
     /// Represents the Snappy algorithm.
@@ -188,7 +189,7 @@ pub enum CompressionAlgorithm {
 /// HashAlgorithm is an enumeration that defines the different hash algorithms
 /// supported for hashing the content of objects.
 #[cw_serde]
-#[derive(Copy)]
+#[derive(Copy, Default, Eq)]
 pub enum HashAlgorithm {
     /// # MD5
     /// Represents the MD5 algorithm.
@@ -224,6 +225,7 @@ pub enum HashAlgorithm {
     /// SHA-256 hashes are stored on-chain as 64 hexadecimal characters.
     ///
     /// See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
+    #[default]
     Sha256,
 
     /// # SHA384
@@ -249,12 +251,6 @@ pub enum HashAlgorithm {
     ///
     /// See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
     Sha512,
-}
-
-impl Default for HashAlgorithm {
-    fn default() -> Self {
-        Self::Sha256
-    }
 }
 
 /// BucketConfig is the type of the configuration of a bucket.

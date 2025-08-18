@@ -9,9 +9,12 @@ use thiserror::Error;
 
 /// CompressionAlgorithm is an enumeration that defines the different compression algorithms
 /// supported for compressing the content of objects.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, JsonSchema, PartialEq, Sequence, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Deserialize, Eq, JsonSchema, PartialEq, Sequence, Serialize,
+)]
 pub enum CompressionAlgorithm {
     /// Represents the "No compression" algorithm.
+    #[default]
     Passthrough,
     /// Represents the Snappy algorithm.
     Snappy,

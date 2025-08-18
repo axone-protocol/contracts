@@ -1,6 +1,7 @@
 use crate::compress::CompressionError;
 use crate::msg::CompressionAlgorithm;
 use cosmwasm_std::{StdError, Uint128};
+use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use thiserror::Error;
 
@@ -20,6 +21,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     Payment(#[from] PaymentError),
+
+    #[error("{0}")]
+    Ownership(#[from] OwnershipError),
 }
 
 #[derive(Debug, Eq, Error, PartialEq)]

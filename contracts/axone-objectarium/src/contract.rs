@@ -23,8 +23,9 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
+    // info.sender,
+    cw_ownable::initialize_owner(deps.storage, deps.api, msg.owner.as_deref())?;
     let bucket = Bucket::try_new(
-        info.sender,
         msg.bucket,
         msg.config.into(),
         msg.limits.try_into()?,
@@ -40,7 +41,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut<'_>,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -51,6 +52,10 @@ pub fn execute(
         ExecuteMsg::PinObject { id } => execute::pin_object(deps, info, id),
         ExecuteMsg::UnpinObject { id } => execute::unpin_object(deps, info, id),
         ExecuteMsg::ForgetObject { id } => execute::forget_object(deps, info, id),
+        ExecuteMsg::UpdateOwnership(action) => {
+            cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
+            Ok(Response::new())
+        }
     }
 }
 
@@ -279,6 +284,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::ObjectPins { id, after, first } => {
             to_json_binary(&query::object_pins(deps, id, after, first)?)
         }
+        QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
     }
 }
 
@@ -454,6 +460,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "foo".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -474,7 +481,6 @@ mod tests {
 
         // check internal state too
         let bucket = BUCKET.load(&deps.storage).unwrap();
-        assert_eq!(addr(CREATOR), bucket.owner);
         assert_eq!(Uint128::zero(), bucket.stat.size);
         assert_eq!(Uint128::zero(), bucket.stat.object_count);
     }
@@ -494,6 +500,7 @@ mod tests {
 
         for (hash_algorithm, expected_hash_algorithm) in test_cases {
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: "bar".to_string(),
                 config: BucketConfig {
                     hash_algorithm,
@@ -519,6 +526,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "bar".to_string(),
             config: Default::default(),
             limits: BucketLimitsBuilder::default()
@@ -565,6 +573,7 @@ mod tests {
     fn proper_pagination_initialization() {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "bar".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -712,6 +721,7 @@ mod tests {
         for case in cases {
             let mut deps = mock_dependencies();
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: "bar".to_string(),
                 config: case.0,
                 limits: case.1,
@@ -737,6 +747,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -754,6 +765,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "foo bar".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -773,6 +785,7 @@ mod tests {
     fn funds_initialization() {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
+            owner: None,
             bucket: "foo".to_string(),
             config: Default::default(),
             limits: Default::default(),
@@ -1012,6 +1025,7 @@ mod tests {
                 mock_env(),
                 info.clone(),
                 InstantiateMsg {
+                    owner: None,
                     bucket: "test".to_string(),
                     config: BucketConfig {
                         hash_algorithm,
@@ -1092,6 +1106,7 @@ mod tests {
         let mut deps = mock_dependencies();
         let info = message_info(&addr(CREATOR), &[]);
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -1220,6 +1235,7 @@ mod tests {
             let mut deps = mock_dependencies();
             let info = message_info(&addr(CREATOR), &[]);
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: String::from("test"),
                 config: Default::default(),
                 limits: case.0,
@@ -1258,6 +1274,7 @@ mod tests {
 
             // Initialize bucket with specific compression algorithm
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: String::from("test"),
                 config: BucketConfig {
                     hash_algorithm: HashAlgorithm::Sha256,
@@ -1408,6 +1425,7 @@ mod tests {
             let mut deps = mock_dependencies();
             let info = message_info(&addr(CREATOR), &[]);
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: String::from("test"),
                 config: Default::default(),
                 limits: Default::default(),
@@ -1451,6 +1469,7 @@ mod tests {
         let info = message_info(&addr(CREATOR), &[]);
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -1528,6 +1547,7 @@ mod tests {
                 Binary::from_base64(general_purpose::STANDARD.encode("okp4").as_str()).unwrap();
 
             let msg = InstantiateMsg {
+                owner: None,
                 bucket: String::from("test"),
                 config: BucketConfig {
                     hash_algorithm: HashAlgorithm::Sha256,
@@ -1858,6 +1878,7 @@ mod tests {
                 mock_env(),
                 info.clone(),
                 InstantiateMsg {
+                    owner: None,
                     bucket: "test".to_string(),
                     config: Default::default(),
                     limits: BucketLimitsBuilder::default()
@@ -2131,6 +2152,7 @@ mod tests {
                 mock_env(),
                 info.clone(),
                 InstantiateMsg {
+                    owner: None,
                     bucket: "test".to_string(),
                     config: Default::default(),
                     limits: Default::default(),
@@ -2218,6 +2240,7 @@ mod tests {
         let info2 = message_info(&addr("creator2"), &[]);
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -2357,6 +2380,7 @@ mod tests {
         let info2 = message_info(&addr("creator2"), &[]);
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -2458,6 +2482,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
+            owner: None,
             bucket: String::from("test"),
             config: Default::default(),
             limits: Default::default(),
@@ -2673,6 +2698,7 @@ mod tests {
                 mock_env(),
                 info.clone(),
                 InstantiateMsg {
+                    owner: None,
                     bucket: "test".to_string(),
                     config: Default::default(),
                     limits: Default::default(),
@@ -2796,6 +2822,7 @@ mod tests {
             mock_env(),
             info.clone(),
             InstantiateMsg {
+                owner: None,
                 bucket: "test".to_string(),
                 config: Default::default(),
                 limits: Default::default(),

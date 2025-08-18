@@ -31,7 +31,6 @@ cw-storage-plus.workspace = true
 cw-utils.workspace = true
 cw2.workspace = true
 derive_builder = "0.20.2"
-either = "1.15.0"
 enum-iterator = "2.1.0"
 lzma-rs = "0.3.0"
 md-5 = "0.10.6"

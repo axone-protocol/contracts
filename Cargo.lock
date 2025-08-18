@@ -327,7 +327,6 @@ dependencies = [
  "cw-utils",
  "cw2",
  "derive_builder",
- "either",
  "enum-iterator",
  "lzma-rs",
  "md-5",

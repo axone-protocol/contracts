@@ -1,7 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Binary, Uint128};
 use derive_builder::Builder;
-use enum_iterator::{all, Sequence};
 
 /// ObjectId is the type of identifier of an object in the bucket.
 pub type ObjectId = String;
@@ -41,21 +40,14 @@ pub enum ExecuteMsg {
     /// objects can be stored without pinning. However, be aware that non-pinned objects can be removed
     /// from the storage by anyone at any time, making them no longer accessible.
     ///
-    /// The "compression_algorithm" parameter specifies the algorithm for compressing the object before
-    /// storing it in the storage, which is optional. If no algorithm is specified, the algorithm used
-    /// is the first algorithm of the bucket configuration limits. Note that the chosen algorithm can
-    /// save storage space, but it will increase CPU usage. Depending on the chosen compression algorithm
-    /// and the achieved compression ratio, the gas cost of the operation will vary, either increasing or decreasing.
+    /// The object will be compressed using the bucket's compression algorithm as specified
+    /// in the bucket configuration.
     StoreObject {
         /// The content of the object to store.
         data: Binary,
         /// Specifies whether the object should be pinned for the sender.
         /// Pinning ensures the object remains persistent and cannot be removed from storage by anyone.
         pin: bool,
-        /// Specifies the compression algorithm to use when storing the object.
-        /// If None, the first algorithm specified in the list of accepted compression algorithms of the bucket
-        /// is used (see [BucketLimits::accepted_compression_algorithms]).
-        compression_algorithm: Option<CompressionAlgorithm>,
     },
 
     /// # ForgetObject
@@ -164,11 +156,12 @@ pub struct BucketResponse {
 /// during both compression and decompression, ranging from the lowest to the highest. This particular
 /// order is utilized to establish the default compression algorithm for storing an object.
 #[cw_serde]
-#[derive(Copy, Eq, PartialOrd, Sequence)]
+#[derive(Copy, Default, Eq)]
 pub enum CompressionAlgorithm {
     /// # Passthrough
     /// Represents no compression algorithm.
     /// The object is stored as is without any compression.
+    #[default]
     Passthrough,
     /// # Snappy
     /// Represents the Snappy algorithm.
@@ -188,7 +181,7 @@ pub enum CompressionAlgorithm {
 /// HashAlgorithm is an enumeration that defines the different hash algorithms
 /// supported for hashing the content of objects.
 #[cw_serde]
-#[derive(Copy)]
+#[derive(Copy, Default, Eq)]
 pub enum HashAlgorithm {
     /// # MD5
     /// Represents the MD5 algorithm.
@@ -224,6 +217,7 @@ pub enum HashAlgorithm {
     /// SHA-256 hashes are stored on-chain as 64 hexadecimal characters.
     ///
     /// See [the SHA-2 Wikipedia page](https://en.wikipedia.org/wiki/SHA-2) for more information.
+    #[default]
     Sha256,
 
     /// # SHA384
@@ -251,18 +245,12 @@ pub enum HashAlgorithm {
     Sha512,
 }
 
-impl Default for HashAlgorithm {
-    fn default() -> Self {
-        Self::Sha256
-    }
-}
-
 /// BucketConfig is the type of the configuration of a bucket.
 ///
 /// The configuration is set at the instantiation of the bucket, and is immutable and cannot be changed.
 /// The configuration is optional and if not set, the default configuration is used.
 #[cw_serde]
-#[derive(Builder)]
+#[derive(Builder, Default)]
 #[builder(default, setter(into, strip_option))]
 pub struct BucketConfig {
     /// The algorithm used to hash the content of the objects to generate the id of the objects.
@@ -271,34 +259,11 @@ pub struct BucketConfig {
     /// The default algorithm is Sha256 if not set.
     #[serde(default)]
     pub hash_algorithm: HashAlgorithm,
-    /// The acceptable compression algorithms for the objects in the bucket.
-    /// If this parameter is not set, then all compression algorithms are accepted.
-    /// If this parameter is set, then only the compression algorithms in the array are accepted.
-    ///
-    /// When an object is stored in the bucket without a specified compression algorithm, the first
-    /// algorithm in the array is used. Therefore, the order of the algorithms in the array is significant.
-    /// Typically, the most efficient compression algorithm, such as the NoCompression algorithm, should
-    /// be placed first in the array.
-    ///
-    /// Any attempt to store an object using a different compression algorithm than the ones specified
-    /// here will fail.
-    #[serde(default = "CompressionAlgorithm::values")]
-    pub accepted_compression_algorithms: Vec<CompressionAlgorithm>,
-}
-
-impl Default for BucketConfig {
-    fn default() -> Self {
-        Self {
-            hash_algorithm: Default::default(),
-            accepted_compression_algorithms: CompressionAlgorithm::values(),
-        }
-    }
-}
-
-impl CompressionAlgorithm {
-    pub fn values() -> Vec<CompressionAlgorithm> {
-        all::<CompressionAlgorithm>().collect::<Vec<_>>()
-    }
+    /// The compression algorithm used for all objects in the bucket.
+    /// All objects stored in the bucket will use this compression algorithm.
+    /// The default algorithm is Passthrough if not set.
+    #[serde(default)]
+    pub compression_algorithm: CompressionAlgorithm,
 }
 
 /// BucketLimits is the type of the limits of a bucket.
@@ -386,8 +351,6 @@ pub struct ObjectResponse {
     /// The size of the object when compressed. If the object is not compressed, the value is the
     /// same as `size`.
     pub compressed_size: Uint128,
-    /// The compression algorithm used to compress the content of the object.
-    pub compression_algorithm: CompressionAlgorithm,
 }
 
 /// # ObjectsResponse
@@ -412,7 +375,7 @@ pub struct ObjectPinsResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::CompressionAlgorithm::{Lzma, Passthrough, Snappy};
+    use crate::msg::CompressionAlgorithm::Passthrough;
     use crate::msg::HashAlgorithm::Sha256;
     use crate::msg::{BucketConfig, BucketLimits, InstantiateMsg, PaginationConfig};
     use schemars::_serde_json;
@@ -436,10 +399,7 @@ mod tests {
 
         let config: BucketConfig = _serde_json::from_str(json).unwrap();
         assert_eq!(config.hash_algorithm, Sha256);
-        assert_eq!(
-            config.accepted_compression_algorithms,
-            vec![Passthrough, Snappy, Lzma]
-        );
+        assert_eq!(config.compression_algorithm, Passthrough);
     }
 
     #[test]
@@ -467,10 +427,7 @@ mod tests {
         assert_eq!(msg.pagination.max_page_size, 30);
         assert_eq!(msg.pagination.default_page_size, 10);
         assert_eq!(msg.config.hash_algorithm, Sha256);
-        assert_eq!(
-            msg.config.accepted_compression_algorithms,
-            vec![Passthrough, Snappy, Lzma]
-        );
+        assert_eq!(msg.config.compression_algorithm, Passthrough);
         assert_eq!(msg.limits.max_object_pins, None);
         assert_eq!(msg.limits.max_objects, None);
         assert_eq!(msg.limits.max_object_size, None);

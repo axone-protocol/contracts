@@ -35,7 +35,6 @@ pub fn instantiate(
     let store_msg = StorageMsg::StoreObject {
         data: msg.program.clone(),
         pin: true,
-        compression_algorithm: None,
     };
 
     let store_program_msg = WasmMsg::Execute {
@@ -378,14 +377,9 @@ mod tests {
                 WasmMsg::Execute { msg, .. } => {
                     let result: StorageMsg = from_json(msg).unwrap();
                     match result {
-                        StorageMsg::StoreObject {
-                            data,
-                            pin,
-                            compression_algorithm,
-                        } => {
+                        StorageMsg::StoreObject { data, pin } => {
                             assert_eq!(data, program);
                             assert!(pin, "the main program should be pinned");
-                            assert_eq!(compression_algorithm, None);
                         }
                         _ => panic!("storage message should be a StoreObject message"),
                     }

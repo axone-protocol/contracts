@@ -8,9 +8,7 @@ use cw2::set_contract_version;
 use cw_utils::nonpayable;
 
 use axone_logic_bindings::LogicCustomQuery;
-use axone_objectarium::msg::{
-    ExecuteMsg as StorageMsg, ObjectPinsResponse, QueryMsg as StorageQuery,
-};
+use axone_objectarium::msg::{ExecuteMsg as StorageMsg, QueryMsg as StorageQuery};
 use axone_objectarium_client::ObjectRef;
 
 use crate::error::ContractError;
@@ -63,9 +61,9 @@ pub fn execute(
 }
 
 pub mod execute {
-    use cosmwasm_std::{ensure_eq, Order};
-
     use crate::state::{DEPENDENCIES, PROGRAM};
+    use axone_objectarium::msg::PinsForObjectResponse;
+    use cosmwasm_std::{ensure_eq, Order};
 
     use super::*;
 
@@ -93,10 +91,10 @@ pub mod execute {
 
         let law_release_msg = match deps
             .querier
-            .query_wasm_smart::<ObjectPinsResponse>(
+            .query_wasm_smart::<PinsForObjectResponse>(
                 stone.law.storage_address.clone(),
-                &StorageQuery::ObjectPins {
-                    id: stone.law.object_id.clone(),
+                &StorageQuery::PinsForObject {
+                    object_id: stone.law.object_id.clone(),
                     first: Some(1u32),
                     after: None,
                 },
@@ -295,7 +293,7 @@ mod tests {
     use axone_logic_bindings::{
         Answer, AskResponse, LogicCustomQuery, Result as LogicResult, Substitution,
     };
-    use axone_objectarium::msg::PageInfo;
+    use axone_objectarium::msg::{PageInfo, PinsForObjectResponse};
     use axone_wasm::uri::CosmwasmUri;
     use testing::addr::{addr, CREATOR, SENDER};
 
@@ -948,12 +946,12 @@ mod tests {
                     if contract_addr == "axone-objectarium1" =>
                 {
                     match from_json(msg) {
-                        Ok(StorageQuery::ObjectPins {
-                            id,
+                        Ok(StorageQuery::PinsForObject {
+                            object_id: id,
                             first: Some(1u32),
                             after: None,
                         }) if id == "program-id" => SystemResult::Ok(ContractResult::Ok(
-                            to_json_binary(&ObjectPinsResponse {
+                            to_json_binary(&PinsForObjectResponse {
                                 data: vec!["creator".to_string()],
                                 page_info: PageInfo {
                                     has_next_page: case.0 > 1,
@@ -1073,7 +1071,7 @@ mod tests {
                     SystemResult::Ok(ContractResult::Ok(to_json_binary(&contract_info).unwrap()))
                 }
                 WasmQuery::Smart { .. } => SystemResult::Ok(ContractResult::Ok(
-                    to_json_binary(&ObjectPinsResponse {
+                    to_json_binary(&PinsForObjectResponse {
                         data: vec![case.1.to_string()],
                         page_info: PageInfo {
                             has_next_page: false,

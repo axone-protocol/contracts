@@ -309,8 +309,6 @@ pub const BUCKET: Item<Bucket> = Item::new("bucket");
 pub struct Object {
     /// The id of the object.
     pub id: Hash,
-    /// The owner of the object.
-    pub owner: Addr,
     /// The size of the object.
     pub size: Uint128,
     /// The number of pin on this object.
@@ -326,32 +324,13 @@ impl From<&Object> for ObjectResponse {
         ObjectResponse {
             id: object.id.to_string(),
             size: object.size,
-            owner: object.owner.clone().into(),
             is_pinned: object.pin_count > Uint128::zero(),
             compressed_size: object.compressed_size,
         }
     }
 }
 
-pub struct ObjectIndexes<'a> {
-    pub owner: MultiIndex<'a, Addr, Object, Hash>,
-}
-
-impl IndexList<Object> for ObjectIndexes<'_> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Object>> + '_> {
-        let owner: &dyn Index<Object> = &self.owner;
-        Box::new(vec![owner].into_iter())
-    }
-}
-
-pub fn objects<'a>() -> IndexedMap<Hash, Object, ObjectIndexes<'a>> {
-    IndexedMap::new(
-        "OBJECT",
-        ObjectIndexes {
-            owner: MultiIndex::new(|_, object| object.owner.clone(), "OBJECT", "OBJECT__OWNER"),
-        },
-    )
-}
+pub const OBJECT: Map<Hash, Object> = Map::new("OBJECT");
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Pin {
@@ -361,22 +340,28 @@ pub struct Pin {
     pub address: Addr,
 }
 
+/// The primary key for a pin is a tuple of the object id and the address that pinned it.
+pub type PinPK = (Hash, Addr);
+
 pub struct PinIndexes<'a> {
-    pub object: MultiIndex<'a, Hash, Pin, (Hash, Addr)>,
+    pub object: MultiIndex<'a, Hash, Pin, PinPK>,
+    pub address: MultiIndex<'a, Addr, Pin, PinPK>,
 }
 
 impl IndexList<Pin> for PinIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Pin>> + '_> {
         let object: &dyn Index<Pin> = &self.object;
-        Box::new(vec![object].into_iter())
+        let address: &dyn Index<Pin> = &self.address;
+        Box::new(vec![object, address].into_iter())
     }
 }
 
-pub fn pins<'a>() -> IndexedMap<(Hash, Addr), Pin, PinIndexes<'a>> {
+pub fn pins<'a>() -> IndexedMap<PinPK, Pin, PinIndexes<'a>> {
     IndexedMap::new(
         "PIN",
         PinIndexes {
-            object: MultiIndex::new(|_, pin| pin.id.clone(), "PIN", "PIN__OBJECT"),
+            object: MultiIndex::new(|_, p| p.id.clone(), "PIN", "PIN__OBJECT"),
+            address: MultiIndex::new(|_, p| p.address.clone(), "PIN", "PIN__ADDRESS"),
         },
     )
 }

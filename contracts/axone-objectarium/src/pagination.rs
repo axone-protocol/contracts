@@ -81,7 +81,7 @@ where
         }
     }
 
-    pub fn query_page_cursor_fn<I, CD, CE>(
+    fn query_page_cursor_fn<I, CD, CE>(
         self,
         iter_fn: I,
         cursor_dec_fn: CD,
@@ -92,7 +92,7 @@ where
     where
         I: FnOnce(Option<Bound<'_, PK>>) -> Box<dyn Iterator<Item = StdResult<(PK, T)>> + 'a>,
         CD: FnOnce(Cursor) -> StdResult<PK>,
-        CE: FnOnce(&T) -> Cursor,
+        CE: FnOnce(&T) -> StdResult<Cursor>,
     {
         let min_bound = match after {
             Some(cursor) => Some(Bound::exclusive(cursor_dec_fn(cursor)?)),
@@ -109,7 +109,11 @@ where
             items.pop();
         }
 
-        let cursor = items.last().map_or_else(String::new, cursor_enc_fn);
+        let cursor = items
+            .last()
+            .map(cursor_enc_fn)
+            .transpose()?
+            .unwrap_or_default();
 
         Ok((
             items,
@@ -188,7 +192,7 @@ mod tests {
         };
         let cursor_dec_fn =
             |cursor: Cursor| cursor.parse::<i32>().map_err(|_| StdError::generic_err(""));
-        let cursor_enc_fn = |pk: &i32| pk.to_string();
+        let cursor_enc_fn = |pk: &i32| Ok(pk.to_string());
 
         let res = handler
             .clone()
@@ -298,7 +302,7 @@ mod tests {
         };
         let cursor_dec_fn =
             |cursor: Cursor| cursor.parse::<i32>().map_err(|_| StdError::generic_err(""));
-        let cursor_enc_fn = |pk: &i32| pk.to_string();
+        let cursor_enc_fn = |pk: &i32| Ok(pk.to_string());
 
         let res = handler.clone().query_page_cursor_fn(
             |_: Option<Bound<i32>>| {

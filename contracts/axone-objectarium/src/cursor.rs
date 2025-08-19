@@ -1,7 +1,7 @@
 use crate::crypto::Hash;
 use crate::msg::Cursor;
-use crate::state::Object;
-use cosmwasm_std::{StdError, StdResult};
+use crate::state::{Object, Pin};
+use cosmwasm_std::{Addr, StdError, StdResult};
 
 pub fn encode<I: AsRef<[u8]>>(id: I) -> Cursor {
     bs58::encode(id).into_string()
@@ -16,13 +16,13 @@ pub fn decode<I: AsRef<[u8]>>(cursor: I) -> StdResult<Cursor> {
 }
 
 pub trait AsCursor<PK> {
-    fn encode_cursor(&self) -> Cursor;
+    fn encode_cursor(&self) -> StdResult<Cursor>;
     fn decode_cursor(_: Cursor) -> StdResult<PK>;
 }
 
 impl AsCursor<Hash> for Object {
-    fn encode_cursor(&self) -> Cursor {
-        bs58::encode(&self.id).into_string()
+    fn encode_cursor(&self) -> StdResult<Cursor> {
+        Ok(bs58::encode(&self.id).into_string())
     }
 
     fn decode_cursor(cursor: Cursor) -> StdResult<Hash> {
@@ -30,6 +30,48 @@ impl AsCursor<Hash> for Object {
             .into_vec()
             .map(Into::into)
             .map_err(|err| StdError::parse_err("Cursor", err))
+    }
+}
+
+impl AsCursor<(Addr, Hash)> for Pin {
+    fn encode_cursor(&self) -> StdResult<Cursor> {
+        let pair = (self.address.as_str(), &self.id);
+        let json =
+            serde_json::to_vec(&pair).map_err(|err| StdError::serialize_err("Cursor", err))?;
+
+        Ok(bs58::encode(json).into_string())
+    }
+
+    fn decode_cursor(cursor: Cursor) -> StdResult<(Addr, Hash)> {
+        let data = bs58::decode(&cursor)
+            .into_vec()
+            .map_err(|err| StdError::parse_err("Cursor", err.to_string()))?;
+
+        let (addr_str, hash_bytes): (String, Vec<u8>) = serde_json::from_slice(&data)
+            .map_err(|err| StdError::parse_err("Cursor", err.to_string()))?;
+
+        Ok((Addr::unchecked(addr_str), hash_bytes.into()))
+    }
+}
+
+impl AsCursor<(Hash, Addr)> for Pin {
+    fn encode_cursor(&self) -> StdResult<Cursor> {
+        let pair = (&self.id, self.address.as_str());
+        let json =
+            serde_json::to_vec(&pair).map_err(|err| StdError::serialize_err("Cursor", err))?;
+
+        Ok(bs58::encode(json).into_string())
+    }
+
+    fn decode_cursor(cursor: Cursor) -> StdResult<(Hash, Addr)> {
+        let data = bs58::decode(&cursor)
+            .into_vec()
+            .map_err(|err| StdError::parse_err("Cursor", err.to_string()))?;
+
+        let (hash_bytes, addr_str): (Vec<u8>, String) = serde_json::from_slice(&data)
+            .map_err(|err| StdError::parse_err("Cursor", err.to_string()))?;
+
+        Ok((hash_bytes.into(), Addr::unchecked(addr_str)))
     }
 }
 

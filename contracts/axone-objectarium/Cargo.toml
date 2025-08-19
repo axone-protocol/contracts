@@ -23,6 +23,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 base16ct = { version = "0.2.0", features = ["alloc"] }
+bin-it = "1.2.0"
 bs58 = "0.5.1"
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true

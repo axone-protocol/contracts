@@ -1,15 +1,18 @@
 use crate::error::BucketError;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
+};
 use cw2::set_contract_version;
 use cw_utils::nonpayable;
 
 use crate::crypto;
+use crate::crypto::Hash;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, ObjectId, QueryMsg};
 use crate::state;
-use crate::state::{objects, pins, Bucket, Object, Pin, BUCKET, DATA};
+use crate::state::{pins, Bucket, Object, Pin, BUCKET, DATA, OBJECT};
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
@@ -60,7 +63,6 @@ pub fn execute(
 
 pub mod execute {
     use super::*;
-    use crate::compress::CompressionAlgorithm;
     use crate::crypto::Hash;
     use crate::state::BucketLimits;
     use crate::ContractError::ObjectPinned;
@@ -74,7 +76,6 @@ pub mod execute {
     ) -> Result<Response, ContractError> {
         let size = (data.len() as u128).into();
         let bucket = BUCKET.load(deps.storage)?;
-        let compression: CompressionAlgorithm = bucket.config.compression_algorithm;
 
         // pre-conditions
         if let Some(limit) = bucket.limits.max_object_size {
@@ -106,15 +107,13 @@ pub mod execute {
             .add_attribute("action", "store_object")
             .add_attribute("id", id.to_string());
 
-        let data_path = DATA.key(id.clone());
-
-        let (old_obj, mut new_obj) = if !data_path.has(deps.storage) {
+        let exists = object_exists(deps.storage, &id);
+        let mut object = if !exists {
+            let compression = bucket.config.compression_algorithm;
             let compressed_data = compression.compress(&data)?;
-            data_path.save(deps.storage, &compressed_data)?;
+            let compressed_size = Uint128::from(compressed_data.len() as u128);
 
-            let compressed_size = (compressed_data.len() as u128).into();
-
-            // save bucket stats
+            DATA.save(deps.storage, id.clone(), &compressed_data)?;
             BUCKET.update(deps.storage, |mut bucket| -> Result<_, ContractError> {
                 let stat = &mut bucket.stat;
                 stat.size += size;
@@ -127,28 +126,26 @@ pub mod execute {
                 .add_attribute("size", size)
                 .add_attribute("compressed_size", compressed_size);
 
-            (
-                None,
-                Object {
-                    id: id.clone(),
-                    owner: info.sender.clone(),
-                    size,
-                    pin_count: Uint128::zero(),
-                    compression,
-                    compressed_size,
-                },
-            )
+            Object {
+                id: id.clone(),
+                size,
+                pin_count: Uint128::zero(),
+                compression,
+                compressed_size,
+            }
         } else {
-            let old = objects().load(deps.storage, id.clone())?;
-            (Some(old.clone()), old)
+            OBJECT.load(deps.storage, id.clone())?
         };
 
-        let mut pinned = false;
-        if pin {
-            pinned = may_pin_object(deps.storage, info.sender, &mut new_obj)?;
-        }
+        let pinned = if pin {
+            may_pin_object(deps.storage, info.sender, &mut object)?
+        } else {
+            false
+        };
 
-        objects().replace(deps.storage, id, Some(&new_obj), old_obj.as_ref())?;
+        if !exists || pinned {
+            OBJECT.save(deps.storage, id, &object)?;
+        }
 
         Ok(res.add_attribute("pinned", pinned.to_string()))
     }
@@ -158,19 +155,18 @@ pub mod execute {
         info: MessageInfo,
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
-        let res = Response::new()
-            .add_attribute("action", "pin_object")
-            .add_attribute("id", object_id.clone());
+        let id: Hash = object_id.clone().try_into()?;
+        let mut object = OBJECT.load(deps.storage, id.clone())?;
 
-        let id: Hash = object_id.try_into()?;
-        let object = objects().load(deps.storage, id.clone())?;
-        let mut updated_object = object.clone();
-
-        if may_pin_object(deps.storage, info.sender, &mut updated_object)? {
-            objects().replace(deps.storage, id, Some(&updated_object), Some(&object))?;
+        let pinned = may_pin_object(deps.storage, info.sender, &mut object)?;
+        if pinned {
+            OBJECT.save(deps.storage, id, &object)?;
         }
 
-        Ok(res)
+        Ok(Response::new()
+            .add_attribute("action", "pin_object")
+            .add_attribute("id", object_id)
+            .add_attribute("pinned", pinned.to_string()))
     }
 
     pub fn unpin_object(
@@ -179,23 +175,17 @@ pub mod execute {
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
         let id: Hash = object_id.clone().try_into()?;
-        let object_path = objects().key(id.clone());
-        let mut object = object_path.load(deps.storage)?;
+        let mut object = OBJECT.load(deps.storage, id.clone())?;
 
-        let res = Response::new()
-            .add_attribute("action", "unpin_object")
-            .add_attribute("id", object_id);
-
-        if !pins().has(deps.storage, (id.clone(), info.sender.clone())) {
-            return Ok(res);
+        let unpinned = maybe_unpin_object(deps.storage, info.sender, &mut object)?;
+        if unpinned {
+            OBJECT.save(deps.storage, id, &object)?;
         }
 
-        object.pin_count -= Uint128::one();
-        object_path.save(deps.storage, &object)?;
-
-        pins().remove(deps.storage, (id, info.sender))?;
-
-        Ok(res)
+        Ok(Response::new()
+            .add_attribute("action", "unpin_object")
+            .add_attribute("id", object_id)
+            .add_attribute("unpinned", unpinned.to_string()))
     }
 
     pub fn forget_object(
@@ -204,20 +194,23 @@ pub mod execute {
         object_id: ObjectId,
     ) -> Result<Response, ContractError> {
         let id: Hash = object_id.clone().try_into()?;
-        if pins().has(deps.storage, (id.clone(), info.sender.clone())) {
-            pins().remove(deps.storage, (id.clone(), info.sender))?;
+
+        let pinned_by_sender = (id.clone(), info.sender);
+        if pins().has(deps.storage, pinned_by_sender.clone()) {
+            pins().remove(deps.storage, pinned_by_sender)?;
         }
 
-        if pins()
+        let still_pinned = pins()
             .idx
             .object
             .prefix(id.clone())
             .keys_raw(deps.storage, None, None, Order::Ascending)
             .next()
-            .is_some()
-        {
+            .is_some();
+        if still_pinned {
             return Err(ObjectPinned {});
         }
+
         let object = query::object(deps.as_ref(), object_id.clone())?;
         BUCKET.update(deps.storage, |mut b| -> Result<_, ContractError> {
             b.stat.object_count -= Uint128::one();
@@ -226,7 +219,7 @@ pub mod execute {
             Ok(b)
         })?;
 
-        objects().remove(deps.storage, id.clone())?;
+        OBJECT.remove(deps.storage, id.clone());
         DATA.remove(deps.storage, id);
 
         Ok(Response::new()
@@ -239,7 +232,8 @@ pub mod execute {
         pinner: Addr,
         target: &mut Object,
     ) -> Result<bool, ContractError> {
-        if pins().has(storage, (target.id.clone(), pinner.clone())) {
+        let key = (target.id.clone(), pinner.clone());
+        if pins().has(storage, key) {
             return Ok(false);
         }
 
@@ -267,6 +261,26 @@ pub mod execute {
             }
         }
     }
+
+    fn maybe_unpin_object(
+        storage: &mut dyn Storage,
+        pinner: Addr,
+        target: &mut Object,
+    ) -> Result<bool, ContractError> {
+        let key = (target.id.clone(), pinner);
+
+        if !pins().has(storage, key.clone()) {
+            return Ok(false);
+        }
+
+        pins().remove(storage, key)?;
+
+        if target.pin_count > Uint128::zero() {
+            target.pin_count -= Uint128::one();
+        }
+
+        Ok(true)
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -275,14 +289,12 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Bucket {} => to_json_binary(&query::bucket(deps)?),
         QueryMsg::Object { id } => to_json_binary(&query::object(deps, id)?),
         QueryMsg::ObjectData { id } => to_json_binary(&query::data(deps, id)?),
-        QueryMsg::Objects {
-            address,
+        QueryMsg::Objects { after, first } => to_json_binary(&query::objects(deps, after, first)?),
+        QueryMsg::PinsForObject {
+            object_id: id,
             after,
             first,
-        } => to_json_binary(&query::fetch_objects(deps, address, after, first)?),
-        QueryMsg::ObjectPins { id, after, first } => {
-            to_json_binary(&query::object_pins(deps, id, after, first)?)
-        }
+        } => to_json_binary(&query::pins_for_object(deps, id, after, first)?),
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
     }
 }
@@ -290,12 +302,12 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub mod query {
     use super::*;
     use crate::crypto::Hash;
-    use crate::cursor;
     use crate::msg::{
-        BucketResponse, Cursor, ObjectPinsResponse, ObjectResponse, ObjectsResponse, PageInfo,
+        BucketResponse, Cursor, ObjectResponse, ObjectsResponse, PageInfo, PinsForObjectResponse,
     };
     use crate::pagination::{PaginationHandler, QueryPage};
-    use cosmwasm_std::{Addr, Order, StdError};
+    use crate::state::PinPK;
+    use cosmwasm_std::{Order, StdError};
 
     pub fn bucket(deps: Deps<'_>) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
@@ -311,13 +323,13 @@ pub mod query {
 
     pub fn object(deps: Deps<'_>, object_id: ObjectId) -> StdResult<ObjectResponse> {
         let id: Hash = object_id.try_into()?;
-        let object = objects().load(deps.storage, id)?;
+        let object = OBJECT.load(deps.storage, id)?;
         Ok((&object).into())
     }
 
     pub fn data(deps: Deps<'_>, object_id: ObjectId) -> StdResult<Binary> {
         let id: Hash = object_id.try_into()?;
-        let compression = objects().load(deps.storage, id.clone())?.compression;
+        let compression = OBJECT.load(deps.storage, id.clone())?.compression;
         let data = DATA.load(deps.storage, id)?;
 
         compression
@@ -326,53 +338,45 @@ pub mod query {
             .map(Binary::from)
     }
 
-    pub fn fetch_objects(
+    pub fn objects(
         deps: Deps<'_>,
-        address: Option<String>,
         after: Option<Cursor>,
         first: Option<u32>,
     ) -> StdResult<ObjectsResponse> {
-        let address = match address {
-            Some(raw) => Some(deps.api.addr_validate(&raw)?),
-            _ => None,
-        };
-
-        let handler: PaginationHandler<'_, Object, Hash> =
-            PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
-
-        let page: (Vec<Object>, PageInfo) = handler.query_page(
-            |min_bound| match address {
-                Some(addr) => objects().idx.owner.prefix(addr).range(
-                    deps.storage,
-                    min_bound,
-                    None,
-                    Order::Ascending,
-                ),
-                _ => objects().range(deps.storage, min_bound, None, Order::Ascending),
-            },
+        let pagination = BUCKET.load(deps.storage)?.pagination;
+        let handler = PaginationHandler::<'_, Object, Hash>::from(pagination);
+        let (objects, page_info) = handler.query_page(
+            |min| OBJECT.range(deps.storage, min, None, Order::Ascending),
             after,
             first,
         )?;
 
-        Ok(ObjectsResponse {
-            data: page.0.iter().map(Into::into).collect(),
-            page_info: page.1,
-        })
+        let data = objects
+            .into_iter()
+            .map(|obj| ObjectResponse {
+                id: obj.id.to_string(),
+                is_pinned: is_pinned(deps.storage, &obj.id),
+                size: obj.size,
+                compressed_size: obj.compressed_size,
+            })
+            .collect();
+
+        Ok(ObjectsResponse { data, page_info })
     }
 
-    pub fn object_pins(
+    pub fn pins_for_object(
         deps: Deps<'_>,
         object_id: ObjectId,
         after: Option<Cursor>,
         first: Option<u32>,
-    ) -> StdResult<ObjectPinsResponse> {
+    ) -> StdResult<PinsForObjectResponse> {
         let id: Hash = object_id.try_into()?;
-        objects().load(deps.storage, id.clone())?;
 
-        let handler: PaginationHandler<'_, Pin, (Hash, Addr)> =
-            PaginationHandler::from(BUCKET.load(deps.storage)?.pagination);
+        require_object(deps.storage, &id)?;
 
-        let page: (Vec<Pin>, PageInfo) = handler.query_page_cursor_fn(
+        let pagination = BUCKET.load(deps.storage)?.pagination;
+        let handler: PaginationHandler<'_, Pin, PinPK> = PaginationHandler::from(pagination);
+        let (pins, page_info): (Vec<Pin>, PageInfo) = handler.query_page(
             |min_bound| {
                 pins().idx.object.prefix(id.clone()).range(
                     deps.storage,
@@ -381,25 +385,37 @@ pub mod query {
                     Order::Ascending,
                 )
             },
-            |c| {
-                cursor::decode(c)
-                    .and_then(|raw| deps.api.addr_validate(raw.as_str()))
-                    .map(|addr| (id.clone(), addr))
-            },
-            |pin: &Pin| cursor::encode(pin.clone().address.into_string()),
             after,
             first,
         )?;
 
-        Ok(ObjectPinsResponse {
-            data: page
-                .0
-                .iter()
-                .map(|pin: &Pin| pin.address.as_str().to_string())
+        Ok(PinsForObjectResponse {
+            data: pins
+                .into_iter()
+                .map(|pin| pin.address.into_string())
                 .collect(),
-            page_info: page.1,
+            page_info,
         })
     }
+
+    fn is_pinned(storage: &dyn Storage, id: &Hash) -> bool {
+        pins()
+            .idx
+            .object
+            .prefix(id.clone())
+            .range(storage, None, None, Order::Ascending)
+            .next()
+            .is_some()
+    }
+}
+
+fn object_exists(storage: &dyn Storage, id: &Hash) -> bool {
+    OBJECT.has(storage, id.clone())
+}
+
+fn require_object(storage: &dyn Storage, id: &Hash) -> StdResult<()> {
+    OBJECT.load(storage, id.clone())?;
+    Ok(())
 }
 
 impl From<state::HashAlgorithm> for crypto::HashAlgorithm {
@@ -422,8 +438,8 @@ mod tests {
     use crate::error::BucketError;
     use crate::msg::{
         BucketConfig, BucketConfigBuilder, BucketLimitsBuilder, BucketResponse, BucketStat,
-        BucketStatBuilder, CompressionAlgorithm, HashAlgorithm, ObjectPinsResponse, ObjectResponse,
-        ObjectsResponse, PageInfo, PaginationConfigBuilder,
+        BucketStatBuilder, CompressionAlgorithm, HashAlgorithm, ObjectResponse, ObjectsResponse,
+        PageInfo, PaginationConfigBuilder, PinsForObjectResponse,
     };
     use base64::{engine::general_purpose, Engine as _};
     use cosmwasm_std::testing::{message_info, mock_dependencies, mock_env};
@@ -838,182 +854,182 @@ mod tests {
         let obj2_content = &general_purpose::STANDARD.encode("okp4");
 
         let test_cases = vec![
-            (
-                HashAlgorithm::MD5,
-                vec![
-                    (
-                        obj1_content,
-                        true,
-                        "5d41402abc4b2a76b9719d911017c592"
-                            .to_string(),
-                        5,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "5d41402abc4b2a76b9719d911017c592"
-                                .to_string()),
-                            Attribute::new("size", "5"),
-                            Attribute::new("compressed_size", "5"),
-                            Attribute::new("pinned", "true"),
-                        ]
-                    ),
-                    (
-                        obj2_content,
-                        false,
-                        "33f41d49353ad1a876e36918f64eac4d"
-                            .to_string(),
-                        4,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "33f41d49353ad1a876e36918f64eac4d"
-                                .to_string()),
-                            Attribute::new("size", "4"),
-                            Attribute::new("compressed_size", "4"),
-                            Attribute::new("pinned", "false"),
-                        ]
-                    ),
-                ],
-            ),
-            (
-                HashAlgorithm::Sha224,
-                vec![
-                    (
-                        obj1_content,
-                        true,
-                        "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
-                            .to_string(),
-                        5,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
-                                .to_string()),
-                            Attribute::new("size", "5"),
-                            Attribute::new("compressed_size", "5"),
-                            Attribute::new("pinned", "true"),
-                        ]
-                    ),
-                    (
-                        obj2_content,
-                        false,
-                        "fe798aa30e560c57d69c46982b2bb1320dc86813730bb7c6406ce84b"
-                            .to_string(),
-                        4,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "fe798aa30e560c57d69c46982b2bb1320dc86813730bb7c6406ce84b"
-                                .to_string()),
-                            Attribute::new("size", "4"),
-                            Attribute::new("compressed_size", "4"),
-                            Attribute::new("pinned", "false"),
-                        ]
-                    ),
-                ],
-            ),
-            (
-                HashAlgorithm::Sha256,
-                vec![
-                    (
-                        obj1_content,
-                        true,
-                        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
-                            .to_string(),
-                        5,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
-                                .to_string()),
-                            Attribute::new("size", "5"),
-                            Attribute::new("compressed_size", "5"),
-                            Attribute::new("pinned", "true"),
-                        ]
-                    ),
-                    (
-                        obj2_content,
-                        false,
-                        "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
-                            .to_string(),
-                        4,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
-                                .to_string()),
-                            Attribute::new("size", "4"),
-                            Attribute::new("compressed_size", "4"),
-                            Attribute::new("pinned", "false"),
-                        ]
-                    ),
-                ],
-            ),
-            (
-                HashAlgorithm::Sha384,
-                vec![
-                    (
-                        obj1_content,
-                        true,
-                        "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90125a3c79f90397bdf5f6a13de828684f"
-                            .to_string(),
-                        5,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90125a3c79f90397bdf5f6a13de828684f"
-                                .to_string()),
-                            Attribute::new("size", "5"),
-                            Attribute::new("compressed_size", "5"),
-                            Attribute::new("pinned", "true"),
-                        ]
-                    ),
-                    (
-                        obj2_content,
-                        false,
-                        "e700b122a81f64ce34ab67c6a815987536a05b0590bbeb32cf5e88963edd8c6e69c9e43b0f957f242d984f09f91bcaf2"
-                            .to_string(),
-                        4,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "e700b122a81f64ce34ab67c6a815987536a05b0590bbeb32cf5e88963edd8c6e69c9e43b0f957f242d984f09f91bcaf2"
-                                .to_string()),
-                            Attribute::new("size", "4"),
-                            Attribute::new("compressed_size", "4"),
-                            Attribute::new("pinned", "false"),
-                        ]
-                    ),
-                ],
-            ),
-            (
-                HashAlgorithm::Sha512,
-                vec![
-                    (
-                        obj1_content,
-                        true,
-                        "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
-                            .to_string(),
-                        5,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
-                                .to_string()),
-                            Attribute::new("size", "5"),
-                            Attribute::new("compressed_size", "5"),
-                            Attribute::new("pinned", "true"),
-                        ]
-                    ),
-                    (
-                        obj2_content,
-                        false,
-                        "e4f4025e1e28abb473c89bcae03ded972e91b4427e8970be87f645cc34b9b203d633c12760e32c97011439640cba159f60992e10aac8023fa2577cadc1be3b55"
-                            .to_string(),
-                        4,
-                        vec![
-                            Attribute::new("action", "store_object"),
-                            Attribute::new("id", "e4f4025e1e28abb473c89bcae03ded972e91b4427e8970be87f645cc34b9b203d633c12760e32c97011439640cba159f60992e10aac8023fa2577cadc1be3b55"
-                                .to_string()),
-                            Attribute::new("size", "4"),
-                            Attribute::new("compressed_size", "4"),
-                            Attribute::new("pinned", "false"),
-                        ]
-                    ),
-                ],
-            ),
-        ];
+                (
+                    HashAlgorithm::MD5,
+                    vec![
+                        (
+                            obj1_content,
+                            true,
+                            "5d41402abc4b2a76b9719d911017c592"
+                                .to_string(),
+                            5,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "5d41402abc4b2a76b9719d911017c592"
+                                    .to_string()),
+                                Attribute::new("size", "5"),
+                                Attribute::new("compressed_size", "5"),
+                                Attribute::new("pinned", "true"),
+                            ]
+                        ),
+                        (
+                            obj2_content,
+                            false,
+                            "33f41d49353ad1a876e36918f64eac4d"
+                                .to_string(),
+                            4,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "33f41d49353ad1a876e36918f64eac4d"
+                                    .to_string()),
+                                Attribute::new("size", "4"),
+                                Attribute::new("compressed_size", "4"),
+                                Attribute::new("pinned", "false"),
+                            ]
+                        ),
+                    ],
+                ),
+                (
+                    HashAlgorithm::Sha224,
+                    vec![
+                        (
+                            obj1_content,
+                            true,
+                            "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
+                                .to_string(),
+                            5,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "ea09ae9cc6768c50fcee903ed054556e5bfc8347907f12598aa24193"
+                                    .to_string()),
+                                Attribute::new("size", "5"),
+                                Attribute::new("compressed_size", "5"),
+                                Attribute::new("pinned", "true"),
+                            ]
+                        ),
+                        (
+                            obj2_content,
+                            false,
+                            "fe798aa30e560c57d69c46982b2bb1320dc86813730bb7c6406ce84b"
+                                .to_string(),
+                            4,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "fe798aa30e560c57d69c46982b2bb1320dc86813730bb7c6406ce84b"
+                                    .to_string()),
+                                Attribute::new("size", "4"),
+                                Attribute::new("compressed_size", "4"),
+                                Attribute::new("pinned", "false"),
+                            ]
+                        ),
+                    ],
+                ),
+                (
+                    HashAlgorithm::Sha256,
+                    vec![
+                        (
+                            obj1_content,
+                            true,
+                            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                                .to_string(),
+                            5,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+                                    .to_string()),
+                                Attribute::new("size", "5"),
+                                Attribute::new("compressed_size", "5"),
+                                Attribute::new("pinned", "true"),
+                            ]
+                        ),
+                        (
+                            obj2_content,
+                            false,
+                            "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
+                                .to_string(),
+                            4,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6"
+                                    .to_string()),
+                                Attribute::new("size", "4"),
+                                Attribute::new("compressed_size", "4"),
+                                Attribute::new("pinned", "false"),
+                            ]
+                        ),
+                    ],
+                ),
+                (
+                    HashAlgorithm::Sha384,
+                    vec![
+                        (
+                            obj1_content,
+                            true,
+                            "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90125a3c79f90397bdf5f6a13de828684f"
+                                .to_string(),
+                            5,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "59e1748777448c69de6b800d7a33bbfb9ff1b463e44354c3553bcdb9c666fa90125a3c79f90397bdf5f6a13de828684f"
+                                    .to_string()),
+                                Attribute::new("size", "5"),
+                                Attribute::new("compressed_size", "5"),
+                                Attribute::new("pinned", "true"),
+                            ]
+                        ),
+                        (
+                            obj2_content,
+                            false,
+                            "e700b122a81f64ce34ab67c6a815987536a05b0590bbeb32cf5e88963edd8c6e69c9e43b0f957f242d984f09f91bcaf2"
+                                .to_string(),
+                            4,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "e700b122a81f64ce34ab67c6a815987536a05b0590bbeb32cf5e88963edd8c6e69c9e43b0f957f242d984f09f91bcaf2"
+                                    .to_string()),
+                                Attribute::new("size", "4"),
+                                Attribute::new("compressed_size", "4"),
+                                Attribute::new("pinned", "false"),
+                            ]
+                        ),
+                    ],
+                ),
+                (
+                    HashAlgorithm::Sha512,
+                    vec![
+                        (
+                            obj1_content,
+                            true,
+                            "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
+                                .to_string(),
+                            5,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043"
+                                    .to_string()),
+                                Attribute::new("size", "5"),
+                                Attribute::new("compressed_size", "5"),
+                                Attribute::new("pinned", "true"),
+                            ]
+                        ),
+                        (
+                            obj2_content,
+                            false,
+                            "e4f4025e1e28abb473c89bcae03ded972e91b4427e8970be87f645cc34b9b203d633c12760e32c97011439640cba159f60992e10aac8023fa2577cadc1be3b55"
+                                .to_string(),
+                            4,
+                            vec![
+                                Attribute::new("action", "store_object"),
+                                Attribute::new("id", "e4f4025e1e28abb473c89bcae03ded972e91b4427e8970be87f645cc34b9b203d633c12760e32c97011439640cba159f60992e10aac8023fa2577cadc1be3b55"
+                                    .to_string()),
+                                Attribute::new("size", "4"),
+                                Attribute::new("compressed_size", "4"),
+                                Attribute::new("pinned", "false"),
+                            ]
+                        ),
+                    ],
+                ),
+            ];
 
         for (hash_algorithm, objs) in test_cases {
             let mut deps = mock_dependencies();
@@ -1052,11 +1068,10 @@ mod tests {
                     ),
                 );
 
-                let created = objects()
+                let created = OBJECT
                     .load(&deps.storage, decode_hex(&expected_hash).into())
                     .unwrap();
                 assert_eq!(created.id, decode_hex(&expected_hash).into());
-                assert_eq!(created.owner, info.sender.clone());
                 assert_eq!(created.size.u128(), *expected_size);
                 assert_eq!(
                     created.pin_count,
@@ -1086,7 +1101,7 @@ mod tests {
                 u128::try_from(objs.len()).unwrap()
             );
             assert_eq!(
-                objects()
+                OBJECT
                     .keys_raw(&deps.storage, None, None, Order::Ascending)
                     .count(),
                 2
@@ -1145,7 +1160,7 @@ mod tests {
             ),
         ));
         assert_eq!(
-            objects()
+            OBJECT
                 .load(
                     &deps.storage,
                     decode_hex("46c4b2f687df251a98cc83cc35437e9893c16861899c2f9d183e1de57d3a2c0e")
@@ -1506,7 +1521,6 @@ mod tests {
             response.id,
             ObjectId::from("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
         );
-        assert_eq!(response.owner, info.sender.as_str());
         assert!(response.is_pinned);
         assert_eq!(response.size.u128(), 5u128);
 
@@ -1526,7 +1540,6 @@ mod tests {
             response.id,
             ObjectId::from("315d0d9ab12c5f8884100055f79de50b72db4bd2c9bfd3df049d89640fed1fa6")
         );
-        assert_eq!(response.owner, info.sender.as_str());
         assert!(!response.is_pinned);
         assert_eq!(response.size.u128(), 4u128);
     }
@@ -1594,14 +1607,13 @@ mod tests {
 
         let object = &Object {
             id: id.clone(),
-            owner: Addr::unchecked("john"),
             size: 42u8.into(),
             pin_count: Uint128::one(),
             compression: compress::CompressionAlgorithm::Lzma,
             compressed_size: Uint128::from(data.len() as u128),
         };
 
-        objects()
+        OBJECT
             .save(deps.as_mut().storage, object.id.clone(), object)
             .expect("no error when storing object");
         let data_path = DATA.key(id.clone());
@@ -1936,7 +1948,7 @@ mod tests {
                     );
                     for (object_id, count) in case.expected_object_pin_count {
                         assert_eq!(
-                            objects()
+                            OBJECT
                                 .load(&deps.storage, decode_hex(&object_id).into())
                                 .unwrap()
                                 .pin_count,
@@ -2220,7 +2232,7 @@ mod tests {
                     );
                     for (object_id, count) in case.expected_object_pin_count {
                         assert_eq!(
-                            objects()
+                            OBJECT
                                 .load(&deps.storage, decode_hex(&object_id).into())
                                 .unwrap()
                                 .pin_count,
@@ -2235,140 +2247,122 @@ mod tests {
     #[test]
     fn fetch_objects() {
         let mut deps = mock_dependencies();
-        let info1 = message_info(&addr("creator1"), &[]);
-        let info2 = message_info(&addr("creator2"), &[]);
+        let creator1 = addr("creator1");
+        let creator2 = addr("creator2");
 
-        let msg = InstantiateMsg {
-            owner: None,
-            bucket: String::from("test"),
-            config: Default::default(),
-            limits: Default::default(),
-            pagination: Default::default(),
-        };
-        instantiate(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
+        let info1 = message_info(&creator1, &[]);
+        let info2 = message_info(&creator2, &[]);
 
-        let msg = QueryMsg::Objects {
-            address: None,
-            first: None,
-            after: None,
-        };
-        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_json(&result).unwrap();
+        // 1. Instantiate
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info1.clone(),
+            InstantiateMsg {
+                owner: None,
+                bucket: "test".to_string(),
+                config: Default::default(),
+                limits: Default::default(),
+                pagination: Default::default(),
+            },
+        )
+        .unwrap();
+
+        // 2. No objects yet
+        let response: ObjectsResponse = from_json(
+            &query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::Objects {
+                    first: None,
+                    after: None,
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
         assert_eq!(response.data.len(), 0);
-        assert_eq!(
-            response.page_info,
-            PageInfo {
-                has_next_page: false,
-                cursor: "".to_string(),
-            }
-        );
+        assert!(!response.page_info.has_next_page);
+        assert_eq!(response.page_info.cursor, "".to_string());
 
-        let data = general_purpose::STANDARD.encode("object1");
-        let msg = ExecuteMsg::StoreObject {
-            data: Binary::from_base64(data.as_str()).unwrap(),
-            pin: false,
-        };
-        execute(deps.as_mut(), mock_env(), info1.clone(), msg).unwrap();
-        let data = general_purpose::STANDARD.encode("object2");
-        let msg = ExecuteMsg::StoreObject {
-            data: Binary::from_base64(data.as_str()).unwrap(),
-            pin: false,
-        };
-        execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
-        let data = general_purpose::STANDARD.encode("object3");
-        let msg = ExecuteMsg::StoreObject {
-            data: Binary::from_base64(data.as_str()).unwrap(),
-            pin: false,
-        };
-        execute(deps.as_mut(), mock_env(), info2, msg).unwrap();
-
-        let cases = vec![
-            (
-                QueryMsg::Objects {
-                    address: None,
-                    first: None,
-                    after: None,
+        // 3. Store 3 objects
+        // creator1 stores 2 (one pinned, one not), creator2 stores 1 (pinned)
+        for (data, info, pin) in vec![
+            ("object1", &info1, false),
+            ("object2", &info1, true),
+            ("object3", &info2, true),
+        ] {
+            execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                ExecuteMsg::StoreObject {
+                    data: Binary::from_base64(general_purpose::STANDARD.encode(data).as_str())
+                        .unwrap(),
+                    pin,
                 },
-                3,
-                PageInfo {
-                    has_next_page: false,
-                    cursor: "CZC4Avd5xNeJaBkK6MYrA1ZSQPNr76GU1k2JJSjmaDyF".to_string(),
-                },
-            ),
-            (
-                QueryMsg::Objects {
-                    address: Some(addr("unknown").to_string()),
-                    first: None,
-                    after: None,
-                },
-                0,
-                PageInfo {
-                    has_next_page: false,
-                    cursor: "".to_string(),
-                },
-            ),
-            (
-                QueryMsg::Objects {
-                    address: Some(addr("creator1").to_string()),
-                    first: None,
-                    after: None,
-                },
-                2,
-                PageInfo {
-                    has_next_page: false,
-                    cursor: "CZC4Avd5xNeJaBkK6MYrA1ZSQPNr76GU1k2JJSjmaDyF".to_string(),
-                },
-            ),
-            (
-                QueryMsg::Objects {
-                    address: Some(addr("creator1").to_string()),
-                    first: Some(1),
-                    after: None,
-                },
-                1,
-                PageInfo {
-                    has_next_page: true,
-                    cursor: "5bfWM6UF5MowkQVp16q5pnXvwc9SVkS4xZkFeVLdswjU".to_string(),
-                },
-            ),
-            (
-                QueryMsg::Objects {
-                    address: Some(addr("creator1").to_string()),
-                    first: Some(1),
-                    after: Some("5bfWM6UF5MowkQVp16q5pnXvwc9SVkS4xZkFeVLdswjU".to_string()),
-                },
-                1,
-                PageInfo {
-                    has_next_page: false,
-                    cursor: "CZC4Avd5xNeJaBkK6MYrA1ZSQPNr76GU1k2JJSjmaDyF".to_string(),
-                },
-            ),
-        ];
-
-        for case in cases {
-            let msg = case.0;
-            let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-            let response: ObjectsResponse = from_json(&result).unwrap();
-            assert_eq!(response.data.len(), case.1);
-            assert_eq!(response.page_info, case.2);
+            )
+            .unwrap();
         }
 
-        let msg = QueryMsg::Objects {
-            address: Some(addr("creator2").to_string()),
-            first: None,
-            after: None,
-        };
-        let result = query(deps.as_ref(), mock_env(), msg).unwrap();
-        let response: ObjectsResponse = from_json(&result).unwrap();
+        // 4. Fetch all objects (no pinned_by) => should return 3
+        let response: ObjectsResponse = from_json(
+            &query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::Objects {
+                    first: None,
+                    after: None,
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(response.data.len(), 3);
+        assert!(!response.page_info.has_next_page);
         assert_eq!(
-            response.data.first().unwrap(),
-            &ObjectResponse {
-                id: "0a6d95579ba3dd2f79c870906fd894007ce449020d111d358894cfbbcd9a03a4".to_string(),
-                owner: addr("creator2").to_string(),
-                is_pinned: false,
-                size: 7u128.into(),
-                compressed_size: 7u128.into(),
-            }
+            response.page_info.cursor,
+            "F6Q2ghnctaKMHREiWKgQtSUBvcy2J1jajNNY3zzUoMFpH52jo".to_string()
+        );
+
+        // 5. Fetch with pagination (first: 1)
+        let first_page: ObjectsResponse = from_json(
+            &query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::Objects {
+                    first: Some(1),
+                    after: None,
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(first_page.data.len(), 1);
+        assert!(first_page.page_info.has_next_page);
+        assert_eq!(
+            first_page.page_info.cursor,
+            "F6Q2gWw8q14Q37Hkdnu45eWE9YBvr4FmokRvRt7m1sVERuHoy".to_string()
+        );
+
+        // 6. Fetch second page (after cursor from previous)
+        let second_page: ObjectsResponse = from_json(
+            &query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::Objects {
+                    first: Some(2),
+                    after: Some(first_page.page_info.cursor),
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(second_page.data.len(), 2);
+        assert!(!second_page.page_info.has_next_page);
+        assert_eq!(
+            second_page.page_info.cursor,
+            "F6Q2ghnctaKMHREiWKgQtSUBvcy2J1jajNNY3zzUoMFpH52jo".to_string()
         );
     }
 
@@ -2407,72 +2401,74 @@ mod tests {
         execute(deps.as_mut(), mock_env(), info1, msg).unwrap();
 
         let cases = vec![
-            (
-                QueryMsg::ObjectPins {
-                    id: "445008b7f2932922bdb184771d9978516a4f89d77000c2d6eab18b0894aac3a7"
-                        .to_string(),
-                    first: None,
-                    after: None,
-                },
-                Vec::<Addr>::new(),
-                PageInfo {
-                    has_next_page: false,
-                    cursor: "".to_string(),
-                },
-            ),
-            (
-                QueryMsg::ObjectPins {
-                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
-                        .to_string(),
-                    first: None,
-                    after: None,
-                },
-                vec![addr("creator2"), addr("creator1")],
-                PageInfo {
-                    has_next_page: false,
-                    cursor: "3wwsaS9LwRtjTvYihWjb64ph5BdBrkTrt8f2sG6vBiE774tMxX31Rs9Mqn91NGQ6MzUow4Gi5iBR6STw68tuG2esLAdK".to_string(),
-                },
-            ),
-            (
-                QueryMsg::ObjectPins {
-                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
-                        .to_string(),
-                    first: Some(1),
-                    after: None,
-                },
-                vec![addr("creator2")],
-                PageInfo {
-                    has_next_page: true,
-                    cursor: "3wwsaS9LwRtjTrrGpg2qSGEo3gFkR53R2hUNX2PapfytooQuGcPiyF4zRneMECgJiZXS336Cd7pZU4CJ96nt3mcoQR8g".to_string(),
-                },
-            ),
-            (
-                QueryMsg::ObjectPins {
-                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
-                        .to_string(),
-                    first: Some(1),
-                    after: Some("3wwsaS9LwRtjTrrGpg2qSGEo3gFkR53R2hUNX2PapfytooQuGcPiyF4zRneMECgJiZXS336Cd7pZU4CJ96nt3mcoQR8g".to_string()),
-                },
-                vec![addr("creator1")],
-                PageInfo {
-                    has_next_page: false,
-                    cursor: "3wwsaS9LwRtjTvYihWjb64ph5BdBrkTrt8f2sG6vBiE774tMxX31Rs9Mqn91NGQ6MzUow4Gi5iBR6STw68tuG2esLAdK".to_string(),
-                },
-            ),
-        ];
+                (
+                    QueryMsg::PinsForObject {
+                        object_id: "445008b7f2932922bdb184771d9978516a4f89d77000c2d6eab18b0894aac3a7"
+                            .to_string(),
+                        first: None,
+                        after: None,
+                    },
+                    Vec::<Addr>::new(),
+                    PageInfo {
+                        has_next_page: false,
+                        cursor: "".to_string(),
+                    },
+                ),
+                (
+                    QueryMsg::PinsForObject {
+                        object_id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                            .to_string(),
+                        first: None,
+                        after: None,
+                    },
+                    vec![addr("creator2"), addr("creator1")],
+                    PageInfo {
+                        has_next_page: false,
+                        cursor: "D4meneVbphiLfeydC5DumtwHVA59Z8wMnpifEZzV9w8ANo2YNxFahwC6L3Y9caxvKwTsZCngnp21pkczRLSQoEfEiY5udrruknAGDThEUVVuVJSsB5VXg14K8NK9nsq3VWuBPDWVzi3VhWEbg1".to_string(),
+                    },
+                ),
+                (
+                    QueryMsg::PinsForObject {
+                        object_id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                            .to_string(),
+                        first: Some(1),
+                        after: None,
+                    },
+                    vec![addr("creator2")],
+                    PageInfo {
+                        has_next_page: true,
+                        cursor: "D4meneVbphiLfeydC5DumtwHVA59Z8wMnpifEZzV9w8ANo2YNxFahwC6L3Y9caxvKwTorkur64NDErbV3tzjNnooXsjfvXVsWZrzk11KqD3HQw2sgRMTxDQtAzR8cNNT8fGo7aZTtgqEfSJrBN".to_string(),
+                    },
+                ),
+                (
+                    QueryMsg::PinsForObject {
+                        object_id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                            .to_string(),
+                        first: Some(1),
+                        after: Some("D4meneVbphiLfeydC5DumtwHVA59Z8wMnpifEZzV9w8ANo2YNxFahwC6L3Y9caxvKwTorkur64NDErbV3tzjNnooXsjfvXVsWZrzk11KqD3HQw2sgRMTxDQtAzR8cNNT8fGo7aZTtgqEfSJrBN".to_string()),
+                    },
+                    vec![addr("creator1")],
+                    PageInfo {
+                        has_next_page: false,
+                        cursor: "D4meneVbphiLfeydC5DumtwHVA59Z8wMnpifEZzV9w8ANo2YNxFahwC6L3Y9caxvKwTsZCngnp21pkczRLSQoEfEiY5udrruknAGDThEUVVuVJSsB5VXg14K8NK9nsq3VWuBPDWVzi3VhWEbg1".to_string(),
+                    },
+                ),
+            ];
 
-        for case in cases {
+        for (n, case) in cases.into_iter().enumerate() {
             let result = query(deps.as_ref(), mock_env_addr(), case.0).unwrap();
-            let response: ObjectPinsResponse = from_json(&result).unwrap();
+            let response: PinsForObjectResponse = from_json(&result).unwrap();
             assert_eq!(
                 response
                     .data
                     .iter()
                     .map(|a| Addr::unchecked(a))
                     .collect::<Vec<Addr>>(),
-                case.1
+                case.1,
+                "case: {}",
+                n
             );
-            assert_eq!(response.page_info, case.2);
+            assert_eq!(response.page_info, case.2, "case: {}", n);
         }
     }
 
@@ -2497,8 +2493,8 @@ mod tests {
 
         let cases = vec![
             (
-                QueryMsg::ObjectPins {
-                    id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
+                QueryMsg::PinsForObject {
+                    object_id: "abafa4428bdc8c34dae28bbc17303a62175f274edf59757b3e9898215a428a56"
                         .to_string(),
                     after: None,
                     first: None,
@@ -2508,8 +2504,8 @@ mod tests {
                 )),
             ),
             (
-                QueryMsg::ObjectPins {
-                    id: "invalid id".to_string(),
+                QueryMsg::PinsForObject {
+                    object_id: "invalid id".to_string(),
                     after: None,
                     first: None,
                 },
@@ -2520,9 +2516,9 @@ mod tests {
             ),
         ];
 
-        for case in cases {
+        for (n, case) in cases.into_iter().enumerate() {
             let res = query(deps.as_ref(), mock_env(), case.0).err().unwrap();
-            assert_eq!(res, case.1)
+            assert_eq!(res, case.1, "case: {}", n)
         }
     }
 
@@ -2777,7 +2773,7 @@ mod tests {
                 _ => {
                     for object_id in case.forget_objects {
                         assert_eq!(
-                            objects()
+                            OBJECT
                                 .load(&deps.storage, decode_hex(object_id.as_str()).into())
                                 .unwrap_err(),
                             StdError::not_found(not_found_object_info::<Object>(&object_id))
@@ -2786,7 +2782,7 @@ mod tests {
                 }
             }
             assert_eq!(
-                objects()
+                OBJECT
                     .keys_raw(&deps.storage, None, None, Order::Ascending)
                     .count(),
                 case.expected_count

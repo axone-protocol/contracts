@@ -165,7 +165,7 @@ Execute messages
 
 ### ExecuteMsg::StoreObject
 
-StoreObject store an object to the bucket and make the sender the owner of the object. The object is referenced by the hash of its content and this value is returned. If the object is already stored, it is a no-op. It may be pinned though.
+StoreObject store an object to the bucket. The object is referenced by the hash of its content and this value is returned. If the object is already stored, it is a no-op. It may be pinned though.
 
 The "pin" parameter specifies whether the object should be pinned for the sender. Pinning an object ensures it is protected from being removed from storage, making it persistent and guaranteeing its indefinite accessibility. It’s important to note that pinning is optional; objects can be stored without pinning. However, be aware that non-pinned objects can be removed from the storage by anyone at any time, making them no longer accessible.
 
@@ -237,12 +237,11 @@ Object returns the object information with the given id.
 
 Objects returns the list of objects in the bucket with support for pagination.
 
-| parameter         | description                                                             |
-| ----------------- | ----------------------------------------------------------------------- |
-| `objects`         | _(Required.) _ **object**.                                              |
-| `objects.address` | **string\|null**. The owner of the objects to get.                      |
-| `objects.after`   | **string\|null**. The point in the sequence to start returning objects. |
-| `objects.first`   | **integer\|null**. The number of objects to return.                     |
+| parameter       | description                                                             |
+| --------------- | ----------------------------------------------------------------------- |
+| `objects`       | _(Required.) _ **object**.                                              |
+| `objects.after` | **string\|null**. The point in the sequence to start returning objects. |
+| `objects.first` | **integer\|null**. The number of objects to return.                     |
 
 ### QueryMsg::ObjectData
 
@@ -253,16 +252,16 @@ ObjectData returns the content of the object with the given id.
 | `object_data`    | _(Required.) _ **object**.                              |
 | `object_data.id` | _(Required.) _ **string**. The id of the object to get. |
 
-### QueryMsg::ObjectPins
+### QueryMsg::PinsForObject
 
-ObjectPins returns the list of addresses that pinned the object with the given id with support for pagination.
+PinsForObject returns the list of addresses that pinned the object with the given id with support for pagination.
 
-| parameter           | description                                                          |
-| ------------------- | -------------------------------------------------------------------- |
-| `object_pins`       | _(Required.) _ **object**.                                           |
-| `object_pins.after` | **string\|null**. The point in the sequence to start returning pins. |
-| `object_pins.first` | **integer\|null**. The number of pins to return.                     |
-| `object_pins.id`    | _(Required.) _ **string**. The id of the object to get the pins for. |
+| parameter                   | description                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| `pins_for_object`           | _(Required.) _ **object**.                                                               |
+| `pins_for_object.after`     | **string\|null**. The point in the sequence to start returning pins.                     |
+| `pins_for_object.first`     | **integer\|null**. The number of pins to return.                                         |
+| `pins_for_object.object_id` | _(Required.) _ **string**. The id of the object for which to list all pinning addresses. |
 
 ### QueryMsg::undefined
 
@@ -306,7 +305,6 @@ ObjectResponse is the response of the Object query.
 | `compressed_size` | _(Required.) _ **[Uint128](#uint128)**. The size of the object when compressed. If the object is not compressed, the value is the same as `size`. |
 | `id`              | _(Required.) _ **string**. The id of the object.                                                                                                  |
 | `is_pinned`       | _(Required.) _ **boolean**. Tells if the object is pinned by at least one address.                                                                |
-| `owner`           | _(Required.) _ **string**. The owner of the object.                                                                                               |
 | `size`            | _(Required.) _ **[Uint128](#uint128)**. The size of the object.                                                                                   |
 
 ### object_data
@@ -318,17 +316,6 @@ This is only needed as serde-json-\{core,wasm\} has a horrible encoding for Vec&
 | type        |
 | ----------- |
 | **string**. |
-
-### object_pins
-
-ObjectPinsResponse is the response of the GetObjectPins query.
-
-| property                  | description                                                                           |
-| ------------------------- | ------------------------------------------------------------------------------------- |
-| `data`                    | _(Required.) _ **Array&lt;string&gt;**. The list of addresses that pinned the object. |
-| `page_info`               | _(Required.) _ **[PageInfo](#pageinfo)**. The page information.                       |
-| `page_info.cursor`        | **string**. The cursor to the next page.                                              |
-| `page_info.has_next_page` | **boolean**. Tells if there is a next page.                                           |
 
 ### objects
 
@@ -350,6 +337,17 @@ The contract's ownership info
 | `owner`          | **string\|null**. The contract's current owner. `None` if the ownership has been renounced.                                                                                                                  |
 | `pending_expiry` | **[Expiration](#expiration)\|null**. The deadline for the pending owner to accept the ownership. `None` if there isn't a pending ownership transfer, or if a transfer exists and it doesn't have a deadline. |
 | `pending_owner`  | **string\|null**. The account who has been proposed to take over the ownership. `None` if there isn't a pending ownership transfer.                                                                          |
+
+### pins_for_object
+
+PinsForObjectResponse is the response of the GetObjectPins query.
+
+| property                  | description                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| `data`                    | _(Required.) _ **Array&lt;string&gt;**. The list of addresses that pinned the object. |
+| `page_info`               | _(Required.) _ **[PageInfo](#pageinfo)**. The page information.                       |
+| `page_info.cursor`        | **string**. The cursor to the next page.                                              |
+| `page_info.has_next_page` | **boolean**. Tells if there is a next page.                                           |
 
 ## Definitions
 
@@ -470,7 +468,6 @@ ObjectResponse is the response of the Object query.
 | `compressed_size` | _(Required.) _ **[Uint128](#uint128)**. The size of the object when compressed. If the object is not compressed, the value is the same as `size`. |
 | `id`              | _(Required.) _ **string**. The id of the object.                                                                                                  |
 | `is_pinned`       | _(Required.) _ **boolean**. Tells if the object is pinned by at least one address.                                                                |
-| `owner`           | _(Required.) _ **string**. The owner of the object.                                                                                               |
 | `size`            | _(Required.) _ **[Uint128](#uint128)**. The size of the object.                                                                                   |
 
 ### PageInfo
@@ -613,5 +610,5 @@ Any existing pending ownership transfer is overwritten.
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`882a9cdfaa1f0b39`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`13697e857ca43568`)*
 ````

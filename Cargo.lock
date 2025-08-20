@@ -319,6 +319,7 @@ version = "7.0.0"
 dependencies = [
  "base16ct",
  "base64",
+ "bin-it",
  "bs58",
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -396,6 +397,12 @@ name = "bech32"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d965446196e3b7decd44aa7ee49e31d630118f90ef12f97900f262eb915c951d"
+
+[[package]]
+name = "bin-it"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efdc68b7631892303d28c13375b6a8a12508f6bbb9c8743518dad7b840d5610c"
 
 [[package]]
 name = "bitflags"

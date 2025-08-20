@@ -1,69 +1,61 @@
 use crate::crypto::Hash;
 use crate::msg::Cursor;
-use crate::state::Object;
-use cosmwasm_std::{StdError, StdResult};
-
-pub fn encode<I: AsRef<[u8]>>(id: I) -> Cursor {
-    bs58::encode(id).into_string()
-}
-
-pub fn decode<I: AsRef<[u8]>>(cursor: I) -> StdResult<Cursor> {
-    let raw = bs58::decode(cursor)
-        .into_vec()
-        .map_err(|err| StdError::parse_err("Cursor", err))?;
-
-    String::from_utf8(raw).map_err(|err| StdError::parse_err("Cursor", err))
-}
+use crate::state::{Object, Pin, PinPK};
+use bin_it::{BinaryReader, BinaryWriter};
+use cosmwasm_std::{Addr, StdError, StdResult};
 
 pub trait AsCursor<PK> {
-    fn encode_cursor(&self) -> Cursor;
+    fn encode_cursor(&self) -> StdResult<Cursor>;
     fn decode_cursor(_: Cursor) -> StdResult<PK>;
 }
 
 impl AsCursor<Hash> for Object {
-    fn encode_cursor(&self) -> Cursor {
-        bs58::encode(&self.id).into_string()
+    fn encode_cursor(&self) -> StdResult<Cursor> {
+        let mut writer = BinaryWriter::new();
+        writer.write_vec_u8(self.id.as_ref());
+
+        Ok(bs58::encode(writer.get_data()).into_string())
     }
 
     fn decode_cursor(cursor: Cursor) -> StdResult<Hash> {
-        bs58::decode(cursor)
+        let decoded = bs58::decode(cursor)
             .into_vec()
-            .map(Into::into)
-            .map_err(|err| StdError::parse_err("Cursor", err))
+            .map_err(|err| StdError::parse_err("Cursor", err))?;
+
+        let mut reader = BinaryReader::new(&decoded);
+        let hash = reader
+            .read_vec_u8()
+            .map_err(|err| StdError::parse_err("Cursor", err))?;
+
+        Ok(hash.into())
+    }
+}
+
+impl AsCursor<PinPK> for Pin {
+    fn encode_cursor(&self) -> StdResult<Cursor> {
+        let mut writer = BinaryWriter::new();
+        writer.write_vec_u8(self.id.as_ref());
+        writer.write_string(self.address.as_str());
+
+        Ok(bs58::encode(writer.get_data()).into_string())
+    }
+
+    fn decode_cursor(cursor: Cursor) -> StdResult<(Hash, Addr)> {
+        let decoded = bs58::decode(cursor)
+            .into_vec()
+            .map_err(|err| StdError::parse_err("Cursor", err))?;
+
+        let mut reader = BinaryReader::new(&decoded);
+        let hash = reader
+            .read_vec_u8()
+            .map_err(|err| StdError::parse_err("Cursor", err))?;
+        let addr = reader
+            .read_string()
+            .map_err(|err| StdError::parse_err("Cursor", err))?;
+
+        Ok((hash.into(), Addr::unchecked(addr)))
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn proper_encode() {
-        assert_eq!(encode(""), "".to_string());
-        assert_eq!(encode("an_id"), "BzZCCcK".to_string());
-    }
-
-    #[test]
-    fn proper_decode() {
-        assert_eq!(decode(""), Ok("".to_string()));
-        assert_eq!(decode("BzZCCcK"), Ok("an_id".to_string()));
-    }
-
-    #[test]
-    fn invalid_decode() {
-        assert_eq!(
-            decode("?"),
-            Err(StdError::parse_err(
-                "Cursor",
-                "provided string contained invalid character '?' at byte 0"
-            ))
-        );
-        assert_eq!(
-            decode("VtB5VXc"),
-            Err(StdError::parse_err(
-                "Cursor",
-                "invalid utf-8 sequence of 1 bytes from index 0"
-            ))
-        );
-    }
-}
+mod tests {}

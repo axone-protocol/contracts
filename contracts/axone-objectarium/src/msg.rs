@@ -35,7 +35,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// # StoreObject
-    /// StoreObject store an object to the bucket and make the sender the owner of the object.
+    /// StoreObject store an object to the bucket.
     /// The object is referenced by the hash of its content and this value is returned.
     /// If the object is already stored, it is a no-op. It may be pinned though.
     ///
@@ -97,8 +97,6 @@ pub enum QueryMsg {
     /// Objects returns the list of objects in the bucket with support for pagination.
     #[returns(ObjectsResponse)]
     Objects {
-        /// The owner of the objects to get.
-        address: Option<String>,
         /// The number of objects to return.
         first: Option<u32>,
         /// The point in the sequence to start returning objects.
@@ -113,13 +111,13 @@ pub enum QueryMsg {
         id: ObjectId,
     },
 
-    /// # ObjectPins
-    /// ObjectPins returns the list of addresses that pinned the object with the given id with
+    /// # PinsForObject
+    /// PinsForObject returns the list of addresses that pinned the object with the given id with
     /// support for pagination.
-    #[returns(ObjectPinsResponse)]
-    ObjectPins {
-        /// The id of the object to get the pins for.
-        id: ObjectId,
+    #[returns(PinsForObjectResponse)]
+    PinsForObject {
+        /// The id of the object for which to list all pinning addresses.
+        object_id: ObjectId,
         /// The number of pins to return.
         first: Option<u32>,
         /// The point in the sequence to start returning pins.
@@ -348,8 +346,6 @@ pub struct BucketStat {
 pub struct ObjectResponse {
     /// The id of the object.
     pub id: ObjectId,
-    /// The owner of the object.
-    pub owner: String,
     /// Tells if the object is pinned by at least one address.
     pub is_pinned: bool,
     /// The size of the object.
@@ -369,10 +365,10 @@ pub struct ObjectsResponse {
     pub page_info: PageInfo,
 }
 
-/// # ObjectPinsResponse
-/// ObjectPinsResponse is the response of the GetObjectPins query.
+/// # PinsForObjectResponse
+/// PinsForObjectResponse is the response of the GetObjectPins query.
 #[cw_serde]
-pub struct ObjectPinsResponse {
+pub struct PinsForObjectResponse {
     /// The list of addresses that pinned the object.
     pub data: Vec<String>,
     /// The page information.

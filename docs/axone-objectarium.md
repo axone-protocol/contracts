@@ -252,6 +252,17 @@ ObjectData returns the content of the object with the given id.
 | `object_data`    | _(Required.) _ **object**.                              |
 | `object_data.id` | _(Required.) _ **string**. The id of the object to get. |
 
+### QueryMsg::ObjectsPinnedBy
+
+ObjectsPinnedBy returns the list of objects pinned by the given address with support for pagination.
+
+| parameter                   | description                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `objects_pinned_by`         | _(Required.) _ **object**.                                                     |
+| `objects_pinned_by.address` | _(Required.) _ **string**. The address whose pinned objects should be listed.  |
+| `objects_pinned_by.after`   | **string\|null**. The point in the sequence to start returning pinned objects. |
+| `objects_pinned_by.first`   | **integer\|null**. The number of objects to return.                            |
+
 ### QueryMsg::PinsForObject
 
 PinsForObject returns the list of addresses that pinned the object with the given id with support for pagination.
@@ -318,6 +329,17 @@ This is only needed as serde-json-\{core,wasm\} has a horrible encoding for Vec&
 | **string**. |
 
 ### objects
+
+ObjectsResponse is the response of the Objects query.
+
+| property                  | description                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `data`                    | _(Required.) _ **Array&lt;[ObjectResponse](#objectresponse)&gt;**. The list of objects in the bucket. |
+| `page_info`               | _(Required.) _ **[PageInfo](#pageinfo)**. The page information.                                       |
+| `page_info.cursor`        | **string**. The cursor to the next page.                                                              |
+| `page_info.has_next_page` | **boolean**. Tells if there is a next page.                                                           |
+
+### objects_pinned_by
 
 ObjectsResponse is the response of the Objects query.
 
@@ -610,5 +632,5 @@ Any existing pending ownership transfer is overwritten.
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`13697e857ca43568`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`adc112e13d1b0a4e`)*
 ````

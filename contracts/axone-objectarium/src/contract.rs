@@ -2,7 +2,7 @@ use crate::error::BucketError;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Storage,
 };
 use cw2::set_contract_version;
 use cw_utils::nonpayable;
@@ -66,7 +66,7 @@ pub mod execute {
     use crate::crypto::Hash;
     use crate::state::BucketLimits;
     use crate::ContractError::ObjectPinned;
-    use cosmwasm_std::{Addr, Order, Storage, Uint128};
+    use cosmwasm_std::{Addr, Storage, Uint128};
 
     pub fn store_object(
         deps: DepsMut<'_>,
@@ -200,13 +200,7 @@ pub mod execute {
             pins().remove(deps.storage, pinned_by_sender)?;
         }
 
-        let still_pinned = pins()
-            .idx
-            .object
-            .prefix(id.clone())
-            .keys_raw(deps.storage, None, None, Order::Ascending)
-            .next()
-            .is_some();
+        let still_pinned = is_pinned(deps.storage, &id);
         if still_pinned {
             return Err(ObjectPinned {});
         }
@@ -441,16 +435,17 @@ pub mod query {
             page_info,
         })
     }
+}
 
-    fn is_pinned(storage: &dyn Storage, id: &Hash) -> bool {
-        pins()
-            .idx
-            .object
-            .prefix(id.clone())
-            .range(storage, None, None, Order::Ascending)
-            .next()
-            .is_some()
-    }
+#[inline]
+fn is_pinned(storage: &dyn Storage, id: &Hash) -> bool {
+    pins()
+        .idx
+        .object
+        .prefix(id.clone())
+        .keys_raw(storage, None, None, Order::Ascending)
+        .next()
+        .is_some()
 }
 
 fn object_exists(storage: &dyn Storage, id: &Hash) -> bool {

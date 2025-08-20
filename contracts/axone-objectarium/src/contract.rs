@@ -2289,7 +2289,7 @@ mod tests {
     }
 
     #[test]
-    fn fetch_objects() {
+    fn objects() {
         let mut deps = mock_dependencies();
         let creator1 = addr("creator1");
         let creator2 = addr("creator2");
@@ -2411,7 +2411,79 @@ mod tests {
     }
 
     #[test]
-    fn object_pins() {
+    fn query_objects_pinned_by() {
+        let mut deps = mock_dependencies();
+        let creator1 = addr("creator1");
+        let creator2 = addr("creator2");
+
+        let info1 = message_info(&creator1, &[]);
+        let info2 = message_info(&creator2, &[]);
+
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            info1.clone(),
+            InstantiateMsg {
+                owner: None,
+                bucket: "test".to_string(),
+                config: Default::default(),
+                limits: Default::default(),
+                pagination: Default::default(),
+            },
+        )
+        .unwrap();
+
+        let objects = vec![
+            ("object1", &info1, false),
+            ("object2", &info1, true),
+            ("object3", &info2, true),
+            ("object4", &info2, true),
+            ("object5", &info1, true),
+        ];
+
+        for (data, info, pin) in objects {
+            execute(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                ExecuteMsg::StoreObject {
+                    data: Binary::from_base64(general_purpose::STANDARD.encode(data).as_str())
+                        .unwrap(),
+                    pin,
+                },
+            )
+            .unwrap();
+        }
+
+        let cases = vec![
+            (creator1.clone(), None, None, 2),
+            (creator2.clone(), None, None, 2),
+            (creator1.clone(), Some(1), None, 1),
+            (creator1, None, Some("D4menWGWo3hzhXpexzE6TTu8w9qU2Mcundpv13CsWP1osLVet7mpmtizLDNQbEeqvJcFQ5Gtn1wixWVRQySUxsxW7mH6yt7MrsC4MX4yRykaqza53PxFY5fZkwVmTC8PkrEoPWDGTS1mboh81T".to_string()), 1),
+            (creator2, Some(1), None, 1),
+        ];
+
+        for (address, first, after, expected_count) in cases {
+            let result: ObjectsResponse = from_json(
+                &query(
+                    deps.as_ref(),
+                    mock_env(),
+                    QueryMsg::ObjectsPinnedBy {
+                        address: address.to_string(),
+                        first,
+                        after,
+                    },
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(result.data.len(), expected_count);
+        }
+    }
+
+    #[test]
+    fn pins_for_object() {
         let mut deps = mock_dependencies();
         let info1 = message_info(&addr("creator1"), &[]);
         let info2 = message_info(&addr("creator2"), &[]);

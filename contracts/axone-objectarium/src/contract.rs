@@ -290,6 +290,11 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Object { id } => to_json_binary(&query::object(deps, id)?),
         QueryMsg::ObjectData { id } => to_json_binary(&query::data(deps, id)?),
         QueryMsg::Objects { after, first } => to_json_binary(&query::objects(deps, after, first)?),
+        QueryMsg::ObjectsPinnedBy {
+            address,
+            first,
+            after,
+        } => to_json_binary(&query::objects_pinned_by(deps, address, after, first)?),
         QueryMsg::PinsForObject {
             object_id: id,
             after,
@@ -309,7 +314,7 @@ pub mod query {
     use crate::state::PinPK;
     use cosmwasm_std::{Order, StdError};
 
-    pub fn bucket(deps: Deps<'_>) -> StdResult<BucketResponse> {
+    pub(crate) fn bucket(deps: Deps<'_>) -> StdResult<BucketResponse> {
         let bucket = BUCKET.load(deps.storage)?;
 
         Ok(BucketResponse {
@@ -321,13 +326,13 @@ pub mod query {
         })
     }
 
-    pub fn object(deps: Deps<'_>, object_id: ObjectId) -> StdResult<ObjectResponse> {
+    pub(crate) fn object(deps: Deps<'_>, object_id: ObjectId) -> StdResult<ObjectResponse> {
         let id: Hash = object_id.try_into()?;
         let object = OBJECT.load(deps.storage, id)?;
         Ok((&object).into())
     }
 
-    pub fn data(deps: Deps<'_>, object_id: ObjectId) -> StdResult<Binary> {
+    pub(crate) fn data(deps: Deps<'_>, object_id: ObjectId) -> StdResult<Binary> {
         let id: Hash = object_id.try_into()?;
         let compression = OBJECT.load(deps.storage, id.clone())?.compression;
         let data = DATA.load(deps.storage, id)?;
@@ -338,7 +343,7 @@ pub mod query {
             .map(Binary::from)
     }
 
-    pub fn objects(
+    pub(crate) fn objects(
         deps: Deps<'_>,
         after: Option<Cursor>,
         first: Option<u32>,
@@ -364,7 +369,46 @@ pub mod query {
         Ok(ObjectsResponse { data, page_info })
     }
 
-    pub fn pins_for_object(
+    pub(crate) fn objects_pinned_by(
+        deps: Deps<'_>,
+        address: String,
+        after: Option<Cursor>,
+        first: Option<u32>,
+    ) -> StdResult<ObjectsResponse> {
+        let addr = deps.api.addr_validate(&address)?;
+
+        let pagination = BUCKET.load(deps.storage)?.pagination;
+        let handler: PaginationHandler<'_, Pin, PinPK> = PaginationHandler::from(pagination);
+
+        let (pins, page_info) = handler.query_page(
+            |min_bound| {
+                pins().idx.address.prefix(addr.clone()).range(
+                    deps.storage,
+                    min_bound,
+                    None,
+                    Order::Ascending,
+                )
+            },
+            after,
+            first,
+        )?;
+
+        let mut data = Vec::with_capacity(pins.len());
+        for pin in pins {
+            let obj = OBJECT.load(deps.storage, pin.id.clone())?;
+
+            data.push(ObjectResponse {
+                id: obj.id.to_string(),
+                is_pinned: true,
+                size: obj.size,
+                compressed_size: obj.compressed_size,
+            });
+        }
+
+        Ok(ObjectsResponse { data, page_info })
+    }
+
+    pub(crate) fn pins_for_object(
         deps: Deps<'_>,
         object_id: ObjectId,
         after: Option<Cursor>,

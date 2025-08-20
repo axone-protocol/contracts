@@ -97,10 +97,10 @@ pub enum QueryMsg {
     /// Objects returns the list of objects in the bucket with support for pagination.
     #[returns(ObjectsResponse)]
     Objects {
-        /// The number of objects to return.
-        first: Option<u32>,
         /// The point in the sequence to start returning objects.
         after: Option<Cursor>,
+        /// The number of objects to return.
+        first: Option<u32>,
     },
 
     /// # ObjectData
@@ -111,6 +111,18 @@ pub enum QueryMsg {
         id: ObjectId,
     },
 
+    /// # ObjectsPinnedBy
+    /// ObjectsPinnedBy returns the list of objects pinned by the given address with support for pagination.
+    #[returns(ObjectsResponse)]
+    ObjectsPinnedBy {
+        /// The address whose pinned objects should be listed.
+        address: String,
+        /// The point in the sequence to start returning pinned objects.
+        after: Option<Cursor>,
+        /// The number of objects to return.
+        first: Option<u32>,
+    },
+
     /// # PinsForObject
     /// PinsForObject returns the list of addresses that pinned the object with the given id with
     /// support for pagination.
@@ -118,10 +130,10 @@ pub enum QueryMsg {
     PinsForObject {
         /// The id of the object for which to list all pinning addresses.
         object_id: ObjectId,
-        /// The number of pins to return.
-        first: Option<u32>,
         /// The point in the sequence to start returning pins.
         after: Option<Cursor>,
+        /// The number of pins to return.
+        first: Option<u32>,
     },
 }
 

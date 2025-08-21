@@ -10,7 +10,7 @@ repository = { workspace = true }
 version = { workspace = true }
 
 [dependencies]
-form_urlencoded = "1.2.1"
+form_urlencoded = "1.2.2"
 serde.workspace = true
 serde-json-wasm.workspace = true
 thiserror.workspace = true

@@ -10,7 +10,7 @@ repository = { workspace = true }
 version = { workspace = true }
 
 [dependencies]
-base16ct = { version = "0.2.0", features = ["alloc"] }
+base16ct = { version = "0.3.0", features = ["alloc"] }
 cosmwasm-std.workspace = true
 itertools = "0.14.0"
 rio_api.workspace = true

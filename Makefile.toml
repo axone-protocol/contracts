@@ -234,11 +234,6 @@ docker run --rm -v "$(pwd)":/code \
   ${DOCKER_IMAGE_COSMWASM_OPTIMIZER}
 '''
 
-[tasks.scaffold-smart-contract]
-args = ["apply", "-s", "templates/axone-smart-contract", "-d", "contracts"]
-command = "ffizer"
-dependencies = ["install-ffizer"]
-
 [tasks.chain-clean]
 condition = { fail_message = "🚫 The chain is running" }
 condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
@@ -618,14 +613,6 @@ install_crate = { crate_name = "cargo-workspaces", binary = "cargo", test_arg = 
   "workspaces",
   "--help",
 ], min_version = "0.3.6" }
-
-[tasks.install-ffizer]
-install_script = '''
-if ! [ -x "$(command -v ffizer)" ]; then
-  echo '❌ ffizer - https://ffizer.github.io/ not found. Please install it first.' >&2
-  exit 1
-fi
-'''
 
 [tasks.install-cargo-hack]
 install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }

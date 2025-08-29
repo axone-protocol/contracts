@@ -351,26 +351,6 @@ cargo make chain-clean
 ⚠️ Please be cautious when running this command as it will completely clean the chain's home directory and the action is
 irreversible.
 
-### 🏗 Smart Contracts scaffolding
-
-When developing a new Smart Contract, you can use the scaffolding to generate the Smart Contract's code.
-
-#### 🔨 Pre-requisites
-
-Be sure you have the following tools installed:
-
-- [ffizer](https://ffizer.github.io/ffizer/book/#install) v2.10.3 or higher
-
-#### 🚧 Generate the scaffolding
-
-To generate the scaffolding, just run:
-
-```sh
-cargo make scaffold-smart-contract
-```
-
-Then, follow the instructions.
-
 ## 📚 Documentation
 
 The documentation of the Smart Contracts must be committed to the repository. The documentation is generated from the

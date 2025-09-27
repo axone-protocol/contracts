@@ -348,7 +348,7 @@ condition = { fail_message = "🚫 The chain is already running" }
 condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
 description = "Run the full node axoned application using the chain's home directory under a Docker container."
 script = '''
-echo "🚀 Starting chain ${CHAIN} under ${CHAIN_HOME}"
+echo "🚀 Starting chain ${CHAIN} under ${CHAIN_HOME} (using ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED})"
 
 if [ ! -f ${CHAIN_HOME}/config/genesis.json ]; then
   echo "❌ The chain seems to be uninitialised. Try: cargo make chain-initialize"
@@ -657,7 +657,7 @@ CHAIN_MONIKER = "local-node"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
 DIR_TARGET = "./target"
 DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
-DOCKER_IMAGE_AXONEPROTOCOL_AXONED = "axoneprotocol/axoned:8.0.0"
+DOCKER_IMAGE_AXONEPROTOCOL_AXONED = "axoneprotocol/axoned:13.0.0"
 DOCKER_IMAGE_COSMWASM_OPTIMIZER = "cosmwasm/optimizer:0.17.0"
 KEYRING_BACKEND = "test"
 MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"

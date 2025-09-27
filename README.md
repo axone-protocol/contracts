@@ -293,9 +293,20 @@ To start the chain, just run:
 cargo make chain-start
 ```
 
-This will start the chain's container and run the full node wasmd application.
+Note: the default Docker image used by the tasks points to the latest released `axoned` version configured in `Makefile.toml`.
 
-You can check the chain's logs with:
+To temporarily run a different `axoned` image (for example to test a newer release), set the variable when invoking `cargo make`:
+
+```sh
+# override just for this run
+cargo make --env DOCKER_IMAGE_AXONEPROTOCOL_AXONED=axoneprotocol/axoned:13.1.0 chain-start
+```
+
+This will start the chain's container and run the full node `axoned` binary inside that image.
+
+### 🔍 Viewing chain logs
+
+Run this to follow the chain container logs in real time:
 
 ```sh
 cargo make chain-logs

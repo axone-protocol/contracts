@@ -317,7 +317,7 @@ dependencies = [
 name = "axone-objectarium"
 version = "7.0.0"
 dependencies = [
- "base16ct",
+ "base16ct 0.3.0",
  "base64",
  "bin-it",
  "bs58",
@@ -353,7 +353,7 @@ dependencies = [
 name = "axone-rdf"
 version = "7.0.0"
 dependencies = [
- "base16ct",
+ "base16ct 0.3.0",
  "cosmwasm-std",
  "itertools 0.14.0",
  "rio_api",
@@ -385,6 +385,12 @@ name = "base16ct"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
+
+[[package]]
+name = "base16ct"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8b59d472eab27ade8d770dcb11da7201c11234bef9f82ce7aa517be028d462b"
 
 [[package]]
 name = "base64"
@@ -1105,7 +1111,7 @@ version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5e6043086bf7973472e0c7dff2142ea0b680d30e18d9cc40f267efbf222bd47"
 dependencies = [
- "base16ct",
+ "base16ct 0.2.0",
  "crypto-bigint",
  "digest",
  "ff",
@@ -2169,7 +2175,7 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48518a2b5775ba8ca5b46596aae011caa431e6ce7e4a67ead66d92f08884220e"
 dependencies = [
- "base16ct",
+ "base16ct 0.2.0",
  "der",
  "generic-array",
  "subtle",

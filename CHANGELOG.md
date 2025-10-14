@@ -1,5 +1,34 @@
 # AXONE contracts
 
+## [8.0.0](https://github.com/axone-protocol/contracts/compare/v7.0.0...v8.0.0) (2025-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cursor:** migrate cursor encoding to bin-it for structured serialization
+* **objectarium:** remove `owner` from Object
+* **objectarium:** ownership is now a first-class concept, separate from the bucket
+* **objectarium:** compression configuration is now defined at the bucket level
+instead of the object level, ensuring consistency and immutability.
+
+### Features
+
+* **logic-bindings:** introduce function for converting strings to Prolog atoms ([a6d5858](https://github.com/axone-protocol/contracts/commit/a6d58585bc94a85ee721a13948383061e8f57c43))
+* **objectarium:** ownership is now a first-class concept, separate from the bucket ([3cae3f4](https://github.com/axone-protocol/contracts/commit/3cae3f413a13eeed68046dccced7e76089880383))
+* **objectarium:** support query ObjectsPinnedBy with pagination ([330b8c0](https://github.com/axone-protocol/contracts/commit/330b8c04da967c24694449804c650baf4eea1649))
+
+
+### Performance Improvements
+
+* **objectarium:** use keys_raw in is_pinned for lighter lookup ([db60a48](https://github.com/axone-protocol/contracts/commit/db60a487f501380f07b930b148f1c3ea0c1303f3))
+
+
+### Code Refactoring
+
+* **cursor:** migrate cursor encoding to bin-it for structured serialization ([47cbf6a](https://github.com/axone-protocol/contracts/commit/47cbf6a70619c2eb2de50c2508b59c81dda54631))
+* **objectarium:** move compression configuration from object to bucket level ([c3fb1c5](https://github.com/axone-protocol/contracts/commit/c3fb1c5f082b4751e5fb1c620aad8ad71252e979)), closes [#583](https://github.com/axone-protocol/contracts/issues/583)
+* **objectarium:** remove `owner` from Object ([b36fbb1](https://github.com/axone-protocol/contracts/commit/b36fbb11cfe079d83cb7faf75ebe3446c96050f0))
+
 ## [7.0.0](https://github.com/axone-protocol/contracts/compare/v6.0.0...v7.0.0) (2024-12-13)
 
 

@@ -136,4 +136,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-law-stone.json` (`df827252e2e559ce`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-law-stone.json` (`7546fa394dc640cf`)_

@@ -632,5 +632,5 @@ Any existing pending ownership transfer is overwritten.
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`adc112e13d1b0a4e`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-objectarium.json` (`9a941ffdcb12ddd9`)*
 ````

@@ -12,6 +12,15 @@
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=for-the-badge)](https://github.com/semantic-release/semantic-release)
 [![license](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=for-the-badge)](https://opensource.org/licenses/BSD-3-Clause)
 
+## 🚧⚠️ **Repo under reconstruction** ⚠️🚧
+
+### Hey there! We're rebuilding the smart contract stack from the ground up
+
+*Old code has been archived, and a new foundation is on its way.*
+
+Looking for the previous implementation?  
+👉 Check the [**last release**](https://github.com/axone-protocol/contracts/releases/v8.0.0).
+
 ## ✨ Smart Contracts
 
 This repository hosts Smart Contracts that are deployed on the [AXONE network](http://axone.xyz). But they are compatible with any

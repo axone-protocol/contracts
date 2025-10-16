@@ -98,7 +98,7 @@ rm -rf ${DOCS_FOLDER}/*
 [tasks.check-npx]
 description = "Check npx is installed"
 script = '''
-if ! which npx >/dev/null; then
+if ! command -v npx >/dev/null 2>&1; then
    echo "❌ npx could not be found"
    echo "   Consider installing npx with: npm install -g npx"
    exit 1
@@ -108,7 +108,7 @@ fi
 [tasks.check-awk]
 description = "Check awk is installed"
 script = '''
-if ! which awk >/dev/null; then
+if ! command -v awk >/dev/null 2>&1; then
    echo "❌ awk could not be found"
    echo "   Consider installing awk (usually pre-installed on Unix systems)"
    exit 1
@@ -118,7 +118,7 @@ fi
 [tasks.check-perl]
 description = "Check perl is installed"
 script = '''
-if ! which perl >/dev/null; then
+if ! command -v perl >/dev/null 2>&1; then
    echo "❌ perl could not be found"
    echo "   Consider installing perl (usually pre-installed on Unix systems)"
    exit 1
@@ -128,15 +128,19 @@ fi
 [tasks.check-jq]
 description = "Check jq is installed (version 1.7 or higher, but below 2.0)"
 script = '''
-if ! which jq >/dev/null; then
+if ! command -v jq >/dev/null 2>&1; then
    echo "❌ jq could not be found"
    echo "   Consider installing jq: brew install jq (macOS) or apt-get install jq (Linux)"
    exit 1
 fi
 
-jq_version=$(jq --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
-jq_major=$(echo "$jq_version" | cut -d. -f1)
-jq_minor=$(echo "$jq_version" | cut -d. -f2)
+jq_version=$(jq --version 2>/dev/null | sed -E 's/^jq-([0-9]+)\.([0-9]+).*/\1.\2/')
+if ! printf '%s' "$jq_version" | grep -Eq '^[0-9]+\.[0-9]+$'; then
+  echo "❌ Could not determine jq version (got: '$jq_version')"
+  exit 1
+fi
+jq_major=${jq_version%%.*}
+jq_minor=${jq_version#*.}
 
 if [ "$jq_major" -lt 1 ] || ([ "$jq_major" -eq 1 ] && [ "$jq_minor" -lt 7 ]); then
   echo "❌ jq version $jq_version is too old (require >= 1.7)"
@@ -144,7 +148,7 @@ if [ "$jq_major" -lt 1 ] || ([ "$jq_major" -eq 1 ] && [ "$jq_minor" -lt 7 ]); th
 fi
 
 if [ "$jq_major" -ge 2 ]; then
-  echo "⚠️  Warning: jq version $jq_version is untested (expected 1.7-1.x)"
+  echo "⚠️  Warning: jq version $jq_version is untested (expected >= 1.7 and < 2.0)"
 fi
 '''
 

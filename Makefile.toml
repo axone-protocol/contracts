@@ -95,46 +95,64 @@ echo "🧹 Cleaning documentation folder"
 rm -rf ${DOCS_FOLDER}/*
 '''
 
-[tasks.check-prerequisites]
-description = "Check prerequisites"
+[tasks.check-npx]
+description = "Check npx is installed"
 script = '''
-echo "🔍 Checking prerequisites"
-
-echo "❔ Checking \`npx\` installed..."
-if ! which npx >/dev/null;
-then
-   echo "\n❌ npx could not be found"
-   echo "  Consider installing npx.\n"
-   echo "＞ \`npm install -g npx\`\n\n"
+if ! which npx >/dev/null; then
+   echo "❌ npx could not be found"
+   echo "   Consider installing npx with: npm install -g npx"
    exit 1
 fi
-echo "✅ \`npx\` installed"
+'''
 
-echo "❔ Checking \`awk\` installed..."
-if ! which awk >/dev/null;
-then
-   echo "\n❌ awk could not be found"
-   echo "  Consider installing awk."
+[tasks.check-awk]
+description = "Check awk is installed"
+script = '''
+if ! which awk >/dev/null; then
+   echo "❌ awk could not be found"
+   echo "   Consider installing awk (usually pre-installed on Unix systems)"
    exit 1
 fi
-echo "✅ \`perl\` installed"
+'''
 
-echo "❔ Checking \`perl\` installed..."
-if ! which perl >/dev/null;
-then
-   echo "\n❌ perl could not be found"
-   echo "  Consider installing perl."
+[tasks.check-perl]
+description = "Check perl is installed"
+script = '''
+if ! which perl >/dev/null; then
+   echo "❌ perl could not be found"
+   echo "   Consider installing perl (usually pre-installed on Unix systems)"
    exit 1
 fi
-echo "✅ \`perl\` installed"
+'''
 
-echo "❔ Checking \`jq\` installation..."
-if [[ $(jq --version) != jq-1\.7* ]]
-then
-  echo "\n❌ Require jq version 1.7"
+[tasks.check-jq]
+description = "Check jq is installed (version 1.7 or higher, but below 2.0)"
+script = '''
+if ! which jq >/dev/null; then
+   echo "❌ jq could not be found"
+   echo "   Consider installing jq: brew install jq (macOS) or apt-get install jq (Linux)"
+   exit 1
+fi
+
+jq_version=$(jq --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+jq_major=$(echo "$jq_version" | cut -d. -f1)
+jq_minor=$(echo "$jq_version" | cut -d. -f2)
+
+if [ "$jq_major" -lt 1 ] || ([ "$jq_major" -eq 1 ] && [ "$jq_minor" -lt 7 ]); then
+  echo "❌ jq version $jq_version is too old (require >= 1.7)"
   exit 1
 fi
-echo "✅ \`jq\` installed"
+
+if [ "$jq_major" -ge 2 ]; then
+  echo "⚠️  Warning: jq version $jq_version is untested (expected 1.7-1.x)"
+fi
+'''
+
+[tasks.check-prerequisites]
+dependencies = ["check-npx", "check-awk", "check-perl", "check-jq"]
+description = "Check all the prerequisites are installed"
+script = '''
+echo "✅ All prerequisites are satisfied"
 '''
 
 [tasks.docs-generate]

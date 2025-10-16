@@ -48,7 +48,7 @@ rdf-types = "0.18.2"
 rio_api = "0.8.5"
 rio_turtle = "0.8.5"
 rio_xml = "0.8.5"
-schemars = "0.8.22"
+schemars = "1.0.4"
 serde = { version = "1.0.228", default-features = false, features = ["derive"] }
 serde-json-wasm = "1.0.1"
 testing = { path = "packages/testing" }

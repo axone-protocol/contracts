@@ -65,8 +65,8 @@ module.exports = {
               {
                 file: "Cargo.toml",
                 hasChanged: true,
-                numMatches: 7,
-                numReplacements: 7,
+                numMatches: 1,
+                numReplacements: 1,
               },
             ],
           },
@@ -85,19 +85,8 @@ module.exports = {
       {
         successComment: false,
         assets: [
-          { path: "./artifacts/axone_objectarium.wasm" },
-          { path: "./artifacts/axone_law_stone.wasm" },
-          { path: "./artifacts/axone_cognitarium.wasm" },
-          { path: "./artifacts/axone_dataverse.wasm" },
+          { path: "./artifacts/axone_dummy.wasm" },
           { path: "./artifacts/checksums.txt" },
-          {
-            path: "./contracts/axone-objectarium/schema/axone-objectarium.json",
-          },
-          { path: "./contracts/axone-law-stone/schema/axone-law-stone.json" },
-          {
-            path: "./contracts/axone-cognitarium/schema/axone-cognitarium.json",
-          },
-          { path: "./contracts/axone-dataverse/schema/axone-dataverse.json" },
         ],
       },
     ],

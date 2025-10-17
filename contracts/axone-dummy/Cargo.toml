@@ -1,0 +1,29 @@
+[package]
+authors = { workspace = true }
+description = "Placeholder CosmWasm contract kept during refactor."
+edition = { workspace = true }
+homepage = { workspace = true }
+keywords = { workspace = true }
+license = { workspace = true }
+name = "axone-dummy"
+repository = { workspace = true }
+rust-version = { workspace = true }
+version = { workspace = true }
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+axone-dummy-lib = { path = "../../packages/axone-dummy-lib", version = "8.0.0" }
+cosmwasm-schema.workspace = true
+cosmwasm-std.workspace = true
+
+[features]
+# use library feature to disable all instantiate/execute/query exports
+library = []

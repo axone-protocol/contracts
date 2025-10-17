@@ -1,0 +1,11 @@
+[package]
+authors = { workspace = true }
+description = "Placeholder shared logic kept during refactor."
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+name = "axone-dummy-lib"
+repository = { workspace = true }
+version = { workspace = true }
+
+[dependencies]

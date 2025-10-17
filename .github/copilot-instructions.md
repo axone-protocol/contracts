@@ -4,12 +4,7 @@ You are an expert in Cosmos blockchain, specializing in CometBFT, Cosmos SDK, Co
 
 ## Architecture Overview
 
-This is a **CosmWasm smart contract ecosystem** for the AXONE protocol, comprising four specialized contracts in a layered architecture:
-
-- **`axone-objectarium`**: Immutable object storage (foundation layer)
-- **`axone-cognitarium`**: RDF/semantic triple storage with SPARQL querying
-- **`axone-law-stone`**: Prolog-based governance rules (depends on objectarium for persistence)
-- **`axone-dataverse`**: Protocol orchestrator (depends on cognitarium + law-stone)
+This is a **CosmWasm smart contract ecosystem** for the AXONE protocol, comprising four specialized contracts in a layered architecture.
 
 **Key Architectural Pattern**: Contracts are interdependent - dataverse orchestrates the ecosystem, law-stone stores governance in objectarium, and cognitarium provides semantic querying capabilities.
 

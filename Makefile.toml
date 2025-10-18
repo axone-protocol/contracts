@@ -8,11 +8,15 @@ dependencies = ["install-cargo-sort-derives"]
 description = "Check formatting and derives order (rustfmt via rust-toolchain.toml)."
 script = ["cargo fmt --all -- --check", "cargo sort-derives --check"]
 
-[tasks.lint-rust]
+[tasks.lint-rust-clippy]
 args = ["cranky"]
 command = "cargo"
 dependencies = ["install-cranky"]
 description = "Check lint of all sources files (clippy via rust-toolchain.toml)."
+
+[tasks.lint-rust]
+dependencies = ["lint-rust-format", "lint-rust-clippy"]
+description = "Check all Rust linting (formatting and clippy)."
 
 [tasks.lint-toml]
 args = ["lint"]
@@ -20,21 +24,27 @@ command = "taplo"
 dependencies = ["install-taplo-cli"]
 description = "Check lint of all toml files."
 
-[tasks.lint-cargo-toml]
-script = '''
-find . -type f \( -name "Cargo.toml" \) -print0 | xargs -0 -n1 cargo make lint-cargo-toml-file
-'''
-
 [tasks.lint-cargo-toml-file]
 args = ["${@}"]
 command = "cargo-toml-lint"
 dependencies = ["install-cargo-toml-lint"]
 description = "Check lint of the given toml file"
 
+[tasks.lint-cargo-toml]
+description = "Check lint of all Cargo.toml files."
+script = '''
+find . -type f \( -name "Cargo.toml" \) -print0 | xargs -0 -n1 cargo make lint-cargo-toml-file
+'''
+
 [tasks.lint-cargo-deps]
 args = ["machete", "--with-metadata"]
 command = "cargo"
 dependencies = ["install-cargo-machete"]
+description = "Check for unused dependencies."
+
+[tasks.lint-cargo]
+dependencies = ["lint-cargo-toml", "lint-cargo-deps"]
+description = "Check all Cargo linting (toml files and dependencies)."
 
 [tasks.format-toml]
 args = ["fmt"]
@@ -43,20 +53,27 @@ dependencies = ["install-taplo-cli"]
 description = "Format toml file"
 
 [tasks.lint]
-dependencies = ["lint-rust-format", "lint-rust", "lint-toml"]
+dependencies = ["lint-rust", "lint-cargo", "lint-toml"]
+description = "Check all linting (Rust, Cargo, and TOML)."
 
 [tasks.format]
 dependencies = ["format-rust", "format-toml"]
+description = "Format all files (Rust and TOML)."
 
-[tasks.clean]
+[tasks.clean-cargo]
 args = ["clean"]
 command = "cargo"
+description = "Clean cargo build artifacts."
+
+[tasks.clean]
+dependencies = ["clean-cargo", "clean-docs", "clean-chain"]
+description = "Clean all artifacts (cargo, docs, and chain)."
 
 [tasks.build]
 args = ["build", "--release", "--locked"]
 command = "cargo"
 
-[tasks.test]
+[tasks.test-unit]
 args = ["test", "--lib", "--tests", "--workspace", "--locked"]
 command = "cargo"
 description = "Run all unit tests."
@@ -65,6 +82,11 @@ description = "Run all unit tests."
 args = ["llvm-cov", "--workspace", "--lcov", "--output-path", "lcov.info"]
 command = "cargo"
 dependencies = ["install-llvm-cov"]
+description = "Run tests with coverage reporting."
+
+[tasks.test]
+dependencies = ["test-unit"]
+description = "Run all tests."
 
 [tasks.wasm]
 args = [
@@ -84,12 +106,13 @@ workspace = true
 
 [tasks.check-contracts]
 dependencies = ["install-cosmwasm-check", "wasm"]
+description = "Check WASM contracts validity."
 script = '''
 cosmwasm-check ${DIR_WASM}/*.wasm
 '''
 
-[tasks.docs-clean]
-description = "Clean documentation folder"
+[tasks.clean-docs]
+description = "Clean documentation folder."
 script = '''
 echo "🧹 Cleaning documentation folder"
 rm -rf ${DOCS_FOLDER}/*
@@ -154,13 +177,17 @@ fi
 
 [tasks.check-prerequisites]
 dependencies = ["check-npx", "check-awk", "check-perl", "check-jq"]
-description = "Check all the prerequisites are installed"
+description = "Check all the prerequisites are installed."
 script = '''
 echo "✅ All prerequisites are satisfied"
 '''
 
+[tasks.check]
+dependencies = ["check-prerequisites", "check-contracts"]
+description = "Check all requirements (prerequisites and contracts)."
+
 [tasks.docs-generate]
-dependencies = ["check-prerequisites", "docs-clean", "schema"]
+dependencies = ["check-prerequisites", "clean-docs", "schema"]
 description = "Generate documentation"
 script = '''
 echo "🧹 Cleaning old documentation..."
@@ -256,10 +283,10 @@ docker run --rm -v "$(pwd)":/code \
   ${DOCKER_IMAGE_COSMWASM_OPTIMIZER}
 '''
 
-[tasks.chain-clean]
+[tasks.clean-chain]
 condition = { fail_message = "🚫 The chain is running" }
 condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
-description = "Clean the chain data (⚠️ definitively)"
+description = "Clean the chain data (⚠️ definitively)."
 script = '''
 echo "️🧹Cleaning chain ${CHAIN} under ${CHAIN_HOME}"
 rm -rf ${CHAIN_HOME}
@@ -644,6 +671,20 @@ install_crate = { crate_name = "cargo-machete", min_version = "0.7.0" }
 
 [tasks.install-cargo-sort-derives]
 install_crate = { crate_name = "cargo-sort-derives", min_version = "0.10.0" }
+
+[tasks.install]
+dependencies = [
+  "install-cranky",
+  "install-taplo-cli",
+  "install-cargo-toml-lint",
+  "install-llvm-cov",
+  "install-cosmwasm-check",
+  "install-cargo-workspaces",
+  "install-cargo-hack",
+  "install-cargo-machete",
+  "install-cargo-sort-derives",
+]
+description = "Install all required development tools."
 
 [tasks.publish-crates]
 args = [

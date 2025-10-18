@@ -1,36 +1,43 @@
 [tasks.format-rust]
+category = "Code Quality"
 dependencies = ["install-cargo-sort-derives"]
 description = "Format rust sources files. (rustfmt provided by rust-toolchain.toml)"
 script = ["cargo fmt", "cargo sort-derives"]
 
 [tasks.lint-rust-format]
+category = "Code Quality"
 dependencies = ["install-cargo-sort-derives"]
 description = "Check formatting and derives order (rustfmt via rust-toolchain.toml)."
 script = ["cargo fmt --all -- --check", "cargo sort-derives --check"]
 
 [tasks.lint-rust-clippy]
 args = ["cranky"]
+category = "Code Quality"
 command = "cargo"
 dependencies = ["install-cranky"]
 description = "Check lint of all sources files (clippy via rust-toolchain.toml)."
 
 [tasks.lint-rust]
+category = "Code Quality"
 dependencies = ["lint-rust-format", "lint-rust-clippy"]
 description = "Check all Rust linting (formatting and clippy)."
 
 [tasks.lint-toml]
 args = ["lint"]
+category = "Code Quality"
 command = "taplo"
 dependencies = ["install-taplo-cli"]
 description = "Check lint of all toml files."
 
 [tasks.lint-cargo-toml-file]
 args = ["${@}"]
+category = "Code Quality"
 command = "cargo-toml-lint"
 dependencies = ["install-cargo-toml-lint"]
 description = "Check lint of the given toml file"
 
 [tasks.lint-cargo-toml]
+category = "Code Quality"
 description = "Check lint of all Cargo.toml files."
 script = '''
 find . -type f \( -name "Cargo.toml" \) -print0 | xargs -0 -n1 cargo make lint-cargo-toml-file
@@ -38,53 +45,64 @@ find . -type f \( -name "Cargo.toml" \) -print0 | xargs -0 -n1 cargo make lint-c
 
 [tasks.lint-cargo-deps]
 args = ["machete", "--with-metadata"]
+category = "Code Quality"
 command = "cargo"
 dependencies = ["install-cargo-machete"]
 description = "Check for unused dependencies."
 
 [tasks.lint-cargo]
+category = "Code Quality"
 dependencies = ["lint-cargo-toml", "lint-cargo-deps"]
 description = "Check all Cargo linting (toml files and dependencies)."
 
 [tasks.format-toml]
 args = ["fmt"]
+category = "Code Quality"
 command = "taplo"
 dependencies = ["install-taplo-cli"]
 description = "Format toml file"
 
 [tasks.lint]
+category = "Code Quality"
 dependencies = ["lint-rust", "lint-cargo", "lint-toml"]
 description = "Check all linting (Rust, Cargo, and TOML)."
 
 [tasks.format]
+category = "Code Quality"
 dependencies = ["format-rust", "format-toml"]
 description = "Format all files (Rust and TOML)."
 
 [tasks.clean-cargo]
 args = ["clean"]
+category = "Cleanup"
 command = "cargo"
 description = "Clean cargo build artifacts."
 
 [tasks.clean]
+category = "Cleanup"
 dependencies = ["clean-cargo", "clean-docs", "clean-chain"]
 description = "Clean all artifacts (cargo, docs, and chain)."
 
 [tasks.build]
 args = ["build", "--release", "--locked"]
+category = "Build"
 command = "cargo"
 
 [tasks.test-unit]
 args = ["test", "--lib", "--tests", "--workspace", "--locked"]
+category = "Testing"
 command = "cargo"
 description = "Run all unit tests."
 
 [tasks.test-coverage]
 args = ["llvm-cov", "--workspace", "--lcov", "--output-path", "lcov.info"]
+category = "Testing"
 command = "cargo"
 dependencies = ["install-llvm-cov"]
 description = "Run tests with coverage reporting."
 
 [tasks.test]
+category = "Testing"
 dependencies = ["test-unit"]
 description = "Run all tests."
 
@@ -98,13 +116,16 @@ args = [
   "wasm32-unknown-unknown",
   "--locked",
 ]
+category = "Build"
 command = "cargo"
 dependencies = ["install-cargo-hack"]
 
 [tasks.schema]
+category = "Build"
 workspace = true
 
 [tasks.check-contracts]
+category = "Verification"
 dependencies = ["install-cosmwasm-check", "wasm"]
 description = "Check WASM contracts validity."
 script = '''
@@ -112,6 +133,7 @@ cosmwasm-check ${DIR_WASM}/*.wasm
 '''
 
 [tasks.clean-docs]
+category = "Cleanup"
 description = "Clean documentation folder."
 script = '''
 echo "🧹 Cleaning documentation folder"
@@ -119,6 +141,7 @@ rm -rf ${DOCS_FOLDER}/*
 '''
 
 [tasks.check-npx]
+category = "Verification"
 description = "Check npx is installed"
 script = '''
 if ! command -v npx >/dev/null 2>&1; then
@@ -129,6 +152,7 @@ fi
 '''
 
 [tasks.check-awk]
+category = "Verification"
 description = "Check awk is installed"
 script = '''
 if ! command -v awk >/dev/null 2>&1; then
@@ -139,6 +163,7 @@ fi
 '''
 
 [tasks.check-perl]
+category = "Verification"
 description = "Check perl is installed"
 script = '''
 if ! command -v perl >/dev/null 2>&1; then
@@ -149,6 +174,7 @@ fi
 '''
 
 [tasks.check-jq]
+category = "Verification"
 description = "Check jq is installed (version 1.7 or higher, but below 2.0)"
 script = '''
 if ! command -v jq >/dev/null 2>&1; then
@@ -176,6 +202,7 @@ fi
 '''
 
 [tasks.check-prerequisites]
+category = "Verification"
 dependencies = ["check-npx", "check-awk", "check-perl", "check-jq"]
 description = "Check all the prerequisites are installed."
 script = '''
@@ -183,10 +210,12 @@ echo "✅ All prerequisites are satisfied"
 '''
 
 [tasks.check]
+category = "Verification"
 dependencies = ["check-prerequisites", "check-contracts"]
 description = "Check all requirements (prerequisites and contracts)."
 
 [tasks.docs]
+category = "Documentation"
 dependencies = ["check-prerequisites", "clean-docs", "schema"]
 description = "Generate documentation"
 script = '''
@@ -274,6 +303,7 @@ echo "📖 Documentation has been successfully generated and available at $(pwd)
 '''
 
 [tasks.release-wasm]
+category = "Build"
 description = "Build optimized wasm using CosmWasm optimizer and provide checksums"
 script = '''
 echo "📦 Generating release binaries and checksums into ${DIR_WASM}"
@@ -284,6 +314,7 @@ docker run --rm -v "$(pwd)":/code \
 '''
 
 [tasks.clean-chain]
+category = "Cleanup"
 condition = { fail_message = "🚫 The chain is running" }
 condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
 description = "Clean the chain data (⚠️ definitively)."
@@ -293,6 +324,7 @@ rm -rf ${CHAIN_HOME}
 '''
 
 [tasks.chain-init-folder]
+category = "Chain Management"
 description = "Initialize deploy folder to make sure scripts have the right permission (needed for linux)"
 script = '''
 echo "️✨ Create deploy folder structure"
@@ -303,6 +335,7 @@ mkdir -p ${DIR_DEPLOY}/${CHAIN}/data
 '''
 
 [tasks.chain-add-keys]
+category = "Chain Management"
 condition = { fail_message = "🚫 The chain is already initialized." }
 condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
 dependencies = ["chain-init-folder"]
@@ -331,6 +364,7 @@ done
 '''
 
 [tasks.chain-initialize]
+category = "Chain Management"
 condition = { fail_message = "🚫 The chain is already initialized." }
 condition_script = ["[ ! -f ${CHAIN_HOME}/config/genesis.json ]"]
 dependencies = ["chain-add-keys"]
@@ -393,6 +427,7 @@ sed -i ${SED_FLAG} 's/"stake"/"uaxone"/g' ${CHAIN_HOME}/config/genesis.json
 '''
 
 [tasks.chain-start]
+category = "Chain Management"
 condition = { fail_message = "🚫 The chain is already running" }
 condition_script = ["! docker ps -a | grep ${CHAIN} > /dev/null"]
 description = "Run the full node axoned application using the chain's home directory under a Docker container."
@@ -416,6 +451,7 @@ docker run -d \
 '''
 
 [tasks.chain-stop]
+category = "Chain Management"
 condition = { fail_message = "🚫 The chain is not running" }
 condition_script = ["docker ps -a | grep ${CHAIN} > /dev/null"]
 description = "Stop the chain's container."
@@ -426,6 +462,7 @@ docker rm ${CHAIN}
 '''
 
 [tasks.chain-logs]
+category = "Chain Management"
 condition = { fail_message = "🚫 The chain is not running" }
 condition_script = ["docker ps -a | grep ${CHAIN} > /dev/null"]
 description = "Show the chain's container logs."
@@ -435,6 +472,7 @@ docker logs -f ${CHAIN}
 '''
 
 [tasks.chain]
+category = "Chain Management"
 description = "Run the axoned CLI using the chain's home directory under a Docker container."
 script = '''
 echo "⌨️ Executing ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} ${@}..."
@@ -450,6 +488,7 @@ docker run \
 '''
 
 [tasks.chain-deploy-contract]
+category = "Contract Deployment"
 dependencies = ["chain-start"]
 description = "Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...)."
 script = '''
@@ -482,6 +521,7 @@ docker run --rm \
 '''
 
 [tasks.chain-deploy-contracts]
+category = "Contract Deployment"
 description = "Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...)."
 script = '''
 find "${DIR_WASM}" -type f -name "*.wasm" -maxdepth 1 | while read file; do
@@ -492,6 +532,7 @@ done
 '''
 
 [tasks.chain-list-contracts]
+category = "Contract Deployment"
 description = "List all the contracts deployed to the chain."
 script = '''
 echo "🔍 Listing contracts on chain ${CHAIN}"
@@ -506,6 +547,7 @@ docker run --rm \
 '''
 
 [tasks.chain-inspect-contract]
+category = "Contract Deployment"
 description = "Inspect a specific contract deployed to the chain."
 script = '''
 if [ -z "$1" ]
@@ -524,6 +566,7 @@ docker run --rm \
 '''
 
 [tasks.chain-instantiate-contract]
+category = "Contract Interaction"
 dependencies = ["chain-start"]
 description = "Instantiate a specific contract to the chain. The contract must be already deployed."
 script = '''
@@ -572,6 +615,7 @@ docker run --rm \
 '''
 
 [tasks.chain-query-contract]
+category = "Contract Interaction"
 dependencies = ["chain-start"]
 description = "Query a specific contract to the chain. The contract must be already deployed and instantiated."
 script = '''
@@ -601,6 +645,7 @@ docker run --rm \
 '''
 
 [tasks.chain-execute-contract]
+category = "Contract Interaction"
 dependencies = ["chain-start"]
 description = "Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated."
 script = '''
@@ -642,37 +687,47 @@ docker run --rm \
 '''
 
 [tasks.install-cranky]
+category = "Development Tools"
 install_crate = { crate_name = "cargo-cranky", min_version = "0.3.0" }
 
 [tasks.install-taplo-cli]
+category = "Development Tools"
 install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help", min_version = "0.9.0" }
 
 [tasks.install-cargo-toml-lint]
+category = "Development Tools"
 install_crate = { crate_name = "cargo-toml-lint", min_version = "0.1.1" }
 
 [tasks.install-llvm-cov]
+category = "Development Tools"
 install_crate = { crate_name = "cargo-llvm-cov", min_version = "0.6.9" }
 install_crate_args = ["--force"]
 
 [tasks.install-cosmwasm-check]
+category = "Development Tools"
 install_crate = { crate_name = "cosmwasm-check", min_version = "2.2.2" }
 
 [tasks.install-cargo-workspaces]
+category = "Development Tools"
 install_crate = { crate_name = "cargo-workspaces", binary = "cargo", test_arg = [
   "workspaces",
   "--help",
 ], min_version = "0.3.6" }
 
 [tasks.install-cargo-hack]
+category = "Development Tools"
 install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
 
 [tasks.install-cargo-machete]
+category = "Development Tools"
 install_crate = { crate_name = "cargo-machete", min_version = "0.7.0" }
 
 [tasks.install-cargo-sort-derives]
+category = "Development Tools"
 install_crate = { crate_name = "cargo-sort-derives", min_version = "0.10.0" }
 
 [tasks.install]
+category = "Development Tools"
 dependencies = [
   "install-cranky",
   "install-taplo-cli",
@@ -695,6 +750,7 @@ args = [
   "--no-git-commit",
   "skip",
 ]
+category = "Publishing"
 command = "cargo"
 condition = { env_set = ["CARGO_REGISTRY_TOKEN"] }
 dependencies = ["install-cargo-workspaces"]

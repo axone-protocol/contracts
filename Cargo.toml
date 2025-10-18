@@ -26,4 +26,26 @@ rpath = false
 [workspace.dependencies]
 cosmwasm-schema = "2.2.2"
 cosmwasm-std = { version = "2.2.2", features = ["cosmwasm_2_2"] }
+cw-asset = "4.0.0"
+cw-controllers = "2.0.0"
+cw-storage-plus = "2.0.0"
+schemars = "0.8"
 serde = { version = "1.0.228", default-features = false, features = ["derive"] }
+thiserror = "2.0.17"
+
+# Abstract SDK dependencies
+abstract-adapter = "0.24.1-beta.2"
+abstract-app = "0.24.1-beta.2"
+abstract-client = "0.24.1-beta.2"
+abstract-interface = "0.24.1-beta.2"
+abstract-standalone = "0.24.1-beta.2"
+cw-orch = "0.25.1"
+
+# Additional dependencies for abstract contracts
+clap = { version = "4.5.19" }
+const_format = "0.2.33"
+dotenv = "0.15.0"
+env_logger = "0.11.5"
+lazy_static = "1.4.0"
+semver = "1.0"
+speculoos = "0.11.0"

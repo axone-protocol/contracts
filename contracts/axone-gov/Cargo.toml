@@ -1,0 +1,68 @@
+[package]
+authors = { workspace = true }
+description = "AXONE governance contract built with Abstract SDK."
+edition = { workspace = true }
+homepage = { workspace = true }
+keywords = { workspace = true }
+license = { workspace = true }
+name = "axone-gov"
+repository = { workspace = true }
+rust-version = { workspace = true }
+version = { workspace = true }
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "schema"
+required-features = ["schema"]
+
+[[bin]]
+name = "publish"
+required-features = ["daemon-bin"]
+
+[features]
+default = ["export"]
+export = []
+# use library feature to disable all instantiate/execute/query exports
+daemon-bin = [
+  "cw-orch/daemon",
+  "dep:clap",
+  "dep:abstract-client",
+  "dep:dotenv",
+  "dep:env_logger",
+]
+library = []
+schema = ["abstract-app/schema"]
+
+[dependencies]
+abstract-app.workspace = true
+const_format.workspace = true
+cosmwasm-schema.workspace = true
+cosmwasm-std.workspace = true
+cw-asset.workspace = true
+cw-controllers.workspace = true
+cw-storage-plus.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+
+# Dependencies for interface
+abstract-interface.workspace = true
+cw-orch.workspace = true
+
+# Dependencies for bins
+abstract-client = { workspace = true, optional = true }
+clap = { workspace = true, optional = true, features = ["derive"] }
+dotenv = { workspace = true, optional = true }
+env_logger = { workspace = true, optional = true }
+
+[dev-dependencies]
+abstract-app = { workspace = true, features = ["test-utils"] }
+abstract-client.workspace = true
+axone-gov = { path = ".", version = "8.0.0" }

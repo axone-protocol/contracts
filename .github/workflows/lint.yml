@@ -324,7 +324,7 @@ jobs:
         run: cargo make schema
 
       - name: Generate documentations
-        run: cargo make docs-generate
+        run: cargo make docs
 
       - name: Verify changed docs files
         uses: tj-actions/verify-changed-files@v20
@@ -342,7 +342,7 @@ jobs:
             echo "‣ Changes in $file:"
             git diff HEAD $file
           done
-          echo "Please generate docs using \`cargo make docs-generate\` then commit this new documentation."
+          echo "Please generate docs using \`cargo make docs\` then commit this new documentation."
           exit 1
 
   lint-typos:

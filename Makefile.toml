@@ -186,7 +186,7 @@ echo "✅ All prerequisites are satisfied"
 dependencies = ["check-prerequisites", "check-contracts"]
 description = "Check all requirements (prerequisites and contracts)."
 
-[tasks.docs-generate]
+[tasks.docs]
 dependencies = ["check-prerequisites", "clean-docs", "schema"]
 description = "Generate documentation"
 script = '''

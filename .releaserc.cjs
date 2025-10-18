@@ -77,7 +77,7 @@ module.exports = {
       "@semantic-release/exec",
       {
         prepareCmd:
-          "cargo make schema && cargo make docs-generate && cargo make release-wasm",
+          "cargo make schema && cargo make docs && cargo make release-wasm",
       },
     ],
     [

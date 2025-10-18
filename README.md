@@ -244,7 +244,7 @@ To generate the documentation, just run:
 
 ```sh
 cargo make schema
-cargo make docs-generate
+cargo make docs
 ```
 
 You'll find the generated documentation under the `docs` folder.

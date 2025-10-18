@@ -1,3 +1,20 @@
+[tasks.default]
+alias = "help"
+
+[tasks.help]
+category = "Help"
+description = "Display available tasks"
+script = [
+  "cargo make --list-all-steps --hide-uninteresting",
+  "echo",
+  "echo 'Examples:'",
+  "echo '  cargo make build'",
+  "echo '  cargo make wasm'",
+  "echo '  cargo make test'",
+  "echo '  cargo make format'",
+  "echo '  cargo make lint'",
+]
+
 [tasks.format-rust]
 category = "Code Quality"
 dependencies = ["install-cargo-sort-derives"]
@@ -759,6 +776,7 @@ description = "Publish all crates to the registry. Requires CARGO_REGISTRY_TOKEN
 [config]
 default_to_workspace = false
 min_version = "0.36.3"
+skip_core_tasks = true
 
 [env]
 CARGO_MAKE_CRATE_INSTALLATION_LOCKED = true

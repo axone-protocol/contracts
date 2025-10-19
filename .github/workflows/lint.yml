@@ -345,6 +345,51 @@ jobs:
           echo "Please generate docs using \`cargo make docs\` then commit this new documentation."
           exit 1
 
+  check-readme-updated:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Generate readme
+        run: cargo make readme
+
+      - name: Verify changed readme files
+        uses: tj-actions/verify-changed-files@v20
+        id: verify-changed-readme-files
+        with:
+          files: |
+            README.md
+
+      - name: Run step only when files change.
+        if: steps.verify-changed-readme-files.outputs.files_changed == 'true'
+        run: |
+          echo "❌ README.md has been updated."
+          echo "  Changed files : ${{ steps.verify-changed-readme-files.outputs.changed_files }}"
+          git diff --name-only | grep 'README.md' | while read file; do
+            echo "‣ Changes in $file:"
+            git diff HEAD $file
+          done
+          echo "Please generate readme using \`cargo make readme\` then commit this new documentation."
+          exit 1
+
   lint-typos:
     runs-on: ubuntu-22.04
     steps:

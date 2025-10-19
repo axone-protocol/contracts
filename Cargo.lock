@@ -730,19 +730,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
-name = "axone-dummy"
-version = "8.0.0"
-dependencies = [
- "axone-dummy-lib",
- "cosmwasm-schema",
- "cosmwasm-std",
-]
-
-[[package]]
-name = "axone-dummy-lib"
-version = "8.0.0"
-
-[[package]]
 name = "axone-gov"
 version = "8.0.0"
 dependencies = [
@@ -760,7 +747,6 @@ dependencies = [
  "cw-storage-plus",
  "dotenv",
  "env_logger",
- "schemars",
  "thiserror 2.0.17",
 ]
 
@@ -3591,7 +3577,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.106",

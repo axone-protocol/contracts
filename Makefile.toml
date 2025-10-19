@@ -5,7 +5,7 @@ alias = "help"
 category = "Help"
 description = "Display available tasks"
 script = [
-  "cargo make --list-all-steps --hide-uninteresting",
+  "cargo make --silent --list-all-steps --hide-uninteresting",
   "echo",
   "echo 'Examples:'",
   "echo '  cargo make build'",
@@ -772,6 +772,53 @@ command = "cargo"
 condition = { env_set = ["CARGO_REGISTRY_TOKEN"] }
 dependencies = ["install-cargo-workspaces"]
 description = "Publish all crates to the registry. Requires CARGO_REGISTRY_TOKEN to be set."
+
+[tasks.readme]
+category = "Documentation"
+description = "Update README with help output"
+script = '''
+set -euo pipefail
+
+HELP_OUTPUT="$(cargo make --silent --makefile ./Makefile.toml --list-all-steps --hide-uninteresting)"
+BLOCK_FILE="$(mktemp -t readme_tasks_block.XXXXXX)"
+trap 'rm -f "$BLOCK_FILE"' EXIT
+
+{
+  printf '%s\n' '<!-- TASKS -->'
+  printf '%s\n' '```text'
+  printf '%s\n' "${HELP_OUTPUT}"
+  printf '%s\n' '```'
+  printf '%s\n' '<!-- TASKS -->'
+} > "${BLOCK_FILE}"
+
+awk -v blk="${BLOCK_FILE}" '
+  BEGIN{
+    start="<!-- TASKS -->"; end="<!-- TASKS -->";
+    replaced=0; inside=0;
+    while ((getline l < blk) > 0) block = block l ORS;
+    close(blk);
+  }
+  {
+    if (!replaced && index($0, start)) {
+      printf "%s", block;           # no extra ORS
+      inside=1; replaced=1; next;
+    }
+    if (inside) {
+      if (index($0, end)) { inside=0; next }
+      next
+    }
+    print
+  }
+  END{
+    if (!replaced) {
+      printf "%s", block
+    }
+  }
+' README.md > README.md.__new__ && mv README.md.__new__ README.md
+
+echo "✅ README.md updated"
+'''
+script_runner = "bash"
 
 [config]
 default_to_workspace = false

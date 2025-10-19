@@ -83,6 +83,108 @@ And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List
 - [shasum](https://linuxhint.com/shasum-linux/) v6.02 or higher
 - [sed](https://www.gnu.org/software/sed/) v4.8 or higher
 
+### 🛠️ Available Tasks
+
+The project uses [cargo-make](https://github.com/sagiegurari/cargo-make) to manage common development tasks. Here are the main tasks available:
+
+<!-- TASKS -->
+```text
+Build
+----------
+build - No Description.
+release-wasm - Build optimized wasm using CosmWasm optimizer and provide checksums
+schema - No Description.
+wasm - No Description.
+
+Chain Management
+----------
+chain - Run the axoned CLI using the chain's home directory under a Docker container.
+chain-add-keys - Add a set of predefined keys (recovered from the seed phrases) to the chain.
+chain-init-folder - Initialize deploy folder to make sure scripts have the right permission (needed for linux)
+chain-initialize - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before.
+chain-logs - Show the chain's container logs.
+chain-start - Run the full node axoned application using the chain's home directory under a Docker container.
+chain-stop - Stop the chain's container.
+
+Cleanup
+----------
+clean - Clean all artifacts (cargo, docs, and chain).
+clean-cargo - Clean cargo build artifacts.
+clean-chain - Clean the chain data (⚠️ definitively).
+clean-docs - Clean documentation folder.
+
+Code Quality
+----------
+format - Format all files (Rust and TOML).
+format-rust - Format rust sources files. (rustfmt provided by rust-toolchain.toml)
+format-toml - Format toml file
+lint - Check all linting (Rust, Cargo, and TOML).
+lint-cargo - Check all Cargo linting (toml files and dependencies).
+lint-cargo-deps - Check for unused dependencies.
+lint-cargo-toml - Check lint of all Cargo.toml files.
+lint-cargo-toml-file - Check lint of the given toml file
+lint-rust - Check all Rust linting (formatting and clippy).
+lint-rust-clippy - Check lint of all sources files (clippy via rust-toolchain.toml).
+lint-rust-format - Check formatting and derives order (rustfmt via rust-toolchain.toml).
+lint-toml - Check lint of all toml files.
+
+Contract Deployment
+----------
+chain-deploy-contract - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
+chain-deploy-contracts - Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...).
+chain-inspect-contract - Inspect a specific contract deployed to the chain.
+chain-list-contracts - List all the contracts deployed to the chain.
+
+Contract Interaction
+----------
+chain-execute-contract - Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated.
+chain-instantiate-contract - Instantiate a specific contract to the chain. The contract must be already deployed.
+chain-query-contract - Query a specific contract to the chain. The contract must be already deployed and instantiated.
+
+Development Tools
+----------
+install - Install all required development tools.
+install-cargo-hack - No Description.
+install-cargo-machete - No Description.
+install-cargo-sort-derives - No Description.
+install-cargo-toml-lint - No Description.
+install-cargo-workspaces - No Description.
+install-cosmwasm-check - No Description.
+install-cranky - No Description.
+install-llvm-cov - No Description.
+install-taplo-cli - No Description.
+
+Documentation
+----------
+docs - Generate documentation
+readme - Update README with help output
+
+Help
+----------
+help - Display available tasks [aliases: default]
+
+Publishing
+----------
+publish-crates - Publish all crates to the registry. Requires CARGO_REGISTRY_TOKEN to be set.
+
+Testing
+----------
+test - Run all tests.
+test-coverage - Run tests with coverage reporting.
+test-unit - Run all unit tests.
+
+Verification
+----------
+check - Check all requirements (prerequisites and contracts).
+check-awk - Check awk is installed
+check-contracts - Check WASM contracts validity.
+check-jq - Check jq is installed (version 1.7 or higher, but below 2.0)
+check-npx - Check npx is installed
+check-perl - Check perl is installed
+check-prerequisites - Check all the prerequisites are installed.
+```
+<!-- TASKS -->
+
 ### 🔧 Compiling Smart Contracts to Wasm
 
 To compile the Smart Contracts to Wasm, just invoke the `wasm` goal of the makefile:
@@ -105,31 +207,6 @@ cargo make test-coverage
 ## 🏓 Play with the Smart Contracts
 
 The project comes with a set of convenient tasks to manage the Smart Contracts and the blockchain.
-To see the list of available tasks, run the following command:
-
-```sh
-cargo make --list-all-steps | grep chain | sort | sed -r 's/chain(-?[a-zA-Z\-]*)/- `chain\1`/'
-```
-
-The list of available tasks for managing the chain is as follows:
-
-- `chain` - Run the axoned CLI using the chain's home directory under a Docker container.
-- `chain-add-keys` - Add a set of predefined keys (recovered from the seed phrases) to the chain.
-- `chain-clean` - Clean the chain data (⚠️ definitively)
-- `chain-deploy-contract` - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
-- `chain-deploy-contracts` - Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...).
-- `chain-execute-contract` - Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated.
-- `chain-init-folder` - Initialize deploy folder to make sure scripts have the right permission (needed for linux)
-- `chain-initialize` - Initialize the chain with a validator's key and a set of predefined keys. ⚠️ The home directory is cleaned before.
-- `chain-inspect-contract` - Inspect a specific contract deployed to the chain.
-- `chain-instantiate-contract` - Instantiate a specific contract to the chain. The contract must be already deployed.
-- `chain-list-contracts` - List all the contracts deployed to the chain.
-- `chain-logs` - Show the chain's container logs.
-- `chain-query-contract` - Query a specific contract to the chain. The contract must be already deployed and instantiated.
-- `chain-start` - Run the full node axoned application using the chain's home directory under a Docker container.
-- `chain-stop` - Stop the chain's container.
-
-## 💻 Develop
 
 ### 🚀 Initialize the chain
 
@@ -226,7 +303,7 @@ Smart Contracts' schema.
 
 To generate the documentation follow the steps below.
 
-### 🔨 Pre-requisites
+### 🔨 Documentation Pre-requisites
 
 Be sure you have the following tools installed:
 

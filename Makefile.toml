@@ -242,74 +242,120 @@ rm -rf $DOCS_FOLDER
 
 echo "📚 Generating documentation in ${DOCS_FOLDER} folder..."
 
-mkdir -p $SCHEMA_FOLDER
-find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
-    -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
+mkdir -p "$SCHEMA_FOLDER"
+find contracts -mindepth 2 -maxdepth 3 -path "*/schema/module-schema.json" -print0 \
+  | while IFS= read -r -d '' schema; do
+      contract=$(basename "$(dirname "$(dirname "$schema")")")
+      dest="${SCHEMA_FOLDER}/${contract}.json"
+      cp "$schema" "$dest"
+      jq "
+        def ensure_one_of:
+          if . == null then .
+          elif has(\"oneOf\") then .
+          else
+            {
+              title: (.title // \"\"),
+              description: (.description // \"\"),
+              oneOf: [
+                {
+                  title: (.title // \"\"),
+                  description: (.description // \"\"),
+                  type: (.type // \"object\"),
+                  required: (.required // []),
+                  properties: (.properties // {}),
+                  additionalProperties: (.additionalProperties // false)
+                }
+              ]
+            }
+          end;
+        def annotate_variants:
+          if . == null or (type != \"object\") then .
+          elif has(\"oneOf\") then
+            .oneOf = [
+              .oneOf[]
+              | if (has(\"title\") and (.title | length > 0)) then .
+                elif (has(\"properties\") and (.properties | type == \"object\") and ((.properties | keys) | length) == 1) then
+                  . + { title: (.properties | keys | first) }
+                else .
+                end
+            ]
+          else .
+          end;
+        (.instantiate |= (ensure_one_of | annotate_variants))
+        | (.execute |= annotate_variants)
+        | (.query |= annotate_variants)
+        | (.migrate |= (ensure_one_of | annotate_variants))
+      " "$dest" > "${dest}.tmp" && mv "${dest}.tmp" "$dest"
+    done
 
-mkdir -p $DOCS_FOLDER
+mkdir -p "$DOCS_FOLDER"
 
-for SCHEMA in $(ls $SCHEMA_FOLDER); do
-    from="$SCHEMA"
-    to="${SCHEMA%.json}.md"
-    echo "✍️ Rendering ${SCHEMA_FOLDER}/$from to $to"
+set -- "$SCHEMA_FOLDER"/*.json
+if [ "$1" = "$SCHEMA_FOLDER/*.json" ]; then
+    echo "⚠️  No schema files to render"
+else
+    for SCHEMA_FILE in "$@"; do
+        from=$(basename "$SCHEMA_FILE")
+        to="${from%.json}.md"
+        echo "✍️ Rendering ${SCHEMA_FOLDER}/$from to $to"
 
-    awk "{sub(\"#/definitions\",\"./${from}/#/definitions\")} {print}" ${SCHEMA_FOLDER}/$from > ${SCHEMA_FOLDER}/$from.tmp
-    mv ${SCHEMA_FOLDER}/${from}.tmp ${SCHEMA_FOLDER}/${from}
+        awk "{sub(\"#/definitions\",\"./${from}/#/definitions\")} {print}" "${SCHEMA_FOLDER}/${from}" > "${SCHEMA_FOLDER}/${from}.tmp"
+        mv "${SCHEMA_FOLDER}/${from}.tmp" "${SCHEMA_FOLDER}/${from}"
 
-    npx --yes @fadroma/schema@1.1.0 ${SCHEMA_FOLDER}/${from} > "docs/${to}.tmp"
+        npx --yes @fadroma/schema@1.1.0 "${SCHEMA_FOLDER}/${from}" > "docs/${to}.tmp"
 
-    perl << 'EOF' - "docs/${to}.tmp" > "docs/${to}"
-    use strict;
-    use warnings;
-    use autodie;
+        perl << 'EOF' - "docs/${to}.tmp" > "docs/${to}"
+        use strict;
+        use warnings;
+        use autodie;
 
-    my $file = shift @ARGV;
-    local $/ = undef;
+        my $file = shift @ARGV;
+        local $/ = undef;
 
-    open my $fh, '<', $file or die "☠️ Could not open file: $!";
-    my $content = <$fh>;
-    close $fh;
+        open my $fh, '<', $file or die "☠️ Could not open file: $!";
+        my $content = <$fh>;
+        close $fh;
 
-    my $in_code_block = 0;
-    my $in_inline_code = 0;
-    my $escaped_content = '';
-    my @chars = split //, $content;
+        my $in_code_block = 0;
+        my $in_inline_code = 0;
+        my $escaped_content = '';
+        my @chars = split //, $content;
 
-    for (my $i = 0; $i < @chars; $i++) {
-        my $char = $chars[$i];
-        my $emitted = '';
+        for (my $i = 0; $i < @chars; $i++) {
+            my $char = $chars[$i];
+            my $emitted = '';
 
-        if ($char eq '`') {
-            my $next_char = $chars[$i + 1] // '';
-            my $next_next_char = $chars[$i + 2] // '';
-            if ($next_char eq '`' && $next_next_char eq '`') {
-                $in_code_block = !$in_code_block;
-                $i += 2;
-                $emitted = '```';
-            } elsif (!$in_code_block) {
-                $in_inline_code = !$in_inline_code;
-                $emitted = '`';
+            if ($char eq '`') {
+                my $next_char = $chars[$i + 1] // '';
+                my $next_next_char = $chars[$i + 2] // '';
+                if ($next_char eq '`' && $next_next_char eq '`') {
+                    $in_code_block = !$in_code_block;
+                    $i += 2;
+                    $emitted = '```';
+                } elsif (!$in_code_block) {
+                    $in_inline_code = !$in_inline_code;
+                    $emitted = '`';
+                } else {
+                    $emitted = $char;
+                }
+            } elsif ($char eq '\n') {
+              $in_inline_code = 0;
+              $emitted = $char;
+            } elsif (!$in_code_block && !$in_inline_code && ($char eq '{' || $char eq '}')) {
+                $emitted = "\\$char";
             } else {
                 $emitted = $char;
             }
-        } elsif ($char eq '\n') {
-          $in_inline_code = 0;
-          $emitted = $char;
-        } elsif (!$in_code_block && !$in_inline_code && ($char eq '{' || $char eq '}')) {
-            $emitted = "\\$char";
-        } else {
-            $emitted = $char;
+
+            $escaped_content .= $emitted;
         }
 
-        $escaped_content .= $emitted;
-    }
-
-    print $escaped_content;
+        print $escaped_content;
 EOF
 
-    rm "docs/${to}.tmp"
-
-done
+        rm "docs/${to}.tmp"
+    done
+fi
 
 rm -rf $SCHEMA_FOLDER
 

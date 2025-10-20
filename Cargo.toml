@@ -25,5 +25,5 @@ rpath = false
 
 [workspace.dependencies]
 cosmwasm-schema = "2.2.2"
-cosmwasm-std = { version = "2.2.2", features = ["cosmwasm_2_2"] }
+cosmwasm-std = { version = "3.0.2", features = ["cosmwasm_2_2"] }
 serde = { version = "1.0.228", default-features = false, features = ["derive"] }

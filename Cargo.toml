@@ -1,5 +1,5 @@
 [workspace]
-members = ["contracts/*", "packages/*"]
+members = ["contracts/*", "packages/*", "scripts"]
 resolver = "2"
 
 [workspace.package]
@@ -9,7 +9,7 @@ homepage = "https://axone.xyz/"
 keywords = ["cosmwasm", "blockchain"]
 license = "BSD-3-Clause"
 repository = "https://github.com/axone-protocol/contracts"
-rust-version = "1.81"
+rust-version = "1.82"
 version = "8.0.0"
 
 [profile.release]
@@ -34,18 +34,21 @@ serde = { version = "1.0.228", default-features = false, features = ["derive"] }
 thiserror = "2.0.17"
 
 # Abstract SDK dependencies
-abstract-adapter = "0.24.1-beta.2"
-abstract-app = "0.24.1-beta.2"
-abstract-client = "0.24.1-beta.2"
-abstract-interface = "0.24.1-beta.2"
-abstract-standalone = "0.24.1-beta.2"
-cw-orch = "0.25.1"
+abstract-adapter = "=0.26.1"
+abstract-app = "=0.26.1"
+abstract-client = "=0.26.1"
+abstract-interface = "=0.26.1"
+abstract-standalone = "=0.26.1"
+abstract-std = "=0.26.1"
+cw-orch = { version = "0.28.0", features = ["daemon"] }
 
 # Additional dependencies for abstract contracts
+anyhow = "1.0"
 clap = { version = "4.5.19" }
 const_format = "0.2.33"
 dotenv = "0.15.0"
 env_logger = "0.11.5"
 lazy_static = "1.4.0"
+log = "0.4.22"
 semver = "1.0"
 speculoos = "0.11.0"

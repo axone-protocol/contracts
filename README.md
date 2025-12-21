@@ -16,7 +16,7 @@
 
 ### Hey there! We're rebuilding the smart contract stack from the ground up
 
-*Old code has been archived, and a new foundation is on its way.*
+_Old code has been archived, and a new foundation is on its way._
 
 Looking for the previous implementation?  
 👉 Check the [**last release**](https://github.com/axone-protocol/contracts/releases/v8.0.0).
@@ -88,6 +88,7 @@ And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List
 The project uses [cargo-make](https://github.com/sagiegurari/cargo-make) to manage common development tasks. Here are the main tasks available:
 
 <!-- TASKS -->
+
 ```text
 Build
 ----------
@@ -128,22 +129,25 @@ lint-rust-clippy - Check lint of all sources files (clippy via rust-toolchain.to
 lint-rust-format - Check formatting and derives order (rustfmt via rust-toolchain.toml).
 lint-toml - Check lint of all toml files.
 
-Contract Deployment
+Contract Inspection
 ----------
-chain-deploy-contract - Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...).
-chain-deploy-contracts - Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...).
-chain-inspect-contract - Inspect a specific contract deployed to the chain.
-chain-list-contracts - List all the contracts deployed to the chain.
+contract-inspect - Inspect a specific contract deployed to the chain.
+contract-list - List all the contracts deployed to the chain.
 
 Contract Interaction
 ----------
-chain-execute-contract - Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated.
-chain-instantiate-contract - Instantiate a specific contract to the chain. The contract must be already deployed.
-chain-query-contract - Query a specific contract to the chain. The contract must be already deployed and instantiated.
+contract-execute - Execute a command on a specific contract. The contract must be already deployed and instantiated.
+contract-query - Query a specific contract. The contract must be already deployed and instantiated.
+
+Deployment
+----------
+deploy-abstract - Deploy Abstract infrastructure to specified networks. Usage: cargo make deploy-abstract <network-ids...>
+deploy-contract - Publish a contract to Abstract on specified networks. Usage: cargo make deploy-contract <contract-name> <network-ids...>
+deploy-install - Install a module on an Abstract Account. Usage: cargo make deploy-install <contract-name> <network-ids...>
+deploy-script - Run a contract deployment script. Usage: cargo make deploy-script <script> <package> <network-ids...>
 
 Development Tools
 ----------
-install - Install all required development tools.
 install-cargo-hack - No Description.
 install-cargo-machete - No Description.
 install-cargo-sort-derives - No Description.
@@ -151,6 +155,7 @@ install-cargo-toml-lint - No Description.
 install-cargo-workspaces - No Description.
 install-cosmwasm-check - No Description.
 install-cranky - No Description.
+install-dev-tools - Install all required development tools.
 install-llvm-cov - No Description.
 install-taplo-cli - No Description.
 
@@ -183,6 +188,7 @@ check-npx - Check npx is installed
 check-perl - Check perl is installed
 check-prerequisites - Check all the prerequisites are installed.
 ```
+
 <!-- TASKS -->
 
 ### 🔧 Compiling Smart Contracts to Wasm
@@ -248,14 +254,65 @@ cargo make chain-logs
 
 ### 🛳 Deploy the Smart Contracts
 
-To deploy the Smart Contracts, just run:
+The Smart Contracts in this repository are designed to work with the [Abstract framework](https://abstract.money/), which provides a modular application layer for Cosmos chains. The deployment process involves three main steps:
+
+#### 1️⃣ Deploy Abstract Infrastructure
+
+First, deploy the Abstract framework infrastructure (account factory, module factory, version control, etc.) to your target network:
 
 ```sh
-cargo make chain-deploy-contracts
+cargo make deploy-abstract local
 ```
 
-This will deploy all the available contracts to the chain. For this, the contracts must be compiled and the wasm files
-must be present in the artifacts directory. See the [Build](#-build) section for more details.
+This command deploys the entire Abstract infrastructure to the specified network. You only need to do this once per network.
+
+**Supported networks:** `local`, `testnet`, `mainnet`, `axone-localnet`, `axone-dentrite-1`, `axone-1`.
+
+**Note:** For non-local deployments, you'll need to set the appropriate mnemonic environment variable:
+
+- Testnet: `TEST_MNEMONIC` or `AXONE_DENTRITE_1_MNEMONIC`
+- Mainnet: `MAIN_MNEMONIC` or `AXONE_1_MNEMONIC`
+
+The local network uses the predefined validator mnemonic from the chain initialization.
+
+#### 2️⃣ Publish Your Contracts
+
+Once the infrastructure is deployed, publish your smart contracts to Abstract's on-chain registry:
+
+```sh
+cargo make deploy-contract axone-gov local
+```
+
+This uploads your contract's WASM binary and registers it with Abstract's version control system. The contract becomes available for installation but is not yet instantiated.
+
+You can publish to multiple networks at once:
+
+```sh
+cargo make deploy-contract axone-gov local testnet
+```
+
+#### 3️⃣ Install on an Abstract Account
+
+Finally, install and instantiate your contract on an Abstract Account (which acts as a modular smart contract wallet):
+
+```sh
+cargo make deploy-install axone-gov local
+```
+
+This creates an Abstract Account (if needed) and installs your contract as a module on that account. The contract is now fully deployed and operational.
+
+#### 🎯 All-in-One Deployment
+
+For local development, you can chain these commands together:
+
+```sh
+cargo make chain-start && \
+cargo make deploy-abstract local && \
+cargo make deploy-contract axone-gov local && \
+cargo make deploy-install axone-gov local
+```
+
+**Note:** Contracts must be compiled first. If WASM files are not found, the `deploy-contract` task will automatically build them. See the [Build](#-build) section for more details.
 
 Now, you can interact with the deployed Smart Contracts and test them out.
 
@@ -290,7 +347,7 @@ cargo make chain-stop
 To clean the chain, just run:
 
 ```sh
-cargo make chain-clean
+cargo make clean-chain
 ```
 
 ⚠️ Please be cautious when running this command as it will completely clean the chain's home directory and the action is

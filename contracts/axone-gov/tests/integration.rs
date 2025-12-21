@@ -11,7 +11,6 @@ use abstract_app::objects::namespace::Namespace;
 use abstract_client::{AbstractClient, Application, Environment};
 use cosmwasm_std::coins;
 use cw_controllers::AdminError;
-// Use prelude to get all the necessary imports
 use cw_orch::{anyhow, prelude::*};
 
 struct TestEnv<Env: CwEnv> {
@@ -20,19 +19,13 @@ struct TestEnv<Env: CwEnv> {
 }
 
 impl TestEnv<MockBech32> {
-    /// Set up the test environment with an Account that has the App installed
     fn setup() -> anyhow::Result<TestEnv<MockBech32>> {
-        // Create a sender and mock env
         let mock = MockBech32::new("mock");
         let sender = mock.sender_addr();
         let namespace = Namespace::new(AXONE_NAMESPACE)?;
 
-        // You can set up Abstract with a builder.
         let abs_client = AbstractClient::builder(mock).build_mock()?;
-        // The app supports setting balances for addresses and configuring ANS.
         abs_client.set_balance(&sender, &coins(123, "ucosm"))?;
-
-        // Publish the app
         let publisher = abs_client
             .account_builder()
             .namespace(namespace)

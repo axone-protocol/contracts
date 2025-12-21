@@ -83,12 +83,31 @@ And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List
 - [shasum](https://linuxhint.com/shasum-linux/) v6.02 or higher
 - [sed](https://www.gnu.org/software/sed/) v4.8 or higher
 
-### 🛠️ Available Tasks
+### 🔧 Environment setup
+
+For deployment to networks (testnet/mainnet), copy the example environment file and configure your credentials:
+
+```sh
+cp .env.example .env
+```
+
+Then edit `.env` and add your deployment wallet mnemonics:
+
+```env
+# For testnet deployments
+TEST_MNEMONIC="your testnet wallet mnemonic here"
+
+# For mainnet deployments (⚠️ keep this private!)
+MAIN_MNEMONIC="your mainnet wallet mnemonic here"
+```
+
+For local development, the default `LOCAL_MNEMONIC` in `.env.example` is safe to use.
+
+### �🛠️ Available Tasks
 
 The project uses [cargo-make](https://github.com/sagiegurari/cargo-make) to manage common development tasks. Here are the main tasks available:
 
 <!-- TASKS -->
-
 ```text
 Build
 ----------
@@ -188,7 +207,6 @@ check-npx - Check npx is installed
 check-perl - Check perl is installed
 check-prerequisites - Check all the prerequisites are installed.
 ```
-
 <!-- TASKS -->
 
 ### 🔧 Compiling Smart Contracts to Wasm
@@ -256,6 +274,8 @@ cargo make chain-logs
 
 The Smart Contracts in this repository are designed to work with the [Abstract framework](https://abstract.money/), which provides a modular application layer for Cosmos chains. The deployment process involves three main steps:
 
+**Prerequisites:** Make sure you've configured your `.env` file with the appropriate mnemonics for your target network (see [Environment Setup](#-environment-setup)).
+
 #### 1️⃣ Deploy Abstract Infrastructure
 
 First, deploy the Abstract framework infrastructure (account factory, module factory, version control, etc.) to your target network:
@@ -267,13 +287,6 @@ cargo make deploy-abstract local
 This command deploys the entire Abstract infrastructure to the specified network. You only need to do this once per network.
 
 **Supported networks:** `local`, `testnet`, `mainnet`, `axone-localnet`, `axone-dentrite-1`, `axone-1`.
-
-**Note:** For non-local deployments, you'll need to set the appropriate mnemonic environment variable:
-
-- Testnet: `TEST_MNEMONIC` or `AXONE_DENTRITE_1_MNEMONIC`
-- Mainnet: `MAIN_MNEMONIC` or `AXONE_1_MNEMONIC`
-
-The local network uses the predefined validator mnemonic from the chain initialization.
 
 #### 2️⃣ Publish Your Contracts
 

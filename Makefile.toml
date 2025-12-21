@@ -911,10 +911,17 @@ CARGO_MAKE_CRATE_INSTALLATION_LOCKED = true
 DOCS_FOLDER = "docs"
 SCHEMA_FOLDER = "schema"
 
+# Local chain configuration (for chain-initialize and chain management tasks)
 BALANCE_ALICE = "100000000000uaxone"
 BALANCE_BOB = "100000000000uaxone"
 BALANCE_CHARLIE = "100000000000uaxone"
 BALANCE_VALIDATOR = "1000000000uaxone"
+MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
+MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"
+MNEMONIC_CHARLIE = "couple proud learn plunge neglect dice dry tail keen price tuition inherit ordinary portion abandon body kitten system word monitor lava quiz soup lift"
+MNEMONIC_VALIDATOR = "island position immense mom cross enemy grab little deputy tray hungry detect state helmet tomorrow trap expect admit inhale present vault reveal scene atom"
+
+# Chain runtime configuration
 CHAIN = "axone-localnet"
 CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
 CHAIN_MONIKER = "local-node"
@@ -925,11 +932,6 @@ DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
 DOCKER_IMAGE_AXONEPROTOCOL_AXONED = "axoneprotocol/axoned:13.0.0"
 DOCKER_IMAGE_COSMWASM_OPTIMIZER = "cosmwasm/optimizer:0.17.0"
 KEYRING_BACKEND = "test"
-LOCAL_MNEMONIC = "${MNEMONIC_VALIDATOR}"
-MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
-MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"
-MNEMONIC_CHARLIE = "couple proud learn plunge neglect dice dry tail keen price tuition inherit ordinary portion abandon body kitten system word monitor lava quiz soup lift"
-MNEMONIC_VALIDATOR = "island position immense mom cross enemy grab little deputy tray hungry detect state helmet tomorrow trap expect admit inhale present vault reveal scene atom"
 RUST_LOG = "info"
 SED_FLAG = { script = [
   '''if [ ${SHELL_NAME} = 'Darwin' ]; then echo "\'\'"; else echo; fi''',

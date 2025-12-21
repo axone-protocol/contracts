@@ -7,10 +7,11 @@ use abstract_interface::Abstract;
 use axone_networks::parse_network as parse_axone_network;
 use clap::Parser;
 use cw_orch::{anyhow, daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
+use log::info;
 
 fn deploy_abstract(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
     for network in networks {
-        println!(
+        info!(
             "🚀 Deploying Abstract infrastructure to {}...",
             network.chain_id
         );
@@ -20,15 +21,14 @@ fn deploy_abstract(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
             .handle(rt.handle())
             .build()?;
 
-        println!("   Connected to: {}", network.chain_id);
-        println!("   Sender: {}", chain.sender_addr());
-        println!();
+        info!("   Connected to: {}", network.chain_id);
+        info!("   Sender: {}", chain.sender_addr());
 
         // Deploy Abstract infrastructure - this uploads and instantiates all core contracts
-        println!("📦 Deploying Abstract core contracts...");
+        info!("📦 Deploying Abstract core contracts...");
         let _abstr = Abstract::deploy_on(chain.clone(), ())?;
 
-        println!("✅ Abstract infrastructure deployed successfully!");
+        info!("✅ Abstract infrastructure deployed successfully!");
     }
     Ok(())
 }

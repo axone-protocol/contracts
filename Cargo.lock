@@ -740,6 +740,7 @@ dependencies = [
  "cw-orch 0.28.0",
  "dotenv",
  "env_logger",
+ "log",
  "tokio",
 ]
 

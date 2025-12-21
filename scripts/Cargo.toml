@@ -16,4 +16,5 @@ clap = { workspace = true, features = ["derive"] }
 cw-orch = { workspace = true, features = ["daemon"] }
 dotenv = { workspace = true }
 env_logger = { workspace = true }
+log = { workspace = true }
 tokio = { version = "1.0", features = ["rt", "macros"] }

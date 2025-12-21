@@ -13,9 +13,7 @@ use cw_orch::{anyhow, daemon::networks::ChainInfo, prelude::*, tokio::runtime::R
 use log::{info, warn};
 
 fn publish(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
-    // run for each requested network
     for network in networks {
-        // Setup
         let rt = Runtime::new()?;
         let chain = DaemonBuilder::new(network.clone())
             .handle(rt.handle())
@@ -23,7 +21,6 @@ fn publish(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
 
         let app_namespace = Namespace::from_id(AXONE_GOV_ID)?;
 
-        // Create an [`AbstractClient`]
         let abstract_client: AbstractClient<Daemon> =
             AbstractClient::new(chain.clone()).map_err(|e| {
                 anyhow::anyhow!(
@@ -37,23 +34,19 @@ fn publish(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
                 )
             })?;
 
-        // Get the [`Account`] that owns the namespace, otherwise create a new one and claim the namespace
         let publisher_acc = abstract_client
             .fetch_or_build_account(app_namespace.clone(), |builder| {
                 builder.namespace(Namespace::from_id(AXONE_GOV_ID).unwrap())
             })?;
 
-        // Get the [`Publisher`]
         let publisher: Publisher<_> = publisher_acc.publisher()?;
 
         if publisher.account().owner()? != chain.sender_addr() {
             panic!("The current sender can not publish to this namespace. Please use the wallet that owns the Account that owns the Namespace.")
         }
 
-        // Publish the App to the Abstract Platform
         publisher.publish_app::<AxoneGovInterface<Daemon>>()?;
 
-        // Attempt to auto-approve the just-published module for this namespace (useful on local/test)
         match Abstract::load_from(chain.clone()).and_then(|abstr| {
             abstr
                 .registry
@@ -87,10 +80,7 @@ fn main() {
     let networks = args
         .network_ids
         .iter()
-        .map(|n| {
-            // Try parsing as an Axone network first, fall back to cw-orch's default parser
-            parse_axone_network(n).or_else(|_| cw_orch::daemon::networks::parse_network(n))
-        })
+        .map(|n| parse_axone_network(n).or_else(|_| cw_orch::daemon::networks::parse_network(n)))
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
 

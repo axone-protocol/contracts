@@ -2,13 +2,6 @@
 //!
 //! This script installs (instantiates) the axone-gov module on an Abstract Account.
 //! The module must be published first using the publish script.
-//!
-//! ## Example
-//!
-//! ```bash
-//! cargo make install axone-gov local
-//! # or directly:
-//! cargo run --bin install --package axone-gov --features="daemon-bin" -- --network-ids local
 //! ```
 
 use axone_gov::{
@@ -22,60 +15,50 @@ use abstract_client::{AbstractClient, Application};
 use axone_networks::parse_network as parse_axone_network;
 use clap::Parser;
 use cw_orch::{anyhow, daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
+use log::info;
 
 fn install(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
     for network in networks {
-        println!("📥 Installing axone-gov on {}...", network.chain_id);
+        info!("📥 Installing axone-gov on {}...", network.chain_id);
 
         let rt = Runtime::new()?;
         let chain = DaemonBuilder::new(network.clone())
             .handle(rt.handle())
             .build()?;
 
-        println!("   Connected to: {}", network.chain_id);
-        println!("   Sender: {}", chain.sender_addr());
-        println!();
+        info!("   Connected to: {}", network.chain_id);
+        info!("   Sender: {}", chain.sender_addr());
 
-        // Connect to Abstract
         let abstract_client: AbstractClient<Daemon> = AbstractClient::new(chain.clone())?;
 
-        // Get or create account with namespace
         let app_namespace = Namespace::from_id(AXONE_GOV_ID)?;
         let account = abstract_client.fetch_or_build_account(app_namespace, |builder| {
             builder.namespace(Namespace::from_id(AXONE_GOV_ID).unwrap())
         })?;
 
-        println!("📦 Account address: {}", account.address()?);
-        println!();
+        info!("📦 Account address: {}", account.address()?);
 
-        // Install the module on the account
-        println!("📥 Installing axone-gov module...");
+        info!("📥 Installing axone-gov module...");
         let app: Application<Daemon, AxoneGovInterface<Daemon>> = account
             .install_app::<AxoneGovInterface<_>>(&AxoneGovInstantiateMsg { count: 0 }, &[])?;
 
-        println!("✅ axone-gov installed successfully!");
-        println!();
-        println!("Module details:");
-        println!("   Address: {}", app.address()?);
-        println!("   Account: {}", account.address()?);
-        println!();
+        info!("✅ axone-gov installed successfully!");
+        info!("Module details:");
+        info!("   Address: {}", app.address()?);
+        info!("   Account: {}", account.address()?);
 
-        // Test basic functionality
-        println!("🧪 Testing module functionality...");
-
+        info!("🧪 Testing module functionality...");
         let count = app.count()?;
-        println!("   Initial count: {}", count.count);
+        info!("   Initial count: {}", count.count);
 
-        println!("   Incrementing...");
+        info!("   Incrementing...");
         app.increment()?;
 
         let count = app.count()?;
-        println!("   Count after increment: {}", count.count);
+        info!("   Count after increment: {}", count.count);
 
-        println!();
-        println!("✅ Module is working correctly!");
-        println!();
-        println!(
+        info!("✅ Module is working correctly!");
+        info!(
             "You can now interact with the module at: {}",
             app.address()?
         );

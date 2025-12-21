@@ -7,7 +7,9 @@ abstract_app::app_msg_types!(AxoneGov, AxoneGovExecuteMsg, AxoneGovQueryMsg);
 
 /// App instantiate message
 #[cosmwasm_schema::cw_serde]
+#[derive(Default)]
 pub struct AxoneGovInstantiateMsg {
+    #[serde(default)]
     pub count: i32,
 }
 

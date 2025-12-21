@@ -4,7 +4,7 @@ use axone_gov::{
         AxoneGovExecuteMsgFns, AxoneGovInstantiateMsg, AxoneGovQueryMsgFns, ConfigResponse,
         CountResponse,
     },
-    AxoneGovError, ABSTRACT_SCAFFOLD_NAMESPACE,
+    AxoneGovError, AXONE_NAMESPACE,
 };
 
 use abstract_app::objects::namespace::Namespace;
@@ -25,7 +25,7 @@ impl TestEnv<MockBech32> {
         // Create a sender and mock env
         let mock = MockBech32::new("mock");
         let sender = mock.sender_addr();
-        let namespace = Namespace::new(ABSTRACT_SCAFFOLD_NAMESPACE)?;
+        let namespace = Namespace::new(AXONE_NAMESPACE)?;
 
         // You can set up Abstract with a builder.
         let abs_client = AbstractClient::builder(mock).build_mock()?;

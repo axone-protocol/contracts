@@ -27,35 +27,46 @@ required-features = ["schema"]
 name = "publish"
 required-features = ["daemon-bin"]
 
+[[bin]]
+name = "install"
+required-features = ["daemon-bin"]
+
 [features]
-default = ["export"]
-export = []
-# use library feature to disable all instantiate/execute/query exports
 daemon-bin = [
   "cw-orch/daemon",
   "dep:clap",
   "dep:abstract-client",
+  "dep:axone-networks",
   "dep:dotenv",
   "dep:env_logger",
+  "dep:log",
 ]
+default = ["export"]
+export = []
 library = []
 schema = ["abstract-app/schema"]
 
 [dependencies]
 abstract-app.workspace = true
-abstract-client = { workspace = true, optional = true }
-abstract-interface.workspace = true
-clap = { workspace = true, optional = true, features = ["derive"] }
 const_format.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
 cw-asset.workspace = true
 cw-controllers.workspace = true
-cw-orch.workspace = true
 cw-storage-plus.workspace = true
+thiserror.workspace = true
+
+# Dependencies for interface
+abstract-interface.workspace = true
+cw-orch.workspace = true
+
+# Dependencies for bins
+abstract-client = { workspace = true, optional = true }
+axone-networks = { path = "../../packages/axone-networks", optional = true }
+clap = { workspace = true, optional = true, features = ["derive"] }
 dotenv = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
-thiserror.workspace = true
+log = { workspace = true, optional = true }
 
 [dev-dependencies]
 abstract-app = { workspace = true, features = ["test-utils"] }

@@ -12,7 +12,6 @@ pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub use contract::interface::AxoneGovInterface;
 
-pub const ABSTRACT_SCAFFOLD_NAMESPACE: &str = "abstract-scaffold";
+pub const AXONE_NAMESPACE: &str = "axone";
 pub const AXONE_GOV_NAME: &str = "axone-gov";
-pub const AXONE_GOV_ID: &str =
-    const_format::concatcp!(ABSTRACT_SCAFFOLD_NAMESPACE, ":", AXONE_GOV_NAME);
+pub const AXONE_GOV_ID: &str = const_format::concatcp!(AXONE_NAMESPACE, ":", AXONE_GOV_NAME);

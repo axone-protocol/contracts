@@ -35,8 +35,6 @@ abstract_app::export_endpoints!(APP, AxoneGov);
 
 abstract_app::cw_orch_interface!(APP, AxoneGov, AxoneGovInterface);
 
-// TODO: add to docmuentation
-// https://linear.app/abstract-sdk/issue/ABS-414/add-documentation-on-dependencycreation-trait
 #[cfg(not(target_arch = "wasm32"))]
 impl<Chain: cw_orch::environment::CwEnv> abstract_interface::DependencyCreation
     for crate::AxoneGovInterface<Chain>

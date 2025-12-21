@@ -13,6 +13,14 @@ script = [
   "echo '  cargo make test'",
   "echo '  cargo make format'",
   "echo '  cargo make lint'",
+  "echo",
+  "echo 'Deployment (cw-orchestrator):'",
+  "echo '  cargo make publish axone-gov local          # Deploy to local network'",
+  "echo '  cargo make publish axone-gov testnet        # Deploy to Axone testnet'",
+  "echo '  cargo make publish axone-gov local testnet  # Deploy to multiple networks'",
+  "echo",
+  "echo 'Supported networks: local, testnet, mainnet, axone-localnet, axone-dentrite-1, axone-1'",
+  "echo 'Also supports other cw-orch networks: uni-6, osmo-test-5, juno-1, etc.'",
 ]
 
 [tasks.format-rust]
@@ -132,6 +140,9 @@ args = [
   "--target",
   "wasm32-unknown-unknown",
   "--locked",
+  "--workspace",
+  "--exclude",
+  "axone-scripts",
 ]
 category = "Build"
 command = "cargo"
@@ -376,6 +387,114 @@ docker run --rm -v "$(pwd)":/code \
   ${DOCKER_IMAGE_COSMWASM_OPTIMIZER}
 '''
 
+[tasks.run-script]
+category = "Deployment"
+description = "Run a contract deployment script. Usage: cargo make run-script <script> <package> <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the script name as the first argument (e.g., publish)"
+  exit 1
+fi
+script=$1
+
+if [ -z "$2" ]
+then
+  echo "❌ Please provide the package name as the second argument (e.g., axone-gov)"
+  exit 1
+fi
+package=$2
+
+shift 2
+networks="$@"
+
+if [ -z "$networks" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+echo "🚀 Running script '${script}' for package '${package}' on networks: ${networks}"
+ARTIFACTS_DIR="${DIR_WASM}" cargo run --bin ${script} --package ${package} --features="daemon-bin" -- --network-ids ${networks}
+'''
+
+[tasks.publish]
+category = "Deployment"
+description = "Publish a contract to Abstract on specified networks. Usage: cargo make publish <contract-name> <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract name as the first argument (e.g., axone-gov)"
+  exit 1
+fi
+contract=$1
+
+shift
+networks="$@"
+
+if [ -z "$networks" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+# Check if artifacts directory exists, if not build WASM
+if [ -d "${DIR_WASM}" ] && [ "$(ls -A ${DIR_WASM}/*.wasm 2>/dev/null)" ]; then
+  echo "✅ Build found in ${DIR_WASM}"
+else
+  echo "📦 Building WASM contracts..."
+  cargo make wasm
+fi
+
+# Ensure cw-orch can locate the built wasm files
+mkdir -p artifacts
+cp -f ${DIR_WASM}/*.wasm artifacts/
+
+echo "📤 Publishing ${contract} to networks: ${networks}"
+cargo make run-script publish ${contract} ${networks}
+'''
+
+[tasks.chain-deploy-abstract]
+category = "Deployment"
+dependencies = ["chain-start"]
+description = "Deploy Abstract infrastructure to specified networks. Usage: cargo make deploy-abstract <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+networks="$@"
+
+echo "🚀 Deploying Abstract infrastructure to networks: ${networks}"
+cargo run --bin deploy_abstract --package axone-scripts -- --network-ids ${networks}
+'''
+
+[tasks.install]
+category = "Deployment"
+description = "Install a module on an Abstract Account. Usage: cargo make install <contract-name> <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract name as the first argument (e.g., axone-gov)"
+  exit 1
+fi
+contract=$1
+
+shift
+networks="$@"
+
+if [ -z "$networks" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+echo "📥 Installing ${contract} on networks: ${networks}"
+cargo run --bin install --package ${contract} --features="daemon-bin" -- --network-ids ${networks}
+'''
+
 [tasks.clean-chain]
 category = "Cleanup"
 condition = { fail_message = "🚫 The chain is running" }
@@ -550,50 +669,6 @@ docker run \
     ${@}
 '''
 
-[tasks.chain-deploy-contract]
-category = "Contract Deployment"
-dependencies = ["chain-start"]
-description = "Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...)."
-script = '''
-if [ -z "$1" ]
-then
-  echo "❌ Please provide the contract name (without extension) as the first argument."
-  exit 1
-fi
-contract=$1
-
-echo "📦 Deploying contract ${contract}.wasm (under ${DIR_WASM}) to chain ${CHAIN}"
-docker run --rm \
-  --network host \
-  -v `pwd`:/app:ro \
-  -w /app \
-  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
-    tx wasm store ${DIR_WASM}/${contract}.wasm \
-      --from validator \
-      --keyring-backend test \
-      --home ${CHAIN_HOME} \
-      --gas-prices 0.025uaxone \
-      --gas auto \
-      --gas-adjustment 1.5 \
-      --chain-id ${CHAIN} \
-      --yes | docker run --rm -i \
-        --network host \
-        -v `pwd`:/app:ro \
-        -w /app \
-        ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx
-'''
-
-[tasks.chain-deploy-contracts]
-category = "Contract Deployment"
-description = "Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...)."
-script = '''
-find "${DIR_WASM}" -type f -name "*.wasm" -maxdepth 1 | while read file; do
-  wasm=$(basename $file)
-  contract=${wasm%.*}
-  cargo make chain-deploy-contract $contract
-done
-'''
-
 [tasks.chain-list-contracts]
 category = "Contract Deployment"
 description = "List all the contracts deployed to the chain."
@@ -626,55 +701,6 @@ docker run --rm \
   ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm code-info $code_id \
       --home ${CHAIN_HOME}
-'''
-
-[tasks.chain-instantiate-contract]
-category = "Contract Interaction"
-dependencies = ["chain-start"]
-description = "Instantiate a specific contract to the chain. The contract must be already deployed."
-script = '''
-if [ -z "$1" ]
-then
-  echo "❌ Please provide the contract code id as the first argument."
-  exit 1
-fi
-code=$1
-
-if [ -z "$2" ]
-then
-  echo "❌ Please provide the contract label as the second argument."
-  exit 1
-fi
-label=$2
-
-if [ -z "$3" ]
-then
-  echo "❌ Please provide the contract instantiation json input as the third argument."
-  exit 1
-fi
-json=$3
-
-echo "📦 Instantiate contract ${code} to chain ${CHAIN}"
-docker run --rm \
-  --network host \
-  -v `pwd`:/app:ro \
-  -w /app \
-  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
-    tx wasm instantiate ${code} "${json}" \
-      --from validator \
-      --keyring-backend test \
-      --home ${CHAIN_HOME} \
-      --gas-prices 0.025uaxone \
-      --gas auto \
-      --gas-adjustment 1.5 \
-      --chain-id ${CHAIN} \
-      --yes \
-      --label $label \
-      --no-admin | docker run --rm -i \
-        --network host \
-        -v `pwd`:/app:ro \
-        -w /app \
-        ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx
 '''
 
 [tasks.chain-query-contract]
@@ -789,7 +815,7 @@ install_crate = { crate_name = "cargo-machete", min_version = "0.7.0" }
 category = "Development Tools"
 install_crate = { crate_name = "cargo-sort-derives", min_version = "0.10.0" }
 
-[tasks.install]
+[tasks.install-dev-tools]
 category = "Development Tools"
 dependencies = [
   "install-cranky",
@@ -890,10 +916,12 @@ DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
 DOCKER_IMAGE_AXONEPROTOCOL_AXONED = "axoneprotocol/axoned:13.0.0"
 DOCKER_IMAGE_COSMWASM_OPTIMIZER = "cosmwasm/optimizer:0.17.0"
 KEYRING_BACKEND = "test"
+LOCAL_MNEMONIC = "${MNEMONIC_VALIDATOR}"
 MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
 MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"
 MNEMONIC_CHARLIE = "couple proud learn plunge neglect dice dry tail keen price tuition inherit ordinary portion abandon body kitten system word monitor lava quiz soup lift"
 MNEMONIC_VALIDATOR = "island position immense mom cross enemy grab little deputy tray hungry detect state helmet tomorrow trap expect admit inhale present vault reveal scene atom"
+RUST_LOG = "info"
 SED_FLAG = { script = [
   '''if [ ${SHELL_NAME} = 'Darwin' ]; then echo "\'\'"; else echo; fi''',
 ] }

@@ -605,7 +605,6 @@ docker run --rm \
 	    --home ${CHAIN_HOME}
 
 sed -i ${SED_FLAG} 's/"stake"/"uaxone"/g' ${CHAIN_HOME}/config/genesis.json
-
 '''
 
 [tasks.chain-start]
@@ -621,8 +620,12 @@ if [ ! -f ${CHAIN_HOME}/config/genesis.json ]; then
   exit 1
 fi
 
+sed -i ${SED_FLAG} 's|address = "localhost:9090"|address = "0.0.0.0:9090"|g' ${CHAIN_HOME}/config/app.toml
+sed -i ${SED_FLAG} 's|address = "tcp://localhost:1317"|address = "tcp://0.0.0.0:1317"|g' ${CHAIN_HOME}/config/app.toml
+sed -i ${SED_FLAG} 's|laddr = "tcp://127.0.0.1:26657"|laddr = "tcp://0.0.0.0:26657"|g' ${CHAIN_HOME}/config/config.toml
+
 docker run -d \
-  --network host \
+  -p 1317:1317 -p 26657:26657 -p 9091:9090 \
   -v `pwd`:/app \
   -w /app \
   --name ${CHAIN} \
@@ -680,6 +683,7 @@ docker run --rm \
   -w /app \
   ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm list-code \
+      --node ${CHAIN_RPC_NODE} \
       --limit 1000 \
       --home ${CHAIN_HOME}
 '''
@@ -700,6 +704,7 @@ docker run --rm \
   -w /app \
   ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm code-info $code_id \
+      --node ${CHAIN_RPC_NODE} \
       --home ${CHAIN_HOME}
 '''
 
@@ -729,6 +734,7 @@ docker run --rm \
   -w /app \
   ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm contract-state smart ${addr} "${query}" \
+      --node ${CHAIN_RPC_NODE} \
       --output json \
       | jq -r '.'
 '''
@@ -762,6 +768,7 @@ docker run --rm \
       --from validator \
       --keyring-backend test \
       --home ${CHAIN_HOME} \
+      --node ${CHAIN_RPC_NODE} \
       --gas-prices 0.025uaxone \
       --gas auto \
       --gas-adjustment 1.5 \
@@ -771,6 +778,7 @@ docker run --rm \
         -v `pwd`:/app:ro \
         -w /app \
         ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx \
+          --node ${CHAIN_RPC_NODE} \
           --output json \
           | jq -r '.'
 '''
@@ -910,6 +918,7 @@ BALANCE_VALIDATOR = "1000000000uaxone"
 CHAIN = "axone-localnet"
 CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
 CHAIN_MONIKER = "local-node"
+CHAIN_RPC_NODE = "tcp://127.0.0.1:26657"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
 DIR_TARGET = "./target"
 DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"

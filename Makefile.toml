@@ -15,9 +15,9 @@ script = [
   "echo '  cargo make lint'",
   "echo",
   "echo 'Deployment (cw-orchestrator):'",
-  "echo '  cargo make publish axone-gov local          # Deploy to local network'",
-  "echo '  cargo make publish axone-gov testnet        # Deploy to Axone testnet'",
-  "echo '  cargo make publish axone-gov local testnet  # Deploy to multiple networks'",
+  "echo '  cargo make deploy-contract axone-gov local          # Deploy to local network'",
+  "echo '  cargo make deploy-contract axone-gov testnet        # Deploy to Axone testnet'",
+  "echo '  cargo make deploy-contract axone-gov local testnet  # Deploy to multiple networks'",
   "echo",
   "echo 'Supported networks: local, testnet, mainnet, axone-localnet, axone-dentrite-1, axone-1'",
   "echo 'Also supports other cw-orch networks: uni-6, osmo-test-5, juno-1, etc.'",
@@ -387,9 +387,9 @@ docker run --rm -v "$(pwd)":/code \
   ${DOCKER_IMAGE_COSMWASM_OPTIMIZER}
 '''
 
-[tasks.run-script]
+[tasks.deploy-script]
 category = "Deployment"
-description = "Run a contract deployment script. Usage: cargo make run-script <script> <package> <network-ids...>"
+description = "Run a contract deployment script. Usage: cargo make deploy-script <script> <package> <network-ids...>"
 script = '''
 if [ -z "$1" ]
 then
@@ -418,9 +418,9 @@ echo "🚀 Running script '${script}' for package '${package}' on networks: ${ne
 ARTIFACTS_DIR="${DIR_WASM}" cargo run --bin ${script} --package ${package} --features="daemon-bin" -- --network-ids ${networks}
 '''
 
-[tasks.publish]
+[tasks.deploy-contract]
 category = "Deployment"
-description = "Publish a contract to Abstract on specified networks. Usage: cargo make publish <contract-name> <network-ids...>"
+description = "Publish a contract to Abstract on specified networks. Usage: cargo make deploy-contract <contract-name> <network-ids...>"
 script = '''
 if [ -z "$1" ]
 then
@@ -451,10 +451,10 @@ mkdir -p artifacts
 cp -f ${DIR_WASM}/*.wasm artifacts/
 
 echo "📤 Publishing ${contract} to networks: ${networks}"
-cargo make run-script publish ${contract} ${networks}
+cargo make deploy-script publish ${contract} ${networks}
 '''
 
-[tasks.chain-deploy-abstract]
+[tasks.deploy-abstract]
 category = "Deployment"
 dependencies = ["chain-start"]
 description = "Deploy Abstract infrastructure to specified networks. Usage: cargo make deploy-abstract <network-ids...>"
@@ -471,9 +471,9 @@ echo "🚀 Deploying Abstract infrastructure to networks: ${networks}"
 cargo run --bin deploy_abstract --package axone-scripts -- --network-ids ${networks}
 '''
 
-[tasks.install]
+[tasks.deploy-install]
 category = "Deployment"
-description = "Install a module on an Abstract Account. Usage: cargo make install <contract-name> <network-ids...>"
+description = "Install a module on an Abstract Account. Usage: cargo make deploy-install <contract-name> <network-ids...>"
 script = '''
 if [ -z "$1" ]
 then
@@ -672,8 +672,8 @@ docker run \
     ${@}
 '''
 
-[tasks.chain-list-contracts]
-category = "Contract Deployment"
+[tasks.contract-list]
+category = "Contract Inspection"
 description = "List all the contracts deployed to the chain."
 script = '''
 echo "🔍 Listing contracts on chain ${CHAIN}"
@@ -688,8 +688,8 @@ docker run --rm \
       --home ${CHAIN_HOME}
 '''
 
-[tasks.chain-inspect-contract]
-category = "Contract Deployment"
+[tasks.contract-inspect]
+category = "Contract Inspection"
 description = "Inspect a specific contract deployed to the chain."
 script = '''
 if [ -z "$1" ]
@@ -708,10 +708,10 @@ docker run --rm \
       --home ${CHAIN_HOME}
 '''
 
-[tasks.chain-query-contract]
+[tasks.contract-query]
 category = "Contract Interaction"
 dependencies = ["chain-start"]
-description = "Query a specific contract to the chain. The contract must be already deployed and instantiated."
+description = "Query a specific contract. The contract must be already deployed and instantiated."
 script = '''
 if [ -z "$1" ]
 then
@@ -739,10 +739,10 @@ docker run --rm \
       | jq -r '.'
 '''
 
-[tasks.chain-execute-contract]
+[tasks.contract-execute]
 category = "Contract Interaction"
 dependencies = ["chain-start"]
-description = "Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated."
+description = "Execute a command on a specific contract. The contract must be already deployed and instantiated."
 script = '''
 if [ -z "$1" ]
 then

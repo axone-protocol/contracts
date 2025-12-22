@@ -387,6 +387,7 @@ npx --yes prettier@3.1.1 docs/*.md --write
 
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 '''
+script_runner = "bash"
 
 [tasks.release-wasm]
 category = "Build"

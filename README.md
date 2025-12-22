@@ -113,7 +113,7 @@ Build
 ----------
 build - No Description.
 release-wasm - Build optimized wasm using CosmWasm optimizer and provide checksums
-schema - No Description.
+schema - Generate JSON schemas for all contracts.
 wasm - No Description.
 
 Chain Management

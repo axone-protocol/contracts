@@ -36,7 +36,7 @@ fn publish(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
 
         let publisher_acc = abstract_client
             .fetch_or_build_account(app_namespace.clone(), |builder| {
-                builder.namespace(Namespace::from_id(AXONE_GOV_ID).unwrap())
+                builder.namespace(app_namespace.clone())
             })?;
 
         let publisher: Publisher<_> = publisher_acc.publisher()?;
@@ -73,7 +73,7 @@ struct Arguments {
     network_ids: Vec<String>,
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
     let args = Arguments::parse();
@@ -82,11 +82,7 @@ fn main() {
         .iter()
         .map(|n| parse_axone_network(n).or_else(|_| cw_orch::daemon::networks::parse_network(n)))
         .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+        .map_err(|e| anyhow::anyhow!("Invalid network id: {}", e))?;
 
-    if let Err(e) = publish(networks) {
-        eprintln!("Error publishing app: {}", e);
-        eprintln!("Error details: {:?}", e);
-        std::process::exit(1);
-    }
+    publish(networks)
 }

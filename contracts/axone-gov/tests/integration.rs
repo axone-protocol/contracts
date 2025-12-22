@@ -24,8 +24,8 @@ impl TestEnv<MockBech32> {
         let sender = mock.sender_addr();
         let namespace = Namespace::new(AXONE_NAMESPACE)?;
 
-        let abs_client = AbstractClient::builder(mock).build_mock()?;
-        abs_client.set_balance(&sender, &coins(123, "ucosm"))?;
+        let abs_client = AbstractClient::builder(mock.clone()).build()?;
+        mock.add_balance(&sender, coins(123, "ucosm"))?;
         let publisher = abs_client
             .account_builder()
             .namespace(namespace)

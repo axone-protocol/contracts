@@ -822,20 +822,70 @@ category = "Development Tools"
 private = true
 script = '''
 TOOL_NAME="${CARGO_MAKE_TASK_ARGS}"
-MIN_VERSION="${MIN_VERSION}"
+REQUIRED_VERSION="${REQUIRED_VERSION}"
 BINARY_NAME="${BINARY_NAME:-$TOOL_NAME}"
 
-# Check if tool is already installed and meets version requirement
+# Check if tool is already installed and meets required pinned version (if provided)
 if command -v "${BINARY_NAME}" >/dev/null 2>&1; then
-    echo "✅ ${BINARY_NAME} is already installed"
-    exit 0
+    if [ -z "${REQUIRED_VERSION}" ]; then
+        echo "✅ ${BINARY_NAME} is already installed"
+        exit 0
+    fi
+
+    extract_version() {
+        local v
+
+        # Preferred: parse from `<bin> --version` (common case)
+        v="$("${BINARY_NAME}" --version 2>/dev/null | grep -Eo '[0-9]+(\.[0-9]+){1,2}' | head -n1)"
+        if [ -n "${v}" ]; then
+            printf '%s' "${v}"
+            return 0
+        fi
+
+        # Fallback: some cargo subcommands (plugins) don't expose `--version`.
+        # In that case, try extracting the installed crate version from `cargo install --list`.
+        if command -v cargo >/dev/null 2>&1; then
+            v="$(cargo install --list 2>/dev/null | awk -v tool="${TOOL_NAME}" -v bin="${BINARY_NAME}" '
+                $1==tool || $1==bin {
+                    ver=$2;
+                    sub(/^v/,"",ver);
+                    sub(/:$/,"",ver);
+                    print ver;
+                    exit
+                }
+            ')"
+            if [ -n "${v}" ]; then
+                printf '%s' "${v}"
+                return 0
+            fi
+        fi
+
+        return 1
+    }
+
+    INSTALLED_VERSION="$(extract_version || true)"
+    if [ -n "${INSTALLED_VERSION}" ] && [ "${INSTALLED_VERSION}" = "${REQUIRED_VERSION}" ]; then
+        echo "✅ ${BINARY_NAME} is already installed (v${INSTALLED_VERSION})"
+        exit 0
+    fi
+
+    if [ -z "${INSTALLED_VERSION}" ]; then
+        echo "⚠️ ${BINARY_NAME} is installed but its version cannot be determined; skipping version check"
+        exit 0
+    fi
+
+    echo "🔁 ${BINARY_NAME} is installed but not the required version (have: ${INSTALLED_VERSION}, need: ${REQUIRED_VERSION}), reinstalling"
 fi
 
 echo "📦 Installing ${TOOL_NAME}..."
 
 if command -v cargo-binstall >/dev/null 2>&1; then
     echo "⚡ Using cargo-binstall (fast binary installation)"
-    if cargo binstall "${TOOL_NAME}" --no-confirm --force; then
+    BINSTALL_VERSION_ARGS=()
+    if [ -n "${REQUIRED_VERSION}" ]; then
+        BINSTALL_VERSION_ARGS=(--version "${REQUIRED_VERSION}")
+    fi
+    if cargo binstall "${TOOL_NAME}" --no-confirm --force "${BINSTALL_VERSION_ARGS[@]}"; then
         echo "✅ ${TOOL_NAME} installed successfully via cargo-binstall"
         exit 0
     else
@@ -845,53 +895,58 @@ fi
 
 # Fallback to cargo install
 echo "🔨 Installing from source via cargo install..."
-cargo install "${TOOL_NAME}" --force --locked
+INSTALL_VERSION_ARGS=()
+if [ -n "${REQUIRED_VERSION}" ]; then
+    INSTALL_VERSION_ARGS=(--version "${REQUIRED_VERSION}")
+fi
+cargo install "${TOOL_NAME}" --force --locked "${INSTALL_VERSION_ARGS[@]}"
 echo "✅ ${TOOL_NAME} installed successfully"
 '''
+script_runner = "bash"
 
 [tasks.install-cranky]
 category = "Development Tools"
-env = { "MIN_VERSION" = "0.3.0", "CARGO_MAKE_TASK_ARGS" = "cargo-cranky", "BINARY_NAME" = "cargo-cranky" }
+env = { "REQUIRED_VERSION" = "0.3.0", "CARGO_MAKE_TASK_ARGS" = "cargo-cranky", "BINARY_NAME" = "cargo-cranky" }
 run_task = "install-tool"
 
 [tasks.install-taplo-cli]
 category = "Development Tools"
-env = { "MIN_VERSION" = "0.9.0", "CARGO_MAKE_TASK_ARGS" = "taplo-cli@0.9.3", "BINARY_NAME" = "taplo" }
+env = { "REQUIRED_VERSION" = "0.10.0", "CARGO_MAKE_TASK_ARGS" = "taplo-cli", "BINARY_NAME" = "taplo" }
 run_task = "install-tool"
 
 [tasks.install-cargo-toml-lint]
 category = "Development Tools"
-env = { "MIN_VERSION" = "0.1.1", "CARGO_MAKE_TASK_ARGS" = "cargo-toml-lint", "BINARY_NAME" = "cargo-toml-lint" }
+env = { "REQUIRED_VERSION" = "0.1.1", "CARGO_MAKE_TASK_ARGS" = "cargo-toml-lint", "BINARY_NAME" = "cargo-toml-lint" }
 run_task = "install-tool"
 
 [tasks.install-llvm-cov]
 category = "Development Tools"
-env = { "MIN_VERSION" = "0.6.9", "CARGO_MAKE_TASK_ARGS" = "cargo-llvm-cov", "BINARY_NAME" = "cargo-llvm-cov" }
+env = { "REQUIRED_VERSION" = "0.6.9", "CARGO_MAKE_TASK_ARGS" = "cargo-llvm-cov", "BINARY_NAME" = "cargo-llvm-cov" }
 run_task = "install-tool"
 
 [tasks.install-cosmwasm-check]
 category = "Development Tools"
-env = { "MIN_VERSION" = "3.0.2", "CARGO_MAKE_TASK_ARGS" = "cosmwasm-check", "BINARY_NAME" = "cosmwasm-check" }
+env = { "REQUIRED_VERSION" = "3.0.2", "CARGO_MAKE_TASK_ARGS" = "cosmwasm-check", "BINARY_NAME" = "cosmwasm-check" }
 run_task = "install-tool"
 
 [tasks.install-cargo-workspaces]
 category = "Development Tools"
-env = { "MIN_VERSION" = "0.3.6", "CARGO_MAKE_TASK_ARGS" = "cargo-workspaces", "BINARY_NAME" = "cargo" }
+env = { "REQUIRED_VERSION" = "0.3.6", "CARGO_MAKE_TASK_ARGS" = "cargo-workspaces", "BINARY_NAME" = "cargo-workspaces" }
 run_task = "install-tool"
 
 [tasks.install-cargo-hack]
 category = "Development Tools"
-env = { "MIN_VERSION" = "0.6.14", "CARGO_MAKE_TASK_ARGS" = "cargo-hack", "BINARY_NAME" = "cargo-hack" }
+env = { "REQUIRED_VERSION" = "0.6.14", "CARGO_MAKE_TASK_ARGS" = "cargo-hack", "BINARY_NAME" = "cargo-hack" }
 run_task = "install-tool"
 
 [tasks.install-cargo-machete]
 category = "Development Tools"
-env = { "MIN_VERSION" = "0.7.0", "CARGO_MAKE_TASK_ARGS" = "cargo-machete", "BINARY_NAME" = "cargo-machete" }
+env = { "REQUIRED_VERSION" = "0.7.0", "CARGO_MAKE_TASK_ARGS" = "cargo-machete", "BINARY_NAME" = "cargo-machete" }
 run_task = "install-tool"
 
 [tasks.install-cargo-sort-derives]
 category = "Development Tools"
-env = { "MIN_VERSION" = "0.10.0", "CARGO_MAKE_TASK_ARGS" = "cargo-sort-derives", "BINARY_NAME" = "cargo-sort-derives" }
+env = { "REQUIRED_VERSION" = "0.10.0", "CARGO_MAKE_TASK_ARGS" = "cargo-sort-derives", "BINARY_NAME" = "cargo-sort-derives" }
 run_task = "install-tool"
 
 [tasks.install-dev-tools]

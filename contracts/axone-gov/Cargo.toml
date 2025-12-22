@@ -1,0 +1,70 @@
+[package]
+authors = { workspace = true }
+description = "AXONE governance contract built with Abstract SDK."
+edition = { workspace = true }
+homepage = { workspace = true }
+keywords = { workspace = true }
+license = { workspace = true }
+name = "axone-gov"
+repository = { workspace = true }
+rust-version = { workspace = true }
+version = { workspace = true }
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "schema"
+required-features = ["schema"]
+
+[[bin]]
+name = "publish"
+required-features = ["daemon-bin"]
+
+[[bin]]
+name = "install"
+required-features = ["daemon-bin"]
+
+[features]
+daemon-bin = [
+  "cw-orch/daemon",
+  "dep:clap",
+  "dep:abstract-client",
+  "dep:axone-networks",
+  "dep:dotenv",
+  "dep:env_logger",
+  "dep:log",
+]
+default = ["export"]
+export = []
+library = []
+schema = ["abstract-app/schema"]
+
+[dependencies]
+abstract-app.workspace = true
+abstract-client = { workspace = true, optional = true }
+abstract-interface.workspace = true
+axone-networks = { path = "../../packages/axone-networks", optional = true }
+clap = { workspace = true, optional = true, features = ["derive"] }
+const_format.workspace = true
+cosmwasm-schema.workspace = true
+cosmwasm-std.workspace = true
+cw-asset.workspace = true
+cw-controllers.workspace = true
+cw-orch.workspace = true
+cw-storage-plus.workspace = true
+dotenv = { workspace = true, optional = true }
+env_logger = { workspace = true, optional = true }
+log = { workspace = true, optional = true }
+thiserror.workspace = true
+
+[dev-dependencies]
+abstract-app = { workspace = true, features = ["test-utils"] }
+abstract-client.workspace = true
+axone-gov = { path = ".", version = "8.0.0" }

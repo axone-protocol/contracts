@@ -1,6 +1,6 @@
 [
   {
-    "path": "target/wasm32-unknown-unknown/release/axone_dummy.wasm",
+    "path": "target/wasm32-unknown-unknown/release/axone_gov.wasm",
     "running": false,
     "brotli": false,
     "gzip": false

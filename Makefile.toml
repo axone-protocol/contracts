@@ -13,6 +13,14 @@ script = [
   "echo '  cargo make test'",
   "echo '  cargo make format'",
   "echo '  cargo make lint'",
+  "echo",
+  "echo 'Deployment (cw-orchestrator):'",
+  "echo '  cargo make deploy-contract axone-gov local          # Deploy to local network'",
+  "echo '  cargo make deploy-contract axone-gov testnet        # Deploy to Axone testnet'",
+  "echo '  cargo make deploy-contract axone-gov local testnet  # Deploy to multiple networks'",
+  "echo",
+  "echo 'Supported networks: local, testnet, mainnet, axone-localnet, axone-dentrite-1, axone-1'",
+  "echo 'Also supports other cw-orch networks: uni-6, osmo-test-5, juno-1, etc.'",
 ]
 
 [tasks.format-rust]
@@ -47,11 +55,12 @@ dependencies = ["install-taplo-cli"]
 description = "Check lint of all toml files."
 
 [tasks.lint-cargo-toml-file]
-args = ["${@}"]
 category = "Code Quality"
-command = "cargo-toml-lint"
 dependencies = ["install-cargo-toml-lint"]
 description = "Check lint of the given toml file"
+script = '''
+cargo-toml-lint "${@}"
+'''
 
 [tasks.lint-cargo-toml]
 category = "Code Quality"
@@ -132,6 +141,9 @@ args = [
   "--target",
   "wasm32-unknown-unknown",
   "--locked",
+  "--workspace",
+  "--exclude",
+  "axone-scripts",
 ]
 category = "Build"
 command = "cargo"
@@ -139,7 +151,18 @@ dependencies = ["install-cargo-hack"]
 
 [tasks.schema]
 category = "Build"
-workspace = true
+description = "Generate JSON schemas for all contracts."
+script = '''
+echo "📋 Generating schemas for all contracts..."
+for contract_dir in contracts/*/; do
+    if [ -d "$contract_dir" ]; then
+        contract_name=$(basename "$contract_dir")
+        echo "🔧 Generating schema for $contract_name..."
+        (cd "$contract_dir" && cargo make schema)
+    fi
+done
+echo "✅ All schemas generated"
+'''
 
 [tasks.check-contracts]
 category = "Verification"
@@ -242,74 +265,120 @@ rm -rf $DOCS_FOLDER
 
 echo "📚 Generating documentation in ${DOCS_FOLDER} folder..."
 
-mkdir -p $SCHEMA_FOLDER
-find contracts/*/schema -type f -maxdepth 1 -name '*.json' \
-    -exec sh -c 'cp "$@" "$0"' $SCHEMA_FOLDER/ {} +
+mkdir -p "$SCHEMA_FOLDER"
+find contracts -mindepth 2 -maxdepth 3 -path "*/schema/module-schema.json" -print0 \
+  | while IFS= read -r -d '' schema; do
+      contract=$(basename "$(dirname "$(dirname "$schema")")")
+      dest="${SCHEMA_FOLDER}/${contract}.json"
+      cp "$schema" "$dest"
+      jq "
+        def ensure_one_of:
+          if . == null then .
+          elif has(\"oneOf\") then .
+          else
+            {
+              title: (.title // \"\"),
+              description: (.description // \"\"),
+              oneOf: [
+                {
+                  title: (.title // \"\"),
+                  description: (.description // \"\"),
+                  type: (.type // \"object\"),
+                  required: (.required // []),
+                  properties: (.properties // {}),
+                  additionalProperties: (.additionalProperties // false)
+                }
+              ]
+            }
+          end;
+        def annotate_variants:
+          if . == null or (type != \"object\") then .
+          elif has(\"oneOf\") then
+            .oneOf = [
+              .oneOf[]
+              | if (has(\"title\") and (.title | length > 0)) then .
+                elif (has(\"properties\") and (.properties | type == \"object\") and ((.properties | keys) | length) == 1) then
+                  . + { title: (.properties | keys | first) }
+                else .
+                end
+            ]
+          else .
+          end;
+        (.instantiate |= (ensure_one_of | annotate_variants))
+        | (.execute |= annotate_variants)
+        | (.query |= annotate_variants)
+        | (.migrate |= (ensure_one_of | annotate_variants))
+      " "$dest" > "${dest}.tmp" && mv "${dest}.tmp" "$dest"
+    done
 
-mkdir -p $DOCS_FOLDER
+mkdir -p "$DOCS_FOLDER"
 
-for SCHEMA in $(ls $SCHEMA_FOLDER); do
-    from="$SCHEMA"
-    to="${SCHEMA%.json}.md"
-    echo "✍️ Rendering ${SCHEMA_FOLDER}/$from to $to"
+set -- "$SCHEMA_FOLDER"/*.json
+if [ "$1" = "$SCHEMA_FOLDER/*.json" ]; then
+    echo "⚠️  No schema files to render"
+else
+    for SCHEMA_FILE in "$@"; do
+        from=$(basename "$SCHEMA_FILE")
+        to="${from%.json}.md"
+        echo "✍️ Rendering ${SCHEMA_FOLDER}/$from to $to"
 
-    awk "{sub(\"#/definitions\",\"./${from}/#/definitions\")} {print}" ${SCHEMA_FOLDER}/$from > ${SCHEMA_FOLDER}/$from.tmp
-    mv ${SCHEMA_FOLDER}/${from}.tmp ${SCHEMA_FOLDER}/${from}
+        awk "{sub(\"#/definitions\",\"./${from}/#/definitions\")} {print}" "${SCHEMA_FOLDER}/${from}" > "${SCHEMA_FOLDER}/${from}.tmp"
+        mv "${SCHEMA_FOLDER}/${from}.tmp" "${SCHEMA_FOLDER}/${from}"
 
-    npx --yes @fadroma/schema@1.1.0 ${SCHEMA_FOLDER}/${from} > "docs/${to}.tmp"
+        npx --yes @fadroma/schema@1.1.0 "${SCHEMA_FOLDER}/${from}" > "docs/${to}.tmp"
 
-    perl << 'EOF' - "docs/${to}.tmp" > "docs/${to}"
-    use strict;
-    use warnings;
-    use autodie;
+        perl << 'EOF' - "docs/${to}.tmp" > "docs/${to}"
+        use strict;
+        use warnings;
+        use autodie;
 
-    my $file = shift @ARGV;
-    local $/ = undef;
+        my $file = shift @ARGV;
+        local $/ = undef;
 
-    open my $fh, '<', $file or die "☠️ Could not open file: $!";
-    my $content = <$fh>;
-    close $fh;
+        open my $fh, '<', $file or die "☠️ Could not open file: $!";
+        my $content = <$fh>;
+        close $fh;
 
-    my $in_code_block = 0;
-    my $in_inline_code = 0;
-    my $escaped_content = '';
-    my @chars = split //, $content;
+        my $in_code_block = 0;
+        my $in_inline_code = 0;
+        my $escaped_content = '';
+        my @chars = split //, $content;
 
-    for (my $i = 0; $i < @chars; $i++) {
-        my $char = $chars[$i];
-        my $emitted = '';
+        for (my $i = 0; $i < @chars; $i++) {
+            my $char = $chars[$i];
+            my $emitted = '';
 
-        if ($char eq '`') {
-            my $next_char = $chars[$i + 1] // '';
-            my $next_next_char = $chars[$i + 2] // '';
-            if ($next_char eq '`' && $next_next_char eq '`') {
-                $in_code_block = !$in_code_block;
-                $i += 2;
-                $emitted = '```';
-            } elsif (!$in_code_block) {
-                $in_inline_code = !$in_inline_code;
-                $emitted = '`';
+            if ($char eq '`') {
+                my $next_char = $chars[$i + 1] // '';
+                my $next_next_char = $chars[$i + 2] // '';
+                if ($next_char eq '`' && $next_next_char eq '`') {
+                    $in_code_block = !$in_code_block;
+                    $i += 2;
+                    $emitted = '```';
+                } elsif (!$in_code_block) {
+                    $in_inline_code = !$in_inline_code;
+                    $emitted = '`';
+                } else {
+                    $emitted = $char;
+                }
+            } elsif ($char eq '\n') {
+              $in_inline_code = 0;
+              $emitted = $char;
+            } elsif (!$in_code_block && !$in_inline_code && ($char eq '{' || $char eq '}')) {
+                $emitted = "\\$char";
             } else {
                 $emitted = $char;
             }
-        } elsif ($char eq '\n') {
-          $in_inline_code = 0;
-          $emitted = $char;
-        } elsif (!$in_code_block && !$in_inline_code && ($char eq '{' || $char eq '}')) {
-            $emitted = "\\$char";
-        } else {
-            $emitted = $char;
+
+            $escaped_content .= $emitted;
         }
 
-        $escaped_content .= $emitted;
-    }
-
-    print $escaped_content;
+        print $escaped_content;
 EOF
 
-    rm "docs/${to}.tmp"
-
-done
+        rm "docs/${to}.tmp"
+    done
+fi
 
 rm -rf $SCHEMA_FOLDER
 
@@ -318,6 +387,7 @@ npx --yes prettier@3.1.1 docs/*.md --write
 
 echo "📖 Documentation has been successfully generated and available at $(pwd)/$DOCS_FOLDER/README.md"
 '''
+script_runner = "bash"
 
 [tasks.release-wasm]
 category = "Build"
@@ -328,6 +398,114 @@ docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
   ${DOCKER_IMAGE_COSMWASM_OPTIMIZER}
+'''
+
+[tasks.deploy-script]
+category = "Deployment"
+description = "Run a contract deployment script. Usage: cargo make deploy-script <script> <package> <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the script name as the first argument (e.g., publish)"
+  exit 1
+fi
+script=$1
+
+if [ -z "$2" ]
+then
+  echo "❌ Please provide the package name as the second argument (e.g., axone-gov)"
+  exit 1
+fi
+package=$2
+
+shift 2
+networks="$@"
+
+if [ -z "$networks" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+echo "🚀 Running script '${script}' for package '${package}' on networks: ${networks}"
+ARTIFACTS_DIR="${DIR_WASM}" cargo run --bin ${script} --package ${package} --features="daemon-bin" -- --network-ids ${networks}
+'''
+
+[tasks.deploy-contract]
+category = "Deployment"
+description = "Publish a contract to Abstract on specified networks. Usage: cargo make deploy-contract <contract-name> <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract name as the first argument (e.g., axone-gov)"
+  exit 1
+fi
+contract=$1
+
+shift
+networks="$@"
+
+if [ -z "$networks" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+# Check if artifacts directory exists, if not build WASM
+if [ -d "${DIR_WASM}" ] && [ "$(ls -A ${DIR_WASM}/*.wasm 2>/dev/null)" ]; then
+  echo "✅ Build found in ${DIR_WASM}"
+else
+  echo "📦 Building WASM contracts..."
+  cargo make wasm
+fi
+
+# Ensure cw-orch can locate the built wasm files
+mkdir -p artifacts
+cp -f ${DIR_WASM}/*.wasm artifacts/
+
+echo "📤 Publishing ${contract} to networks: ${networks}"
+cargo make deploy-script publish ${contract} ${networks}
+'''
+
+[tasks.deploy-abstract]
+category = "Deployment"
+dependencies = ["chain-start"]
+description = "Deploy Abstract infrastructure to specified networks. Usage: cargo make deploy-abstract <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+networks="$@"
+
+echo "🚀 Deploying Abstract infrastructure to networks: ${networks}"
+cargo run --bin deploy_abstract --package axone-scripts -- --network-ids ${networks}
+'''
+
+[tasks.deploy-install]
+category = "Deployment"
+description = "Install a module on an Abstract Account. Usage: cargo make deploy-install <contract-name> <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide the contract name as the first argument (e.g., axone-gov)"
+  exit 1
+fi
+contract=$1
+
+shift
+networks="$@"
+
+if [ -z "$networks" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+echo "📥 Installing ${contract} on networks: ${networks}"
+cargo run --bin install --package ${contract} --features="daemon-bin" -- --network-ids ${networks}
 '''
 
 [tasks.clean-chain]
@@ -440,7 +618,6 @@ docker run --rm \
 	    --home ${CHAIN_HOME}
 
 sed -i ${SED_FLAG} 's/"stake"/"uaxone"/g' ${CHAIN_HOME}/config/genesis.json
-
 '''
 
 [tasks.chain-start]
@@ -456,8 +633,12 @@ if [ ! -f ${CHAIN_HOME}/config/genesis.json ]; then
   exit 1
 fi
 
+sed -i ${SED_FLAG} 's|address = "localhost:9090"|address = "0.0.0.0:9090"|g' ${CHAIN_HOME}/config/app.toml
+sed -i ${SED_FLAG} 's|address = "tcp://localhost:1317"|address = "tcp://0.0.0.0:1317"|g' ${CHAIN_HOME}/config/app.toml
+sed -i ${SED_FLAG} 's|laddr = "tcp://127.0.0.1:26657"|laddr = "tcp://0.0.0.0:26657"|g' ${CHAIN_HOME}/config/config.toml
+
 docker run -d \
-  --network host \
+  -p 1317:1317 -p 26657:26657 -p 9091:9090 \
   -v `pwd`:/app \
   -w /app \
   --name ${CHAIN} \
@@ -504,52 +685,8 @@ docker run \
     ${@}
 '''
 
-[tasks.chain-deploy-contract]
-category = "Contract Deployment"
-dependencies = ["chain-start"]
-description = "Deploy a specific contract to the chain. The contract must be compiled and the wasm file must be present in the artifacts directory (under target/wasm32-unknown-unknown/...)."
-script = '''
-if [ -z "$1" ]
-then
-  echo "❌ Please provide the contract name (without extension) as the first argument."
-  exit 1
-fi
-contract=$1
-
-echo "📦 Deploying contract ${contract}.wasm (under ${DIR_WASM}) to chain ${CHAIN}"
-docker run --rm \
-  --network host \
-  -v `pwd`:/app:ro \
-  -w /app \
-  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
-    tx wasm store ${DIR_WASM}/${contract}.wasm \
-      --from validator \
-      --keyring-backend test \
-      --home ${CHAIN_HOME} \
-      --gas-prices 0.025uaxone \
-      --gas auto \
-      --gas-adjustment 1.5 \
-      --chain-id ${CHAIN} \
-      --yes | docker run --rm -i \
-        --network host \
-        -v `pwd`:/app:ro \
-        -w /app \
-        ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx
-'''
-
-[tasks.chain-deploy-contracts]
-category = "Contract Deployment"
-description = "Deploy all the available contracts to the chain (under target/wasm32-unknown-unknown/...)."
-script = '''
-find "${DIR_WASM}" -type f -name "*.wasm" -maxdepth 1 | while read file; do
-  wasm=$(basename $file)
-  contract=${wasm%.*}
-  cargo make chain-deploy-contract $contract
-done
-'''
-
-[tasks.chain-list-contracts]
-category = "Contract Deployment"
+[tasks.contract-list]
+category = "Contract Inspection"
 description = "List all the contracts deployed to the chain."
 script = '''
 echo "🔍 Listing contracts on chain ${CHAIN}"
@@ -559,12 +696,13 @@ docker run --rm \
   -w /app \
   ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm list-code \
+      --node ${CHAIN_RPC_NODE} \
       --limit 1000 \
       --home ${CHAIN_HOME}
 '''
 
-[tasks.chain-inspect-contract]
-category = "Contract Deployment"
+[tasks.contract-inspect]
+category = "Contract Inspection"
 description = "Inspect a specific contract deployed to the chain."
 script = '''
 if [ -z "$1" ]
@@ -579,62 +717,14 @@ docker run --rm \
   -w /app \
   ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm code-info $code_id \
+      --node ${CHAIN_RPC_NODE} \
       --home ${CHAIN_HOME}
 '''
 
-[tasks.chain-instantiate-contract]
+[tasks.contract-query]
 category = "Contract Interaction"
 dependencies = ["chain-start"]
-description = "Instantiate a specific contract to the chain. The contract must be already deployed."
-script = '''
-if [ -z "$1" ]
-then
-  echo "❌ Please provide the contract code id as the first argument."
-  exit 1
-fi
-code=$1
-
-if [ -z "$2" ]
-then
-  echo "❌ Please provide the contract label as the second argument."
-  exit 1
-fi
-label=$2
-
-if [ -z "$3" ]
-then
-  echo "❌ Please provide the contract instantiation json input as the third argument."
-  exit 1
-fi
-json=$3
-
-echo "📦 Instantiate contract ${code} to chain ${CHAIN}"
-docker run --rm \
-  --network host \
-  -v `pwd`:/app:ro \
-  -w /app \
-  ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
-    tx wasm instantiate ${code} "${json}" \
-      --from validator \
-      --keyring-backend test \
-      --home ${CHAIN_HOME} \
-      --gas-prices 0.025uaxone \
-      --gas auto \
-      --gas-adjustment 1.5 \
-      --chain-id ${CHAIN} \
-      --yes \
-      --label $label \
-      --no-admin | docker run --rm -i \
-        --network host \
-        -v `pwd`:/app:ro \
-        -w /app \
-        ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx
-'''
-
-[tasks.chain-query-contract]
-category = "Contract Interaction"
-dependencies = ["chain-start"]
-description = "Query a specific contract to the chain. The contract must be already deployed and instantiated."
+description = "Query a specific contract. The contract must be already deployed and instantiated."
 script = '''
 if [ -z "$1" ]
 then
@@ -657,14 +747,15 @@ docker run --rm \
   -w /app \
   ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} \
     query wasm contract-state smart ${addr} "${query}" \
+      --node ${CHAIN_RPC_NODE} \
       --output json \
       | jq -r '.'
 '''
 
-[tasks.chain-execute-contract]
+[tasks.contract-execute]
 category = "Contract Interaction"
 dependencies = ["chain-start"]
-description = "Execute a command on a specific contract to the chain. The contract must be already deployed and instantiated."
+description = "Execute a command on a specific contract. The contract must be already deployed and instantiated."
 script = '''
 if [ -z "$1" ]
 then
@@ -690,6 +781,7 @@ docker run --rm \
       --from validator \
       --keyring-backend test \
       --home ${CHAIN_HOME} \
+      --node ${CHAIN_RPC_NODE} \
       --gas-prices 0.025uaxone \
       --gas auto \
       --gas-adjustment 1.5 \
@@ -699,53 +791,168 @@ docker run --rm \
         -v `pwd`:/app:ro \
         -w /app \
         ${DOCKER_IMAGE_AXONEPROTOCOL_AXONED} query wait-tx \
+          --node ${CHAIN_RPC_NODE} \
           --output json \
           | jq -r '.'
 '''
 
+[tasks.install-cargo-binstall]
+category = "Development Tools"
+description = "Install cargo-binstall if not already available"
+script = '''
+if command -v cargo-binstall >/dev/null 2>&1; then
+    echo "✅ cargo-binstall already available"
+    exit 0
+fi
+
+echo "📦 Installing cargo-binstall..."
+if curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash >/dev/null; then
+    if command -v cargo-binstall >/dev/null 2>&1; then
+        echo "✅ cargo-binstall installed successfully"
+        exit 0
+    fi
+fi
+
+echo "❌ Failed to install cargo-binstall"
+exit 1
+'''
+
+[tasks.install-tool]
+category = "Development Tools"
+private = true
+script = '''
+TOOL_NAME="${CARGO_MAKE_TASK_ARGS}"
+REQUIRED_VERSION="${REQUIRED_VERSION}"
+BINARY_NAME="${BINARY_NAME:-$TOOL_NAME}"
+
+# Check if tool is already installed and meets required pinned version (if provided)
+if command -v "${BINARY_NAME}" >/dev/null 2>&1; then
+    if [ -z "${REQUIRED_VERSION}" ]; then
+        echo "✅ ${BINARY_NAME} is already installed"
+        exit 0
+    fi
+
+    extract_version() {
+        local v
+
+        # Preferred: parse from `<bin> --version` (common case)
+        v="$("${BINARY_NAME}" --version 2>/dev/null | grep -Eo '[0-9]+(\.[0-9]+){1,2}' | head -n1)"
+        if [ -n "${v}" ]; then
+            printf '%s' "${v}"
+            return 0
+        fi
+
+        # Fallback: some cargo subcommands (plugins) don't expose `--version`.
+        # In that case, try extracting the installed crate version from `cargo install --list`.
+        if command -v cargo >/dev/null 2>&1; then
+            v="$(cargo install --list 2>/dev/null | awk -v tool="${TOOL_NAME}" -v bin="${BINARY_NAME}" '
+                $1==tool || $1==bin {
+                    ver=$2;
+                    sub(/^v/,"",ver);
+                    sub(/:$/,"",ver);
+                    print ver;
+                    exit
+                }
+            ')"
+            if [ -n "${v}" ]; then
+                printf '%s' "${v}"
+                return 0
+            fi
+        fi
+
+        return 1
+    }
+
+    INSTALLED_VERSION="$(extract_version || true)"
+    if [ -n "${INSTALLED_VERSION}" ] && [ "${INSTALLED_VERSION}" = "${REQUIRED_VERSION}" ]; then
+        echo "✅ ${BINARY_NAME} is already installed (v${INSTALLED_VERSION})"
+        exit 0
+    fi
+
+    if [ -z "${INSTALLED_VERSION}" ]; then
+        echo "⚠️ ${BINARY_NAME} is installed but its version cannot be determined; skipping version check"
+        exit 0
+    fi
+
+    echo "🔁 ${BINARY_NAME} is installed but not the required version (have: ${INSTALLED_VERSION}, need: ${REQUIRED_VERSION}), reinstalling"
+fi
+
+echo "📦 Installing ${TOOL_NAME}..."
+
+if command -v cargo-binstall >/dev/null 2>&1; then
+    echo "⚡ Using cargo-binstall (fast binary installation)"
+    BINSTALL_VERSION_ARGS=()
+    if [ -n "${REQUIRED_VERSION}" ]; then
+        BINSTALL_VERSION_ARGS=(--version "${REQUIRED_VERSION}")
+    fi
+    if cargo binstall "${TOOL_NAME}" --no-confirm --force "${BINSTALL_VERSION_ARGS[@]}"; then
+        echo "✅ ${TOOL_NAME} installed successfully via cargo-binstall"
+        exit 0
+    else
+        echo "⚠️ cargo-binstall failed, falling back to cargo install..."
+    fi
+fi
+
+# Fallback to cargo install
+echo "🔨 Installing from source via cargo install..."
+INSTALL_VERSION_ARGS=()
+if [ -n "${REQUIRED_VERSION}" ]; then
+    INSTALL_VERSION_ARGS=(--version "${REQUIRED_VERSION}")
+fi
+cargo install "${TOOL_NAME}" --force --locked "${INSTALL_VERSION_ARGS[@]}"
+echo "✅ ${TOOL_NAME} installed successfully"
+'''
+script_runner = "bash"
+
 [tasks.install-cranky]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-cranky", min_version = "0.3.0" }
+env = { "REQUIRED_VERSION" = "0.3.0", "CARGO_MAKE_TASK_ARGS" = "cargo-cranky", "BINARY_NAME" = "cargo-cranky" }
+run_task = "install-tool"
 
 [tasks.install-taplo-cli]
 category = "Development Tools"
-install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help", min_version = "0.9.0" }
+env = { "REQUIRED_VERSION" = "0.10.0", "CARGO_MAKE_TASK_ARGS" = "taplo-cli", "BINARY_NAME" = "taplo" }
+run_task = "install-tool"
 
 [tasks.install-cargo-toml-lint]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-toml-lint", min_version = "0.1.1" }
+env = { "REQUIRED_VERSION" = "0.1.1", "CARGO_MAKE_TASK_ARGS" = "cargo-toml-lint", "BINARY_NAME" = "cargo-toml-lint" }
+run_task = "install-tool"
 
 [tasks.install-llvm-cov]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-llvm-cov", min_version = "0.6.9" }
-install_crate_args = ["--force"]
+env = { "REQUIRED_VERSION" = "0.6.9", "CARGO_MAKE_TASK_ARGS" = "cargo-llvm-cov", "BINARY_NAME" = "cargo-llvm-cov" }
+run_task = "install-tool"
 
 [tasks.install-cosmwasm-check]
 category = "Development Tools"
-install_crate = { crate_name = "cosmwasm-check", min_version = "2.2.2" }
+env = { "REQUIRED_VERSION" = "3.0.2", "CARGO_MAKE_TASK_ARGS" = "cosmwasm-check", "BINARY_NAME" = "cosmwasm-check" }
+run_task = "install-tool"
 
 [tasks.install-cargo-workspaces]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-workspaces", binary = "cargo", test_arg = [
-  "workspaces",
-  "--help",
-], min_version = "0.3.6" }
+env = { "REQUIRED_VERSION" = "0.3.6", "CARGO_MAKE_TASK_ARGS" = "cargo-workspaces", "BINARY_NAME" = "cargo-workspaces" }
+run_task = "install-tool"
 
 [tasks.install-cargo-hack]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
+env = { "REQUIRED_VERSION" = "0.6.14", "CARGO_MAKE_TASK_ARGS" = "cargo-hack", "BINARY_NAME" = "cargo-hack" }
+run_task = "install-tool"
 
 [tasks.install-cargo-machete]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-machete", min_version = "0.7.0" }
+env = { "REQUIRED_VERSION" = "0.7.0", "CARGO_MAKE_TASK_ARGS" = "cargo-machete", "BINARY_NAME" = "cargo-machete" }
+run_task = "install-tool"
 
 [tasks.install-cargo-sort-derives]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-sort-derives", min_version = "0.10.0" }
+env = { "REQUIRED_VERSION" = "0.10.0", "CARGO_MAKE_TASK_ARGS" = "cargo-sort-derives", "BINARY_NAME" = "cargo-sort-derives" }
+run_task = "install-tool"
 
-[tasks.install]
+[tasks.install-dev-tools]
 category = "Development Tools"
 dependencies = [
+  "install-cargo-binstall",
   "install-cranky",
   "install-taplo-cli",
   "install-cargo-toml-lint",
@@ -831,23 +1038,28 @@ CARGO_MAKE_CRATE_INSTALLATION_LOCKED = true
 DOCS_FOLDER = "docs"
 SCHEMA_FOLDER = "schema"
 
+# Local chain configuration (for chain-initialize and chain management tasks)
 BALANCE_ALICE = "100000000000uaxone"
 BALANCE_BOB = "100000000000uaxone"
 BALANCE_CHARLIE = "100000000000uaxone"
 BALANCE_VALIDATOR = "1000000000uaxone"
+MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
+MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"
+MNEMONIC_CHARLIE = "couple proud learn plunge neglect dice dry tail keen price tuition inherit ordinary portion abandon body kitten system word monitor lava quiz soup lift"
+MNEMONIC_VALIDATOR = "island position immense mom cross enemy grab little deputy tray hungry detect state helmet tomorrow trap expect admit inhale present vault reveal scene atom"
+
+# Chain runtime configuration
 CHAIN = "axone-localnet"
 CHAIN_HOME = "${DIR_DEPLOY}/${CHAIN}"
 CHAIN_MONIKER = "local-node"
+CHAIN_RPC_NODE = "tcp://127.0.0.1:26657"
 DIR_DEPLOY = "${DIR_TARGET}/deploy"
 DIR_TARGET = "./target"
 DIR_WASM = "${DIR_TARGET}/wasm32-unknown-unknown/release"
 DOCKER_IMAGE_AXONEPROTOCOL_AXONED = "axoneprotocol/axoned:13.0.0"
 DOCKER_IMAGE_COSMWASM_OPTIMIZER = "cosmwasm/optimizer:0.17.0"
 KEYRING_BACKEND = "test"
-MNEMONIC_ALICE = "code ceiling reduce repeat unfold intact cloud marriage nut remove illegal eternal pool frame mask rate buzz vintage pulp suggest loan faint snake spoon"
-MNEMONIC_BOB = "add pig champion lounge initial tunnel oak panic drama float foot elegant coast manage diesel essence glory bicycle sniff upon horse crash damage bounce"
-MNEMONIC_CHARLIE = "couple proud learn plunge neglect dice dry tail keen price tuition inherit ordinary portion abandon body kitten system word monitor lava quiz soup lift"
-MNEMONIC_VALIDATOR = "island position immense mom cross enemy grab little deputy tray hungry detect state helmet tomorrow trap expect admit inhale present vault reveal scene atom"
+RUST_LOG = "info"
 SED_FLAG = { script = [
   '''if [ ${SHELL_NAME} = 'Darwin' ]; then echo "\'\'"; else echo; fi''',
 ] }

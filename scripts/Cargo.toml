@@ -1,0 +1,20 @@
+[package]
+edition = "2021"
+name = "axone-scripts"
+publish = false
+version = "0.1.0"
+
+[[bin]]
+name = "deploy_abstract"
+path = "src/bin/deploy_abstract.rs"
+
+[dependencies]
+abstract-interface.workspace = true
+anyhow = { workspace = true }
+axone-networks = { path = "../packages/axone-networks" }
+clap = { workspace = true, features = ["derive"] }
+cw-orch = { workspace = true, features = ["daemon"] }
+dotenv = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
+tokio = { version = "1.0", features = ["rt", "macros"] }

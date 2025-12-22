@@ -783,49 +783,101 @@ docker run --rm \
           | jq -r '.'
 '''
 
+[tasks.install-cargo-binstall]
+category = "Development Tools"
+description = "Install cargo-binstall if not already available"
+script = '''
+if command -v cargo-binstall >/dev/null 2>&1; then
+    echo "✅ cargo-binstall already available"
+    exit 0
+fi
+
+echo "📦 Installing cargo-binstall..."
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash &>/dev/null
+echo "✅ cargo-binstall installed successfully"
+'''
+
+[tasks.install-tool]
+category = "Development Tools"
+private = true
+script = '''
+TOOL_NAME="${CARGO_MAKE_TASK_ARGS}"
+MIN_VERSION="${MIN_VERSION}"
+BINARY_NAME="${BINARY_NAME:-$TOOL_NAME}"
+
+# Check if tool is already installed and meets version requirement
+if command -v "${BINARY_NAME}" >/dev/null 2>&1; then
+    echo "✅ ${BINARY_NAME} is already installed"
+    exit 0
+fi
+
+echo "📦 Installing ${TOOL_NAME}..."
+
+if command -v cargo-binstall >/dev/null 2>&1; then
+    echo "⚡ Using cargo-binstall (fast binary installation)"
+    if cargo binstall "${TOOL_NAME}" --no-confirm --force; then
+        echo "✅ ${TOOL_NAME} installed successfully via cargo-binstall"
+        exit 0
+    else
+        echo "⚠️ cargo-binstall failed, falling back to cargo install..."
+    fi
+fi
+
+# Fallback to cargo install
+echo "🔨 Installing from source via cargo install..."
+cargo install "${TOOL_NAME}" --force --locked
+echo "✅ ${TOOL_NAME} installed successfully"
+'''
+
 [tasks.install-cranky]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-cranky", min_version = "0.3.0" }
+env = { "MIN_VERSION" = "0.3.0", "CARGO_MAKE_TASK_ARGS" = "cargo-cranky", "BINARY_NAME" = "cargo-cranky" }
+run_task = "install-tool"
 
 [tasks.install-taplo-cli]
 category = "Development Tools"
-install_crate = { crate_name = "taplo-cli", binary = "taplo", test_arg = "--help", min_version = "0.9.0" }
+env = { "MIN_VERSION" = "0.9.0", "CARGO_MAKE_TASK_ARGS" = "taplo-cli@0.9.3", "BINARY_NAME" = "taplo" }
+run_task = "install-tool"
 
 [tasks.install-cargo-toml-lint]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-toml-lint", min_version = "0.1.1" }
+env = { "MIN_VERSION" = "0.1.1", "CARGO_MAKE_TASK_ARGS" = "cargo-toml-lint", "BINARY_NAME" = "cargo-toml-lint" }
+run_task = "install-tool"
 
 [tasks.install-llvm-cov]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-llvm-cov", min_version = "0.6.9" }
-install_crate_args = ["--force"]
+env = { "MIN_VERSION" = "0.6.9", "CARGO_MAKE_TASK_ARGS" = "cargo-llvm-cov", "BINARY_NAME" = "cargo-llvm-cov" }
+run_task = "install-tool"
 
 [tasks.install-cosmwasm-check]
 category = "Development Tools"
-install_crate = { crate_name = "cosmwasm-check", min_version = "3.0.2" }
+env = { "MIN_VERSION" = "3.0.2", "CARGO_MAKE_TASK_ARGS" = "cosmwasm-check", "BINARY_NAME" = "cosmwasm-check" }
+run_task = "install-tool"
 
 [tasks.install-cargo-workspaces]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-workspaces", binary = "cargo", test_arg = [
-  "workspaces",
-  "--help",
-], min_version = "0.3.6" }
+env = { "MIN_VERSION" = "0.3.6", "CARGO_MAKE_TASK_ARGS" = "cargo-workspaces", "BINARY_NAME" = "cargo" }
+run_task = "install-tool"
 
 [tasks.install-cargo-hack]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-hack", min_version = "0.6.14" }
+env = { "MIN_VERSION" = "0.6.14", "CARGO_MAKE_TASK_ARGS" = "cargo-hack", "BINARY_NAME" = "cargo-hack" }
+run_task = "install-tool"
 
 [tasks.install-cargo-machete]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-machete", min_version = "0.7.0" }
+env = { "MIN_VERSION" = "0.7.0", "CARGO_MAKE_TASK_ARGS" = "cargo-machete", "BINARY_NAME" = "cargo-machete" }
+run_task = "install-tool"
 
 [tasks.install-cargo-sort-derives]
 category = "Development Tools"
-install_crate = { crate_name = "cargo-sort-derives", min_version = "0.10.0" }
+env = { "MIN_VERSION" = "0.10.0", "CARGO_MAKE_TASK_ARGS" = "cargo-sort-derives", "BINARY_NAME" = "cargo-sort-derives" }
+run_task = "install-tool"
 
 [tasks.install-dev-tools]
 category = "Development Tools"
 dependencies = [
+  "install-cargo-binstall",
   "install-cranky",
   "install-taplo-cli",
   "install-cargo-toml-lint",

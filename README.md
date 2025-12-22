@@ -167,6 +167,7 @@ deploy-script - Run a contract deployment script. Usage: cargo make deploy-scrip
 
 Development Tools
 ----------
+install-cargo-binstall - Install cargo-binstall if not already available
 install-cargo-hack - No Description.
 install-cargo-machete - No Description.
 install-cargo-sort-derives - No Description.

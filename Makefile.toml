@@ -806,8 +806,15 @@ if command -v cargo-binstall >/dev/null 2>&1; then
 fi
 
 echo "📦 Installing cargo-binstall..."
-curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash &>/dev/null
-echo "✅ cargo-binstall installed successfully"
+if curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash >/dev/null; then
+    if command -v cargo-binstall >/dev/null 2>&1; then
+        echo "✅ cargo-binstall installed successfully"
+        exit 0
+    fi
+fi
+
+echo "❌ Failed to install cargo-binstall"
+exit 1
 '''
 
 [tasks.install-tool]

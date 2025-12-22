@@ -151,7 +151,18 @@ dependencies = ["install-cargo-hack"]
 
 [tasks.schema]
 category = "Build"
-workspace = true
+description = "Generate JSON schemas for all contracts."
+script = '''
+echo "📋 Generating schemas for all contracts..."
+for contract_dir in contracts/*/; do
+    if [ -d "$contract_dir" ]; then
+        contract_name=$(basename "$contract_dir")
+        echo "🔧 Generating schema for $contract_name..."
+        (cd "$contract_dir" && cargo make schema)
+    fi
+done
+echo "✅ All schemas generated"
+'''
 
 [tasks.check-contracts]
 category = "Verification"

@@ -55,11 +55,12 @@ dependencies = ["install-taplo-cli"]
 description = "Check lint of all toml files."
 
 [tasks.lint-cargo-toml-file]
-args = ["${@}"]
 category = "Code Quality"
-command = "cargo-toml-lint"
 dependencies = ["install-cargo-toml-lint"]
 description = "Check lint of the given toml file"
+script = '''
+cargo-toml-lint "${@}"
+'''
 
 [tasks.lint-cargo-toml]
 category = "Code Quality"

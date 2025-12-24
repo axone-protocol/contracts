@@ -27,7 +27,7 @@ rpath = false
 cosmwasm-schema = "2.2.2"
 cosmwasm-std = { version = "2.2.2", features = ["cosmwasm_2_2"] }
 cw-asset = "4.0.0"
-cw-controllers = "2.0.0"
+cw-controllers = "3.0.0"
 cw-storage-plus = "2.0.0"
 schemars = "0.8"
 serde = { version = "1.0.228", default-features = false, features = ["derive"] }

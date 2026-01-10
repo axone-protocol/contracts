@@ -44,6 +44,7 @@ daemon-bin = [
 default = ["export"]
 export = []
 library = []
+mock-logic-query = []
 schema = ["abstract-app/schema"]
 
 [dependencies]
@@ -62,9 +63,12 @@ cw-storage-plus.workspace = true
 dotenv = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
+logos = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 thiserror.workspace = true
 
 [dev-dependencies]
 abstract-app = { workspace = true, features = ["test-utils"] }
 abstract-client.workspace = true
-axone-gov = { path = ".", version = "8.0.0" }
+axone-gov = { path = ".", version = "8.0.0", features = ["mock-logic-query"] }
+serde.workspace = true

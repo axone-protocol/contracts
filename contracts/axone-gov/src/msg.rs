@@ -20,7 +20,10 @@ pub struct AxoneGovInstantiateMsg {
 /// Execute messages.
 #[cosmwasm_schema::cw_serde]
 #[derive(cw_orch::ExecuteFns)]
-pub enum AxoneGovExecuteMsg {}
+pub enum AxoneGovExecuteMsg {
+    /// No-op execute message
+    NoOp {},
+}
 
 /// Migrate message.
 ///

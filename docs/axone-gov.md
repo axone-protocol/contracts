@@ -36,23 +36,6 @@ App execute messages
 | --------------- | -------------------------- |
 | `update_config` | _(Required.) _ **object**. |
 
-### ExecuteMsg::increment
-
-Increment count by 1
-
-| parameter   | description                |
-| ----------- | -------------------------- |
-| `increment` | _(Required.) _ **object**. |
-
-### ExecuteMsg::reset
-
-Admin method - reset count
-
-| parameter     | description                                         |
-| ------------- | --------------------------------------------------- |
-| `reset`       | _(Required.) _ **object**.                          |
-| `reset.count` | _(Required.) _ **integer**. Count value after reset |
-
 ## QueryMsg
 
 App query messages
@@ -63,11 +46,11 @@ App query messages
 | --------- | -------------------------- |
 | `config`  | _(Required.) _ **object**. |
 
-### QueryMsg::count
+### QueryMsg::constitution
 
-| parameter | description                |
-| --------- | -------------------------- |
-| `count`   | _(Required.) _ **object**. |
+| parameter      | description                |
+| -------------- | -------------------------- |
+| `constitution` | _(Required.) _ **object**. |
 
 ## MigrateMsg
 
@@ -84,12 +67,22 @@ App query messages
 | ----------- |
 | **object**. |
 
-### count
+### constitution
 
-| property | description                 |
-| -------- | --------------------------- |
-| `count`  | _(Required.) _ **integer**. |
+| property     | description                |
+| ------------ | -------------------------- |
+| `governance` | _(Required.) _ **string**. |
+
+## Definitions
+
+### Binary
+
+A string containing Base64-encoded data.
+
+| type        |
+| ----------- |
+| **string**. |
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`68d5c80810cc40b0`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`c0f351e4f83ae34d`)_

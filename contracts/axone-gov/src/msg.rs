@@ -20,12 +20,7 @@ pub struct AxoneGovInstantiateMsg {
 /// Execute messages.
 #[cosmwasm_schema::cw_serde]
 #[derive(cw_orch::ExecuteFns)]
-pub enum AxoneGovExecuteMsg {
-    /// Update the contract configuration.
-    ///
-    /// This message is reserved for future configuration fields.
-    UpdateConfig {},
-}
+pub enum AxoneGovExecuteMsg {}
 
 /// Migrate message.
 ///
@@ -37,18 +32,10 @@ pub struct AxoneGovMigrateMsg {}
 #[cosmwasm_schema::cw_serde]
 #[derive(cw_orch::QueryFns, QueryResponses)]
 pub enum AxoneGovQueryMsg {
-    /// Return the current configuration.
-    #[returns(ConfigResponse)]
-    Config {},
-
     /// Return the stored governance constitution program.
     #[returns(ConstitutionResponse)]
     Constitution {},
 }
-
-/// Response returned by `QueryMsg::Config`.
-#[cosmwasm_schema::cw_serde]
-pub struct ConfigResponse {}
 
 /// Response returned by `QueryMsg::Constitution`.
 #[cosmwasm_schema::cw_serde]

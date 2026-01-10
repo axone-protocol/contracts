@@ -5,7 +5,7 @@ use axone_gov::{
         set_query_service_ask_handler, Answer, QueryServiceAskMockGuard, QueryServiceAskResponse,
         Result as LogicResult,
     },
-    msg::{AxoneGovInstantiateMsg, AxoneGovQueryMsgFns, ConfigResponse},
+    msg::{AxoneGovInstantiateMsg, AxoneGovQueryMsgFns},
     AxoneGovInterface, AXONE_NAMESPACE,
 };
 use cosmwasm_std::Binary;
@@ -138,9 +138,6 @@ fn instantiate_succeeds_with_valid_constitution() {
     let (hook, expectations) = LogicAskScenario::new().then("valid.", ask_ok()).install();
     let env = TestEnv::setup(constitution.clone(), hook, expectations)
         .expect("Failed to setup test environment");
-
-    let config_got = env.app.config().expect("Failed to query config");
-    assert_eq!(config_got, ConfigResponse {});
 
     let constitution_got = env
         .app

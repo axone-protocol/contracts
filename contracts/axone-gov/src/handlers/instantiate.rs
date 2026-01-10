@@ -1,10 +1,10 @@
 use crate::{
     contract::{AxoneGov, AxoneGovResult},
+    guards,
     msg::AxoneGovInstantiateMsg,
-    state::{Config, CONFIG, COUNT},
+    state::{Config, CONFIG, CONSTITUTION},
 };
 use abstract_app::sdk::AbstractResponse;
-
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
 
 pub fn instantiate_handler(
@@ -14,9 +14,12 @@ pub fn instantiate_handler(
     module: AxoneGov,
     msg: AxoneGovInstantiateMsg,
 ) -> AxoneGovResult {
+    guards::constitution(&*deps.querier, &msg.constitution)?;
+
     let config: Config = Config {};
 
     CONFIG.save(deps.storage, &config)?;
-    COUNT.save(deps.storage, &msg.count)?;
+    CONSTITUTION.save(deps.storage, &msg.constitution)?;
+
     Ok(module.response("instantiate"))
 }

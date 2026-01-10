@@ -1,7 +1,7 @@
 use crate::{
     contract::{AxoneGov, AxoneGovResult},
     msg::AxoneGovExecuteMsg,
-    state::{CONFIG, COUNT},
+    state::CONFIG,
 };
 
 use abstract_app::traits::AbstractResponse;
@@ -16,8 +16,6 @@ pub fn execute_handler(
 ) -> AxoneGovResult {
     match msg {
         AxoneGovExecuteMsg::UpdateConfig {} => update_config(deps, env, info, module),
-        AxoneGovExecuteMsg::Increment {} => increment(deps, module),
-        AxoneGovExecuteMsg::Reset { count } => reset(deps, env, info, count, module),
     }
 }
 
@@ -35,25 +33,4 @@ fn update_config(
     let mut _config = CONFIG.load(deps.storage)?;
 
     Ok(module.response("update_config"))
-}
-
-fn increment(deps: DepsMut<'_>, module: AxoneGov) -> AxoneGovResult {
-    COUNT.update(deps.storage, |count| AxoneGovResult::Ok(count + 1))?;
-
-    Ok(module.response("increment"))
-}
-
-fn reset(
-    deps: DepsMut<'_>,
-    env: Env,
-    info: MessageInfo,
-    count: i32,
-    module: AxoneGov,
-) -> AxoneGovResult {
-    module
-        .admin
-        .assert_admin(deps.as_ref(), &env, &info.sender)?;
-    COUNT.save(deps.storage, &count)?;
-
-    Ok(module.response("reset"))
 }

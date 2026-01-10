@@ -25,4 +25,7 @@ pub enum AxoneGovError {
 
     #[error("{0}")]
     DappError(#[from] AppError),
+
+    #[error("invalid constitution: {0}")]
+    InvalidConstitution(String),
 }

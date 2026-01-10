@@ -6,6 +6,7 @@ use crate::{
 use abstract_app::traits::AbstractResponse;
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
 
+#[allow(clippy::unnecessary_wraps)]
 pub fn execute_handler(
     _deps: DepsMut<'_>,
     _env: Env,

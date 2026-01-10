@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::ops::Range;
 
 use crate::prolog::ast::Term;

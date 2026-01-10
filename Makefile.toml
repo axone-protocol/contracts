@@ -488,24 +488,48 @@ cargo run --bin deploy_abstract --package axone-scripts -- --network-ids ${netwo
 category = "Deployment"
 description = "Install a module on an Abstract Account. Usage: cargo make deploy-install <contract-name> <network-ids...>"
 script = '''
-if [ -z "$1" ]
+set -- "$@"
+if [ "$#" -eq 0 ]
 then
   echo "❌ Please provide the contract name as the first argument (e.g., axone-gov)"
   exit 1
 fi
 contract=$1
-
 shift
-networks="$@"
 
-if [ -z "$networks" ]
+has_network_flag=0
+for arg in "$@"
+do
+  case "$arg" in
+    --network-ids|-n)
+      has_network_flag=1
+      ;;
+  esac
+done
+
+if [ "$has_network_flag" -eq 0 ]
 then
-  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
-  exit 1
+  networks=""
+  while [ "$#" -gt 0 ]
+  do
+    case "$1" in
+      -*)
+        break
+        ;;
+      *)
+        networks="${networks} $1"
+        shift
+        ;;
+    esac
+  done
+  if [ -n "${networks}" ]
+  then
+    set -- --network-ids ${networks} "$@"
+  fi
 fi
 
-echo "📥 Installing ${contract} on networks: ${networks}"
-cargo run --bin install --package ${contract} --features="daemon-bin" -- --network-ids ${networks}
+echo "📥 Installing ${contract} with args: $*"
+cargo run --bin install --package ${contract} --features="daemon-bin" -- "$@"
 '''
 
 [tasks.clean-chain]

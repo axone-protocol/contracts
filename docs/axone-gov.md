@@ -20,76 +20,73 @@ This contract follows AXONE development patterns and uses the cargo-make build s
 
 ## InstantiateMsg
 
-App instantiate message
+Instantiate message.
 
-| variant        | description                         |
-| -------------- | ----------------------------------- |
-| InstantiateMsg | **object**. App instantiate message |
+`constitution` is the Prolog program (UTF-8 bytes) that defines the governance rules. The contract validates that it provides the required predicates (`decide/2` and `decide/3`) during instantiation.
+
+| variant        | description                                                                                                                                                                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| InstantiateMsg | **object**. Instantiate message.<br /><br />`constitution` is the Prolog program (UTF-8 bytes) that defines the governance rules. The contract validates that it provides the required predicates (`decide/2` and `decide/3`) during instantiation. |
 
 ## ExecuteMsg
 
-App execute messages
+Execute messages.
 
-### ExecuteMsg::update_config
+### ExecuteMsg::no_op
 
-| parameter       | description                |
-| --------------- | -------------------------- |
-| `update_config` | _(Required.) _ **object**. |
+No-op execute message
 
-### ExecuteMsg::increment
-
-Increment count by 1
-
-| parameter   | description                |
-| ----------- | -------------------------- |
-| `increment` | _(Required.) _ **object**. |
-
-### ExecuteMsg::reset
-
-Admin method - reset count
-
-| parameter     | description                                         |
-| ------------- | --------------------------------------------------- |
-| `reset`       | _(Required.) _ **object**.                          |
-| `reset.count` | _(Required.) _ **integer**. Count value after reset |
+| parameter | description                |
+| --------- | -------------------------- |
+| `no_op`   | _(Required.) _ **object**. |
 
 ## QueryMsg
 
-App query messages
+Query messages.
 
-### QueryMsg::config
+### QueryMsg::constitution
 
-| parameter | description                |
-| --------- | -------------------------- |
-| `config`  | _(Required.) _ **object**. |
+Return the stored governance constitution program.
 
-### QueryMsg::count
-
-| parameter | description                |
-| --------- | -------------------------- |
-| `count`   | _(Required.) _ **object**. |
+| parameter      | description                |
+| -------------- | -------------------------- |
+| `constitution` | _(Required.) _ **object**. |
 
 ## MigrateMsg
 
+Migrate message.
+
+Reserved for future migrations.
+
 ### MigrateMsg::MigrateMsg
+
+Migrate message.
+
+Reserved for future migrations.
 
 | parameter | description |
 | --------- | ----------- |
 
 ## Responses
 
-### config
+### constitution
+
+Response returned by `QueryMsg::Constitution`.
+
+| property     | description                                                             |
+| ------------ | ----------------------------------------------------------------------- |
+| `governance` | _(Required.) _ **[Binary](#binary)**. Stored Prolog governance program. |
+
+## Definitions
+
+### Binary
+
+A string containing Base64-encoded data.
 
 | type        |
 | ----------- |
-| **object**. |
-
-### count
-
-| property | description                 |
-| -------- | --------------------------- |
-| `count`  | _(Required.) _ **integer**. |
+| **string**. |
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`68d5c80810cc40b0`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`51c999a033214538`)_

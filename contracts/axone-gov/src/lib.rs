@@ -1,7 +1,10 @@
 pub mod contract;
 pub mod error;
+pub mod gateway;
+mod guards;
 mod handlers;
 pub mod msg;
+mod prolog;
 mod replies;
 pub mod state;
 

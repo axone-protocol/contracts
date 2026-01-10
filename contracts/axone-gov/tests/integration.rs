@@ -1,125 +1,175 @@
-use axone_gov::{
-    contract::interface::AxoneGovInterface,
-    msg::{
-        AxoneGovExecuteMsgFns, AxoneGovInstantiateMsg, AxoneGovQueryMsgFns, ConfigResponse,
-        CountResponse,
-    },
-    AxoneGovError, AXONE_NAMESPACE,
-};
-
 use abstract_app::objects::namespace::Namespace;
-use abstract_client::{AbstractClient, Application, Environment};
-use cosmwasm_std::coins;
-use cw_controllers::AdminError;
+use abstract_client::{AbstractClient, Application};
+use axone_gov::{
+    gateway::logic::{
+        set_query_service_ask_handler, Answer, QueryServiceAskMockGuard, QueryServiceAskResponse,
+        Result as LogicResult,
+    },
+    msg::{AxoneGovInstantiateMsg, AxoneGovQueryMsgFns, ConfigResponse},
+    AxoneGovInterface, AXONE_NAMESPACE,
+};
+use cosmwasm_std::Binary;
 use cw_orch::{anyhow, prelude::*};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+
+#[derive(Clone)]
+struct LogicAskExpectations(Rc<RefCell<VecDeque<(String, QueryServiceAskResponse)>>>);
+
+impl Drop for LogicAskExpectations {
+    fn drop(&mut self) {
+        let remaining = self.0.borrow().len();
+        assert_eq!(
+            remaining, 0,
+            "not all Logic::ask expectations were consumed (remaining={remaining})"
+        );
+    }
+}
+
+struct LogicAskScenario {
+    expected: Rc<RefCell<VecDeque<(String, QueryServiceAskResponse)>>>,
+}
+
+impl LogicAskScenario {
+    fn new() -> Self {
+        Self {
+            expected: Rc::new(RefCell::new(VecDeque::new())),
+        }
+    }
+
+    fn then(self, program: impl Into<String>, response: QueryServiceAskResponse) -> Self {
+        self.expected
+            .borrow_mut()
+            .push_back((program.into(), response));
+        self
+    }
+
+    fn install(self) -> (QueryServiceAskMockGuard, LogicAskExpectations) {
+        let expected = self.expected.clone();
+        let hook: QueryServiceAskMockGuard = set_query_service_ask_handler(move |request| {
+            let mut q = expected.borrow_mut();
+            let (program, response) = q
+                .pop_front()
+                .expect("unexpected Logic::ask call (no expectation left)");
+            assert_eq!(request.program, program, "unexpected Logic::ask program");
+            Ok(response)
+        });
+
+        (hook, LogicAskExpectations(self.expected))
+    }
+}
 
 struct TestEnv<Env: CwEnv> {
-    abs: AbstractClient<Env>,
+    _hook: QueryServiceAskMockGuard,
+    _expectations: LogicAskExpectations,
     app: Application<Env, AxoneGovInterface<Env>>,
 }
 
 impl TestEnv<MockBech32> {
-    fn setup() -> anyhow::Result<TestEnv<MockBech32>> {
-        let mock = MockBech32::new("mock");
-        let sender = mock.sender_addr();
-        let namespace = Namespace::new(AXONE_NAMESPACE)?;
-
-        let abs_client = AbstractClient::builder(mock.clone()).build()?;
-        mock.add_balance(&sender, coins(123, "ucosm"))?;
-        let publisher = abs_client
+    fn setup(
+        constitution: Binary,
+        hook: QueryServiceAskMockGuard,
+        expectations: LogicAskExpectations,
+    ) -> anyhow::Result<Self> {
+        let chain = MockBech32::new("mock");
+        let client = AbstractClient::builder(chain.clone()).build()?;
+        let publisher = client
             .account_builder()
-            .namespace(namespace)
+            .namespace(Namespace::new(AXONE_NAMESPACE)?)
             .build()?
             .publisher()?;
-        publisher.publish_app::<AxoneGovInterface<_>>()?;
+        publisher.publish_app::<AxoneGovInterface<MockBech32>>()?;
 
         let app = publisher
             .account()
-            .install_app::<AxoneGovInterface<_>>(&AxoneGovInstantiateMsg { count: 0 }, &[])?;
+            .install_app::<AxoneGovInterface<MockBech32>>(
+                &AxoneGovInstantiateMsg { constitution },
+                &[],
+            )?;
 
-        Ok(TestEnv {
-            abs: abs_client,
+        Ok(Self {
+            _hook: hook,
+            _expectations: expectations,
             app,
         })
     }
 }
 
-#[test]
-fn successful_install() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let app = env.app;
+fn ask_ok() -> QueryServiceAskResponse {
+    let result = LogicResult {
+        error: None,
+        substitutions: Vec::new(),
+    };
+    let answer = Answer {
+        has_more: false,
+        variables: Vec::new(),
+        results: vec![result],
+    };
 
-    let config = app.config()?;
-    assert_eq!(config, ConfigResponse {});
-    Ok(())
+    QueryServiceAskResponse {
+        height: 0,
+        gas_used: 0,
+        answer: Some(answer),
+        user_output: None,
+    }
+}
+
+fn ask_error(msg: impl Into<String>) -> QueryServiceAskResponse {
+    let result = LogicResult {
+        error: Some(msg.into()),
+        substitutions: Vec::new(),
+    };
+    let answer = Answer {
+        has_more: false,
+        variables: Vec::new(),
+        results: vec![result],
+    };
+
+    QueryServiceAskResponse {
+        height: 0,
+        gas_used: 0,
+        answer: Some(answer),
+        user_output: None,
+    }
 }
 
 #[test]
-fn successful_increment() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let app = env.app;
+fn instantiate_succeeds_with_valid_constitution() {
+    let constitution = Binary::from(b"valid.".to_vec());
+    let (hook, expectations) = LogicAskScenario::new().then("valid.", ask_ok()).install();
+    let env = TestEnv::setup(constitution.clone(), hook, expectations)
+        .expect("Failed to setup test environment");
 
-    app.increment()?;
-    let count: CountResponse = app.count()?;
-    assert_eq!(count.count, 1);
-    Ok(())
+    let config_got = env.app.config().expect("Failed to query config");
+    assert_eq!(config_got, ConfigResponse {});
+
+    let constitution_got = env
+        .app
+        .constitution()
+        .expect("Failed to query constitution");
+    assert_eq!(constitution_got.governance, constitution);
 }
 
 #[test]
-fn successful_reset() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let app = env.app;
+fn instantiate_rejects_invalid_constitution() {
+    let (hook, expectations) = LogicAskScenario::new()
+        .then("invalid(", ask_error("parse error"))
+        .install();
 
-    app.reset(42)?;
-    let count: CountResponse = app.count()?;
-    assert_eq!(count.count, 42);
-    Ok(())
-}
-
-#[test]
-fn failed_reset() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let app = env.app;
-
-    let err: AxoneGovError = app
-        .call_as(&Addr::unchecked("NotAdmin"))
-        .reset(9)
-        .unwrap_err()
-        .downcast()
-        .unwrap();
-    assert_eq!(err, AxoneGovError::Admin(AdminError::NotAdmin {}));
-    Ok(())
-}
-
-#[test]
-fn update_config() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let app = env.app;
-
-    app.update_config()?;
-    let config = app.config()?;
-    let expected_response = axone_gov::msg::ConfigResponse {};
-    assert_eq!(config, expected_response);
-    Ok(())
-}
-
-#[test]
-fn balance_added() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let account = env.app.account();
-
-    // You can add balance to your account in test environment
-    let add_balance = coins(100, "ucosm");
-    account.add_balance(&add_balance)?;
-    let balances = account.query_balances()?;
-
-    assert_eq!(balances, add_balance);
-
-    // Or set balance to any other address using cw_orch
-    let mock_env = env.abs.environment();
-    mock_env.add_balance(&env.app.address()?, add_balance.clone())?;
-    let balances = mock_env.query_all_balances(&env.app.address()?)?;
-
-    assert_eq!(balances, add_balance);
-    Ok(())
+    let err = match TestEnv::setup(Binary::from(b"invalid(".to_vec()), hook, expectations) {
+        Ok(_) => panic!("Expected invalid constitution error"),
+        Err(err) => err,
+    };
+    let msg = err.to_string();
+    let chain = err
+        .chain()
+        .map(|cause| cause.to_string())
+        .collect::<Vec<_>>();
+    let has_invalid = msg.contains("invalid constitution")
+        || chain
+            .iter()
+            .any(|cause| cause.contains("invalid constitution"));
+    assert!(
+        has_invalid,
+        "expected invalid constitution, got: {msg}; chain: {chain:?}"
+    );
 }

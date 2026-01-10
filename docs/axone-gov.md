@@ -20,33 +20,33 @@ This contract follows AXONE development patterns and uses the cargo-make build s
 
 ## InstantiateMsg
 
-App instantiate message
+Instantiate message.
 
-| variant        | description                         |
-| -------------- | ----------------------------------- |
-| InstantiateMsg | **object**. App instantiate message |
+`constitution` is the Prolog program (UTF-8 bytes) that defines the governance rules. The contract validates that it provides the required predicates (`decide/2` and `decide/3`) during instantiation.
+
+| variant        | description                                                                                                                                                                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| InstantiateMsg | **object**. Instantiate message.<br /><br />`constitution` is the Prolog program (UTF-8 bytes) that defines the governance rules. The contract validates that it provides the required predicates (`decide/2` and `decide/3`) during instantiation. |
 
 ## ExecuteMsg
 
-App execute messages
+Execute messages.
 
-### ExecuteMsg::update_config
+### ExecuteMsg::no_op
 
-| parameter       | description                |
-| --------------- | -------------------------- |
-| `update_config` | _(Required.) _ **object**. |
-
-## QueryMsg
-
-App query messages
-
-### QueryMsg::config
+No-op execute message
 
 | parameter | description                |
 | --------- | -------------------------- |
-| `config`  | _(Required.) _ **object**. |
+| `no_op`   | _(Required.) _ **object**. |
+
+## QueryMsg
+
+Query messages.
 
 ### QueryMsg::constitution
+
+Return the stored governance constitution program.
 
 | parameter      | description                |
 | -------------- | -------------------------- |
@@ -54,24 +54,28 @@ App query messages
 
 ## MigrateMsg
 
+Migrate message.
+
+Reserved for future migrations.
+
 ### MigrateMsg::MigrateMsg
+
+Migrate message.
+
+Reserved for future migrations.
 
 | parameter | description |
 | --------- | ----------- |
 
 ## Responses
 
-### config
-
-| type        |
-| ----------- |
-| **object**. |
-
 ### constitution
 
-| property     | description                |
-| ------------ | -------------------------- |
-| `governance` | _(Required.) _ **string**. |
+Response returned by `QueryMsg::Constitution`.
+
+| property     | description                                                             |
+| ------------ | ----------------------------------------------------------------------- |
+| `governance` | _(Required.) _ **[Binary](#binary)**. Stored Prolog governance program. |
 
 ## Definitions
 
@@ -85,4 +89,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`c0f351e4f83ae34d`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`51c999a033214538`)_

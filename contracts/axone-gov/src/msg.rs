@@ -38,6 +38,13 @@ pub enum AxoneGovQueryMsg {
     /// Return the stored governance constitution program.
     #[returns(ConstitutionResponse)]
     Constitution {},
+
+    /// Decide a case using the constitution's decide/2 or decide/3 predicate.
+    ///
+    /// The `case` must be a Prolog dict term string representing the decision context.
+    /// If `motivated` is true, the response includes the decision motivation.
+    #[returns(DecideResponse)]
+    Decide { case: String, motivated: bool },
 }
 
 /// Response returned by `QueryMsg::Constitution`.
@@ -45,4 +52,13 @@ pub enum AxoneGovQueryMsg {
 pub struct ConstitutionResponse {
     /// Stored Prolog governance program.
     pub governance: Binary,
+}
+
+/// Response returned by `QueryMsg::Decide`.
+#[cosmwasm_schema::cw_serde]
+pub struct DecideResponse {
+    /// The decision verdict as a Prolog term string.
+    pub verdict: String,
+    /// The decision motivation (if requested) as a Prolog term string.
+    pub motivation: Option<String>,
 }

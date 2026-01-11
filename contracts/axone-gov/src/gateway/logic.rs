@@ -127,7 +127,7 @@ mod mock {
             let cell = cell.borrow();
             let handler = cell
                 .as_ref()
-                .ok_or_else(|| StdError::generic_err("mock query handler not set"))?;
+                .ok_or_else(|| StdError::not_found("mock query handler"))?;
             handler(&request)
         })
     }

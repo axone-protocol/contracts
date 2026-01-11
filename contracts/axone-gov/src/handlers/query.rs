@@ -1,10 +1,13 @@
 use crate::{
     contract::{AxoneGov, AxoneGovResult},
-    msg::{AxoneGovQueryMsg, ConstitutionResponse},
+    error::AxoneGovError,
+    gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskRequest},
+    guards,
+    msg::{AxoneGovQueryMsg, ConstitutionResponse, DecideResponse},
     state::CONSTITUTION,
 };
 
-use cosmwasm_std::{to_json_binary, Binary, Deps, Env, StdResult};
+use cosmwasm_std::{to_json_binary, Binary, Deps, Env, QuerierWrapper, StdResult};
 
 pub fn query_handler(
     deps: Deps<'_>,
@@ -14,6 +17,9 @@ pub fn query_handler(
 ) -> AxoneGovResult<Binary> {
     match msg {
         AxoneGovQueryMsg::Constitution {} => to_json_binary(&query_constitution(deps)?),
+        AxoneGovQueryMsg::Decide { case, motivated } => {
+            to_json_binary(&query_decide(deps, &case, motivated)?)
+        }
     }
     .map_err(Into::into)
 }
@@ -23,4 +29,63 @@ fn query_constitution(deps: Deps<'_>) -> StdResult<ConstitutionResponse> {
     Ok(ConstitutionResponse {
         governance: constitution,
     })
+}
+
+fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<DecideResponse> {
+    guards::case(case)?;
+
+    let case = case.trim();
+    let constitution = CONSTITUTION.load(deps.storage)?;
+    let program = std::str::from_utf8(constitution.as_slice()).map_err(|err| {
+        AxoneGovError::InvalidConstitution(format!("constitution must be valid UTF-8: {err}"))
+    })?;
+    let query = if motivated {
+        format!("decide({case}, Verdict, Motivation).")
+    } else {
+        format!("decide({case}, Verdict).")
+    };
+
+    let request = QueryServiceAskRequest::new(program, query, Some(1));
+    let response = query_service_ask(
+        &QuerierWrapper::<AxoneLogicQuery>::new(&*deps.querier),
+        request,
+    )?;
+    let answer = response.answer.ok_or(AxoneGovError::DecisionNoAnswer)?;
+
+    if let Some(error) = answer
+        .results
+        .iter()
+        .filter_map(|result| result.error.as_deref())
+        .next()
+    {
+        return Err(AxoneGovError::DecisionFailed(error.to_string()));
+    }
+
+    let result = answer
+        .results
+        .first()
+        .ok_or(AxoneGovError::DecisionNoResult)?;
+    let verdict =
+        find_substitution(result, "Verdict").ok_or(AxoneGovError::DecisionMissingVerdict)?;
+    let motivation = if motivated {
+        Some(
+            find_substitution(result, "Motivation")
+                .ok_or(AxoneGovError::DecisionMissingMotivation)?,
+        )
+    } else {
+        None
+    };
+
+    Ok(DecideResponse {
+        verdict,
+        motivation,
+    })
+}
+
+fn find_substitution(result: &crate::gateway::logic::Result, variable: &str) -> Option<String> {
+    result
+        .substitutions
+        .iter()
+        .find(|sub| sub.variable == variable)
+        .map(|sub| sub.expression.clone())
 }

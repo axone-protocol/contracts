@@ -28,4 +28,22 @@ pub enum AxoneGovError {
 
     #[error("invalid constitution: {0}")]
     InvalidConstitution(String),
+
+    #[error("decision returned no answer")]
+    DecisionNoAnswer,
+
+    #[error("invalid case: {0}")]
+    InvalidCase(String),
+
+    #[error("decision failed: {0}")]
+    DecisionFailed(String),
+
+    #[error("decision returned no result")]
+    DecisionNoResult,
+
+    #[error("decision verdict missing in response")]
+    DecisionMissingVerdict,
+
+    #[error("decision motivation missing in response")]
+    DecisionMissingMotivation,
 }

@@ -384,3 +384,31 @@ fn decide_fails_with_missing_verdict() {
     );
 }
 
+#[test]
+fn decide_fails_with_missing_motivation() {
+    let constitution = Binary::from(b"decide(_, verdict, motivation).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(
+            program,
+            ask_with_substitutions(vec![Substitution {
+                variable: "Verdict".to_string(),
+                expression: "allowed".to_string(),
+            }]),
+        )
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), true)
+        .expect_err("Expected missing motivation error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision motivation missing"),
+        "expected decision motivation missing, got: {msg}"
+    );
+}

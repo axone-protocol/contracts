@@ -309,3 +309,25 @@ fn decide_fails_with_no_answer() {
     );
 }
 
+#[test]
+fn decide_fails_with_no_results() {
+    let constitution = Binary::from(b"decide(_, verdict).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_empty_results())
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), false)
+        .expect_err("Expected decision no result error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision returned no result"),
+        "expected decision no result, got: {msg}"
+    );
+}

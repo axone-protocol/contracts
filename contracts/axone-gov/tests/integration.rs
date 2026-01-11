@@ -161,12 +161,12 @@ fn instantiate_rejects_invalid_constitution() {
         .chain()
         .map(|cause| cause.to_string())
         .collect::<Vec<_>>();
-    let has_invalid = msg.contains("invalid constitution")
+    let has_invalid = msg.contains("constitution is invalid")
         || chain
             .iter()
-            .any(|cause| cause.contains("invalid constitution"));
+            .any(|cause| cause.contains("constitution is invalid"));
     assert!(
         has_invalid,
-        "expected invalid constitution, got: {msg}; chain: {chain:?}"
+        "expected constitution is invalid, got: {msg}; chain: {chain:?}"
     );
 }

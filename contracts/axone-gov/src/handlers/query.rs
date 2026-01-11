@@ -47,7 +47,7 @@ fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<D
         &QuerierWrapper::<AxoneLogicQuery>::new(&*deps.querier),
         request,
     )?;
-    let answer = response.answer.ok_or(AxoneGovError::DecisionNoAnswer)?;
+    let answer = response.answer.ok_or(AxoneGovError::PrologEngineNoAnswer)?;
 
     if let Some(error) = answer
         .results

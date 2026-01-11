@@ -4,7 +4,7 @@ use crate::{
     gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskRequest},
     guards,
     msg::{AxoneGovQueryMsg, ConstitutionResponse, DecideResponse},
-    state::CONSTITUTION,
+    state::{load_constitution_as_string, CONSTITUTION},
 };
 
 use cosmwasm_std::{to_json_binary, Binary, Deps, Env, QuerierWrapper, StdResult};
@@ -35,10 +35,7 @@ fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<D
     guards::case(case)?;
 
     let case = case.trim();
-    let constitution = CONSTITUTION.load(deps.storage)?;
-    let program = std::str::from_utf8(constitution.as_slice()).map_err(|err| {
-        AxoneGovError::InvalidConstitution(format!("constitution must be valid UTF-8: {err}"))
-    })?;
+    let program = load_constitution_as_string(deps.storage)?;
     let query = if motivated {
         format!("decide({case}, Verdict, Motivation).")
     } else {

@@ -54,12 +54,12 @@ impl ConstitutionValidationError {
 
 pub fn constitution(querier: &dyn Querier, constitution: &Binary) -> AxoneGovResult<()> {
     let program = std::str::from_utf8(constitution.as_slice())
+        .map(|s| s.to_string())
         .map_err(|err| {
             AxoneGovError::InvalidConstitution(
                 ConstitutionValidationError::InvalidUtf8(err.to_string()).to_message(),
             )
-        })?
-        .to_string();
+        })?;
     let query = required_predicates_query();
     let request = QueryServiceAskRequest::new(program, query, Some(1));
     let response = query_service_ask(&QuerierWrapper::<AxoneLogicQuery>::new(querier), request)

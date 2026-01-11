@@ -3,7 +3,7 @@ use abstract_client::{AbstractClient, Application};
 use axone_gov::{
     gateway::logic::{
         set_query_service_ask_handler, Answer, QueryServiceAskMockGuard, QueryServiceAskResponse,
-        Result as LogicResult,
+        Result as LogicResult, Substitution,
     },
     msg::{AxoneGovInstantiateMsg, AxoneGovQueryMsgFns},
     AxoneGovInterface, AXONE_NAMESPACE,
@@ -132,6 +132,49 @@ fn ask_error(msg: impl Into<String>) -> QueryServiceAskResponse {
     }
 }
 
+fn ask_with_substitutions(substitutions: Vec<Substitution>) -> QueryServiceAskResponse {
+    let result = LogicResult {
+        error: None,
+        substitutions,
+    };
+    let answer = Answer {
+        has_more: false,
+        variables: Vec::new(),
+        results: vec![result],
+    };
+
+    QueryServiceAskResponse {
+        height: 0,
+        gas_used: 0,
+        answer: Some(answer),
+        user_output: None,
+    }
+}
+
+fn ask_no_answer() -> QueryServiceAskResponse {
+    QueryServiceAskResponse {
+        height: 0,
+        gas_used: 0,
+        answer: None,
+        user_output: None,
+    }
+}
+
+fn ask_empty_results() -> QueryServiceAskResponse {
+    let answer = Answer {
+        has_more: false,
+        variables: Vec::new(),
+        results: Vec::new(),
+    };
+
+    QueryServiceAskResponse {
+        height: 0,
+        gas_used: 0,
+        answer: Some(answer),
+        user_output: None,
+    }
+}
+
 #[test]
 fn instantiate_succeeds_with_valid_constitution() {
     let constitution = Binary::from(b"valid.".to_vec());
@@ -170,3 +213,37 @@ fn instantiate_rejects_invalid_constitution() {
         "expected constitution is invalid, got: {msg}; chain: {chain:?}"
     );
 }
+
+#[test]
+fn decide_succeeds_without_motivation() {
+    let constitution = Binary::from(
+        b"decide(case{action:transfer}, allowed).
+decide(case{action:withdraw}, denied)."
+            .to_vec(),
+    );
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(
+            program,
+            ask_ok(), // constitution validation
+        )
+        .then(
+            program,
+            ask_with_substitutions(vec![Substitution {
+                variable: "Verdict".to_string(),
+                expression: "allowed".to_string(),
+            }]),
+        )
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let response = env
+        .app
+        .decide("case{action:transfer}".to_string(), false)
+        .expect("Failed to query decide");
+
+    assert_eq!(response.verdict, "allowed");
+    assert_eq!(response.motivation, None);
+}
+

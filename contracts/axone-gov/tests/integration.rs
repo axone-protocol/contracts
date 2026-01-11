@@ -316,9 +316,19 @@ fn decide_fails_with_invalid_case() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let invalid_cases = vec!["not_a_dict", "'not_a_term"];
+    let invalid_cases = vec![
+        ("not_a_dict", "case must be a Prolog dict"),
+        (
+            "'not_a_term",
+            "syntax error at offset 0: unterminated quoted atom",
+        ),
+        (
+            "case{action:transfer, user:User}",
+            "case must be ground (no variables)",
+        ),
+    ];
 
-    for case in invalid_cases {
+    for (case, expected_msg) in invalid_cases {
         let err = env
             .app
             .decide(case.to_string(), false)
@@ -326,8 +336,8 @@ fn decide_fails_with_invalid_case() {
 
         let msg = format!("{err:?}");
         assert!(
-            msg.contains("invalid case") || msg.contains("case must be a Prolog dict"),
-            "expected invalid case error, got: {msg}"
+            msg.contains(&format!("invalid case: {}", expected_msg)),
+            "got: {msg}"
         );
     }
 }

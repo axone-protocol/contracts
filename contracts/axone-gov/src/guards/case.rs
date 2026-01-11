@@ -6,7 +6,14 @@ use crate::prolog::parser::{ParseError, Parser};
 pub fn case(case: &str) -> AxoneGovResult<()> {
     let term = parse_term(case)?;
     match term {
-        Term::Dict(_, _) => Ok(()),
+        Term::Dict(_, _) => {
+            if !term.is_ground() {
+                return Err(AxoneGovError::InvalidCase(
+                    "case must be ground (no variables)".to_string(),
+                ));
+            }
+            Ok(())
+        }
         _ => Err(AxoneGovError::InvalidCase(
             "case must be a Prolog dict".to_string(),
         )),
@@ -19,5 +26,5 @@ fn parse_term(input: &str) -> AxoneGovResult<Term> {
 }
 
 fn parse_error(err: ParseError) -> AxoneGovError {
-    AxoneGovError::InvalidCase(format!("invalid case syntax at {}: {}", err.at, err.msg))
+    AxoneGovError::InvalidCase(format!("syntax error at offset {}: {}", err.at, err.msg))
 }

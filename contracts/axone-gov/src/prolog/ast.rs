@@ -17,3 +17,19 @@ pub enum Term {
     /// A dictionary, e.g., `dict{key1: value1, key2: value2}`
     Dict(String, Vec<(String, Term)>),
 }
+
+impl Term {
+    /// Returns true if the term is ground (fully instantiated with no variables).
+    pub fn is_ground(&self) -> bool {
+        match self {
+            Term::Atom(_) | Term::Integer(_) | Term::Float(_) => true,
+            Term::Variable(_) => false,
+            Term::Compound(_, args) => args.iter().all(Term::is_ground),
+            Term::List(elements, tail) => {
+                elements.iter().all(Term::is_ground)
+                    && tail.as_ref().map_or(true, |t| t.is_ground())
+            }
+            Term::Dict(_, pairs) => pairs.iter().all(|(_, value)| value.is_ground()),
+        }
+    }
+}

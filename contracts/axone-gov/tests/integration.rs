@@ -331,3 +331,27 @@ fn decide_fails_with_no_results() {
         "expected decision no result, got: {msg}"
     );
 }
+
+#[test]
+fn decide_fails_with_prolog_error() {
+    let constitution = Binary::from(b"decide(Case, Verdict) :- fail.".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_error("predicate failed"))
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), false)
+        .expect_err("Expected decision failed error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision failed"),
+        "expected decision failed, got: {msg}"
+    );
+}
+

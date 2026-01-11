@@ -247,3 +247,42 @@ decide(case{action:withdraw}, denied)."
     assert_eq!(response.motivation, None);
 }
 
+#[test]
+fn decide_succeeds_with_motivation() {
+    let constitution = Binary::from(
+        b"decide(case{action:transfer}, allowed, 'User is authorized').
+decide(case{action:withdraw}, denied, 'Insufficient funds')."
+            .to_vec(),
+    );
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(
+            program,
+            ask_with_substitutions(vec![
+                Substitution {
+                    variable: "Verdict".to_string(),
+                    expression: "allowed".to_string(),
+                },
+                Substitution {
+                    variable: "Motivation".to_string(),
+                    expression: "'User is authorized'".to_string(),
+                },
+            ]),
+        )
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let response = env
+        .app
+        .decide("case{action:transfer}".to_string(), true)
+        .expect("Failed to query decide");
+
+    assert_eq!(response.verdict, "allowed");
+    assert_eq!(
+        response.motivation,
+        Some("'User is authorized'".to_string())
+    );
+}
+

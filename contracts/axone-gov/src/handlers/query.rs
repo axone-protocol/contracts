@@ -34,7 +34,6 @@ fn query_constitution(deps: Deps<'_>) -> StdResult<ConstitutionResponse> {
 fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<DecideResponse> {
     guards::case(case)?;
 
-    let case = case.trim();
     let program = load_constitution_as_string(deps.storage)?;
     let query = if motivated {
         format!("decide({case}, Verdict, Motivation).")

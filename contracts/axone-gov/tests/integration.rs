@@ -247,26 +247,45 @@ decide(case{action:withdraw}, denied)."
             .to_vec(),
     );
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
-    let (hook, expectations) = LogicAskScenario::new()
-        .then(program, ask_ok())
-        .then(
-            program,
-            ask_with_substitutions(vec![Substitution {
-                variable: "Verdict".to_string(),
-                expression: "allowed".to_string(),
-            }]),
-        )
-        .install();
-    let env =
-        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let response = env
-        .app
-        .decide("case{action:transfer}".to_string(), false)
-        .expect("Failed to query decide");
+    let test_cases = vec![
+        ("case{action:transfer}", "nominal case"),
+        (" case{action:transfer} ", "leading and trailing spaces"),
+        ("case{'foo-bar':baz_qux}", "complex atom in key"),
+        ("case{action:(transfer, withdraw)}", "tuple as value"),
+        ("case{actions:[transfer, withdraw]}", "array as value"),
+    ];
 
-    assert_eq!(response.verdict, "allowed");
-    assert_eq!(response.motivation, None);
+    for (case, description) in test_cases {
+        let (hook, expectations) = LogicAskScenario::new()
+            .then(program, ask_ok())
+            .then(
+                program,
+                ask_with_substitutions(vec![Substitution {
+                    variable: "Verdict".to_string(),
+                    expression: "allowed".to_string(),
+                }]),
+            )
+            .install();
+        let env =
+            TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+        let response = env
+            .app
+            .decide(case.to_string(), false)
+            .unwrap_or_else(|_| panic!("Failed to query decide for case: {}", description));
+
+        assert_eq!(
+            response.verdict, "allowed",
+            "Unexpected verdict for case: {}",
+            description
+        );
+        assert_eq!(
+            response.motivation, None,
+            "Unexpected motivation for case: {}",
+            description
+        );
+    }
 }
 
 #[test]

@@ -215,6 +215,31 @@ fn instantiate_rejects_invalid_constitution() {
 }
 
 #[test]
+fn instantiate_rejects_constitution_missing_required_predicates() {
+    let (hook, expectations) = LogicAskScenario::new()
+        .then("valid.", ask_empty_results())
+        .install();
+
+    let err = match TestEnv::setup(Binary::from(b"valid.".to_vec()), hook, expectations) {
+        Ok(_) => panic!("Expected missing required predicates error"),
+        Err(err) => err,
+    };
+    let msg = err.to_string();
+    let chain = err
+        .chain()
+        .map(|cause| cause.to_string())
+        .collect::<Vec<_>>();
+    let has_missing_predicates = msg.contains("missing required predicates")
+        || chain
+            .iter()
+            .any(|cause| cause.contains("missing required predicates"));
+    assert!(
+        has_missing_predicates,
+        "expected missing required predicates, got: {msg}; chain: {chain:?}"
+    );
+}
+
+#[test]
 fn decide_succeeds_without_motivation() {
     let constitution = Binary::from(
         b"decide(case{action:transfer}, allowed).

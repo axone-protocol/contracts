@@ -3,7 +3,7 @@ use abstract_client::{AbstractClient, Application};
 use axone_gov::{
     gateway::logic::{
         set_query_service_ask_handler, Answer, QueryServiceAskMockGuard, QueryServiceAskResponse,
-        Result as LogicResult,
+        Result as LogicResult, Substitution,
     },
     msg::{AxoneGovInstantiateMsg, AxoneGovQueryMsgFns},
     AxoneGovInterface, AXONE_NAMESPACE,
@@ -132,6 +132,49 @@ fn ask_error(msg: impl Into<String>) -> QueryServiceAskResponse {
     }
 }
 
+fn ask_with_substitutions(substitutions: Vec<Substitution>) -> QueryServiceAskResponse {
+    let result = LogicResult {
+        error: None,
+        substitutions,
+    };
+    let answer = Answer {
+        has_more: false,
+        variables: Vec::new(),
+        results: vec![result],
+    };
+
+    QueryServiceAskResponse {
+        height: 0,
+        gas_used: 0,
+        answer: Some(answer),
+        user_output: None,
+    }
+}
+
+fn ask_no_answer() -> QueryServiceAskResponse {
+    QueryServiceAskResponse {
+        height: 0,
+        gas_used: 0,
+        answer: None,
+        user_output: None,
+    }
+}
+
+fn ask_empty_results() -> QueryServiceAskResponse {
+    let answer = Answer {
+        has_more: false,
+        variables: Vec::new(),
+        results: Vec::new(),
+    };
+
+    QueryServiceAskResponse {
+        height: 0,
+        gas_used: 0,
+        answer: Some(answer),
+        user_output: None,
+    }
+}
+
 #[test]
 fn instantiate_succeeds_with_valid_constitution() {
     let constitution = Binary::from(b"valid.".to_vec());
@@ -161,12 +204,286 @@ fn instantiate_rejects_invalid_constitution() {
         .chain()
         .map(|cause| cause.to_string())
         .collect::<Vec<_>>();
-    let has_invalid = msg.contains("invalid constitution")
+    let has_invalid = msg.contains("constitution is invalid")
         || chain
             .iter()
-            .any(|cause| cause.contains("invalid constitution"));
+            .any(|cause| cause.contains("constitution is invalid"));
     assert!(
         has_invalid,
-        "expected invalid constitution, got: {msg}; chain: {chain:?}"
+        "expected constitution is invalid, got: {msg}; chain: {chain:?}"
+    );
+}
+
+#[test]
+fn instantiate_rejects_constitution_missing_required_predicates() {
+    let (hook, expectations) = LogicAskScenario::new()
+        .then("valid.", ask_empty_results())
+        .install();
+
+    let err = match TestEnv::setup(Binary::from(b"valid.".to_vec()), hook, expectations) {
+        Ok(_) => panic!("Expected missing required predicates error"),
+        Err(err) => err,
+    };
+    let msg = err.to_string();
+    let chain = err
+        .chain()
+        .map(|cause| cause.to_string())
+        .collect::<Vec<_>>();
+    let has_missing_predicates = msg.contains("missing required predicates")
+        || chain
+            .iter()
+            .any(|cause| cause.contains("missing required predicates"));
+    assert!(
+        has_missing_predicates,
+        "expected missing required predicates, got: {msg}; chain: {chain:?}"
+    );
+}
+
+#[test]
+fn decide_succeeds_without_motivation() {
+    let constitution = Binary::from(
+        b"decide(case{action:transfer}, allowed).
+decide(case{action:withdraw}, denied)."
+            .to_vec(),
+    );
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+
+    let test_cases = vec![
+        ("case{action:transfer}", "nominal case"),
+        (" case{action:transfer} ", "leading and trailing spaces"),
+        ("case{'foo-bar':baz_qux}", "complex atom in key"),
+        ("case{action:(transfer, withdraw)}", "tuple as value"),
+        ("case{actions:[transfer, withdraw]}", "array as value"),
+    ];
+
+    for (case, description) in test_cases {
+        let (hook, expectations) = LogicAskScenario::new()
+            .then(program, ask_ok())
+            .then(
+                program,
+                ask_with_substitutions(vec![Substitution {
+                    variable: "Verdict".to_string(),
+                    expression: "allowed".to_string(),
+                }]),
+            )
+            .install();
+        let env =
+            TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+        let response = env
+            .app
+            .decide(case.to_string(), false)
+            .unwrap_or_else(|_| panic!("Failed to query decide for case: {}", description));
+
+        assert_eq!(
+            response.verdict, "allowed",
+            "Unexpected verdict for case: {}",
+            description
+        );
+        assert_eq!(
+            response.motivation, None,
+            "Unexpected motivation for case: {}",
+            description
+        );
+    }
+}
+
+#[test]
+fn decide_succeeds_with_motivation() {
+    let constitution = Binary::from(
+        b"decide(case{action:transfer}, allowed, 'User is authorized').
+decide(case{action:withdraw}, denied, 'Insufficient funds')."
+            .to_vec(),
+    );
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(
+            program,
+            ask_with_substitutions(vec![
+                Substitution {
+                    variable: "Verdict".to_string(),
+                    expression: "allowed".to_string(),
+                },
+                Substitution {
+                    variable: "Motivation".to_string(),
+                    expression: "'User is authorized'".to_string(),
+                },
+            ]),
+        )
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let response = env
+        .app
+        .decide("case{action:transfer}".to_string(), true)
+        .expect("Failed to query decide");
+
+    assert_eq!(response.verdict, "allowed");
+    assert_eq!(
+        response.motivation,
+        Some("'User is authorized'".to_string())
+    );
+}
+
+#[test]
+fn decide_fails_with_invalid_case() {
+    let constitution = Binary::from(b"decide(_, verdict).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let invalid_cases = vec![
+        ("not_a_dict", "case must be a Prolog dict"),
+        (
+            "'not_a_term",
+            "syntax error at offset 0: unterminated quoted atom",
+        ),
+        (
+            "case{action:transfer, user:User}",
+            "case must be ground (no variables)",
+        ),
+    ];
+
+    for (case, expected_msg) in invalid_cases {
+        let err = env
+            .app
+            .decide(case.to_string(), false)
+            .expect_err("Expected invalid case error");
+
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains(&format!("invalid case: {}", expected_msg)),
+            "got: {msg}"
+        );
+    }
+}
+
+#[test]
+fn decide_fails_with_no_answer() {
+    let constitution = Binary::from(b"decide(_, verdict).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_no_answer())
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), false)
+        .expect_err("Expected prolog engine no answer error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("prolog engine returned no answer"),
+        "expected prolog engine no answer, got: {msg}"
+    );
+}
+
+#[test]
+fn decide_fails_with_no_results() {
+    let constitution = Binary::from(b"decide(_, verdict).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_empty_results())
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), false)
+        .expect_err("Expected decision no result error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision returned no result"),
+        "expected decision no result, got: {msg}"
+    );
+}
+
+#[test]
+fn decide_fails_with_prolog_error() {
+    let constitution = Binary::from(b"decide(Case, Verdict) :- fail.".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_error("predicate failed"))
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), false)
+        .expect_err("Expected decision failed error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision failed"),
+        "expected decision failed, got: {msg}"
+    );
+}
+
+#[test]
+fn decide_fails_with_missing_verdict() {
+    let constitution = Binary::from(b"decide(_, verdict).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(
+            program,
+            ask_with_substitutions(vec![Substitution {
+                variable: "WrongVar".to_string(),
+                expression: "allowed".to_string(),
+            }]),
+        )
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), false)
+        .expect_err("Expected missing verdict error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision verdict missing"),
+        "expected decision verdict missing, got: {msg}"
+    );
+}
+
+#[test]
+fn decide_fails_with_missing_motivation() {
+    let constitution = Binary::from(b"decide(_, verdict, motivation).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(
+            program,
+            ask_with_substitutions(vec![Substitution {
+                variable: "Verdict".to_string(),
+                expression: "allowed".to_string(),
+            }]),
+        )
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), true)
+        .expect_err("Expected missing motivation error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision motivation missing"),
+        "expected decision motivation missing, got: {msg}"
     );
 }

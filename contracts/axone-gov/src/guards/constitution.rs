@@ -14,69 +14,25 @@ fn required_predicates_query() -> String {
     )
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum ConstitutionValidationError {
-    InvalidUtf8(String),
-    NoAnswer,
-    MissingRequiredPredicates,
-    Engine(String),
-}
-
-impl ConstitutionValidationError {
-    fn to_message(&self) -> String {
-        match self {
-            Self::InvalidUtf8(err) => {
-                format!("constitution must be valid UTF-8: {err}")
-            }
-            Self::NoAnswer => {
-                format!(
-                    "constitution validation failed while checking required predicates ({}, {}): no answer returned",
-                    REQUIRED_PREDICATES[0],
-                    REQUIRED_PREDICATES[1]
-                )
-            }
-            Self::MissingRequiredPredicates => {
-                format!(
-                    "constitution is missing required predicates ({}, {})",
-                    REQUIRED_PREDICATES[0], REQUIRED_PREDICATES[1]
-                )
-            }
-            Self::Engine(err) => {
-                format!(
-                    "constitution validation failed while checking required predicates ({}, {}): {err}",
-                    REQUIRED_PREDICATES[0],
-                    REQUIRED_PREDICATES[1]
-                )
-            }
-        }
-    }
-}
-
 pub fn constitution(querier: &dyn Querier, constitution: &Binary) -> AxoneGovResult<()> {
     let program = std::str::from_utf8(constitution.as_slice())
-        .map_err(|err| {
-            AxoneGovError::InvalidConstitution(
-                ConstitutionValidationError::InvalidUtf8(err.to_string()).to_message(),
-            )
-        })?
-        .to_string();
+        .map(ToString::to_string)
+        .map_err(|err| AxoneGovError::ConstitutionUtf8(err.to_string()))?;
     let query = required_predicates_query();
     let request = QueryServiceAskRequest::new(program, query, Some(1));
     let response = query_service_ask(&QuerierWrapper::<AxoneLogicQuery>::new(querier), request)
-        .map_err(|err| {
-            AxoneGovError::InvalidConstitution(
-                ConstitutionValidationError::Engine(err.to_string()).to_message(),
-            )
-        })?;
+        .map_err(|err| AxoneGovError::PrologEngineError(err.to_string()))?;
 
-    let answer = response.answer.as_ref().ok_or_else(|| {
-        AxoneGovError::InvalidConstitution(ConstitutionValidationError::NoAnswer.to_message())
-    })?;
+    let answer = response
+        .answer
+        .as_ref()
+        .ok_or(AxoneGovError::PrologEngineNoAnswer)?;
 
     if answer.results.is_empty() {
-        return Err(AxoneGovError::InvalidConstitution(
-            ConstitutionValidationError::MissingRequiredPredicates.to_message(),
-        ));
+        return Err(AxoneGovError::ConstitutionInvalid(format!(
+            "constitution is missing required predicates ({}, {})",
+            REQUIRED_PREDICATES[0], REQUIRED_PREDICATES[1]
+        )));
     }
 
     if let Some(error) = answer
@@ -85,9 +41,9 @@ pub fn constitution(querier: &dyn Querier, constitution: &Binary) -> AxoneGovRes
         .filter_map(|result| result.error.as_deref())
         .next()
     {
-        return Err(AxoneGovError::InvalidConstitution(
-            ConstitutionValidationError::Engine(error.to_string()).to_message(),
-        ));
+        return Err(AxoneGovError::ConstitutionInvalid(format!(
+            "predicate validation failed: {error}"
+        )));
     }
 
     Ok(())

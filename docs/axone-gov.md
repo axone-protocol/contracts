@@ -22,11 +22,15 @@ This contract follows AXONE development patterns and uses the cargo-make build s
 
 Instantiate message.
 
-`constitution` is the Prolog program (UTF-8 bytes) that defines the governance rules. The contract validates that it provides the required predicates (`decide/2` and `decide/3`) during instantiation.
+This contract stores a governance constitution as a Prolog program on the resource AA. The constitution defines governance rules using Prolog predicates. The `constitution` field must contain a UTF-8 encoded Prolog program.
 
-| variant        | description                                                                                                                                                                                                                                         |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| InstantiateMsg | **object**. Instantiate message.<br /><br />`constitution` is the Prolog program (UTF-8 bytes) that defines the governance rules. The contract validates that it provides the required predicates (`decide/2` and `decide/3`) during instantiation. |
+During instantiation, the contract validates that the constitution defines the required predicates: - `decide/2` which takes a `Case` argument and returns a verdict term. - `decide/3` which takes a `Case` argument and returns both a verdict and a motivation term.
+
+The `decide/2` predicate returns a verdict Prolog term indicating the decision outcome. The `decide/3` predicate returns both a verdict and a motivation term providing reasoning for the decision.
+
+| variant        | description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| InstantiateMsg | **object**. Instantiate message.<br /><br />This contract stores a governance constitution as a Prolog program on the resource AA. The constitution defines governance rules using Prolog predicates. The `constitution` field must contain a UTF-8 encoded Prolog program.<br /><br />During instantiation, the contract validates that the constitution defines the required predicates: - `decide/2` which takes a `Case` argument and returns a verdict term. - `decide/3` which takes a `Case` argument and returns both a verdict and a motivation term.<br /><br />The `decide/2` predicate returns a verdict Prolog term indicating the decision outcome. The `decide/3` predicate returns both a verdict and a motivation term providing reasoning for the decision. |
 
 ## ExecuteMsg
 
@@ -46,11 +50,29 @@ Query messages.
 
 ### QueryMsg::constitution
 
-Return the stored governance constitution program.
+Return the stored governance constitution program bytes.
 
 | parameter      | description                |
 | -------------- | -------------------------- |
 | `constitution` | _(Required.) _ **object**. |
+
+### QueryMsg::decide
+
+Decide a case using the constitution's `decide/2` or `decide/3` predicate.
+
+The `case` parameter is a Prolog dict term string that represents the decision context. This string is passed as the `Case` argument to the `decide` predicate.
+
+Example of a case dict: `ctx{action:read, user:"did:example:123", object:"obj:42"}`
+
+The `verdict` returned is an arbitrary Prolog term (which can be an atom or a compound term, e.g., `permitted` or `pay(user_1)`), representing the decision outcome.
+
+If `motivated` is true, the contract calls `decide/3` and returns both `verdict` and `motivation`. The `motivation` is a Prolog term that provides reasoning behind the decision.
+
+| parameter          | description                 |
+| ------------------ | --------------------------- |
+| `decide`           | _(Required.) _ **object**.  |
+| `decide.case`      | _(Required.) _ **string**.  |
+| `decide.motivated` | _(Required.) _ **boolean**. |
 
 ## MigrateMsg
 
@@ -73,9 +95,18 @@ Reserved for future migrations.
 
 Response returned by `QueryMsg::Constitution`.
 
-| property     | description                                                             |
-| ------------ | ----------------------------------------------------------------------- |
-| `governance` | _(Required.) _ **[Binary](#binary)**. Stored Prolog governance program. |
+| property     | description                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| `governance` | _(Required.) _ **[Binary](#binary)**. The stored Prolog governance constitution program bytes. |
+
+### decide
+
+Response returned by `QueryMsg::Decide`.
+
+| property     | description                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| `motivation` | **string\|null**. Optional motivation term returned as the third argument by `decide/3`. |
+| `verdict`    | _(Required.) _ **string**. The decision verdict as a Prolog term string.                 |
 
 ## Definitions
 
@@ -89,4 +120,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`51c999a033214538`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`7b8b444e2a0cab26`)_

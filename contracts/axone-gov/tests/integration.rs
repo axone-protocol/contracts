@@ -248,10 +248,7 @@ decide(case{action:withdraw}, denied)."
     );
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
-        .then(
-            program,
-            ask_ok(), // constitution validation
-        )
+        .then(program, ask_ok())
         .then(
             program,
             ask_with_substitutions(vec![Substitution {
@@ -309,6 +306,30 @@ decide(case{action:withdraw}, denied, 'Insufficient funds')."
         response.motivation,
         Some("'User is authorized'".to_string())
     );
+}
+
+#[test]
+fn decide_fails_with_invalid_case() {
+    let constitution = Binary::from(b"decide(_, verdict).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let invalid_cases = vec!["not_a_dict", "'not_a_term"];
+
+    for case in invalid_cases {
+        let err = env
+            .app
+            .decide(case.to_string(), false)
+            .expect_err("Expected invalid case error");
+
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("invalid case") || msg.contains("case must be a Prolog dict"),
+            "expected invalid case error, got: {msg}"
+        );
+    }
 }
 
 #[test]

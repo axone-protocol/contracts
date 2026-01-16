@@ -8,7 +8,7 @@ use axone_gov::{
     msg::{AxoneGovInstantiateMsg, AxoneGovQueryMsgFns},
     AxoneGovInterface, AXONE_NAMESPACE,
 };
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Checksum};
 use cw_orch::{anyhow, prelude::*};
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
@@ -187,6 +187,17 @@ fn instantiate_succeeds_with_valid_constitution() {
         .constitution()
         .expect("Failed to query constitution");
     assert_eq!(constitution_got.governance, constitution);
+
+    let status = env
+        .app
+        .constitution_status()
+        .expect("Failed to query constitution status");
+    let expected_hash = Checksum::generate(constitution.as_slice());
+    assert_eq!(status.constitution_revision, 1);
+    assert_eq!(
+        status.constitution_hash,
+        Binary::from(expected_hash.as_slice())
+    );
 }
 
 #[test]

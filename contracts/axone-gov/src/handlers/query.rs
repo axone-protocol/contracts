@@ -1,7 +1,10 @@
 use crate::{
     contract::{AxoneGov, AxoneGovResult},
     error::AxoneGovError,
-    gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskRequest},
+    gateway::logic::{
+        build_decide_query, build_decide_query_with_motivation, query_service_ask, AxoneLogicQuery,
+        QueryServiceAskRequest,
+    },
     guards,
     msg::{AxoneGovQueryMsg, ConstitutionResponse, ConstitutionStatusResponse, DecideResponse},
     state::{load_constitution_as_string, CONSTITUTION, CONSTITUTION_STATUS},
@@ -44,9 +47,9 @@ fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<D
 
     let program = load_constitution_as_string(deps.storage)?;
     let query = if motivated {
-        format!("decide({case}, Verdict, Motivation).")
+        build_decide_query_with_motivation(case)
     } else {
-        format!("decide({case}, Verdict).")
+        build_decide_query(case)
     };
 
     let request = QueryServiceAskRequest::new(program, query, Some(1));

@@ -69,6 +69,16 @@ pub struct Answer {
     pub results: Vec<Result>,
 }
 
+/// Builder function to create a Prolog decide query without motivation
+pub fn build_decide_query(case: &str) -> String {
+    format!("decide({case}, Verdict).")
+}
+
+/// Builder function to create a Prolog decide query with motivation
+pub fn build_decide_query_with_motivation(case: &str) -> String {
+    format!("decide({case}, Verdict, Motivation).")
+}
+
 #[cfg(not(feature = "mock-logic-query"))]
 pub fn query_service_ask(
     querier: &QuerierWrapper<'_, AxoneLogicQuery>,

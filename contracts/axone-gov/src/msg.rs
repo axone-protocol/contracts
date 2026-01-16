@@ -1,4 +1,4 @@
-use crate::contract::AxoneGov;
+use crate::{contract::AxoneGov, state::ConstitutionStatus};
 
 use cosmwasm_schema::QueryResponses;
 use cosmwasm_std::Binary;
@@ -46,6 +46,10 @@ pub enum AxoneGovQueryMsg {
     #[returns(ConstitutionResponse)]
     Constitution {},
 
+    /// Return the stored constitution status metadata.
+    #[returns(ConstitutionStatusResponse)]
+    ConstitutionStatus {},
+
     /// Decide a case using the constitution's `decide/2` or `decide/3` predicate.
     ///
     /// The `case` parameter is a Prolog dict term string that represents the decision context.
@@ -68,6 +72,24 @@ pub enum AxoneGovQueryMsg {
 pub struct ConstitutionResponse {
     /// The stored Prolog governance constitution program bytes.
     pub governance: Binary,
+}
+
+/// Response returned by `QueryMsg::ConstitutionStatus`.
+#[cosmwasm_schema::cw_serde]
+pub struct ConstitutionStatusResponse {
+    /// The stored constitution revision.
+    pub constitution_revision: u64,
+    /// The stored constitution hash (32 bytes).
+    pub constitution_hash: Binary,
+}
+
+impl From<&ConstitutionStatus> for ConstitutionStatusResponse {
+    fn from(status: &ConstitutionStatus) -> Self {
+        Self {
+            constitution_revision: status.constitution_revision,
+            constitution_hash: Binary::from(status.constitution_hash),
+        }
+    }
 }
 
 /// Response returned by `QueryMsg::Decide`.

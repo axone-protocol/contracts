@@ -2,7 +2,7 @@ use crate::{
     contract::{AxoneGov, AxoneGovResult},
     guards,
     msg::AxoneGovInstantiateMsg,
-    state::CONSTITUTION,
+    state::{ConstitutionStatus, CONSTITUTION, CONSTITUTION_STATUS},
 };
 use abstract_app::sdk::AbstractResponse;
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
@@ -17,6 +17,20 @@ pub fn instantiate_handler(
     guards::constitution(&*deps.querier, &msg.constitution)?;
 
     CONSTITUTION.save(deps.storage, &msg.constitution)?;
+    let status = ConstitutionStatus::from_constitution(&msg.constitution);
+    CONSTITUTION_STATUS.save(deps.storage, &status)?;
 
-    Ok(module.response("instantiate"))
+    Ok(module.custom_response(
+        "instantiate",
+        vec![
+            (
+                "constitution_revision".to_string(),
+                status.constitution_revision.to_string(),
+            ),
+            (
+                "constitution_hash".to_string(),
+                status.constitution_hash_base64(),
+            ),
+        ],
+    ))
 }

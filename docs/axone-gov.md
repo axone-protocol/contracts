@@ -56,6 +56,14 @@ Return the stored governance constitution program bytes.
 | -------------- | -------------------------- |
 | `constitution` | _(Required.) _ **object**. |
 
+### QueryMsg::constitution_status
+
+Return the stored constitution status metadata.
+
+| parameter             | description                |
+| --------------------- | -------------------------- |
+| `constitution_status` | _(Required.) _ **object**. |
+
 ### QueryMsg::decide
 
 Decide a case using the constitution's `decide/2` or `decide/3` predicate.
@@ -99,6 +107,15 @@ Response returned by `QueryMsg::Constitution`.
 | ------------ | ---------------------------------------------------------------------------------------------- |
 | `governance` | _(Required.) _ **[Binary](#binary)**. The stored Prolog governance constitution program bytes. |
 
+### constitution_status
+
+Response returned by `QueryMsg::ConstitutionStatus`.
+
+| property                | description                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `constitution_hash`     | _(Required.) _ **[Binary](#binary)**. The stored constitution hash (32 bytes). |
+| `constitution_revision` | _(Required.) _ **integer**. The stored constitution revision.                  |
+
 ### decide
 
 Response returned by `QueryMsg::Decide`.
@@ -120,4 +137,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`7b8b444e2a0cab26`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`e6c3f9b0aa476922`)_

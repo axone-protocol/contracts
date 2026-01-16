@@ -1,11 +1,9 @@
 use crate::{
     contract::{AxoneGov, AxoneGovResult},
     error::AxoneGovError,
-    gateway::logic::{
-        build_decide_query, build_decide_query_with_motivation, query_service_ask, AxoneLogicQuery,
-        QueryServiceAskRequest,
-    },
-    msg::{AxoneGovQueryMsg, ConstitutionResponse, ConstitutionStatusResponse, DecideResponse},
+    gateway::logic::{query_service_ask, AxoneLogicQuery,  QueryServiceAskRequest},
+    msg::{AxoneGovQueryMsg, ConstitutionResponse, ConstitutionStatusResponse,DecideResponse},
+    queries::decision::{build_decide_query, build_decide_query_with_motivation},
     state::{load_constitution_as_string, CONSTITUTION, CONSTITUTION_STATUS},
 };
 

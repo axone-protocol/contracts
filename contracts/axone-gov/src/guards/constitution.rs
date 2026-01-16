@@ -1,5 +1,6 @@
 use crate::contract::AxoneGovResult;
 use crate::gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskRequest};
+use crate::queries::validation::build_required_predicates_query;
 use crate::AxoneGovError;
 use cosmwasm_std::{Binary, Querier, QuerierWrapper};
 
@@ -7,18 +8,11 @@ use cosmwasm_std::{Binary, Querier, QuerierWrapper};
 /// If any are missing, the constitution is considered invalid.
 const REQUIRED_PREDICATES: [&str; 2] = ["decide/2", "decide/3"];
 
-fn required_predicates_query() -> String {
-    format!(
-        "current_predicate({}), current_predicate({}).",
-        REQUIRED_PREDICATES[0], REQUIRED_PREDICATES[1],
-    )
-}
-
 pub fn constitution(querier: &dyn Querier, constitution: &Binary) -> AxoneGovResult<()> {
     let program = std::str::from_utf8(constitution.as_slice())
         .map(ToString::to_string)
         .map_err(|err| AxoneGovError::ConstitutionUtf8(err.to_string()))?;
-    let query = required_predicates_query();
+    let query = build_required_predicates_query(&REQUIRED_PREDICATES);
     let request = QueryServiceAskRequest::new(program, query, Some(1));
     let response = query_service_ask(&QuerierWrapper::<AxoneLogicQuery>::new(querier), request)
         .map_err(|err| AxoneGovError::PrologEngineError(err.to_string()))?;
@@ -29,9 +23,9 @@ pub fn constitution(querier: &dyn Querier, constitution: &Binary) -> AxoneGovRes
         .ok_or(AxoneGovError::PrologEngineNoAnswer)?;
 
     if answer.results.is_empty() {
+        let predicates = REQUIRED_PREDICATES.join(", ");
         return Err(AxoneGovError::ConstitutionInvalid(format!(
-            "constitution is missing required predicates ({}, {})",
-            REQUIRED_PREDICATES[0], REQUIRED_PREDICATES[1]
+            "constitution is missing required predicates ({predicates})"
         )));
     }
 

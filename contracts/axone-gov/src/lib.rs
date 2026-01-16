@@ -5,6 +5,7 @@ mod guards;
 mod handlers;
 pub mod msg;
 mod prolog;
+mod queries;
 mod replies;
 pub mod state;
 

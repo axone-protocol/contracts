@@ -3,8 +3,8 @@ use crate::{
     error::AxoneGovError,
     gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskRequest},
     guards,
-    msg::{AxoneGovQueryMsg, ConstitutionResponse, DecideResponse},
-    state::{load_constitution_as_string, CONSTITUTION},
+    msg::{AxoneGovQueryMsg, ConstitutionResponse, ConstitutionStatusResponse, DecideResponse},
+    state::{load_constitution_as_string, CONSTITUTION, CONSTITUTION_STATUS},
 };
 
 use cosmwasm_std::{to_json_binary, Binary, Deps, Env, QuerierWrapper, StdResult};
@@ -17,6 +17,9 @@ pub fn query_handler(
 ) -> AxoneGovResult<Binary> {
     match msg {
         AxoneGovQueryMsg::Constitution {} => to_json_binary(&query_constitution(deps)?),
+        AxoneGovQueryMsg::ConstitutionStatus {} => {
+            to_json_binary(&query_constitution_status(deps)?)
+        }
         AxoneGovQueryMsg::Decide { case, motivated } => {
             to_json_binary(&query_decide(deps, &case, motivated)?)
         }
@@ -29,6 +32,11 @@ fn query_constitution(deps: Deps<'_>) -> StdResult<ConstitutionResponse> {
     Ok(ConstitutionResponse {
         governance: constitution,
     })
+}
+
+fn query_constitution_status(deps: Deps<'_>) -> StdResult<ConstitutionStatusResponse> {
+    let status = CONSTITUTION_STATUS.load(deps.storage)?;
+    Ok(ConstitutionStatusResponse::from(&status))
 }
 
 fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<DecideResponse> {

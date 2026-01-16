@@ -5,11 +5,11 @@ use crate::{
         build_decide_query, build_decide_query_with_motivation, query_service_ask, AxoneLogicQuery,
         QueryServiceAskRequest,
     },
-    guards,
     msg::{AxoneGovQueryMsg, ConstitutionResponse, ConstitutionStatusResponse, DecideResponse},
     state::{load_constitution_as_string, CONSTITUTION, CONSTITUTION_STATUS},
 };
 
+use crate::gateway::logic::Case;
 use cosmwasm_std::{to_json_binary, Binary, Deps, Env, QuerierWrapper, StdResult};
 
 pub fn query_handler(
@@ -43,13 +43,13 @@ fn query_constitution_status(deps: Deps<'_>) -> StdResult<ConstitutionStatusResp
 }
 
 fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<DecideResponse> {
-    guards::case(case)?;
+    let case = Case::new(case)?;
 
     let program = load_constitution_as_string(deps.storage)?;
     let query = if motivated {
-        build_decide_query_with_motivation(case)
+        build_decide_query_with_motivation(&case)
     } else {
-        build_decide_query(case)
+        build_decide_query(&case)
     };
 
     let request = QueryServiceAskRequest::new(program, query, Some(1));

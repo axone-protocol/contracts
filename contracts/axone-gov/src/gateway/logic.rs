@@ -1,8 +1,56 @@
 use cosmwasm_std::{CustomQuery, QuerierWrapper, StdResult};
 use serde::{Deserialize, Serialize};
 
+use crate::contract::AxoneGovResult;
+use crate::error::AxoneGovError;
 use crate::prolog::ast::Term;
 use crate::prolog::parser::{ParseError, Parser};
+
+/// A case as a ground Prolog dictionary.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Case {
+    raw: String,
+}
+
+impl Case {
+    /// Parse a case from a string.
+    ///
+    /// Returns an error if the input is not valid Prolog syntax,
+    /// not a dictionary, or contains variables.
+    pub fn new(input: &str) -> AxoneGovResult<Self> {
+        let term = parse_term(input)?;
+        match term {
+            Term::Dict(_, _) => {
+                if !term.is_ground() {
+                    return Err(AxoneGovError::InvalidCase(
+                        "case must be ground (no variables)".to_string(),
+                    ));
+                }
+                Ok(Self {
+                    raw: input.to_string(),
+                })
+            }
+            _ => Err(AxoneGovError::InvalidCase(
+                "case must be a Prolog dict".to_string(),
+            )),
+        }
+    }
+}
+
+impl AsRef<str> for Case {
+    fn as_ref(&self) -> &str {
+        &self.raw
+    }
+}
+
+fn parse_term(input: &str) -> AxoneGovResult<Term> {
+    let parser = Parser::new(input).map_err(parse_error)?;
+    parser.parse_root().map_err(parse_error)
+}
+
+fn parse_error(err: ParseError) -> AxoneGovError {
+    AxoneGovError::InvalidCase(format!("syntax error at offset {}: {}", err.at, err.msg))
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct QueryServiceAskRequest {
@@ -69,14 +117,14 @@ pub struct Answer {
     pub results: Vec<Result>,
 }
 
-/// Builder function to create a Prolog decide query without motivation
-pub fn build_decide_query(case: &str) -> String {
-    format!("decide({case}, Verdict).")
+/// Build a Prolog decide query without motivation.
+pub fn build_decide_query(case: &Case) -> String {
+    format!("decide({}, Verdict).", case.as_ref())
 }
 
-/// Builder function to create a Prolog decide query with motivation
-pub fn build_decide_query_with_motivation(case: &str) -> String {
-    format!("decide({case}, Verdict, Motivation).")
+/// Build a Prolog decide query with motivation.
+pub fn build_decide_query_with_motivation(case: &Case) -> String {
+    format!("decide({}, Verdict, Motivation).", case.as_ref())
 }
 
 #[cfg(not(feature = "mock-logic-query"))]

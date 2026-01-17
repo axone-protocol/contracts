@@ -1,5 +1,7 @@
-use crate::{contract::AxoneGov, state::ConstitutionStatus};
+use crate::contract::AxoneGov;
 
+use crate::domain::constitution::ConstitutionStatus;
+use crate::domain::Constitution;
 use cosmwasm_schema::QueryResponses;
 use cosmwasm_std::Binary;
 
@@ -86,8 +88,16 @@ pub struct ConstitutionStatusResponse {
 impl From<&ConstitutionStatus> for ConstitutionStatusResponse {
     fn from(status: &ConstitutionStatus) -> Self {
         Self {
-            constitution_revision: status.constitution_revision,
-            constitution_hash: Binary::from(status.constitution_hash),
+            constitution_revision: status.constitution_revision(),
+            constitution_hash: Binary::from(status.constitution_hash()),
+        }
+    }
+}
+
+impl From<&Constitution> for ConstitutionResponse {
+    fn from(constitution: &Constitution) -> Self {
+        Self {
+            governance: constitution.bytes().clone(),
         }
     }
 }

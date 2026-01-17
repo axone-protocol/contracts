@@ -1,4 +1,4 @@
-use crate::gateway::logic::Case;
+use crate::domain::Case;
 
 /// Build a Prolog decide query without motivation.
 pub fn build_decide_query(case: &Case) -> String {

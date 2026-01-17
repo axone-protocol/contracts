@@ -1,14 +1,15 @@
 use crate::{
     contract::{AxoneGov, AxoneGovResult},
+    domain::Case,
     error::AxoneGovError,
-    gateway::logic::{query_service_ask, AxoneLogicQuery,  QueryServiceAskRequest},
-    msg::{AxoneGovQueryMsg, ConstitutionResponse, ConstitutionStatusResponse,DecideResponse},
+    gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskRequest},
+    msg::{AxoneGovQueryMsg, ConstitutionResponse, ConstitutionStatusResponse, DecideResponse},
     queries::decision::{build_decide_query, build_decide_query_with_motivation},
-    state::{load_constitution_as_string, CONSTITUTION, CONSTITUTION_STATUS},
+    state::load_constitution,
 };
 
-use crate::gateway::logic::Case;
-use cosmwasm_std::{to_json_binary, Binary, Deps, Env, QuerierWrapper, StdResult};
+use crate::state::load_constitution_status;
+use cosmwasm_std::{to_json_binary, Binary, Deps, Env, QuerierWrapper};
 
 pub fn query_handler(
     deps: Deps<'_>,
@@ -28,22 +29,23 @@ pub fn query_handler(
     .map_err(Into::into)
 }
 
-fn query_constitution(deps: Deps<'_>) -> StdResult<ConstitutionResponse> {
-    let constitution = CONSTITUTION.load(deps.storage)?;
-    Ok(ConstitutionResponse {
-        governance: constitution,
-    })
+fn query_constitution(deps: Deps<'_>) -> AxoneGovResult<ConstitutionResponse> {
+    Ok(ConstitutionResponse::from(&load_constitution(
+        deps.storage,
+    )?))
 }
 
-fn query_constitution_status(deps: Deps<'_>) -> StdResult<ConstitutionStatusResponse> {
-    let status = CONSTITUTION_STATUS.load(deps.storage)?;
-    Ok(ConstitutionStatusResponse::from(&status))
+fn query_constitution_status(deps: Deps<'_>) -> AxoneGovResult<ConstitutionStatusResponse> {
+    Ok(ConstitutionStatusResponse::from(&load_constitution_status(
+        deps.storage,
+    )?))
 }
 
 fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<DecideResponse> {
     let case = Case::new(case)?;
 
-    let program = load_constitution_as_string(deps.storage)?;
+    let constitution = load_constitution(deps.storage)?;
+    let program = constitution.source();
     let query = if motivated {
         build_decide_query_with_motivation(&case)
     } else {
@@ -60,8 +62,7 @@ fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<D
     if let Some(error) = answer
         .results
         .iter()
-        .filter_map(|result| result.error.as_deref())
-        .next()
+        .find_map(|result| result.error.as_deref())
     {
         return Err(AxoneGovError::DecisionFailed(error.to_string()));
     }

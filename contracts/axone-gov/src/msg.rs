@@ -79,7 +79,10 @@ pub struct ConstitutionResponse {
 /// Response returned by `QueryMsg::ConstitutionStatus`.
 #[cosmwasm_schema::cw_serde]
 pub struct ConstitutionStatusResponse {
-    /// The stored constitution revision.
+    /// The stored constitution revision number.
+    ///
+    /// Revision starts at `0` for the initial constitution and is incremented by `1`
+    /// on each successful constitutional revision.
     pub constitution_revision: u64,
     /// The stored constitution hash (32 bytes).
     pub constitution_hash: Binary,

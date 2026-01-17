@@ -1,7 +1,7 @@
 use crate::domain::constitution::ConstitutionStatus;
 use crate::domain::Constitution;
 use crate::error::AxoneGovError;
-use cosmwasm_std::{Binary, OverflowError, OverflowOperation, StdError, Storage};
+use cosmwasm_std::{Binary, Checksum, OverflowError, OverflowOperation, StdError, Storage};
 use cw_storage_plus::Item;
 
 pub(crate) struct StateAccess(());
@@ -14,6 +14,8 @@ impl StateAccess {
 const CONSTITUTION: Item<Binary> = Item::new("constitution");
 const CONSTITUTION_STATUS: Item<ConstitutionStatus> = Item::new("constitution_status");
 
+const INITIAL_CONSTITUTION_REVISION: u64 = 0;
+
 pub fn save_initial_constitution(
     storage: &mut dyn Storage,
     constitution: &Constitution,
@@ -21,7 +23,8 @@ pub fn save_initial_constitution(
     if CONSTITUTION_STATUS.may_load(storage)?.is_some() {
         return Err(StdError::generic_err("constitution already initialized").into());
     }
-    let status = ConstitutionStatus::from_constitution(constitution, 0);
+    let hash = constitution_hash(constitution);
+    let status = ConstitutionStatus::new(INITIAL_CONSTITUTION_REVISION, hash);
 
     CONSTITUTION.save(storage, constitution.bytes())?;
     CONSTITUTION_STATUS.save(storage, &status)?;
@@ -38,7 +41,8 @@ pub fn save_revised_constitution(
         .constitution_revision()
         .checked_add(1)
         .ok_or_else(|| StdError::overflow(OverflowError::new(OverflowOperation::Add)))?;
-    let status = ConstitutionStatus::from_constitution(constitution, next_revision);
+    let hash = constitution_hash(constitution);
+    let status = ConstitutionStatus::new(next_revision, hash);
 
     CONSTITUTION.save(storage, constitution.bytes())?;
     CONSTITUTION_STATUS.save(storage, &status)?;
@@ -48,13 +52,9 @@ pub fn save_revised_constitution(
 
 pub fn load_constitution(storage: &dyn Storage) -> Result<Constitution, AxoneGovError> {
     let bytes = CONSTITUTION.load(storage)?;
-    let status = load_constitution_status(storage)?;
+    let _status = load_constitution_status(storage)?;
 
-    Ok(Constitution::from_state(
-        bytes,
-        status.constitution_hash(),
-        &StateAccess::new(),
-    ))
+    Ok(Constitution::from_state(bytes, &StateAccess::new()))
 }
 
 pub fn load_constitution_status(
@@ -62,4 +62,8 @@ pub fn load_constitution_status(
 ) -> Result<ConstitutionStatus, AxoneGovError> {
     let status = CONSTITUTION_STATUS.load(storage)?;
     Ok(status)
+}
+
+fn constitution_hash(constitution: &Constitution) -> [u8; 32] {
+    *Checksum::generate(constitution.bytes().as_slice()).as_ref()
 }

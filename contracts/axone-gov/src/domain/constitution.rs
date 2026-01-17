@@ -4,7 +4,7 @@ use crate::gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskR
 use crate::queries::validation::build_required_predicates_query;
 use crate::state::StateAccess;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Binary, Checksum, QuerierWrapper};
+use cosmwasm_std::{Binary, QuerierWrapper};
 
 const REQUIRED_PREDICATES: [&str; 2] = ["decide/2", "decide/3"];
 
@@ -15,13 +15,12 @@ const REQUIRED_PREDICATES: [&str; 2] = ["decide/2", "decide/3"];
 #[derive(Clone, Debug, PartialEq)]
 pub struct Constitution {
     bytes: Binary,
-    hash: [u8; 32],
 }
 
 impl Constitution {
     /// Reconstruct a Constitution from bytes previously stored in contract state.
-    pub(crate) fn from_state(bytes: Binary, hash: [u8; 32], _access: &StateAccess) -> Self {
-        Self { bytes, hash }
+    pub(crate) fn from_state(bytes: Binary, _access: &StateAccess) -> Self {
+        Self { bytes }
     }
 
     /// Create a new Constitution from a Prolog program.
@@ -66,17 +65,11 @@ impl Constitution {
             )));
         }
 
-        let hash = *Checksum::generate(bytes.as_ref()).as_ref();
-
-        Ok(Self { bytes, hash })
+        Ok(Self { bytes })
     }
 
     pub fn bytes(&self) -> &Binary {
         &self.bytes
-    }
-
-    pub fn hash(&self) -> [u8; 32] {
-        self.hash
     }
 
     /// Get the constitution as a UTF-8 string.
@@ -111,10 +104,6 @@ impl ConstitutionStatus {
             constitution_revision,
             constitution_hash,
         }
-    }
-
-    pub fn from_constitution(constitution: &Constitution, constitution_revision: u64) -> Self {
-        Self::new(constitution_revision, constitution.hash())
     }
 
     pub fn constitution_revision(&self) -> u64 {

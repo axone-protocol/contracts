@@ -4,7 +4,7 @@ use crate::gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskR
 use crate::queries::validation::build_required_predicates_query;
 use crate::state::StateAccess;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Binary, QuerierWrapper};
+use cosmwasm_std::{to_hex, Binary, QuerierWrapper};
 
 const REQUIRED_PREDICATES: [&str; 2] = ["decide/2", "decide/3"];
 
@@ -114,7 +114,7 @@ impl ConstitutionStatus {
         self.constitution_hash
     }
 
-    pub fn constitution_hash_base64(&self) -> String {
-        Binary::from(self.constitution_hash).to_base64()
+    pub fn constitution_hash_hex(&self) -> String {
+        to_hex(self.constitution_hash)
     }
 }

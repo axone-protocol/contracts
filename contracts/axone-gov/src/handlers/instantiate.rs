@@ -29,7 +29,7 @@ pub fn instantiate_handler(
             ),
             (
                 "constitution_hash".to_string(),
-                status.constitution_hash_base64(),
+                status.constitution_hash_hex(),
             ),
         ],
     ))

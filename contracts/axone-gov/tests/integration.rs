@@ -193,7 +193,7 @@ fn instantiate_succeeds_with_valid_constitution() {
         .constitution_status()
         .expect("Failed to query constitution status");
     let expected_hash = Checksum::generate(constitution.as_slice());
-    assert_eq!(status.constitution_revision, 1);
+    assert_eq!(status.constitution_revision, 0);
     assert_eq!(
         status.constitution_hash,
         Binary::from(expected_hash.as_slice())

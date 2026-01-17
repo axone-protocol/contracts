@@ -21,7 +21,7 @@ pub fn save_initial_constitution(
     if CONSTITUTION_STATUS.may_load(storage)?.is_some() {
         return Err(StdError::generic_err("constitution already initialized").into());
     }
-    let status = ConstitutionStatus::from_constitution(constitution, 1);
+    let status = ConstitutionStatus::from_constitution(constitution, 0);
 
     CONSTITUTION.save(storage, constitution.bytes())?;
     CONSTITUTION_STATUS.save(storage, &status)?;

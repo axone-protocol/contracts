@@ -9,6 +9,7 @@ use crate::{
     state::{load_constitution, save_revised_constitution},
 };
 
+use crate::prolog::term as t;
 use abstract_app::traits::AbstractResponse;
 use cosmwasm_std::{Binary, DepsMut, Env, Int64, MessageInfo, QuerierWrapper, StdError, Uint64};
 
@@ -45,18 +46,16 @@ fn revise_constitution(
         Case::default()
     };
 
-    let enrichment = Case::try_from(Term::Dict(
-        "ctx".to_string(),
+    let enrichment_term = t::dict(
+        "ctx",
         vec![
-            (
-                "intent".to_string(),
-                Term::Atom("gov:revise_constitution".to_string()),
-            ),
-            ("cosmwasm".to_string(), build_cosmwasm_term(&env, &info)?),
+            t::kv("intent", t::atom("gov:revise_constitution")),
+            t::kv("cosmwasm", build_cosmwasm_term(&env, &info)?),
         ],
-    ))?;
-    case.merge(&enrichment);
+    );
 
+    let enrichment = Case::try_from(enrichment_term)?;
+    case.merge(&enrichment);
     let current_constitution = load_constitution(deps.storage)?;
     let program = current_constitution.source();
     let query = build_decide_query_with_motivation(&case);
@@ -98,7 +97,7 @@ fn revise_constitution(
         .map(|sub| sub.expression.clone())
         .ok_or(AxoneGovError::DecisionMissingMotivation)?;
 
-    let authorized = verdict_term == Term::Atom("gov:permitted".to_string());
+    let authorized = verdict_term == t::atom("gov:permitted");
 
     if !authorized {
         return Err(AxoneGovError::RevisionRefused {
@@ -124,46 +123,40 @@ fn revise_constitution(
         ],
     ))
 }
-
 fn build_cosmwasm_term(env: &Env, info: &MessageInfo) -> AxoneGovResult<Term> {
     let funds = info
         .funds
         .iter()
         .map(|c| -> AxoneGovResult<Term> {
             let amount = Int64::try_from(c.amount).map_err(StdError::from)?;
-            Ok(Term::Compound(
-                "-".to_string(),
-                vec![Term::Integer(amount), Term::Atom(c.denom.clone())],
-            ))
+            Ok(t::compound2("-", amount.into(), t::atom(c.denom.clone())))
         })
         .collect::<Result<Vec<_>, _>>()?;
 
     let height = Int64::try_from(Uint64::from(env.block.height)).map_err(StdError::from)?;
+
     let mut block_entries = vec![
-        ("height".to_string(), Term::Integer(height)),
-        ("time".to_string(), Term::Atom(env.block.time.to_string())),
+        t::kv("height", height.into()),
+        t::kv("time", t::atom(env.block.time.to_string())),
     ];
     if let Some(tx) = &env.transaction {
-        block_entries.push(("tx_index".to_string(), Term::Integer(Int64::from(tx.index))));
+        block_entries.push(t::kv("tx_index", Int64::from(tx.index).into()));
     }
 
-    Ok(Term::Dict(
-        "cosmwasm".to_string(),
+    Ok(t::dict(
+        "cosmwasm",
         vec![
-            (
-                "message".to_string(),
-                Term::Dict(
-                    "message".to_string(),
+            t::kv(
+                "message",
+                t::dict(
+                    "message",
                     vec![
-                        ("sender".to_string(), Term::Atom(info.sender.to_string())),
-                        ("funds".to_string(), Term::List(funds, None)),
+                        t::kv("sender", t::atom(info.sender.to_string())),
+                        t::kv("funds", t::list(funds)),
                     ],
                 ),
             ),
-            (
-                "block".to_string(),
-                Term::Dict("block".to_string(), block_entries),
-            ),
+            t::kv("block", t::dict("block", block_entries)),
         ],
     ))
 }

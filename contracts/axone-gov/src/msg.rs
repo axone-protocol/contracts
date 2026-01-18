@@ -30,6 +30,13 @@ pub struct AxoneGovInstantiateMsg {
 #[cosmwasm_schema::cw_serde]
 #[derive(cw_orch::ExecuteFns)]
 pub enum AxoneGovExecuteMsg {
+    /// Revise the governance constitution.
+    ReviseConstitution {
+        /// The new constitution.
+        constitution: Binary,
+        /// Additional case context as a Prolog dict string.
+        case: Option<String>,
+    },
     /// No-op execute message
     NoOp {},
 }

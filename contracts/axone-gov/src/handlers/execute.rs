@@ -129,7 +129,7 @@ fn build_cosmwasm_term(env: &Env, info: &MessageInfo) -> AxoneGovResult<Term> {
         .iter()
         .map(|c| -> AxoneGovResult<Term> {
             let amount = Int64::try_from(c.amount).map_err(StdError::from)?;
-            Ok(t::compound2("-", amount.into(), t::atom(c.denom.clone())))
+            Ok(t::compound2("coin", amount.into(), t::atom(c.denom.clone())))
         })
         .collect::<Result<Vec<_>, _>>()?;
 

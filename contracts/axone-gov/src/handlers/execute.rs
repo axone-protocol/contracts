@@ -163,3 +163,136 @@ fn build_cosmwasm_term(env: &Env, info: &MessageInfo) -> AxoneGovResult<Term> {
         ],
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::{Addr, BlockInfo, Coin, ContractInfo, Timestamp, TransactionInfo, Uint128};
+
+    #[test]
+    fn test_build_cosmwasm_term() {
+        let cases = vec![
+            (
+                "basic case with no funds and no transaction",
+                Env {
+                    block: BlockInfo {
+                        height: 100,
+                        time: Timestamp::from_seconds(1609459200),
+                        chain_id: "test-chain".to_string(),
+                    },
+                    transaction: None,
+                    contract: ContractInfo {
+                        address: Addr::unchecked("contract"),
+                    },
+                },
+                MessageInfo {
+                    sender: Addr::unchecked("sender"),
+                    funds: vec![],
+                },
+                "cosmwasm{message: message{sender: sender, funds: []}, block: block{height: 100, time: '1609459200.000000000'}}",
+            ),
+            (
+                "case with single coin",
+                Env {
+                    block: BlockInfo {
+                        height: 200,
+                        time: Timestamp::from_seconds(1609459300),
+                        chain_id: "test-chain".to_string(),
+                    },
+                    transaction: None,
+                    contract: ContractInfo {
+                        address: Addr::unchecked("contract"),
+                    },
+                },
+                MessageInfo {
+                    sender: Addr::unchecked("alice"),
+                    funds: vec![Coin {
+                        denom: "uaxone".to_string(),
+                        amount: Uint128::new(1000),
+                    }],
+                },
+                "cosmwasm{message: message{sender: alice, funds: [coin(1000, uaxone)]}, block: block{height: 200, time: '1609459300.000000000'}}",
+            ),
+            (
+                "case with multiple coins",
+                Env {
+                    block: BlockInfo {
+                        height: 300,
+                        time: Timestamp::from_seconds(1609459400),
+                        chain_id: "test-chain".to_string(),
+                    },
+                    transaction: None,
+                    contract: ContractInfo {
+                        address: Addr::unchecked("contract"),
+                    },
+                },
+                MessageInfo {
+                    sender: Addr::unchecked("bob"),
+                    funds: vec![
+                        Coin {
+                            denom: "uaxone".to_string(),
+                            amount: Uint128::new(5000),
+                        },
+                        Coin {
+                            denom: "uatom".to_string(),
+                            amount: Uint128::new(2500),
+                        },
+                    ],
+                },
+                "cosmwasm{message: message{sender: bob, funds: [coin(5000, uaxone), coin(2500, uatom)]}, block: block{height: 300, time: '1609459400.000000000'}}",
+            ),
+            (
+                "case with transaction info",
+                Env {
+                    block: BlockInfo {
+                        height: 400,
+                        time: Timestamp::from_seconds(1609459500),
+                        chain_id: "test-chain".to_string(),
+                    },
+                    transaction: Some(TransactionInfo { index: 42 }),
+                    contract: ContractInfo {
+                        address: Addr::unchecked("contract"),
+                    },
+                },
+                MessageInfo {
+                    sender: Addr::unchecked("charlie"),
+                    funds: vec![],
+                },
+                "cosmwasm{message: message{sender: charlie, funds: []}, block: block{height: 400, time: '1609459500.000000000', tx_index: 42}}",
+            ),
+            (
+                "case with funds and transaction",
+                Env {
+                    block: BlockInfo {
+                        height: 500,
+                        time: Timestamp::from_seconds(1609459600),
+                        chain_id: "test-chain".to_string(),
+                    },
+                    transaction: Some(TransactionInfo { index: 99 }),
+                    contract: ContractInfo {
+                        address: Addr::unchecked("contract"),
+                    },
+                },
+                MessageInfo {
+                    sender: Addr::unchecked("dave"),
+                    funds: vec![Coin {
+                        denom: "uaxone".to_string(),
+                        amount: Uint128::new(12345),
+                    }],
+                },
+                "cosmwasm{message: message{sender: dave, funds: [coin(12345, uaxone)]}, block: block{height: 500, time: '1609459600.000000000', tx_index: 99}}",
+            ),
+        ];
+
+        for (description, env, info, expected) in cases {
+            let result = build_cosmwasm_term(&env, &info)
+                .expect(&format!("failed to build term for: {}", description));
+            let actual = result.to_string();
+            assert_eq!(
+                actual, expected,
+                "test case failed: {}\nexpected: {}\nactual: {}",
+                description, expected, actual
+            );
+        }
+    }
+}

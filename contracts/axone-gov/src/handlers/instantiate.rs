@@ -1,11 +1,12 @@
 use crate::{
     contract::{AxoneGov, AxoneGovResult},
-    guards,
+    domain::Constitution,
+    gateway::logic::AxoneLogicQuery,
     msg::AxoneGovInstantiateMsg,
-    state::{ConstitutionStatus, CONSTITUTION, CONSTITUTION_STATUS},
+    state::save_initial_constitution,
 };
 use abstract_app::sdk::AbstractResponse;
-use cosmwasm_std::{DepsMut, Env, MessageInfo};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
 
 pub fn instantiate_handler(
     deps: DepsMut<'_>,
@@ -14,22 +15,21 @@ pub fn instantiate_handler(
     module: AxoneGov,
     msg: AxoneGovInstantiateMsg,
 ) -> AxoneGovResult {
-    guards::constitution(&*deps.querier, &msg.constitution)?;
+    let querier = QuerierWrapper::<AxoneLogicQuery>::new(&*deps.querier);
+    let constitution = Constitution::try_new(msg.constitution, &querier)?;
 
-    CONSTITUTION.save(deps.storage, &msg.constitution)?;
-    let status = ConstitutionStatus::from_constitution(&msg.constitution);
-    CONSTITUTION_STATUS.save(deps.storage, &status)?;
+    let status = save_initial_constitution(deps.storage, &constitution)?;
 
     Ok(module.custom_response(
         "instantiate",
         vec![
             (
                 "constitution_revision".to_string(),
-                status.constitution_revision.to_string(),
+                status.constitution_revision().to_string(),
             ),
             (
                 "constitution_hash".to_string(),
-                status.constitution_hash_base64(),
+                status.constitution_hash_hex(),
             ),
         ],
     ))

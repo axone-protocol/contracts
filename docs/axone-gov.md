@@ -111,10 +111,10 @@ Response returned by `QueryMsg::Constitution`.
 
 Response returned by `QueryMsg::ConstitutionStatus`.
 
-| property                | description                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------ |
-| `constitution_hash`     | _(Required.) _ **[Binary](#binary)**. The stored constitution hash (32 bytes). |
-| `constitution_revision` | _(Required.) _ **integer**. The stored constitution revision.                  |
+| property                | description                                                                                                                                                                                               |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `constitution_hash`     | _(Required.) _ **[Binary](#binary)**. The stored constitution hash (32 bytes).                                                                                                                            |
+| `constitution_revision` | _(Required.) _ **integer**. The stored constitution revision number.<br /><br />Revision starts at `0` for the initial constitution and is incremented by `1` on each successful constitutional revision. |
 
 ### decide
 
@@ -137,4 +137,4 @@ A string containing Base64-encoded data.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`e6c3f9b0aa476922`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`b34bf756c89335fc`)_

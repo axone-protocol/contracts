@@ -1,35 +1,69 @@
+use crate::domain::constitution::ConstitutionStatus;
+use crate::domain::Constitution;
 use crate::error::AxoneGovError;
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Binary, Checksum, Storage};
+use cosmwasm_std::{Binary, Checksum, OverflowError, OverflowOperation, StdError, Storage};
 use cw_storage_plus::Item;
 
-pub const CONSTITUTION: Item<Binary> = Item::new("constitution");
-pub const CONSTITUTION_STATUS: Item<ConstitutionStatus> = Item::new("constitution_status");
-
-#[cw_serde]
-pub struct ConstitutionStatus {
-    pub constitution_revision: u64,
-    pub constitution_hash: [u8; 32],
-}
-
-impl ConstitutionStatus {
-    pub fn from_constitution(constitution: &Binary) -> Self {
-        let checksum = Checksum::generate(constitution.as_slice());
-        Self {
-            constitution_revision: 1,
-            constitution_hash: *checksum.as_ref(),
-        }
-    }
-
-    pub fn constitution_hash_base64(&self) -> String {
-        Binary::from(self.constitution_hash).to_base64()
+pub(crate) struct StateAccess(());
+impl StateAccess {
+    fn new() -> Self {
+        Self(())
     }
 }
 
-/// Load the constitution from storage and convert it to a UTF-8 string.
-pub fn load_constitution_as_string(storage: &dyn Storage) -> Result<String, AxoneGovError> {
-    let constitution = CONSTITUTION.load(storage)?;
-    std::str::from_utf8(constitution.as_slice())
-        .map(ToString::to_string)
-        .map_err(|err| AxoneGovError::ConstitutionUtf8(err.to_string()))
+const CONSTITUTION: Item<Binary> = Item::new("constitution");
+const CONSTITUTION_STATUS: Item<ConstitutionStatus> = Item::new("constitution_status");
+
+const INITIAL_CONSTITUTION_REVISION: u64 = 0;
+
+pub fn save_initial_constitution(
+    storage: &mut dyn Storage,
+    constitution: &Constitution,
+) -> Result<ConstitutionStatus, AxoneGovError> {
+    if CONSTITUTION_STATUS.may_load(storage)?.is_some() {
+        return Err(StdError::generic_err("constitution already initialized").into());
+    }
+    let hash = constitution_hash(constitution);
+    let status = ConstitutionStatus::new(INITIAL_CONSTITUTION_REVISION, hash);
+
+    CONSTITUTION.save(storage, constitution.bytes())?;
+    CONSTITUTION_STATUS.save(storage, &status)?;
+
+    Ok(status)
+}
+
+pub fn save_revised_constitution(
+    storage: &mut dyn Storage,
+    constitution: &Constitution,
+) -> Result<ConstitutionStatus, AxoneGovError> {
+    let current = load_constitution_status(storage)?;
+    let next_revision = current
+        .constitution_revision()
+        .checked_add(1)
+        .ok_or_else(|| StdError::overflow(OverflowError::new(OverflowOperation::Add)))?;
+    let hash = constitution_hash(constitution);
+    let status = ConstitutionStatus::new(next_revision, hash);
+
+    CONSTITUTION.save(storage, constitution.bytes())?;
+    CONSTITUTION_STATUS.save(storage, &status)?;
+
+    Ok(status)
+}
+
+pub fn load_constitution(storage: &dyn Storage) -> Result<Constitution, AxoneGovError> {
+    let bytes = CONSTITUTION.load(storage)?;
+    let _status = load_constitution_status(storage)?;
+
+    Ok(Constitution::from_state(bytes, &StateAccess::new()))
+}
+
+pub fn load_constitution_status(
+    storage: &dyn Storage,
+) -> Result<ConstitutionStatus, AxoneGovError> {
+    let status = CONSTITUTION_STATUS.load(storage)?;
+    Ok(status)
+}
+
+fn constitution_hash(constitution: &Constitution) -> [u8; 32] {
+    *Checksum::generate(constitution.bytes().as_slice()).as_ref()
 }

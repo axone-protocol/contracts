@@ -1,10 +1,11 @@
 pub mod contract;
+mod domain;
 pub mod error;
 pub mod gateway;
-mod guards;
 mod handlers;
 pub mod msg;
 mod prolog;
+mod queries;
 mod replies;
 pub mod state;
 

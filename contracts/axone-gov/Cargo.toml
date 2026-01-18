@@ -62,6 +62,7 @@ cw-orch.workspace = true
 cw-storage-plus.workspace = true
 dotenv = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
+getset = { workspace = true }
 log = { workspace = true, optional = true }
 logos = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

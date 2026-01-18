@@ -1,6 +1,6 @@
 use crate::prolog::ast::Term;
 
-use cosmwasm_std::{Int256, Int64, Uint128, Uint256};
+use cosmwasm_std::{Int256, Int64, Timestamp, Uint128, Uint256};
 
 fn int256_from_uint256_infallible(u: Uint256) -> Int256 {
     match Int256::try_from(u) {
@@ -37,6 +37,18 @@ impl From<u64> for Term {
 impl From<i32> for Term {
     fn from(v: i32) -> Self {
         Term::Integer(Int256::from_i128(v.into()))
+    }
+}
+
+impl From<u32> for Term {
+    fn from(v: u32) -> Self {
+        Term::Integer(int256_from_uint256_infallible(Uint256::from(v)))
+    }
+}
+
+impl From<Timestamp> for Term {
+    fn from(v: Timestamp) -> Self {
+        v.seconds().into()
     }
 }
 

@@ -11,7 +11,7 @@ use crate::{
 
 use crate::prolog::term as t;
 use abstract_app::traits::AbstractResponse;
-use cosmwasm_std::{Binary, DepsMut, Env, Int64, MessageInfo, QuerierWrapper};
+use cosmwasm_std::{Binary, Coin, DepsMut, Env, MessageInfo, QuerierWrapper};
 
 #[allow(clippy::unnecessary_wraps)]
 pub fn execute_handler(
@@ -49,7 +49,7 @@ fn revise_constitution(
         "ctx",
         vec![
             t::kv("intent", t::atom("gov:revise_constitution")),
-            t::kv("cosmwasm", build_cosmwasm_term(&env, &info)),
+            t::kv("cosmwasm", cosmwasm_term(&env, &info)),
         ],
     );
 
@@ -122,23 +122,26 @@ fn revise_constitution(
         ],
     ))
 }
-fn build_cosmwasm_term(env: &Env, info: &MessageInfo) -> Term {
-    let funds = info
-        .funds
-        .iter()
-        .map(|c| -> Term {
-            let amount = c.amount;
-            t::compound2("coin", amount.into(), t::atom(c.denom.clone()))
-        })
-        .collect();
 
-    let mut block_entries = vec![
+fn coin_term(c: &Coin) -> Term {
+    t::compound2("coin", c.amount.into(), t::atom(c.denom.clone()))
+}
+
+fn cosmwasm_term(env: &Env, info: &MessageInfo) -> Term {
+    let sender = t::atom(info.sender.to_string());
+    let funds = t::list(info.funds.iter().map(coin_term).collect());
+    let block_entries: Vec<(String, Term)> = [
         t::kv("height", env.block.height.into()),
-        t::kv("time", t::atom(env.block.time.to_string())),
-    ];
-    if let Some(tx) = &env.transaction {
-        block_entries.push(t::kv("tx_index", Int64::from(tx.index).into()));
-    }
+        t::kv("time", env.block.time.into()),
+    ]
+    .into_iter()
+    .chain(
+        env.transaction
+            .as_ref()
+            .map(|tx| t::kv("tx_index", tx.index.into()))
+            .into_iter(),
+    )
+    .collect();
 
     t::dict(
         "cosmwasm",
@@ -147,10 +150,7 @@ fn build_cosmwasm_term(env: &Env, info: &MessageInfo) -> Term {
                 "message",
                 t::dict(
                     "message",
-                    vec![
-                        t::kv("sender", t::atom(info.sender.to_string())),
-                        t::kv("funds", t::list(funds)),
-                    ],
+                    vec![t::kv("sender", sender), t::kv("funds", funds)],
                 ),
             ),
             t::kv("block", t::dict("block", block_entries)),
@@ -183,7 +183,7 @@ mod tests {
                     sender: Addr::unchecked("sender"),
                     funds: vec![],
                 },
-                "cosmwasm{message: message{sender: sender, funds: []}, block: block{height: 100, time: '1609459200.000000000'}}",
+                "cosmwasm{message: message{sender: sender, funds: []}, block: block{height: 100, time: 1609459200}}",
             ),
             (
                 "case with single coin",
@@ -205,7 +205,7 @@ mod tests {
                         amount: Uint128::new(1000),
                     }],
                 },
-                "cosmwasm{message: message{sender: alice, funds: [coin(1000, uaxone)]}, block: block{height: 200, time: '1609459300.000000000'}}",
+                "cosmwasm{message: message{sender: alice, funds: [coin(1000, uaxone)]}, block: block{height: 200, time: 1609459300}}",
             ),
             (
                 "case with multiple coins",
@@ -233,7 +233,7 @@ mod tests {
                         },
                     ],
                 },
-                "cosmwasm{message: message{sender: bob, funds: [coin(5000, uaxone), coin(2500, uatom)]}, block: block{height: 300, time: '1609459400.000000000'}}",
+                "cosmwasm{message: message{sender: bob, funds: [coin(5000, uaxone), coin(2500, uatom)]}, block: block{height: 300, time: 1609459400}}",
             ),
             (
                 "case with transaction info",
@@ -252,7 +252,7 @@ mod tests {
                     sender: Addr::unchecked("charlie"),
                     funds: vec![],
                 },
-                "cosmwasm{message: message{sender: charlie, funds: []}, block: block{height: 400, time: '1609459500.000000000', tx_index: 42}}",
+                "cosmwasm{message: message{sender: charlie, funds: []}, block: block{height: 400, time: 1609459500, tx_index: 42}}",
             ),
             (
                 "case with funds and transaction",
@@ -274,12 +274,12 @@ mod tests {
                         amount: Uint128::new(12345),
                     }],
                 },
-                "cosmwasm{message: message{sender: dave, funds: [coin(12345, uaxone)]}, block: block{height: 500, time: '1609459600.000000000', tx_index: 99}}",
+                "cosmwasm{message: message{sender: dave, funds: [coin(12345, uaxone)]}, block: block{height: 500, time: 1609459600, tx_index: 99}}",
             ),
         ];
 
         for (description, env, info, expected) in cases {
-            let got = build_cosmwasm_term(&env, &info).to_string();
+            let got = cosmwasm_term(&env, &info).to_string();
             assert_eq!(
                 got, expected,
                 "test case failed: {}\nexpected: {}\ngot: {}",

@@ -1,11 +1,11 @@
-use cosmwasm_std::{Int64, SignedDecimal};
+use cosmwasm_std::{Int256, SignedDecimal};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Term {
     /// An atom, e.g., `foo`
     Atom(String),
     /// A integer number, e.g., `42`, `-7`
-    Integer(Int64),
+    Integer(Int256),
     /// A floating-point number, e.g., `3.14`, `-0.001`
     Float(SignedDecimal),
     /// A variable, e.g., `X`
@@ -100,120 +100,87 @@ fn is_simple_atom(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prolog::term as t;
 
     #[test]
     fn is_ground() {
         let test_cases = vec![
-            (Term::Atom("foo".to_string()), true, "atom"),
-            (Term::Integer(Int64::new(42)), true, "integer"),
+            (t::atom("foo"), true, "atom"),
+            (42.into(), true, "integer"),
             (Term::Float(SignedDecimal::one()), true, "float"),
-            (Term::Variable("X".to_string()), false, "variable"),
+            (t::variable("X"), false, "variable"),
             (
-                Term::Compound(
-                    "foo".to_string(),
-                    vec![Term::Atom("bar".to_string()), Term::Integer(Int64::new(1))],
-                ),
+                t::compound("foo", vec![t::atom("bar"), 1.into()]),
                 true,
                 "compound with ground args",
             ),
             (
-                Term::Compound(
-                    "foo".to_string(),
-                    vec![
-                        Term::Atom("bar".to_string()),
-                        Term::Variable("X".to_string()),
-                    ],
-                ),
+                t::compound("foo", vec![t::atom("bar"), t::variable("X")]),
                 false,
                 "compound with variable arg",
             ),
+            (t::compound("foo", vec![]), true, "compound with no args"),
             (
-                Term::Compound("foo".to_string(), vec![]),
-                true,
-                "compound with no args",
-            ),
-            (
-                Term::List(
-                    vec![Term::Atom("a".to_string()), Term::Integer(Int64::new(1))],
-                    None,
-                ),
+                t::list(vec![t::atom("a"), 1.into()]),
                 true,
                 "list with ground elements",
             ),
             (
-                Term::List(
-                    vec![Term::Atom("a".to_string()), Term::Variable("X".to_string())],
-                    None,
-                ),
+                t::list(vec![t::atom("a"), t::variable("X")]),
                 false,
                 "list with variable element",
             ),
-            (Term::List(vec![], None), true, "empty list"),
+            (t::list(vec![]), true, "empty list"),
             (
-                Term::List(
-                    vec![Term::Atom("a".to_string())],
-                    Some(Box::new(Term::List(
-                        vec![Term::Integer(Int64::new(2))],
-                        None,
-                    ))),
-                ),
+                Term::List(vec![t::atom("a")], Some(Box::new(t::list(vec![2.into()])))),
                 true,
                 "list with ground tail",
             ),
             (
-                Term::List(
-                    vec![Term::Atom("a".to_string())],
-                    Some(Box::new(Term::Variable("Tail".to_string()))),
-                ),
+                Term::List(vec![t::atom("a")], Some(Box::new(t::variable("Tail")))),
                 false,
                 "list with variable tail",
             ),
             (
-                Term::Dict(
-                    "ctx".to_string(),
+                t::dict(
+                    "ctx",
                     vec![
-                        ("action".to_string(), Term::Atom("read".to_string())),
-                        ("user".to_string(), Term::Integer(Int64::new(123))),
+                        ("action".to_string(), t::atom("read")),
+                        ("user".to_string(), 123.into()),
                     ],
                 ),
                 true,
                 "dict with ground values",
             ),
             (
-                Term::Dict(
-                    "ctx".to_string(),
+                t::dict(
+                    "ctx",
                     vec![
-                        ("action".to_string(), Term::Atom("read".to_string())),
-                        ("user".to_string(), Term::Variable("User".to_string())),
+                        ("action".to_string(), t::atom("read")),
+                        ("user".to_string(), t::variable("User")),
                     ],
                 ),
                 false,
                 "dict with variable value",
             ),
-            (Term::Dict("empty".to_string(), vec![]), true, "empty dict"),
+            (t::dict("empty", vec![]), true, "empty dict"),
             (
-                Term::Dict(
-                    "ctx".to_string(),
+                t::dict(
+                    "ctx",
                     vec![(
                         "nested".to_string(),
-                        Term::Compound(
-                            "foo".to_string(),
-                            vec![Term::List(vec![Term::Atom("a".to_string())], None)],
-                        ),
+                        t::compound("foo", vec![t::list(vec![t::atom("a")])]),
                     )],
                 ),
                 true,
                 "nested ground structures",
             ),
             (
-                Term::Dict(
-                    "ctx".to_string(),
+                t::dict(
+                    "ctx",
                     vec![(
                         "nested".to_string(),
-                        Term::Compound(
-                            "foo".to_string(),
-                            vec![Term::List(vec![Term::Variable("X".to_string())], None)],
-                        ),
+                        t::compound("foo", vec![t::list(vec![t::variable("X")])]),
                     )],
                 ),
                 false,

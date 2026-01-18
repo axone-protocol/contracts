@@ -11,7 +11,7 @@ use crate::{
 
 use crate::prolog::term as t;
 use abstract_app::traits::AbstractResponse;
-use cosmwasm_std::{Binary, DepsMut, Env, Int64, MessageInfo, QuerierWrapper, StdError, Uint64};
+use cosmwasm_std::{Binary, DepsMut, Env, Int64, MessageInfo, QuerierWrapper};
 
 #[allow(clippy::unnecessary_wraps)]
 pub fn execute_handler(
@@ -49,7 +49,7 @@ fn revise_constitution(
         "ctx",
         vec![
             t::kv("intent", t::atom("gov:revise_constitution")),
-            t::kv("cosmwasm", build_cosmwasm_term(&env, &info)?),
+            t::kv("cosmwasm", build_cosmwasm_term(&env, &info)),
         ],
     );
 
@@ -122,31 +122,25 @@ fn revise_constitution(
         ],
     ))
 }
-fn build_cosmwasm_term(env: &Env, info: &MessageInfo) -> AxoneGovResult<Term> {
+fn build_cosmwasm_term(env: &Env, info: &MessageInfo) -> Term {
     let funds = info
         .funds
         .iter()
-        .map(|c| -> AxoneGovResult<Term> {
-            let amount = Int64::try_from(c.amount).map_err(StdError::from)?;
-            Ok(t::compound2(
-                "coin",
-                amount.into(),
-                t::atom(c.denom.clone()),
-            ))
+        .map(|c| -> Term {
+            let amount = c.amount;
+            t::compound2("coin", amount.into(), t::atom(c.denom.clone()))
         })
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let height = Int64::try_from(Uint64::from(env.block.height)).map_err(StdError::from)?;
+        .collect();
 
     let mut block_entries = vec![
-        t::kv("height", height.into()),
+        t::kv("height", env.block.height.into()),
         t::kv("time", t::atom(env.block.time.to_string())),
     ];
     if let Some(tx) = &env.transaction {
         block_entries.push(t::kv("tx_index", Int64::from(tx.index).into()));
     }
 
-    Ok(t::dict(
+    t::dict(
         "cosmwasm",
         vec![
             t::kv(
@@ -161,7 +155,7 @@ fn build_cosmwasm_term(env: &Env, info: &MessageInfo) -> AxoneGovResult<Term> {
             ),
             t::kv("block", t::dict("block", block_entries)),
         ],
-    ))
+    )
 }
 
 #[cfg(test)]
@@ -285,13 +279,11 @@ mod tests {
         ];
 
         for (description, env, info, expected) in cases {
-            let result = build_cosmwasm_term(&env, &info)
-                .expect(&format!("failed to build term for: {}", description));
-            let actual = result.to_string();
+            let got = build_cosmwasm_term(&env, &info).to_string();
             assert_eq!(
-                actual, expected,
-                "test case failed: {}\nexpected: {}\nactual: {}",
-                description, expected, actual
+                got, expected,
+                "test case failed: {}\nexpected: {}\ngot: {}",
+                description, expected, got
             );
         }
     }

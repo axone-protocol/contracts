@@ -1,9 +1,9 @@
-use std::ops::Range;
-
 use crate::prolog::ast::Term;
 use crate::prolog::lexer::{Kind, LexErrorKind, Tok};
-use cosmwasm_std::{Int128, Int64, SignedDecimal};
+use cosmwasm_std::{Int128, Int256, SignedDecimal, Uint256};
 use logos::Logos;
+use std::ops::Range;
+use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub struct Token<'a> {
@@ -140,11 +140,13 @@ impl<'a> Parser<'a> {
                     },
                     Tok::Minus => match rhs {
                         Term::Integer(i) => {
-                            let v = i.i64();
-                            let nv = v.checked_neg().ok_or_else(|| {
-                                ParseError::new("integer negation overflow", self.at())
-                            })?;
-                            Term::Integer(Int64::from(nv))
+                            if i == Int256::MIN {
+                                return Err(ParseError::new(
+                                    "integer negation overflow",
+                                    self.at(),
+                                ));
+                            }
+                            Term::Integer(-i)
                         }
                         Term::Float(d) => {
                             let atoms = d.atomics().i128();
@@ -226,19 +228,19 @@ impl<'a> Parser<'a> {
             Some(Tok::Int(s)) => {
                 self.bump();
                 Ok(Term::Integer(
-                    parse_i64(s).map_err(|e| ParseError::new(e, self.at()))?,
+                    parse_i256(s).map_err(|e| ParseError::new(e, self.at()))?,
                 ))
             }
             Some(Tok::BasedInt(s)) => {
                 self.bump();
                 Ok(Term::Integer(
-                    parse_based_i64(s).map_err(|e| ParseError::new(e, self.at()))?,
+                    parse_based_i256(s).map_err(|e| ParseError::new(e, self.at()))?,
                 ))
             }
             Some(Tok::CharCode(s)) => {
                 self.bump();
                 Ok(Term::Integer(
-                    parse_char_code_i64(s).map_err(|e| ParseError::new(e, self.at()))?,
+                    parse_char_code_i256(s).map_err(|e| ParseError::new(e, self.at()))?,
                 ))
             }
 
@@ -451,12 +453,12 @@ fn prefix_name(tok: &Tok<'_>) -> String {
     }
 }
 
-fn parse_i64(s: &str) -> Result<Int64, String> {
-    let v = s.parse::<i64>().map_err(|_| format!("invalid int: {s}"))?;
-    Ok(Int64::from(v))
+fn parse_i256(s: &str) -> Result<Int256, String> {
+    let v = Int256::from_str(s).map_err(|_| format!("invalid int: {s}"))?;
+    Ok(v)
 }
 
-fn parse_based_i64(s: &str) -> Result<Int64, String> {
+fn parse_based_i256(s: &str) -> Result<Int256, String> {
     let (neg, body) = if let Some(rest) = s.strip_prefix('-') {
         (true, rest)
     } else if let Some(rest) = s.strip_prefix('+') {
@@ -479,17 +481,31 @@ fn parse_based_i64(s: &str) -> Result<Int64, String> {
         return Err(format!("invalid based int: {s}"));
     }
 
-    let u = i128::from_str_radix(digits, radix).map_err(|_| format!("invalid based int: {s}"))?;
-    let v = if neg { -u } else { u };
-
-    if v < i64::MIN as i128 || v > i64::MAX as i128 {
-        return Err(format!("based int out of range: {s}"));
+    let mut acc = Uint256::zero();
+    for ch in digits.chars() {
+        let d = ch
+            .to_digit(radix)
+            .ok_or_else(|| format!("invalid based int: {s}"))?;
+        let oor = || format!("based int out of range: {s}");
+        acc = acc
+            .checked_mul(Uint256::from(radix as u128))
+            .map_err(|_| oor())?
+            .checked_add(Uint256::from(d as u128))
+            .map_err(|_| oor())?;
     }
 
-    Ok(Int64::from(v as i64))
+    let mut v = Int256::try_from(acc).map_err(|_| format!("based int out of range: {s}"))?;
+    if neg {
+        // only overflow case for negation is MIN
+        if v == Int256::MIN {
+            return Err(format!("based int out of range: {s}"));
+        }
+        v = -v;
+    }
+    Ok(v)
 }
 
-fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
+fn parse_char_code_i256(s: &str) -> Result<Int256, String> {
     let rest = s
         .strip_prefix("0'")
         .ok_or_else(|| format!("invalid char code: {s}"))?;
@@ -509,7 +525,7 @@ fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
             return Err(format!("invalid hex char code: {s}"));
         }
         let v = u32::from_str_radix(hex, 16).map_err(|_| format!("invalid hex char code: {s}"))?;
-        return Ok(Int64::from(v as i64));
+        return Ok(Int256::from(v as i128));
     }
 
     // 0'\101 or 0'\101\
@@ -520,18 +536,22 @@ fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
             return Err(format!("invalid char code: {s}"));
         };
 
-        match c0 {
-            'a' => return Ok(Int64::from(0x07)),
-            'b' => return Ok(Int64::from(0x08)),
-            'f' => return Ok(Int64::from(0x0c)),
-            'n' => return Ok(Int64::from(0x0a)),
-            'r' => return Ok(Int64::from(0x0d)),
-            't' => return Ok(Int64::from(0x09)),
-            'v' => return Ok(Int64::from(0x0b)),
-            '\\' => return Ok(Int64::from('\\' as i64)),
-            '\'' => return Ok(Int64::from('\'' as i64)),
-            '"' => return Ok(Int64::from('"' as i64)),
-            _ => {}
+        let code: u32 = match c0 {
+            'a' => 0x07,
+            'b' => 0x08,
+            'f' => 0x0c,
+            'n' => 0x0a,
+            'r' => 0x0d,
+            't' => 0x09,
+            'v' => 0x0b,
+            '\\' => '\\' as u32,
+            '\'' => '\'' as u32,
+            '"' => '"' as u32,
+            _ => 0,
+        };
+
+        if code != 0 {
+            return Ok(Int256::from(code as i128));
         }
 
         // octal escape: up to 3 digits, optional trailing backslash
@@ -550,19 +570,22 @@ fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
             }
 
             let tail: String = chars.collect();
-            let tail = tail.as_str();
-            let tail = if tail == "\\" { "" } else { tail };
+            let tail = if tail.as_str() == "\\" {
+                ""
+            } else {
+                tail.as_str()
+            };
             if !tail.is_empty() {
                 return Err(format!("invalid octal char code: {s}"));
             }
 
             let v = u32::from_str_radix(&oct, 8)
                 .map_err(|_| format!("invalid octal char code: {s}"))?;
-            return Ok(Int64::from(v as i64));
+            return Ok(Int256::from(v as i128));
         }
 
         // fallback: treat as escaped single char
-        return Ok(Int64::from(c0 as i64));
+        return Ok(Int256::from((c0 as u32) as i128));
     }
 
     // default: first unicode scalar
@@ -570,7 +593,7 @@ fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
         .chars()
         .next()
         .ok_or_else(|| format!("invalid char code: {s}"))?;
-    Ok(Int64::from(ch as i64))
+    Ok(Int256::from((ch as u32) as i128))
 }
 
 fn parse_signed_decimal_scientific(s: &str) -> Result<SignedDecimal, String> {
@@ -665,20 +688,21 @@ mod tests {
     #[test]
     fn test_numbers() {
         use super::*;
+        use std::str::FromStr;
 
         let cases = vec![
-            ("123", Term::Integer(Int64::new(123))),
-            ("+456", Term::Integer(Int64::new(456))),
-            ("-789", Term::Integer(Int64::new(-789))),
-            ("0b1010", Term::Integer(Int64::new(10))),
-            ("-0b1010", Term::Integer(Int64::new(-10))),
-            ("0o17", Term::Integer(Int64::new(15))),
-            ("+0o17", Term::Integer(Int64::new(15))),
-            ("0x1A", Term::Integer(Int64::new(26))),
-            ("-0x1A", Term::Integer(Int64::new(-26))),
-            (r"0'\x41\", Term::Integer(Int64::new(65))),
-            (r"0'\101\", Term::Integer(Int64::new(65))),
-            (r"0'\n", Term::Integer(Int64::new(10))),
+            ("123", Term::Integer(Int256::from_str("123").unwrap())),
+            ("+456", Term::Integer(Int256::from_str("456").unwrap())),
+            ("-789", Term::Integer(Int256::from_str("-789").unwrap())),
+            ("0b1010", Term::Integer(Int256::from_str("10").unwrap())),
+            ("-0b1010", Term::Integer(Int256::from_str("-10").unwrap())),
+            ("0o17", Term::Integer(Int256::from_str("15").unwrap())),
+            ("+0o17", Term::Integer(Int256::from_str("15").unwrap())),
+            ("0x1A", Term::Integer(Int256::from_str("26").unwrap())),
+            ("-0x1A", Term::Integer(Int256::from_str("-26").unwrap())),
+            (r"0'\x41\", Term::Integer(Int256::from_str("65").unwrap())),
+            (r"0'\101\", Term::Integer(Int256::from_str("65").unwrap())),
+            (r"0'\n", Term::Integer(Int256::from_str("10").unwrap())),
             (
                 "3.14",
                 Term::Float(
@@ -949,6 +973,7 @@ mod tests {
     #[test]
     fn test_lists() {
         use super::*;
+        use std::str::FromStr;
 
         let cases = vec![
             // empty list
@@ -1060,14 +1085,17 @@ mod tests {
                 Term::Compound(
                     ".".to_string(),
                     vec![
-                        Term::Integer(Int64::from(1)),
+                        Term::Integer(Int256::from_str("1").unwrap()),
                         Term::Compound(
                             ".".to_string(),
                             vec![
-                                Term::Integer(Int64::from(2)),
+                                Term::Integer(Int256::from_str("2").unwrap()),
                                 Term::Compound(
                                     ".".to_string(),
-                                    vec![Term::Integer(Int64::from(3)), Term::List(vec![], None)],
+                                    vec![
+                                        Term::Integer(Int256::from_str("3").unwrap()),
+                                        Term::List(vec![], None),
+                                    ],
                                 ),
                             ],
                         ),
@@ -1087,6 +1115,7 @@ mod tests {
     #[test]
     fn test_dicts() {
         use super::*;
+        use std::str::FromStr;
 
         let cases = vec![
             // empty dict
@@ -1096,7 +1125,10 @@ mod tests {
                 "tag{k:1}",
                 Term::Dict(
                     "tag".to_string(),
-                    vec![("k".to_string(), Term::Integer(Int64::from(1)))],
+                    vec![(
+                        "k".to_string(),
+                        Term::Integer(Int256::from_str("1").unwrap()),
+                    )],
                 ),
             ),
             // multiple entries
@@ -1105,8 +1137,14 @@ mod tests {
                 Term::Dict(
                     "tag".to_string(),
                     vec![
-                        ("k".to_string(), Term::Integer(Int64::from(1))),
-                        ("v".to_string(), Term::Integer(Int64::from(2))),
+                        (
+                            "k".to_string(),
+                            Term::Integer(Int256::from_str("1").unwrap()),
+                        ),
+                        (
+                            "v".to_string(),
+                            Term::Integer(Int256::from_str("2").unwrap()),
+                        ),
                     ],
                 ),
             ),
@@ -1196,7 +1234,10 @@ mod tests {
                         "inner".to_string(),
                         Term::Dict(
                             "tag".to_string(),
-                            vec![("k".to_string(), Term::Integer(Int64::from(1)))],
+                            vec![(
+                                "k".to_string(),
+                                Term::Integer(Int256::from_str("1").unwrap()),
+                            )],
                         ),
                     )],
                 ),

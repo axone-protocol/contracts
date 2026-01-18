@@ -37,8 +37,6 @@ pub enum AxoneGovExecuteMsg {
         /// Additional case context as a Prolog dict string.
         case: Option<String>,
     },
-    /// No-op execute message
-    NoOp {},
 }
 
 /// Migrate message.

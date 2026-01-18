@@ -29,5 +29,5 @@ pub fn compound(functor: impl Into<String>, args: Vec<Term>) -> Term {
 }
 
 pub fn compound2(functor: impl Into<String>, arg1: Term, arg2: Term) -> Term {
-    compound(functor.into(), vec![arg1, arg2])
+    compound(functor, vec![arg1, arg2])
 }

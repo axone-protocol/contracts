@@ -41,7 +41,7 @@ impl Constitution {
             .map_err(|err| AxoneGovError::ConstitutionUtf8(err.to_string()))?;
 
         let query = build_required_predicates_query(&REQUIRED_PREDICATES);
-        let request = QueryServiceAskRequest::new(source, query, Some(1));
+        let request = QueryServiceAskRequest::one(source, query);
         let response = query_service_ask(querier, request)
             .map_err(|err| AxoneGovError::PrologEngineError(err.to_string()))?;
 

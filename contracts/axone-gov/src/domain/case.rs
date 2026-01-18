@@ -19,7 +19,7 @@ impl Case {
     /// Parse a case from a string.
     ///
     /// Returns an error if the input is not valid Prolog syntax,
-    /// not a dictionary, or contains variables.
+    /// not a dictionary, or contains variables (is not ground).
     pub fn new(input: &str) -> AxoneGovResult<Self> {
         let term = parse_term(input)?;
         term.try_into()
@@ -60,19 +60,24 @@ impl TryFrom<Term> for Case {
     type Error = AxoneGovError;
 
     fn try_from(term: Term) -> Result<Self, Self::Error> {
-        match term {
-            Term::Dict(_, _) => {
-                if !term.is_ground() {
-                    return Err(AxoneGovError::InvalidCase(
-                        "case must be ground (no variables)".to_string(),
-                    ));
-                }
-                Ok(Self(term))
+        validate_case(&term)?;
+        Ok(Self(term))
+    }
+}
+
+fn validate_case(term: &Term) -> AxoneGovResult<()> {
+    match term {
+        Term::Dict(_, _) => {
+            if !term.is_ground() {
+                return Err(AxoneGovError::InvalidCase(
+                    "case must be ground (no variables)".to_string(),
+                ));
             }
-            _ => Err(AxoneGovError::InvalidCase(
-                "case must be a Prolog dict".to_string(),
-            )),
+            Ok(())
         }
+        _ => Err(AxoneGovError::InvalidCase(
+            "case must be a Prolog dict".to_string(),
+        )),
     }
 }
 

@@ -61,7 +61,7 @@ fn revise_constitution(
     let program = current_constitution.source();
     let query = build_decide_query_with_motivation(&case);
 
-    let request = QueryServiceAskRequest::new(program, query, Some(1));
+    let request = QueryServiceAskRequest::one(program, query);
     let response = query_service_ask(&querier, request)?;
     let answer = response.answer.ok_or(AxoneGovError::PrologEngineNoAnswer)?;
 

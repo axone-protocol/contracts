@@ -5,6 +5,7 @@ use crate::queries::validation::build_required_predicates_query;
 use crate::state::StateAccess;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{to_hex, Binary, QuerierWrapper};
+use getset::{CopyGetters, Getters};
 
 const REQUIRED_PREDICATES: [&str; 2] = ["decide/2", "decide/3"];
 
@@ -12,8 +13,9 @@ const REQUIRED_PREDICATES: [&str; 2] = ["decide/2", "decide/3"];
 ///
 /// Represents the governance rules that define how decisions are made
 /// within the axone-gov contract.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Getters, PartialEq)]
 pub struct Constitution {
+    #[getset(get = "pub")]
     bytes: Binary,
 }
 
@@ -68,10 +70,6 @@ impl Constitution {
         Ok(Self { bytes })
     }
 
-    pub fn bytes(&self) -> &Binary {
-        &self.bytes
-    }
-
     /// Get the constitution as a UTF-8 string.
     pub fn source(&self) -> &str {
         self.as_ref()
@@ -93,8 +91,11 @@ impl AsRef<str> for Constitution {
 }
 
 #[cw_serde]
+#[derive(CopyGetters, Getters)]
 pub struct ConstitutionStatus {
+    #[getset(get_copy = "pub")]
     constitution_revision: u64,
+    #[getset(get = "pub")]
     constitution_hash: [u8; 32],
 }
 
@@ -104,14 +105,6 @@ impl ConstitutionStatus {
             constitution_revision,
             constitution_hash,
         }
-    }
-
-    pub fn constitution_revision(&self) -> u64 {
-        self.constitution_revision
-    }
-
-    pub fn constitution_hash(&self) -> [u8; 32] {
-        self.constitution_hash
     }
 
     pub fn constitution_hash_hex(&self) -> String {

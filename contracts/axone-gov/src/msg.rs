@@ -9,20 +9,32 @@ abstract_app::app_msg_types!(AxoneGov, AxoneGovExecuteMsg, AxoneGovQueryMsg);
 
 /// Instantiate message.
 ///
-/// This contract stores a governance constitution as a Prolog program on the resource AA.
-/// The constitution defines governance rules using Prolog predicates.
-/// The `constitution` field must contain a UTF-8 encoded Prolog program.
+/// In Axone, a resource is represented by an Abstract Account (AA).
+/// Instantiating this `gov` app on the resource AA attaches a **governance capability** to that resource.
 ///
-/// During instantiation, the contract validates that the constitution defines the required predicates:
-/// - `decide/2` which takes a `Case` argument and returns a verdict term.
-/// - `decide/3` which takes a `Case` argument and returns both a verdict and a motivation term.
+/// A **constitution** (or governance constitution) is the Prolog program stored by this contract.
+/// It expresses the resource governance as rules that decide cases and may query on-chain facts via the
+/// Axone logic module.
 ///
-/// The `decide/2` predicate returns a verdict Prolog term indicating the decision outcome.
-/// The `decide/3` predicate returns both a verdict and a motivation term providing reasoning for the decision.
+/// The `constitution` payload MUST be a UTF-8 encoded Prolog program.
+///
+/// On instantiation, the contract validates that the program can be evaluated and that it defines
+/// the required entrypoints:
+///
+///    - `decide/2` as `governance:decide(+Case, -Verdict)`
+///    - `decide/3` as `governance:decide(+Case, -Verdict, -Motivation)`
+///
+/// Where:
+///
+///    - `Case` is a Prolog dict term (typically `ctx{...}`) representing the decision context.
+///      It can include any key-value facts required by the constitution (e.g. intent, actor, subject).
+///    - `Verdict` is an arbitrary Prolog term (atom or compound) representing the decision outcome.
+///    - `Motivation` is an arbitrary Prolog term intended to justify the verdict (e.g. applicable articles,
+///      findings, interpretation rules).
 #[cosmwasm_schema::cw_serde]
 #[derive(Default)]
 pub struct AxoneGovInstantiateMsg {
-    /// Prolog governance program defining the constitution.
+    /// The constitution (UTF-8 Prolog program bytes).
     pub constitution: Binary,
 }
 
@@ -30,11 +42,20 @@ pub struct AxoneGovInstantiateMsg {
 #[cosmwasm_schema::cw_serde]
 #[derive(cw_orch::ExecuteFns)]
 pub enum AxoneGovExecuteMsg {
-    /// Revise the governance constitution.
+    /// Propose a constitutional revision (constitutional amendment).
+    ///
+    /// The contract asks the **current** constitution to decide whether the revision is allowed by
+    /// evaluating a case that includes the intent `gov:revise_constitution`.
+    ///
+    /// The revision is applied only if the decision verdict is exactly the atom `gov:permitted`.
+    /// Any other verdict (atom or compound term) refuses the revision.
     ReviseConstitution {
-        /// The new constitution.
+        /// The proposed new constitution (UTF-8 Prolog program bytes).
         constitution: Binary,
-        /// Additional case context as a Prolog dict string.
+        /// Optional additional decision context provided by the caller.
+        ///
+        /// This is a Prolog dict term string (typically `ctx{...}`) merged into the case used to
+        /// evaluate the `gov:revise_constitution` intent.
         case: Option<String>,
     },
 }
@@ -49,27 +70,34 @@ pub struct AxoneGovMigrateMsg {}
 #[cosmwasm_schema::cw_serde]
 #[derive(cw_orch::QueryFns, QueryResponses)]
 pub enum AxoneGovQueryMsg {
-    /// Return the stored governance constitution program bytes.
+    /// Return the currently stored constitution (raw Prolog program bytes).
     #[returns(ConstitutionResponse)]
     Constitution {},
 
-    /// Return the stored constitution status metadata.
+    /// Return the current constitution metadata (revision and hash).
     #[returns(ConstitutionStatusResponse)]
     ConstitutionStatus {},
 
-    /// Decide a case using the constitution's `decide/2` or `decide/3` predicate.
+    /// Decide a case using the stored constitution.
     ///
-    /// The `case` parameter is a Prolog dict term string that represents the decision context.
-    /// This string is passed as the `Case` argument to the `decide` predicate.
+    /// The `case` parameter is a Prolog dict term string (typically `ctx{...}`) representing the decision context.
+    /// This is passed as the `Case` argument to `governance:decide/2` or `governance:decide/3`.
     ///
-    /// Example of a case dict:
-    /// `ctx{action:read, user:"did:example:123", object:"obj:42"}`
+    /// Example:
     ///
-    /// The `verdict` returned is an arbitrary Prolog term (which can be an atom or a compound term,
-    /// e.g., `permitted` or `pay(user_1)`), representing the decision outcome.
+    /// `ctx{intent:read, user:"did:example:123", object:"obj:42"}`
     ///
-    /// If `motivated` is true, the contract calls `decide/3` and returns both `verdict` and `motivation`.
-    /// The `motivation` is a Prolog term that provides reasoning behind the decision.
+    ///   - If `motivated` is `false`, the contract calls `decide/2` and returns only the verdict.
+    ///   - If `motivated` is `true`, the contract calls `decide/3` and returns both verdict and motivation.
+    ///
+    /// The returned `verdict` is an arbitrary Prolog term (atom or compound), for example:
+    ///
+    ///   - `gov:permitted`
+    ///   - `gov:forbidden`
+    ///   - `pay("did:...", 1000)`
+    ///
+    /// The optional `motivation` is an arbitrary Prolog term returned by the constitution and intended to
+    /// justify the verdict (e.g. grounds/articles, findings, interpretation rules).
     #[returns(DecideResponse)]
     Decide { case: String, motivated: bool },
 }
@@ -77,19 +105,19 @@ pub enum AxoneGovQueryMsg {
 /// Response returned by `QueryMsg::Constitution`.
 #[cosmwasm_schema::cw_serde]
 pub struct ConstitutionResponse {
-    /// The stored Prolog governance constitution program bytes.
+    /// The stored constitution (raw Prolog program bytes).
     pub governance: Binary,
 }
 
 /// Response returned by `QueryMsg::ConstitutionStatus`.
 #[cosmwasm_schema::cw_serde]
 pub struct ConstitutionStatusResponse {
-    /// The stored constitution revision number.
+    /// The constitution revision number.
     ///
-    /// Revision starts at `0` for the initial constitution and is incremented by `1`
-    /// on each successful constitutional revision.
+    /// The initially instantiated constitution has revision `0`.
+    /// Each successful revision increments it by `1`.
     pub constitution_revision: u64,
-    /// The stored constitution hash (32 bytes).
+    /// The stored constitution hash (32 bytes, sha256).
     pub constitution_hash: Binary,
 }
 
@@ -113,8 +141,8 @@ impl From<&Constitution> for ConstitutionResponse {
 /// Response returned by `QueryMsg::Decide`.
 #[cosmwasm_schema::cw_serde]
 pub struct DecideResponse {
-    /// The decision verdict as a Prolog term string.
+    /// The verdict returned by the constitution as a Prolog term string.
     pub verdict: String,
-    /// Optional motivation term returned as the third argument by `decide/3`.
+    /// Optional motivation term returned as the third argument of `decide/3`.
     pub motivation: Option<String>,
 }

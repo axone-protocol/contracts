@@ -49,7 +49,8 @@ fn revise_constitution(
         "ctx",
         vec![
             t::kv("intent", t::atom("gov:revise_constitution")),
-            t::kv("cosmwasm", cosmwasm_term(&env, &info)),
+            t::kv("gov:module", module_term(&module)),
+            t::kv("gov:cosmwasm", cosmwasm_term(&env, &info)),
         ],
     );
 
@@ -127,6 +128,16 @@ fn coin_term(c: &Coin) -> Term {
     t::compound2("coin", c.amount.into(), t::atom(c.denom.clone()))
 }
 
+fn module_term(module: &AxoneGov) -> Term {
+    t::dict(
+        "module",
+        vec![
+            t::kv("id", t::atom(module.module_id())),
+            t::kv("version", t::atom(module.version())),
+        ],
+    )
+}
+
 fn cosmwasm_term(env: &Env, info: &MessageInfo) -> Term {
     let sender = t::atom(info.sender.to_string());
     let funds = t::list(info.funds.iter().map(coin_term).collect());
@@ -138,8 +149,7 @@ fn cosmwasm_term(env: &Env, info: &MessageInfo) -> Term {
     .chain(
         env.transaction
             .as_ref()
-            .map(|tx| t::kv("tx_index", tx.index.into()))
-            .into_iter(),
+            .map(|tx| t::kv("tx_index", tx.index.into())),
     )
     .collect();
 

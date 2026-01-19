@@ -7,6 +7,9 @@ use crate::{
     prolog::ast::Term,
     queries::decision::build_decide_query_with_motivation,
     state::{load_constitution, save_revised_constitution},
+    GOV_CTX_COSMWASM, GOV_CTX_MODULE, GOV_INTENT_REVISE_CONSTITUTION, GOV_VERDICT_PERMITTED,
+    RESPONSE_KEY_CONSTITUTION_HASH, RESPONSE_KEY_CONSTITUTION_REVISER,
+    RESPONSE_KEY_CONSTITUTION_REVISION,
 };
 
 use crate::prolog::term as t;
@@ -48,9 +51,9 @@ fn revise_constitution(
     let enrichment_term = t::dict(
         "ctx",
         vec![
-            t::kv("intent", t::atom("gov:revise_constitution")),
-            t::kv("gov:module", module_term(&module)),
-            t::kv("gov:cosmwasm", cosmwasm_term(&env, &info)),
+            t::kv("intent", t::atom(GOV_INTENT_REVISE_CONSTITUTION)),
+            t::kv(GOV_CTX_MODULE, module_term(&module)),
+            t::kv(GOV_CTX_COSMWASM, cosmwasm_term(&env, &info)),
         ],
     );
 
@@ -97,7 +100,7 @@ fn revise_constitution(
         .map(|sub| sub.expression.clone())
         .ok_or(AxoneGovError::DecisionMissingMotivation)?;
 
-    let authorized = verdict_term == t::atom("gov:permitted");
+    let authorized = verdict_term == t::atom(GOV_VERDICT_PERMITTED);
 
     if !authorized {
         return Err(AxoneGovError::RevisionRefused {
@@ -112,14 +115,17 @@ fn revise_constitution(
         "revise_constitution",
         vec![
             (
-                "constitution_revision".to_string(),
+                RESPONSE_KEY_CONSTITUTION_REVISION.to_string(),
                 status.constitution_revision().to_string(),
             ),
             (
-                "constitution_hash".to_string(),
+                RESPONSE_KEY_CONSTITUTION_HASH.to_string(),
                 status.constitution_hash_hex(),
             ),
-            ("constitution_reviser".to_string(), info.sender.to_string()),
+            (
+                RESPONSE_KEY_CONSTITUTION_REVISER.to_string(),
+                info.sender.to_string(),
+            ),
         ],
     ))
 }

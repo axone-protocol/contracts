@@ -844,6 +844,36 @@ fn revise_constitution_fails_with_missing_motivation() {
 }
 
 #[test]
+fn revise_constitution_fails_with_invalid_verdict_term() {
+    let constitution = Binary::from(b"decide(_, 'gov:permitted', 'Revision allowed').".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let new_constitution = Binary::from(b"decide(_, allowed).".to_vec());
+    let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
+
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(new_constitution_program, ask_ok())
+        .then(
+            program,
+            ask_decision_with_motivation("invalid(term(", "'Some motivation'"),
+        )
+        .install();
+    let env = TestEnv::setup(constitution.clone(), hook, expectations)
+        .expect("Failed to setup test environment");
+
+    let err = env
+        .app
+        .revise_constitution(new_constitution, None)
+        .expect_err("Expected invalid verdict term error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("invalid verdict term at offset"),
+        "expected invalid verdict term error, got: {msg}"
+    );
+}
+
+#[test]
 fn revise_constitution_increments_revision_number() {
     let constitution = Binary::from(b"decide(_, 'gov:permitted', 'Revision allowed').".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();

@@ -703,6 +703,16 @@ mod tests {
             (r"0'\x41\", Term::Integer(Int256::from_str("65").unwrap())),
             (r"0'\101\", Term::Integer(Int256::from_str("65").unwrap())),
             (r"0'\n", Term::Integer(Int256::from_str("10").unwrap())),
+            // character escape sequences
+            (r"0'\a", Term::Integer(Int256::from_str("7").unwrap())),
+            (r"0'\b", Term::Integer(Int256::from_str("8").unwrap())),
+            (r"0'\f", Term::Integer(Int256::from_str("12").unwrap())),
+            (r"0'\r", Term::Integer(Int256::from_str("13").unwrap())),
+            (r"0'\t", Term::Integer(Int256::from_str("9").unwrap())),
+            (r"0'\v", Term::Integer(Int256::from_str("11").unwrap())),
+            (r"0'\\", Term::Integer(Int256::from_str("92").unwrap())),
+            (r"0'\'", Term::Integer(Int256::from_str("39").unwrap())),
+            ("0'\"", Term::Integer(Int256::from_str("34").unwrap())),
             (
                 "3.14",
                 Term::Float(

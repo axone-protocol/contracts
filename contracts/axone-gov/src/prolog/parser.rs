@@ -769,6 +769,7 @@ mod tests {
             (r"\=", Term::Atom("\\=".to_string())),
             (r"'=\\='", Term::Atom("=\\=".to_string())),
             ("=<", Term::Atom("=<".to_string())),
+            (">=", Term::Atom(">=".to_string())),
             ("'>='", Term::Atom(">=".to_string())),
             ("<", Term::Atom("<".to_string())),
             (">", Term::Atom(">".to_string())),
@@ -1317,6 +1318,7 @@ mod tests {
             parse(input).expect_err(&format!("expected parse error for {input}"));
         }
     }
+
     #[test]
     fn test_prefix_operators() {
         use super::*;
@@ -1689,6 +1691,97 @@ mod tests {
                 "expected error for {input}, got {:?}",
                 result
             );
+        }
+    }
+
+    #[test]
+    fn non_empty_brace_fails() {
+        use super::*;
+
+        let result = Parser::new("{a}").and_then(|p| p.parse_root());
+        assert!(result.is_err(), "expected error for non-empty braces");
+
+        match result {
+            Err(e) => {
+                assert!(e.msg.contains("unexpected"));
+                assert!(e.msg.contains("{}"));
+            }
+            Ok(_) => panic!("expected error for non-empty braces but got Ok"),
+        }
+    }
+
+    #[test]
+    fn unterminated_quoted_atom_fails() {
+        use super::*;
+
+        let result = Parser::new("'unterminated");
+        assert!(
+            result.is_err(),
+            "expected error for unterminated quoted atom"
+        );
+
+        match result {
+            Err(e) => assert!(e.msg.contains("unterminated")),
+            Ok(_) => panic!("expected error for unterminated quoted atom but got Ok"),
+        }
+    }
+
+    #[test]
+    fn negating_int256_min_fails() {
+        use super::*;
+
+        let min_str = Int256::MIN.to_string();
+        let result = Parser::new(&format!("-{}", min_str.trim_start_matches('-')))
+            .and_then(|p| p.parse_root());
+        assert!(result.is_err(), "expected error for negating Int256::MIN");
+
+        match result {
+            Err(e) => assert!(e.msg.contains("invalid int")),
+            Ok(_) => panic!("expected error for negating Int256::MIN but got Ok"),
+        }
+    }
+
+    #[test]
+    fn based_int_at_int256_min_fails() {
+        use super::*;
+
+        let result =
+            parse_based_i256("-0x8000000000000000000000000000000000000000000000000000000000000000");
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err();
+        assert!(err_msg.contains("out of range"));
+    }
+
+    #[test]
+    fn invalid_escape_in_quoted_atom_fails() {
+        use super::*;
+
+        let result = Parser::new("'\\x'");
+        assert!(
+            result.is_err(),
+            "expected error for invalid escape in quoted atom"
+        );
+
+        match result {
+            Err(e) => {
+                assert!(e.msg.contains("invalid escape"));
+                assert!(e.msg.contains("quoted atom"));
+            }
+            Ok(_) => panic!("expected error for invalid escape in quoted atom but got Ok"),
+        }
+    }
+
+    #[test]
+    fn generic_lex_error_fails() {
+        use super::*;
+
+        let result = Parser::new("'\\xD800\\'");
+        assert!(result.is_err(), "expected lex error for invalid Unicode");
+
+        match result {
+            Err(e) => assert!(e.msg.contains("lex error")),
+            Ok(_) => panic!("expected lex error for invalid Unicode but got Ok"),
         }
     }
 }

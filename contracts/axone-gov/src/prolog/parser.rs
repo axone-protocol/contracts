@@ -192,11 +192,7 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
-    fn parse_primary(&mut self, stops: &[Kind]) -> Result<Term, ParseError> {
-        if self.is_stop(stops) {
-            return Err(ParseError::new("unexpected stop token", self.at()));
-        }
-
+    fn parse_primary(&mut self, _stops: &[Kind]) -> Result<Term, ParseError> {
         match self.peek_tok().cloned() {
             Some(Tok::LParen) => {
                 self.bump();

@@ -52,6 +52,10 @@ fn revise_constitution(
         "ctx",
         vec![
             t::kv("intent", t::atom(GOV_INTENT_REVISE_CONSTITUTION)),
+            t::kv(
+                "gov:proposed_constitution_hash",
+                t::atom(revised_constitution.hash_hex()),
+            ),
             t::kv(GOV_CTX_MODULE, module_term(&module)),
             t::kv(GOV_CTX_COSMWASM, cosmwasm_term(&env, &info)),
         ],

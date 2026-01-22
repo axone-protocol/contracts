@@ -1,7 +1,7 @@
 use crate::domain::constitution::ConstitutionStatus;
 use crate::domain::Constitution;
 use crate::error::AxoneGovError;
-use cosmwasm_std::{Binary, Checksum, OverflowError, OverflowOperation, StdError, Storage};
+use cosmwasm_std::{Binary, OverflowError, OverflowOperation, StdError, Storage};
 use cw_storage_plus::Item;
 
 pub(crate) struct StateAccess(());
@@ -23,8 +23,7 @@ pub fn save_initial_constitution(
     if CONSTITUTION_STATUS.may_load(storage)?.is_some() {
         return Err(StdError::generic_err("constitution already initialized").into());
     }
-    let hash = constitution_hash(constitution);
-    let status = ConstitutionStatus::new(INITIAL_CONSTITUTION_REVISION, hash);
+    let status = ConstitutionStatus::new(INITIAL_CONSTITUTION_REVISION, constitution.hash());
 
     CONSTITUTION.save(storage, constitution.bytes())?;
     CONSTITUTION_STATUS.save(storage, &status)?;
@@ -41,8 +40,7 @@ pub fn save_revised_constitution(
         .constitution_revision()
         .checked_add(1)
         .ok_or_else(|| StdError::overflow(OverflowError::new(OverflowOperation::Add)))?;
-    let hash = constitution_hash(constitution);
-    let status = ConstitutionStatus::new(next_revision, hash);
+    let status = ConstitutionStatus::new(next_revision, constitution.hash());
 
     CONSTITUTION.save(storage, constitution.bytes())?;
     CONSTITUTION_STATUS.save(storage, &status)?;
@@ -62,8 +60,4 @@ pub fn load_constitution_status(
 ) -> Result<ConstitutionStatus, AxoneGovError> {
     let status = CONSTITUTION_STATUS.load(storage)?;
     Ok(status)
-}
-
-fn constitution_hash(constitution: &Constitution) -> [u8; 32] {
-    *Checksum::generate(constitution.bytes().as_slice()).as_ref()
 }

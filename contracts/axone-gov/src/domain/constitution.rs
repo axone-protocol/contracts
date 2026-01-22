@@ -4,7 +4,7 @@ use crate::gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskR
 use crate::queries::validation::build_required_predicates_query;
 use crate::state::StateAccess;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_hex, Binary, QuerierWrapper};
+use cosmwasm_std::{to_hex, Binary, Checksum, QuerierWrapper};
 use getset::{CopyGetters, Getters};
 
 const REQUIRED_PREDICATES: [&str; 2] = ["decide/2", "decide/3"];
@@ -73,6 +73,16 @@ impl Constitution {
     /// Get the constitution as a UTF-8 string.
     pub fn source(&self) -> &str {
         self.as_ref()
+    }
+
+    /// Compute the SHA256 hash of the constitution bytes.
+    pub fn hash(&self) -> [u8; 32] {
+        *Checksum::generate(self.bytes.as_slice()).as_ref()
+    }
+
+    /// Compute the SHA256 hash of the constitution bytes as a hex string.
+    pub fn hash_hex(&self) -> String {
+        to_hex(self.hash())
     }
 }
 

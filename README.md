@@ -29,10 +29,10 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
     <th rowspan="4" width="30%">
       <div align="center">
         <img alt="axone-gov logo" src="contracts/axone-gov/axone-gov-card.webp" width="150px"/>
-        <b>axone-gov</b>
-      </div>
-      <br/>
+              <div><b>axone-gov</b></div>
+      <div>
       <sub><a href="contracts/axone-gov/README.md">→ Tech documentation</a></sub>
+      </div>
     </th>
   </tr>
   <tr>
@@ -61,7 +61,6 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
       <a href="https://en.wikipedia.org/wiki/Prolog" target="_blank">
         <img alt="kind: logic" src="https://img.shields.io/badge/kind-🧠%20logic-moccasin?style=for-the-badge" />
       </a>
-      <img alt="state: mutable" src="https://img.shields.io/badge/state-✏️%20mutable-lavender?style=for-the-badge" />
     </td>
   </tr>
 </table>

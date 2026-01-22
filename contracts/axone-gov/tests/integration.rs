@@ -17,6 +17,9 @@ struct LogicAskExpectations(Rc<RefCell<VecDeque<(String, QueryServiceAskResponse
 
 impl Drop for LogicAskExpectations {
     fn drop(&mut self) {
+        if std::thread::panicking() {
+            return;
+        }
         let remaining = self.0.borrow().len();
         assert_eq!(
             remaining, 0,
@@ -27,12 +30,14 @@ impl Drop for LogicAskExpectations {
 
 struct LogicAskScenario {
     expected: Rc<RefCell<VecDeque<(String, QueryServiceAskResponse)>>>,
+    assertions: Rc<RefCell<Vec<(usize, Box<dyn Fn(&str)>)>>>,
 }
 
 impl LogicAskScenario {
     fn new() -> Self {
         Self {
             expected: Rc::new(RefCell::new(VecDeque::new())),
+            assertions: Rc::new(RefCell::new(Vec::new())),
         }
     }
 
@@ -43,9 +48,32 @@ impl LogicAskScenario {
         self
     }
 
+    fn assert_query<F>(self, query_index: usize, assertion: F) -> Self
+    where
+        F: Fn(&str) + 'static,
+    {
+        self.assertions
+            .borrow_mut()
+            .push((query_index, Box::new(assertion)));
+        self
+    }
+
     fn install(self) -> (QueryServiceAskMockGuard, LogicAskExpectations) {
         let expected = self.expected.clone();
+        let assertions = self.assertions.clone();
+        let queries = Rc::new(RefCell::new(Vec::new()));
+        let queries_clone = queries.clone();
+
         let hook: QueryServiceAskMockGuard = set_query_service_ask_handler(move |request| {
+            let query_index = queries_clone.borrow().len();
+            queries_clone.borrow_mut().push(request.query.clone());
+
+            for (idx, assertion) in assertions.borrow().iter() {
+                if *idx == query_index {
+                    assertion(&request.query);
+                }
+            }
+
             let mut q = expected.borrow_mut();
             let (program, response) = q
                 .pop_front()
@@ -874,6 +902,72 @@ fn revise_constitution_fails_with_invalid_verdict_term() {
 }
 
 #[test]
+fn revise_constitution_injects_complete_context_as_per_specification() {
+    let constitution = Binary::from(b"decide(_, 'gov:permitted', ok).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let new_constitution = Binary::from(b"decide(_, 'gov:permitted', ok).".to_vec());
+    let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
+
+    let expected_query = "decide(ctx{intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': '6686998504972527d11b4c1434169210facea0519f77b9ec3958283593e553c7', 'gov:module': module{id: 'axone:axone-gov', version: '8.0.0'}, 'gov:cosmwasm': cosmwasm{message: message{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}, block: block{height: 12345, time: 1571797419, tx_index: 0}}}, Verdict, Motivation).";
+
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(new_constitution_program, ask_ok())
+        .then(
+            program,
+            ask_decision_with_motivation("'gov:permitted'", "ok"),
+        )
+        .assert_query(2, move |query| {
+            assert_eq!(
+                query, expected_query,
+                "Query must exactly match the expected structure.\nExpected:\n{}\nGot:\n{}",
+                expected_query, query
+            );
+        })
+        .install();
+
+    let env = TestEnv::setup(constitution.clone(), hook, expectations)
+        .expect("Failed to setup test environment");
+
+    env.app
+        .revise_constitution(new_constitution.clone(), None)
+        .expect("Revision should succeed");
+}
+
+#[test]
+fn revise_constitution_hash_value_matches_proposed_constitution() {
+    let constitution = Binary::from(b"decide(_, 'gov:permitted', ok).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let new_constitution = Binary::from(b"decide(_, allowed).".to_vec());
+    let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
+
+    let expected_query = "decide(ctx{intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': d0f6d6cf2ae210e1d6e18d7216273f23d7290825d81c2cbce5fd7358c0deed53, 'gov:module': module{id: 'axone:axone-gov', version: '8.0.0'}, 'gov:cosmwasm': cosmwasm{message: message{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}, block: block{height: 12345, time: 1571797419, tx_index: 0}}}, Verdict, Motivation).";
+
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(new_constitution_program, ask_ok())
+        .then(
+            program,
+            ask_decision_with_motivation("'gov:permitted'", "ok"),
+        )
+        .assert_query(2, move |query| {
+            assert_eq!(
+                query, expected_query,
+                "Query must exactly match with correct hash.\nExpected:\n{}\nGot:\n{}",
+                expected_query, query
+            );
+        })
+        .install();
+
+    let env = TestEnv::setup(constitution.clone(), hook, expectations)
+        .expect("Failed to setup test environment");
+
+    env.app
+        .revise_constitution(new_constitution.clone(), None)
+        .expect("Revision should succeed");
+}
+
+#[test]
 fn revise_constitution_increments_revision_number() {
     let constitution = Binary::from(b"decide(_, 'gov:permitted', 'Revision allowed').".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
@@ -884,13 +978,11 @@ fn revise_constitution_increments_revision_number() {
     let new_constitution_2_program = std::str::from_utf8(new_constitution_2.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
-        // First revision: validate new_constitution_1, then decide on current (program)
         .then(new_constitution_1_program, ask_ok())
         .then(
             program,
             ask_decision_with_motivation("'gov:permitted'", "'Revision allowed'"),
         )
-        // Second revision: validate new_constitution_2, then decide on current (new_constitution_1)
         .then(new_constitution_2_program, ask_ok())
         .then(
             new_constitution_1_program,
@@ -900,7 +992,6 @@ fn revise_constitution_increments_revision_number() {
     let env = TestEnv::setup(constitution.clone(), hook, expectations)
         .expect("Failed to setup test environment");
 
-    // First revision
     env.app
         .revise_constitution(new_constitution_1.clone(), None)
         .expect("Failed first revision");
@@ -911,7 +1002,6 @@ fn revise_constitution_increments_revision_number() {
         .expect("Failed to query constitution status");
     assert_eq!(status.constitution_revision, 1);
 
-    // Second revision
     env.app
         .revise_constitution(new_constitution_2.clone(), None)
         .expect("Failed second revision");

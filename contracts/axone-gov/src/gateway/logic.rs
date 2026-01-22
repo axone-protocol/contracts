@@ -20,6 +20,10 @@ impl QueryServiceAskRequest {
             limit,
         }
     }
+
+    pub fn one(program: impl Into<String>, query: impl Into<String>) -> Self {
+        Self::new(program, query, Some(1))
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

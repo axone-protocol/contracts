@@ -52,7 +52,7 @@ fn query_decide(deps: Deps<'_>, case: &str, motivated: bool) -> AxoneGovResult<D
         build_decide_query(&case)
     };
 
-    let request = QueryServiceAskRequest::new(program, query, Some(1));
+    let request = QueryServiceAskRequest::one(program, query);
     let response = query_service_ask(
         &QuerierWrapper::<AxoneLogicQuery>::new(&*deps.querier),
         request,

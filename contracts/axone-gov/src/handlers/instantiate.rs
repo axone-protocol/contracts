@@ -4,6 +4,7 @@ use crate::{
     gateway::logic::AxoneLogicQuery,
     msg::AxoneGovInstantiateMsg,
     state::save_initial_constitution,
+    RESPONSE_KEY_CONSTITUTION_HASH, RESPONSE_KEY_CONSTITUTION_REVISION,
 };
 use abstract_app::sdk::AbstractResponse;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
@@ -24,11 +25,11 @@ pub fn instantiate_handler(
         "instantiate",
         vec![
             (
-                "constitution_revision".to_string(),
+                RESPONSE_KEY_CONSTITUTION_REVISION.to_string(),
                 status.constitution_revision().to_string(),
             ),
             (
-                "constitution_hash".to_string(),
+                RESPONSE_KEY_CONSTITUTION_HASH.to_string(),
                 status.constitution_hash_hex(),
             ),
         ],

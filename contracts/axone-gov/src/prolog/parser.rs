@@ -1,9 +1,9 @@
-use std::ops::Range;
-
 use crate::prolog::ast::Term;
 use crate::prolog::lexer::{Kind, LexErrorKind, Tok};
-use cosmwasm_std::{Int128, Int64, SignedDecimal};
+use cosmwasm_std::{Int128, Int256, SignedDecimal, Uint256};
 use logos::Logos;
+use std::ops::Range;
+use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub struct Token<'a> {
@@ -140,11 +140,13 @@ impl<'a> Parser<'a> {
                     },
                     Tok::Minus => match rhs {
                         Term::Integer(i) => {
-                            let v = i.i64();
-                            let nv = v.checked_neg().ok_or_else(|| {
-                                ParseError::new("integer negation overflow", self.at())
-                            })?;
-                            Term::Integer(Int64::from(nv))
+                            if i == Int256::MIN {
+                                return Err(ParseError::new(
+                                    "integer negation overflow",
+                                    self.at(),
+                                ));
+                            }
+                            Term::Integer(-i)
                         }
                         Term::Float(d) => {
                             let atoms = d.atomics().i128();
@@ -190,11 +192,7 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
-    fn parse_primary(&mut self, stops: &[Kind]) -> Result<Term, ParseError> {
-        if self.is_stop(stops) {
-            return Err(ParseError::new("unexpected stop token", self.at()));
-        }
-
+    fn parse_primary(&mut self, _stops: &[Kind]) -> Result<Term, ParseError> {
         match self.peek_tok().cloned() {
             Some(Tok::LParen) => {
                 self.bump();
@@ -226,19 +224,19 @@ impl<'a> Parser<'a> {
             Some(Tok::Int(s)) => {
                 self.bump();
                 Ok(Term::Integer(
-                    parse_i64(s).map_err(|e| ParseError::new(e, self.at()))?,
+                    parse_i256(s).map_err(|e| ParseError::new(e, self.at()))?,
                 ))
             }
             Some(Tok::BasedInt(s)) => {
                 self.bump();
                 Ok(Term::Integer(
-                    parse_based_i64(s).map_err(|e| ParseError::new(e, self.at()))?,
+                    parse_based_i256(s).map_err(|e| ParseError::new(e, self.at()))?,
                 ))
             }
             Some(Tok::CharCode(s)) => {
                 self.bump();
                 Ok(Term::Integer(
-                    parse_char_code_i64(s).map_err(|e| ParseError::new(e, self.at()))?,
+                    parse_char_code_i256(s).map_err(|e| ParseError::new(e, self.at()))?,
                 ))
             }
 
@@ -451,12 +449,12 @@ fn prefix_name(tok: &Tok<'_>) -> String {
     }
 }
 
-fn parse_i64(s: &str) -> Result<Int64, String> {
-    let v = s.parse::<i64>().map_err(|_| format!("invalid int: {s}"))?;
-    Ok(Int64::from(v))
+fn parse_i256(s: &str) -> Result<Int256, String> {
+    let v = Int256::from_str(s).map_err(|_| format!("invalid int: {s}"))?;
+    Ok(v)
 }
 
-fn parse_based_i64(s: &str) -> Result<Int64, String> {
+fn parse_based_i256(s: &str) -> Result<Int256, String> {
     let (neg, body) = if let Some(rest) = s.strip_prefix('-') {
         (true, rest)
     } else if let Some(rest) = s.strip_prefix('+') {
@@ -479,17 +477,31 @@ fn parse_based_i64(s: &str) -> Result<Int64, String> {
         return Err(format!("invalid based int: {s}"));
     }
 
-    let u = i128::from_str_radix(digits, radix).map_err(|_| format!("invalid based int: {s}"))?;
-    let v = if neg { -u } else { u };
-
-    if v < i64::MIN as i128 || v > i64::MAX as i128 {
-        return Err(format!("based int out of range: {s}"));
+    let mut acc = Uint256::zero();
+    for ch in digits.chars() {
+        let d = ch
+            .to_digit(radix)
+            .ok_or_else(|| format!("invalid based int: {s}"))?;
+        let oor = || format!("based int out of range: {s}");
+        acc = acc
+            .checked_mul(Uint256::from(radix as u128))
+            .map_err(|_| oor())?
+            .checked_add(Uint256::from(d as u128))
+            .map_err(|_| oor())?;
     }
 
-    Ok(Int64::from(v as i64))
+    let mut v = Int256::try_from(acc).map_err(|_| format!("based int out of range: {s}"))?;
+    if neg {
+        // only overflow case for negation is MIN
+        if v == Int256::MIN {
+            return Err(format!("based int out of range: {s}"));
+        }
+        v = -v;
+    }
+    Ok(v)
 }
 
-fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
+fn parse_char_code_i256(s: &str) -> Result<Int256, String> {
     let rest = s
         .strip_prefix("0'")
         .ok_or_else(|| format!("invalid char code: {s}"))?;
@@ -509,7 +521,7 @@ fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
             return Err(format!("invalid hex char code: {s}"));
         }
         let v = u32::from_str_radix(hex, 16).map_err(|_| format!("invalid hex char code: {s}"))?;
-        return Ok(Int64::from(v as i64));
+        return Ok(Int256::from(v as i128));
     }
 
     // 0'\101 or 0'\101\
@@ -520,18 +532,22 @@ fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
             return Err(format!("invalid char code: {s}"));
         };
 
-        match c0 {
-            'a' => return Ok(Int64::from(0x07)),
-            'b' => return Ok(Int64::from(0x08)),
-            'f' => return Ok(Int64::from(0x0c)),
-            'n' => return Ok(Int64::from(0x0a)),
-            'r' => return Ok(Int64::from(0x0d)),
-            't' => return Ok(Int64::from(0x09)),
-            'v' => return Ok(Int64::from(0x0b)),
-            '\\' => return Ok(Int64::from('\\' as i64)),
-            '\'' => return Ok(Int64::from('\'' as i64)),
-            '"' => return Ok(Int64::from('"' as i64)),
-            _ => {}
+        let code: u32 = match c0 {
+            'a' => 0x07,
+            'b' => 0x08,
+            'f' => 0x0c,
+            'n' => 0x0a,
+            'r' => 0x0d,
+            't' => 0x09,
+            'v' => 0x0b,
+            '\\' => '\\' as u32,
+            '\'' => '\'' as u32,
+            '"' => '"' as u32,
+            _ => 0,
+        };
+
+        if code != 0 {
+            return Ok(Int256::from(code as i128));
         }
 
         // octal escape: up to 3 digits, optional trailing backslash
@@ -550,19 +566,22 @@ fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
             }
 
             let tail: String = chars.collect();
-            let tail = tail.as_str();
-            let tail = if tail == "\\" { "" } else { tail };
+            let tail = if tail.as_str() == "\\" {
+                ""
+            } else {
+                tail.as_str()
+            };
             if !tail.is_empty() {
                 return Err(format!("invalid octal char code: {s}"));
             }
 
             let v = u32::from_str_radix(&oct, 8)
                 .map_err(|_| format!("invalid octal char code: {s}"))?;
-            return Ok(Int64::from(v as i64));
+            return Ok(Int256::from(v as i128));
         }
 
         // fallback: treat as escaped single char
-        return Ok(Int64::from(c0 as i64));
+        return Ok(Int256::from((c0 as u32) as i128));
     }
 
     // default: first unicode scalar
@@ -570,7 +589,7 @@ fn parse_char_code_i64(s: &str) -> Result<Int64, String> {
         .chars()
         .next()
         .ok_or_else(|| format!("invalid char code: {s}"))?;
-    Ok(Int64::from(ch as i64))
+    Ok(Int256::from((ch as u32) as i128))
 }
 
 fn parse_signed_decimal_scientific(s: &str) -> Result<SignedDecimal, String> {
@@ -665,20 +684,31 @@ mod tests {
     #[test]
     fn test_numbers() {
         use super::*;
+        use std::str::FromStr;
 
         let cases = vec![
-            ("123", Term::Integer(Int64::new(123))),
-            ("+456", Term::Integer(Int64::new(456))),
-            ("-789", Term::Integer(Int64::new(-789))),
-            ("0b1010", Term::Integer(Int64::new(10))),
-            ("-0b1010", Term::Integer(Int64::new(-10))),
-            ("0o17", Term::Integer(Int64::new(15))),
-            ("+0o17", Term::Integer(Int64::new(15))),
-            ("0x1A", Term::Integer(Int64::new(26))),
-            ("-0x1A", Term::Integer(Int64::new(-26))),
-            (r"0'\x41\", Term::Integer(Int64::new(65))),
-            (r"0'\101\", Term::Integer(Int64::new(65))),
-            (r"0'\n", Term::Integer(Int64::new(10))),
+            ("123", Term::Integer(Int256::from_str("123").unwrap())),
+            ("+456", Term::Integer(Int256::from_str("456").unwrap())),
+            ("-789", Term::Integer(Int256::from_str("-789").unwrap())),
+            ("0b1010", Term::Integer(Int256::from_str("10").unwrap())),
+            ("-0b1010", Term::Integer(Int256::from_str("-10").unwrap())),
+            ("0o17", Term::Integer(Int256::from_str("15").unwrap())),
+            ("+0o17", Term::Integer(Int256::from_str("15").unwrap())),
+            ("0x1A", Term::Integer(Int256::from_str("26").unwrap())),
+            ("-0x1A", Term::Integer(Int256::from_str("-26").unwrap())),
+            (r"0'\x41\", Term::Integer(Int256::from_str("65").unwrap())),
+            (r"0'\101\", Term::Integer(Int256::from_str("65").unwrap())),
+            (r"0'\n", Term::Integer(Int256::from_str("10").unwrap())),
+            // character escape sequences
+            (r"0'\a", Term::Integer(Int256::from_str("7").unwrap())),
+            (r"0'\b", Term::Integer(Int256::from_str("8").unwrap())),
+            (r"0'\f", Term::Integer(Int256::from_str("12").unwrap())),
+            (r"0'\r", Term::Integer(Int256::from_str("13").unwrap())),
+            (r"0'\t", Term::Integer(Int256::from_str("9").unwrap())),
+            (r"0'\v", Term::Integer(Int256::from_str("11").unwrap())),
+            (r"0'\\", Term::Integer(Int256::from_str("92").unwrap())),
+            (r"0'\'", Term::Integer(Int256::from_str("39").unwrap())),
+            ("0'\"", Term::Integer(Int256::from_str("34").unwrap())),
             (
                 "3.14",
                 Term::Float(
@@ -739,6 +769,7 @@ mod tests {
             (r"\=", Term::Atom("\\=".to_string())),
             (r"'=\\='", Term::Atom("=\\=".to_string())),
             ("=<", Term::Atom("=<".to_string())),
+            (">=", Term::Atom(">=".to_string())),
             ("'>='", Term::Atom(">=".to_string())),
             ("<", Term::Atom("<".to_string())),
             (">", Term::Atom(">".to_string())),
@@ -949,6 +980,7 @@ mod tests {
     #[test]
     fn test_lists() {
         use super::*;
+        use std::str::FromStr;
 
         let cases = vec![
             // empty list
@@ -1060,14 +1092,17 @@ mod tests {
                 Term::Compound(
                     ".".to_string(),
                     vec![
-                        Term::Integer(Int64::from(1)),
+                        Term::Integer(Int256::from_str("1").unwrap()),
                         Term::Compound(
                             ".".to_string(),
                             vec![
-                                Term::Integer(Int64::from(2)),
+                                Term::Integer(Int256::from_str("2").unwrap()),
                                 Term::Compound(
                                     ".".to_string(),
-                                    vec![Term::Integer(Int64::from(3)), Term::List(vec![], None)],
+                                    vec![
+                                        Term::Integer(Int256::from_str("3").unwrap()),
+                                        Term::List(vec![], None),
+                                    ],
                                 ),
                             ],
                         ),
@@ -1087,6 +1122,7 @@ mod tests {
     #[test]
     fn test_dicts() {
         use super::*;
+        use std::str::FromStr;
 
         let cases = vec![
             // empty dict
@@ -1096,7 +1132,10 @@ mod tests {
                 "tag{k:1}",
                 Term::Dict(
                     "tag".to_string(),
-                    vec![("k".to_string(), Term::Integer(Int64::from(1)))],
+                    vec![(
+                        "k".to_string(),
+                        Term::Integer(Int256::from_str("1").unwrap()),
+                    )],
                 ),
             ),
             // multiple entries
@@ -1105,8 +1144,14 @@ mod tests {
                 Term::Dict(
                     "tag".to_string(),
                     vec![
-                        ("k".to_string(), Term::Integer(Int64::from(1))),
-                        ("v".to_string(), Term::Integer(Int64::from(2))),
+                        (
+                            "k".to_string(),
+                            Term::Integer(Int256::from_str("1").unwrap()),
+                        ),
+                        (
+                            "v".to_string(),
+                            Term::Integer(Int256::from_str("2").unwrap()),
+                        ),
                     ],
                 ),
             ),
@@ -1196,7 +1241,10 @@ mod tests {
                         "inner".to_string(),
                         Term::Dict(
                             "tag".to_string(),
-                            vec![("k".to_string(), Term::Integer(Int64::from(1)))],
+                            vec![(
+                                "k".to_string(),
+                                Term::Integer(Int256::from_str("1").unwrap()),
+                            )],
                         ),
                     )],
                 ),
@@ -1268,6 +1316,472 @@ mod tests {
 
         for input in cases {
             parse(input).expect_err(&format!("expected parse error for {input}"));
+        }
+    }
+
+    #[test]
+    fn test_prefix_operators() {
+        use super::*;
+
+        let cases = vec![
+            // Test unary + on non-numeric terms
+            (
+                "+a",
+                Term::Compound("+".to_string(), vec![Term::Atom("a".to_string())]),
+            ),
+            (
+                "+foo",
+                Term::Compound("+".to_string(), vec![Term::Atom("foo".to_string())]),
+            ),
+            (
+                "+X",
+                Term::Compound("+".to_string(), vec![Term::Variable("X".to_string())]),
+            ),
+            // Test unary + on list (non-numeric)
+            (
+                "+[]",
+                Term::Compound("+".to_string(), vec![Term::List(vec![], None)]),
+            ),
+            (
+                "+[1,2]",
+                Term::Compound(
+                    "+".to_string(),
+                    vec![Term::List(
+                        vec![
+                            Term::Integer(Int256::from(1)),
+                            Term::Integer(Int256::from(2)),
+                        ],
+                        None,
+                    )],
+                ),
+            ),
+            // Test unary - on non-numeric terms
+            (
+                "-a",
+                Term::Compound("-".to_string(), vec![Term::Atom("a".to_string())]),
+            ),
+            (
+                "-foo",
+                Term::Compound("-".to_string(), vec![Term::Atom("foo".to_string())]),
+            ),
+            (
+                "-X",
+                Term::Compound("-".to_string(), vec![Term::Variable("X".to_string())]),
+            ),
+            // Test \\+ (not) operator
+            (
+                "\\+ a",
+                Term::Compound("\\+".to_string(), vec![Term::Atom("a".to_string())]),
+            ),
+            (
+                "\\+ foo(bar)",
+                Term::Compound(
+                    "\\+".to_string(),
+                    vec![Term::Compound(
+                        "foo".to_string(),
+                        vec![Term::Atom("bar".to_string())],
+                    )],
+                ),
+            ),
+            // Test nested prefix operators
+            (
+                "+-a",
+                Term::Compound(
+                    "+".to_string(),
+                    vec![Term::Compound(
+                        "-".to_string(),
+                        vec![Term::Atom("a".to_string())],
+                    )],
+                ),
+            ),
+            (
+                "-+X",
+                Term::Compound(
+                    "-".to_string(),
+                    vec![Term::Compound(
+                        "+".to_string(),
+                        vec![Term::Variable("X".to_string())],
+                    )],
+                ),
+            ),
+        ];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for (input, expected) in cases {
+            let term = parse(input).expect(&format!("failed to parse {input}"));
+            assert_eq!(term, expected, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn test_unexpected_stop_token() {
+        use super::*;
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        let result = parse("()");
+        assert!(result.is_err(), "expected error for ()");
+        if let Err(e) = result {
+            assert!(
+                e.msg.contains("unexpected"),
+                "expected 'unexpected' in error message, got: {}",
+                e.msg
+            );
+        }
+
+        let result = parse("f()");
+        assert!(result.is_ok(), "f() should parse as compound with no args");
+
+        let result = parse("[]");
+        assert!(result.is_ok(), "[] should parse as empty list");
+    }
+
+    #[test]
+    fn test_prefix_plus_variations() {
+        use super::*;
+
+        let cases = vec![
+            // Unary + with compound terms
+            (
+                "+f(x)",
+                Term::Compound(
+                    "+".to_string(),
+                    vec![Term::Compound(
+                        "f".to_string(),
+                        vec![Term::Atom("x".to_string())],
+                    )],
+                ),
+            ),
+            // Unary + with nested expressions
+            (
+                "+(a+b)",
+                Term::Compound(
+                    "+".to_string(),
+                    vec![Term::Compound(
+                        "+".to_string(),
+                        vec![Term::Atom("a".to_string()), Term::Atom("b".to_string())],
+                    )],
+                ),
+            ),
+            // Unary + with dict
+            (
+                "+a{k:v}",
+                Term::Compound(
+                    "+".to_string(),
+                    vec![Term::Dict(
+                        "a".to_string(),
+                        vec![("k".to_string(), Term::Atom("v".to_string()))],
+                    )],
+                ),
+            ),
+        ];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for (input, expected) in cases {
+            let term = parse(input).expect(&format!("failed to parse {input}"));
+            assert_eq!(term, expected, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn test_unary_minus_variations() {
+        use super::*;
+
+        let cases = vec![
+            // Unary - with compound terms
+            (
+                "-f(x)",
+                Term::Compound(
+                    "-".to_string(),
+                    vec![Term::Compound(
+                        "f".to_string(),
+                        vec![Term::Atom("x".to_string())],
+                    )],
+                ),
+            ),
+            // Unary - with dict
+            (
+                "-a{k:v}",
+                Term::Compound(
+                    "-".to_string(),
+                    vec![Term::Dict(
+                        "a".to_string(),
+                        vec![("k".to_string(), Term::Atom("v".to_string()))],
+                    )],
+                ),
+            ),
+            // Unary - with list
+            (
+                "-[a,b,c]",
+                Term::Compound(
+                    "-".to_string(),
+                    vec![Term::List(
+                        vec![
+                            Term::Atom("a".to_string()),
+                            Term::Atom("b".to_string()),
+                            Term::Atom("c".to_string()),
+                        ],
+                        None,
+                    )],
+                ),
+            ),
+        ];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for (input, expected) in cases {
+            let term = parse(input).expect(&format!("failed to parse {input}"));
+            assert_eq!(term, expected, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn test_char_codes() {
+        use super::*;
+
+        let cases = vec![
+            // Character codes
+            ("0'a", Term::Integer(Int256::from(97))),
+            ("0'A", Term::Integer(Int256::from(65))),
+            ("0'0", Term::Integer(Int256::from(48))),
+            ("0' ", Term::Integer(Int256::from(32))),
+            // Escaped characters
+            ("0'\\n", Term::Integer(Int256::from(10))),
+            ("0'\\t", Term::Integer(Int256::from(9))),
+            ("0'\\r", Term::Integer(Int256::from(13))),
+        ];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for (input, expected) in cases {
+            let term = parse(input).expect(&format!("failed to parse {input}"));
+            assert_eq!(term, expected, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn test_float_scientific_notation() {
+        use super::*;
+
+        let cases = vec!["1.0e10", "1.5e-5", "3.14e2", "2.5e3"];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for input in cases {
+            let result = parse(input);
+            assert!(result.is_ok(), "failed to parse {input}: {:?}", result);
+            if let Ok(Term::Float(_)) = result {
+                // Success
+            } else if let Ok(term) = result {
+                panic!("expected float for {input}, got {:?}", term);
+            }
+        }
+    }
+
+    #[test]
+    fn test_operators_as_atoms() {
+        use super::*;
+
+        let cases = vec![
+            ("(+)", Term::Atom("+".to_string())),
+            ("(-)", Term::Atom("-".to_string())),
+            ("(*)", Term::Atom("*".to_string())),
+            ("(/)", Term::Atom("/".to_string())),
+            ("(=)", Term::Atom("=".to_string())),
+            ("(<)", Term::Atom("<".to_string())),
+            ("(>)", Term::Atom(">".to_string())),
+            ("(mod)", Term::Atom("mod".to_string())),
+            ("(is)", Term::Atom("is".to_string())),
+            ("(,)", Term::Atom(",".to_string())),
+            ("(;)", Term::Atom(";".to_string())),
+            ("(:)", Term::Atom(":".to_string())),
+            ("(|)", Term::Atom("|".to_string())),
+        ];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for (input, expected) in cases {
+            let term = parse(input).expect(&format!("failed to parse {input}"));
+            assert_eq!(term, expected, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn test_complex_expressions() {
+        use super::*;
+
+        let cases = vec![
+            // Nested operations
+            ("a+b*c/d", true),
+            ("X is Y + Z * 2", true),
+            ("(a,b,c)", true),
+            ("a;b;c", true),
+            // Mixed operations
+            ("f(X+Y, Z*W)", true),
+            ("[A+B, C*D]", true),
+            ("tag{k:V+1, w:X*Y}", true),
+            // Precedence tests
+            ("a+b=c+d", true),
+            ("X<Y, Y<Z", true),
+        ];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for (input, should_succeed) in cases {
+            let result = parse(input);
+            if should_succeed {
+                assert!(
+                    result.is_ok(),
+                    "expected success for {input}, got {:?}",
+                    result
+                );
+            } else {
+                assert!(result.is_err(), "expected error for {input}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_based_integers() {
+        use super::*;
+
+        let cases = vec![
+            // Hex
+            ("0x10", Term::Integer(Int256::from(16))),
+            ("0xFF", Term::Integer(Int256::from(255))),
+            ("0xABCD", Term::Integer(Int256::from(0xABCD))),
+            // Octal
+            ("0o10", Term::Integer(Int256::from(8))),
+            ("0o77", Term::Integer(Int256::from(63))),
+            // Binary
+            ("0b1010", Term::Integer(Int256::from(10))),
+            ("0b11111111", Term::Integer(Int256::from(255))),
+        ];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for (input, expected) in cases {
+            let term = parse(input).expect(&format!("failed to parse {input}"));
+            assert_eq!(term, expected, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn test_edge_case_errors() {
+        use super::*;
+
+        let error_cases = vec![
+            "0xGGG", // Invalid hex digit
+            "0o88",  // Invalid octal digit
+            "0b22",  // Invalid binary digit
+            "0'",    // Incomplete char code
+            "a{",    // Unclosed dict
+            "[1,2",  // Unclosed list
+            "f(a,",  // Unclosed compound
+        ];
+
+        let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
+
+        for input in error_cases {
+            let result = parse(input);
+            assert!(
+                result.is_err(),
+                "expected error for {input}, got {:?}",
+                result
+            );
+        }
+    }
+
+    #[test]
+    fn non_empty_brace_fails() {
+        use super::*;
+
+        let result = Parser::new("{a}").and_then(|p| p.parse_root());
+        assert!(result.is_err(), "expected error for non-empty braces");
+
+        match result {
+            Err(e) => {
+                assert!(e.msg.contains("unexpected"));
+                assert!(e.msg.contains("{}"));
+            }
+            Ok(_) => panic!("expected error for non-empty braces but got Ok"),
+        }
+    }
+
+    #[test]
+    fn unterminated_quoted_atom_fails() {
+        use super::*;
+
+        let result = Parser::new("'unterminated");
+        assert!(
+            result.is_err(),
+            "expected error for unterminated quoted atom"
+        );
+
+        match result {
+            Err(e) => assert!(e.msg.contains("unterminated")),
+            Ok(_) => panic!("expected error for unterminated quoted atom but got Ok"),
+        }
+    }
+
+    #[test]
+    fn negating_int256_min_fails() {
+        use super::*;
+
+        let min_str = Int256::MIN.to_string();
+        let result = Parser::new(&format!("-{}", min_str.trim_start_matches('-')))
+            .and_then(|p| p.parse_root());
+        assert!(result.is_err(), "expected error for negating Int256::MIN");
+
+        match result {
+            Err(e) => assert!(e.msg.contains("invalid int")),
+            Ok(_) => panic!("expected error for negating Int256::MIN but got Ok"),
+        }
+    }
+
+    #[test]
+    fn based_int_at_int256_min_fails() {
+        use super::*;
+
+        let result =
+            parse_based_i256("-0x8000000000000000000000000000000000000000000000000000000000000000");
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err();
+        assert!(err_msg.contains("out of range"));
+    }
+
+    #[test]
+    fn invalid_escape_in_quoted_atom_fails() {
+        use super::*;
+
+        let result = Parser::new("'\\x'");
+        assert!(
+            result.is_err(),
+            "expected error for invalid escape in quoted atom"
+        );
+
+        match result {
+            Err(e) => {
+                assert!(e.msg.contains("invalid escape"));
+                assert!(e.msg.contains("quoted atom"));
+            }
+            Ok(_) => panic!("expected error for invalid escape in quoted atom but got Ok"),
+        }
+    }
+
+    #[test]
+    fn generic_lex_error_fails() {
+        use super::*;
+
+        let result = Parser::new("'\\xD800\\'");
+        assert!(result.is_err(), "expected lex error for invalid Unicode");
+
+        match result {
+            Err(e) => assert!(e.msg.contains("lex error")),
+            Ok(_) => panic!("expected lex error for invalid Unicode but got Ok"),
         }
     }
 }

@@ -85,4 +85,13 @@ pub enum AxoneGovError {
     /// is not found in substitutions.
     #[error("decision motivation missing in response")]
     DecisionMissingMotivation,
+
+    /// The revision of the constitution was refused by the current constitution rules.
+    #[error("revision refused: verdict={verdict}, motivation={motivation}")]
+    RevisionRefused {
+        /// The verdict returned by the constitution deciding logic.
+        verdict: String,
+        /// The motivation provided for the refusal.
+        motivation: String,
+    },
 }

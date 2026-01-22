@@ -12,19 +12,59 @@
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=for-the-badge)](https://github.com/semantic-release/semantic-release)
 [![license](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=for-the-badge)](https://opensource.org/licenses/BSD-3-Clause)
 
-## 🚧⚠️ **Repo under reconstruction** ⚠️🚧
-
-### Hey there! We're rebuilding the smart contract stack from the ground up
-
-_Old code has been archived, and a new foundation is on its way._
-
-Looking for the previous implementation?  
-👉 Check the [**last release**](https://github.com/axone-protocol/contracts/releases/v8.0.0).
-
 ## ✨ Smart Contracts
 
-This repository hosts Smart Contracts that are deployed on the [AXONE network](http://axone.xyz). But they are compatible with any
-[Cosmos blockchains](https://cosmos.network/) that uses the [CosmWasm](https://cosmwasm.com/) framework.
+This repository hosts the smart contracts at the heart of the AXONE ecosystem, powering on-chain governance and resource management on the [AXONE network](http://axone.xyz).
+
+Built on **[CosmWasm](https://cosmwasm.com/)** and the **[Abstract SDK](https://abstract.money/)**, these contracts constitute the **functional core** of the protocol. They act as the on-chain operating system, responsible for **orchestrating off-chain resources**, **empowering sovereign agents**, and **enforcing verifiable governance**.
+
+This foundation allows AXONE to go beyond simple transactions, enabling the execution of complex agreements and logic-based interactions directly on the blockchain.
+
+### 🏛️ Governance
+
+> Smart Contracts designed to enable on-chain decision making, rule enforcement and organizational structure.
+
+<table>
+  <tr>
+    <th rowspan="4" width="30%">
+      <div align="center">
+        <img alt="axone-gov logo" src="contracts/axone-gov/axone-gov-card.webp" width="150px"/>
+        <b>axone-gov</b>
+      </div>
+      <br/>
+      <sub><a href="contracts/axone-gov/README.md">→ Tech documentation</a></sub>
+    </th>
+  </tr>
+  <tr>
+    <td>
+      <a href="#-maturity">
+        <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
+      </a>
+      <a href="https://crates.io/crates/axone-gov" target="_blank">
+        <img alt="crates" src="https://img.shields.io/crates/v/axone-gov.svg?style=for-the-badge&color=orange"/>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p>
+        The <b>Governance Engine</b> of the protocol. It attaches governance capabilities to any resource represented by an <a href="https://docs.abstract.money/">Abstract Account (AA)</a>.
+      </p>
+      <p>
+        It utilizes <b>Prolog constitutions</b> to strictly define and enforce governance rules, allowing for highly flexible and programmable organizational logic.
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img alt="type: governance" src="https://img.shields.io/badge/type-🏛️%20governance-darkslateblue?style=for-the-badge" />
+      <a href="https://en.wikipedia.org/wiki/Prolog" target="_blank">
+        <img alt="kind: logic" src="https://img.shields.io/badge/kind-🧠%20logic-moccasin?style=for-the-badge" />
+      </a>
+      <img alt="state: mutable" src="https://img.shields.io/badge/state-✏️%20mutable-lavender?style=for-the-badge" />
+    </td>
+  </tr>
+</table>
 
 ## 🥚 Maturity
 
@@ -425,6 +465,11 @@ git commit -am "docs: update generated documentation"
 - [CosmWasm Docs](https://docs.cosmwasm.com/)
 - [AXONE Whitepaper](https://docs.axone.xyz/whitepaper/abstract)
 - [AXONE Blockchain](https://github.com/axone-protocol/axoned)
+
+## 🧭 Previous implementation
+
+Looking for the earlier contracts? The last archived release is available here:
+👉 [v8.0.0 release](https://github.com/axone-protocol/contracts/releases/v8.0.0).
 
 ## You want to get involved? 😍
 

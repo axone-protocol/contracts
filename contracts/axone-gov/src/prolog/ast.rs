@@ -41,7 +41,16 @@ impl fmt::Display for Term {
         match self {
             Term::Atom(s) => write_atom(f, s),
             Term::Integer(i) => write!(f, "{}", i),
-            Term::Float(val) => write!(f, "{}", val),
+            Term::Float(val) => {
+                let s = val.to_string();
+                if s.contains('.') {
+                    write!(f, "{}", s)
+                } else if let Some(pos) = s.find(['e', 'E']) {
+                    write!(f, "{}.0{}", &s[..pos], &s[pos..])
+                } else {
+                    write!(f, "{}.0", s)
+                }
+            }
             Term::Variable(s) => write!(f, "{}", s),
             Term::Compound(name, args) => {
                 write_atom(f, name)?;
@@ -238,8 +247,8 @@ mod tests {
             ("-7", "-7", "negative integer"),
             ("1000000", "1000000", "large integer"),
             // Floats
-            ("0.0", "0", "zero float"),
-            ("1.0", "1", "one float"),
+            ("0.0", "0.0", "zero float"),
+            ("1.0", "1.0", "one float"),
             ("3.14", "3.14", "positive float"),
             ("-0.001", "-0.001", "negative small float"),
             // Variables
@@ -261,7 +270,7 @@ mod tests {
             ("add(1, 2, Result)", "add(1, 2, Result)", "ternary compound"),
             (
                 "test(a, 1, X, 1.0)",
-                "test(a, 1, X, 1)",
+                "test(a, 1, X, 1.0)",
                 "compound with mixed args",
             ),
             // Compounds with special atom names
@@ -397,6 +406,64 @@ mod tests {
                 description,
                 input
             );
+        }
+    }
+
+    #[test]
+    fn display_float_always_has_decimal_point() {
+        // Test that Term::Float display always includes a decimal point,
+        // even when SignedDecimal::to_string() might omit it
+        use std::str::FromStr;
+
+        let test_cases = vec![
+            (SignedDecimal::zero(), "0.0", "zero"),
+            (SignedDecimal::one(), "1.0", "one"),
+            (
+                SignedDecimal::from_str("3.14").unwrap(),
+                "3.14",
+                "standard decimal",
+            ),
+            (
+                SignedDecimal::from_str("1.0").unwrap(),
+                "1.0",
+                "whole number as float",
+            ),
+            (
+                SignedDecimal::from_str("10.0").unwrap(),
+                "10.0",
+                "ten as float",
+            ),
+            (
+                SignedDecimal::from_str("100.0").unwrap(),
+                "100.0",
+                "hundred as float",
+            ),
+            (
+                SignedDecimal::from_str("-1.0").unwrap(),
+                "-1.0",
+                "negative one",
+            ),
+            (
+                SignedDecimal::from_str("0.001").unwrap(),
+                "0.001",
+                "small decimal",
+            ),
+        ];
+
+        for (val, expected, description) in test_cases {
+            let term = Term::Float(val);
+            let output = format!("{}", term);
+
+            // Verify output has a decimal point
+            assert!(
+                output.contains('.'),
+                "Float output must contain decimal point for case: {} (got '{}')",
+                description,
+                output
+            );
+
+            // Verify expected output
+            assert_eq!(output, expected, "Failed for case: {}", description);
         }
     }
 }

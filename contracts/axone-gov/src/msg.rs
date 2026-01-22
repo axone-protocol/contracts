@@ -22,13 +22,16 @@ abstract_app::app_msg_types!(AxoneGov, AxoneGovExecuteMsg, AxoneGovQueryMsg);
 /// the required entrypoints:
 ///
 ///    - `decide/2` as `governance:decide(+Case, -Verdict)`
+///
 ///    - `decide/3` as `governance:decide(+Case, -Verdict, -Motivation)`
 ///
 /// Where:
 ///
 ///    - `Case` is a Prolog dict term (typically `ctx{...}`) representing the decision context.
 ///      It can include any key-value facts required by the constitution (e.g. intent, actor, subject).
+///
 ///    - `Verdict` is an arbitrary Prolog term (atom or compound) representing the decision outcome.
+///
 ///    - `Motivation` is an arbitrary Prolog term intended to justify the verdict (e.g. applicable articles,
 ///      findings, interpretation rules).
 #[cosmwasm_schema::cw_serde]
@@ -46,6 +49,32 @@ pub enum AxoneGovExecuteMsg {
     ///
     /// The contract asks the **current** constitution to decide whether the revision is allowed by
     /// evaluating a case that includes the intent `gov:revise_constitution`.
+    ///
+    /// The contract builds the decision case by merging the caller-provided `case` (if any) with
+    /// contract-enriched context. The complete case structure is:
+    ///
+    /// ```prolog
+    /// ctx{
+    ///   intent: 'gov:revise_constitution',
+    ///   'gov:proposed_constitution_hash': <hex_string>,   % SHA256 of constitution bytes (authoritative)
+    ///   'gov:module': module{
+    ///     id: <atom>,       % Contract module ID (e.g., 'axone:axone-gov')
+    ///     version: <atom>   % Contract version (e.g., '1.2.3')
+    ///   },
+    ///   'gov:cosmwasm': cosmwasm{
+    ///     message: message{
+    ///       sender: <atom>,                    % Bech32 address of message sender
+    ///       funds: [coin(Amount, Denom), ...]  % List of coins sent with message
+    ///     },
+    ///     block: block{
+    ///       height: <integer>,        % Block height
+    ///       time: <integer>,          % Block timestamp (seconds since epoch)
+    ///       tx_index: <integer>       % Transaction index
+    ///     }
+    ///   },
+    ///   <caller_provided_keys>: <caller_provided_values>  % Any additional keys from caller's case
+    /// }
+    /// ```
     ///
     /// The revision is applied only if the decision verdict is exactly the atom `gov:permitted`.
     /// Any other verdict (atom or compound term) refuses the revision.

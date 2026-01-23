@@ -10,7 +10,6 @@ keywords = ["cosmwasm", "blockchain"]
 license = "BSD-3-Clause"
 repository = "https://github.com/axone-protocol/contracts"
 rust-version = "1.82"
-version = "8.0.0"
 
 [profile.release]
 codegen-units = 1

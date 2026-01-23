@@ -8,7 +8,7 @@ license = { workspace = true }
 name = "axone-gov"
 repository = { workspace = true }
 rust-version = { workspace = true }
-version = { workspace = true }
+version = "0.1.0"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -71,5 +71,5 @@ thiserror.workspace = true
 [dev-dependencies]
 abstract-app = { workspace = true, features = ["test-utils"] }
 abstract-client.workspace = true
-axone-gov = { path = ".", version = "8.0.0", features = ["mock-logic-query"] }
+axone-gov = { path = ".", features = ["mock-logic-query"] }
 serde.workspace = true

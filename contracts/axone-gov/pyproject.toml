@@ -1,0 +1,36 @@
+[tool.semantic_release]
+allow_zero_version = true
+build_command = "cd ../.. && cargo make release-wasm"
+commit_parser = "conventional-monorepo"
+major_on_zero = false
+tag_format = "axone-gov-v{version}"
+version_toml = ["Cargo.toml:package.version"]
+
+[tool.semantic_release.commit_parser_options]
+path_filters = ["./**", "../../Cargo.toml", "../../Cargo.lock"]
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+prerelease_token = "rc"
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = []
+mode = "update"
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+
+[tool.semantic_release.commit_author]
+default = "semantic-release <semantic-release>"
+env = "GIT_COMMIT_AUTHOR"
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["../../artifacts/axone_gov.wasm"]
+upload_to_vcs_release = true
+
+[tool.semantic_release.remote]
+type = "github"
+
+[tool.semantic_release.remote.token]
+env = "GH_TOKEN"

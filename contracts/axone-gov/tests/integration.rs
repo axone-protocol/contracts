@@ -12,6 +12,8 @@ use cosmwasm_std::{Binary, Checksum};
 use cw_orch::{anyhow, prelude::*};
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
+const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Clone)]
 struct LogicAskExpectations(Rc<RefCell<VecDeque<(String, QueryServiceAskResponse)>>>);
 
@@ -908,7 +910,7 @@ fn revise_constitution_injects_complete_context_as_per_specification() {
     let new_constitution = Binary::from(b"decide(_, 'gov:permitted', ok).".to_vec());
     let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
 
-    let expected_query = "decide(ctx{intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': '6686998504972527d11b4c1434169210facea0519f77b9ec3958283593e553c7', 'gov:module': module{id: 'axone:axone-gov', version: '8.0.0'}, 'gov:cosmwasm': cosmwasm{message: message{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}, block: block{height: 12345, time: 1571797419, tx_index: 0}}}, Verdict, Motivation).";
+    let expected_query = format!("decide(ctx{{intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': '6686998504972527d11b4c1434169210facea0519f77b9ec3958283593e553c7', 'gov:module': module{{id: 'axone:axone-gov', version: '{}'}}, 'gov:cosmwasm': cosmwasm{{message: message{{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}}, block: block{{height: 12345, time: 1571797419, tx_index: 0}}}}}}, Verdict, Motivation).", PKG_VERSION);
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
@@ -941,7 +943,7 @@ fn revise_constitution_hash_value_matches_proposed_constitution() {
     let new_constitution = Binary::from(b"decide(_, allowed).".to_vec());
     let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
 
-    let expected_query = "decide(ctx{intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': d0f6d6cf2ae210e1d6e18d7216273f23d7290825d81c2cbce5fd7358c0deed53, 'gov:module': module{id: 'axone:axone-gov', version: '8.0.0'}, 'gov:cosmwasm': cosmwasm{message: message{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}, block: block{height: 12345, time: 1571797419, tx_index: 0}}}, Verdict, Motivation).";
+    let expected_query = format!("decide(ctx{{intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': d0f6d6cf2ae210e1d6e18d7216273f23d7290825d81c2cbce5fd7358c0deed53, 'gov:module': module{{id: 'axone:axone-gov', version: '{}'}}, 'gov:cosmwasm': cosmwasm{{message: message{{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}}, block: block{{height: 12345, time: 1571797419, tx_index: 0}}}}}}, Verdict, Motivation).", PKG_VERSION);
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())

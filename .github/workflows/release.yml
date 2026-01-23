@@ -107,7 +107,7 @@ jobs:
         if: github.event.inputs.dry_run != 'true'
         uses: python-semantic-release/python-semantic-release@v10
         with:
-          root: ${{ matrix.project_dir }}
+          directory: ${{ matrix.project_dir }}
           github_token: ${{ secrets.OPS_TOKEN }}
           verbosity: 1
           strict: true

@@ -5,10 +5,10 @@ homepage.workspace = true
 keywords.workspace = true
 license.workspace = true
 name = "axone-networks"
+publish = false
 repository.workspace = true
 rust-version.workspace = true
 version = "0.1.0"
-publish = false
 
 [dependencies]
 anyhow.workspace = true

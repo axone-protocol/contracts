@@ -1,4 +1,5 @@
 use abstract_app::objects::namespace::Namespace;
+use abstract_app::std::{app, registry};
 use abstract_client::{AbstractClient, Application};
 use axone_gov::{
     gateway::logic::{
@@ -6,7 +7,7 @@ use axone_gov::{
         Result as LogicResult, Substitution,
     },
     msg::{AxoneGovExecuteMsgFns, AxoneGovInstantiateMsg, AxoneGovQueryMsgFns},
-    AxoneGovInterface, AXONE_NAMESPACE,
+    AxoneGovInterface, AXONE_GOV_ID, AXONE_NAMESPACE,
 };
 use cosmwasm_std::{Binary, Checksum};
 use cw_orch::{anyhow, prelude::*};
@@ -303,6 +304,99 @@ fn instantiate_rejects_constitution_missing_required_predicates() {
         has_missing_predicates,
         "expected missing required predicates, got: {msg}; chain: {chain:?}"
     );
+}
+
+#[test]
+fn instantiate_succeeds_without_registered_gov() {
+    let constitution = Binary::from(b"valid.".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+
+    let chain = MockBech32::new("mock");
+    let contract = AxoneGovInterface::new("axone-gov-direct-missing", chain.clone());
+    contract.upload().expect("Failed to upload axone-gov");
+
+    let init_msg = app::InstantiateMsg {
+        base: app::BaseInstantiateMsg {
+            account: registry::Account::new(chain.addr_make("not-an-account")),
+        },
+        module: AxoneGovInstantiateMsg {
+            constitution: constitution.clone(),
+        },
+    };
+
+    contract
+        .instantiate(&init_msg, None, &[])
+        .expect("Expected instantiation to succeed");
+
+    let stored = contract
+        .constitution()
+        .expect("Failed to query constitution");
+    assert_eq!(stored.governance, constitution);
+
+    drop(hook);
+    drop(expectations);
+}
+
+#[test]
+fn instantiate_fails_when_gov_already_registered() {
+    let constitution = Binary::from(b"valid.".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+
+    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+
+    let chain = MockBech32::new("mock");
+    let client = AbstractClient::builder(chain.clone())
+        .build()
+        .expect("Failed to build Abstract client");
+    let publisher = client
+        .account_builder()
+        .namespace(Namespace::new(AXONE_NAMESPACE).expect("Invalid namespace"))
+        .build()
+        .expect("Failed to build account")
+        .publisher()
+        .expect("Failed to build publisher");
+    publisher
+        .publish_app::<AxoneGovInterface<MockBech32>>()
+        .expect("Failed to publish axone-gov");
+
+    let account = publisher.account();
+    account
+        .install_app::<AxoneGovInterface<MockBech32>>(
+            &AxoneGovInstantiateMsg {
+                constitution: constitution.clone(),
+            },
+            &[],
+        )
+        .expect("Failed to install axone-gov");
+
+    let contract = AxoneGovInterface::new("axone-gov-direct", chain);
+    contract.upload().expect("Failed to upload axone-gov");
+
+    let account_addr = account.address().expect("Failed to get account address");
+    let init_msg = app::InstantiateMsg {
+        base: app::BaseInstantiateMsg {
+            account: registry::Account::new(account_addr),
+        },
+        module: AxoneGovInstantiateMsg { constitution },
+    };
+
+    let err = contract
+        .instantiate(&init_msg, None, &[])
+        .expect_err("Expected duplicate governance error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("module already installed:"),
+        "expected module already installed error, got: {msg}"
+    );
+    assert!(
+        msg.contains(AXONE_GOV_ID),
+        "expected module id '{AXONE_GOV_ID}' in error, got: {msg}"
+    );
+
+    drop(hook);
+    drop(expectations);
 }
 
 #[test]

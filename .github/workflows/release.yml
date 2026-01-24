@@ -94,6 +94,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Build WASM artifacts
+        run: cargo make release-wasm
+
       - name: Python Semantic Release (Dry Run)
         if: github.event.inputs.dry_run == 'true'
         run: |

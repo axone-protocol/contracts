@@ -1,6 +1,5 @@
 [tool.semantic_release]
 allow_zero_version = true
-build_command = "cd ../.. && cargo make release-wasm"
 commit_parser = "conventional-monorepo"
 major_on_zero = false
 tag_format = "axone-gov-v{version}"

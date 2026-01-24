@@ -8,7 +8,7 @@ license = { workspace = true }
 name = "axone-gov"
 repository = { workspace = true }
 rust-version = { workspace = true }
-version = "0.1.0"
+version = "1.0.0"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.

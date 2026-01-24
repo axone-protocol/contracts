@@ -45,18 +45,56 @@ pub struct AxoneGovInstantiateMsg {
 #[cosmwasm_schema::cw_serde]
 #[derive(cw_orch::ExecuteFns)]
 pub enum AxoneGovExecuteMsg {
+    /// Record a decision on-chain by deciding a case using the stored constitution.
+    ///
+    /// The `case` parameter is a Prolog dict term string (typically `ctx{...}`) representing
+    /// the decision context provided by the caller.
+    ///
+    /// Before evaluation, the contract enriches the case with contract-derived facts:
+    ///
+    /// ```prolog
+    /// ctx{
+    ///   'gov:module': module{ id: <atom>, version: <atom> },
+    ///   'gov:cosmwasm': cosmwasm{
+    ///     message: message{
+    ///       sender: <atom>,                    % Bech32 address of message sender
+    ///       funds: [coin(Amount, Denom), ...]  % List of coins sent with message
+    ///     },
+    ///     block: block{
+    ///       height: <integer>,        % Block height
+    ///       time: <integer>,          % Block timestamp (seconds since epoch)
+    ///       tx_index: <integer>       % Transaction index (optional)
+    ///     }
+    ///   },
+    ///   <caller_provided_keys>: <caller_provided_values>
+    /// }
+    /// ```
+    ///
+    /// Injected keys are authoritative and overwrite any caller-provided value under the same keys.
+    ///
+    /// The contract evaluates `governance:decide/2` or `governance:decide/3` depending on
+    /// `motivated`, and records the resulting verdict (and optional motivation) as a durable
+    /// decision record.
+    RecordDecision {
+        /// The decision context.
+        case: String,
+        /// Whether to request a motivated decision (defaults to `false`).
+        ///
+        ///   - If `false`, the contract calls `governance:decide/2` and records only the verdict.
+        ///   - If `true`, the contract calls `governance:decide/3` and records both verdict and motivation.
+        motivated: Option<bool>,
+    },
     /// Propose a constitutional revision (constitutional amendment).
     ///
     /// The contract asks the **current** constitution to decide whether the revision is allowed by
     /// evaluating a case that includes the intent `gov:revise_constitution`.
     ///
-    /// The contract builds the decision case by merging the caller-provided `case` (if any) with
-    /// contract-enriched context. The complete case structure is:
+    /// The complete case structure is (keys containing `:` are quoted atoms):
     ///
     /// ```prolog
     /// ctx{
     ///   intent: 'gov:revise_constitution',
-    ///   'gov:proposed_constitution_hash': <hex_string>,   % SHA256 of constitution bytes (authoritative)
+    ///   'gov:proposed_constitution_hash': <atom>,        % Hex string atom (authoritative SHA256 of payload)
     ///   'gov:module': module{
     ///     id: <atom>,       % Contract module ID (e.g., 'axone:axone-gov')
     ///     version: <atom>   % Contract version (e.g., '1.2.3')
@@ -116,9 +154,6 @@ pub enum AxoneGovQueryMsg {
     ///
     /// `ctx{intent:read, user:"did:example:123", object:"obj:42"}`
     ///
-    ///   - If `motivated` is `false`, the contract calls `decide/2` and returns only the verdict.
-    ///   - If `motivated` is `true`, the contract calls `decide/3` and returns both verdict and motivation.
-    ///
     /// The returned `verdict` is an arbitrary Prolog term (atom or compound), for example:
     ///
     ///   - `gov:permitted`
@@ -127,15 +162,28 @@ pub enum AxoneGovQueryMsg {
     ///
     /// The optional `motivation` is an arbitrary Prolog term returned by the constitution and intended to
     /// justify the verdict (e.g. grounds/articles, findings, interpretation rules).
+    ///
+    /// Before evaluation, the contract enriches the case with module metadata (`'gov:module'`).
+    ///
+    /// Injected keys are authoritative and overwrite any caller-provided value under the same keys.
+    ///
     #[returns(DecideResponse)]
-    Decide { case: String, motivated: bool },
+    Decide {
+        /// The decision context.
+        case: String,
+        /// Whether to request a motivated decision (defaults to `false`).
+        ///
+        ///   - If `false`, the contract calls `governance:decide/2` and returns only the verdict.
+        ///   - If `true`, the contract calls `governance:decide/3` and returns both verdict and motivation.
+        motivated: Option<bool>,
+    },
 }
 
 /// Response returned by `QueryMsg::Constitution`.
 #[cosmwasm_schema::cw_serde]
 pub struct ConstitutionResponse {
     /// The stored constitution (raw Prolog program bytes).
-    pub governance: Binary,
+    pub constitution: Binary,
 }
 
 /// Response returned by `QueryMsg::ConstitutionStatus`.
@@ -162,7 +210,7 @@ impl From<&ConstitutionStatus> for ConstitutionStatusResponse {
 impl From<&Constitution> for ConstitutionResponse {
     fn from(constitution: &Constitution) -> Self {
         Self {
-            governance: constitution.bytes().clone(),
+            constitution: constitution.bytes().clone(),
         }
     }
 }

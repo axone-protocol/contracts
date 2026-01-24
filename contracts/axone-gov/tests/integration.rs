@@ -242,7 +242,7 @@ fn instantiate_succeeds_with_valid_constitution() {
         .app
         .constitution()
         .expect("Failed to query constitution");
-    assert_eq!(constitution_got.governance, constitution);
+    assert_eq!(constitution_got.constitution, constitution);
 
     let status = env
         .app
@@ -424,9 +424,7 @@ decide(case{action:withdraw}, denied)."
         let env =
             TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-        let response = env
-            .app
-            .decide(case.to_string(), false)
+        let response = AxoneGovQueryMsgFns::decide(&env.app, case.to_string(), Some(false))
             .unwrap_or_else(|_| panic!("Failed to query decide for case: {}", description));
 
         assert_eq!(
@@ -460,9 +458,7 @@ decide(case{action:withdraw}, denied, 'Insufficient funds')."
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let response = env
-        .app
-        .decide("case{action:transfer}".to_string(), true)
+    let response = AxoneGovQueryMsgFns::decide(&env.app, "case{action:transfer}".to_string(), Some(true))
         .expect("Failed to query decide");
 
     assert_eq!(response.verdict, "allowed");
@@ -493,9 +489,8 @@ fn decide_fails_with_invalid_case() {
     ];
 
     for (case, expected_msg) in invalid_cases {
-        let err = env
-            .app
-            .decide(case.to_string(), false)
+        let err =  AxoneGovQueryMsgFns::decide(&env
+            .app, case.to_string(), Some(false))
             .expect_err("Expected invalid case error");
 
         let msg = format!("{err:?}");
@@ -517,9 +512,8 @@ fn decide_fails_with_no_answer() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err = env
-        .app
-        .decide("case{action:test}".to_string(), false)
+    let err =  AxoneGovQueryMsgFns::decide(&env
+        .app, "case{action:test}".to_string(), Some(false))
         .expect_err("Expected prolog engine no answer error");
 
     let msg = format!("{err:?}");
@@ -540,9 +534,8 @@ fn decide_fails_with_no_results() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err = env
-        .app
-        .decide("case{action:test}".to_string(), false)
+    let err =  AxoneGovQueryMsgFns::decide(&env
+        .app, "case{action:test}".to_string(), Some(false))
         .expect_err("Expected decision no result error");
 
     let msg = format!("{err:?}");
@@ -563,9 +556,8 @@ fn decide_fails_with_prolog_error() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err = env
-        .app
-        .decide("case{action:test}".to_string(), false)
+    let err =  AxoneGovQueryMsgFns::decide(&env
+        .app, "case{action:test}".to_string(), Some(false))
         .expect_err("Expected decision failed error");
 
     let msg = format!("{err:?}");
@@ -592,9 +584,8 @@ fn decide_fails_with_missing_verdict() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err = env
-        .app
-        .decide("case{action:test}".to_string(), false)
+    let err =  AxoneGovQueryMsgFns::decide(&env
+        .app, "case{action:test}".to_string(), Some(false))
         .expect_err("Expected missing verdict error");
 
     let msg = format!("{err:?}");
@@ -615,9 +606,8 @@ fn decide_fails_with_missing_motivation() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err = env
-        .app
-        .decide("case{action:test}".to_string(), true)
+    let err =  AxoneGovQueryMsgFns::decide(&env
+        .app, "case{action:test}".to_string(), Some(true))
         .expect_err("Expected missing motivation error");
 
     let msg = format!("{err:?}");
@@ -653,7 +643,7 @@ fn revise_constitution_succeeds_with_permitted_verdict() {
         .app
         .constitution()
         .expect("Failed to query constitution");
-    assert_eq!(constitution_got.governance, new_constitution);
+    assert_eq!(constitution_got.constitution, new_constitution);
 
     let status = env
         .app
@@ -694,7 +684,7 @@ fn revise_constitution_succeeds_with_custom_case() {
         .app
         .constitution()
         .expect("Failed to query constitution");
-    assert_eq!(constitution_got.governance, new_constitution);
+    assert_eq!(constitution_got.constitution, new_constitution);
 
     let status = env
         .app

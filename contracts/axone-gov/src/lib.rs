@@ -21,13 +21,18 @@ pub const AXONE_GOV_NAME: &str = "axone-gov";
 pub const AXONE_GOV_ID: &str = const_format::concatcp!(AXONE_NAMESPACE, ":", AXONE_GOV_NAME);
 
 // Governance domain constants
-pub const GOV_INTENT_REVISE_CONSTITUTION: &str = "gov:revise_constitution";
-pub const GOV_VERDICT_PERMITTED: &str = "gov:permitted";
-pub const GOV_VERDICT_FORBIDDEN: &str = "gov:forbidden";
-pub const GOV_CTX_MODULE: &str = "gov:module";
 pub const GOV_CTX_COSMWASM: &str = "gov:cosmwasm";
+pub const GOV_CTX_MODULE: &str = "gov:module";
+pub const GOV_INTENT_REVISE_CONSTITUTION: &str = "gov:revise_constitution";
+pub const GOV_VERDICT_FORBIDDEN: &str = "gov:forbidden";
+pub const GOV_VERDICT_PERMITTED: &str = "gov:permitted";
 
 // Response constants
-pub const RESPONSE_KEY_CONSTITUTION_REVISION: &str = "constitution_revision";
+pub const RESPONSE_KEY_CASE_HASH: &str = "case_hash";
 pub const RESPONSE_KEY_CONSTITUTION_HASH: &str = "constitution_hash";
 pub const RESPONSE_KEY_CONSTITUTION_REVISER: &str = "constitution_reviser";
+pub const RESPONSE_KEY_CONSTITUTION_REVISION: &str = "constitution_revision";
+pub const RESPONSE_KEY_DECISION_ID: &str = "decision_id";
+pub const RESPONSE_KEY_MOTIVATION_HASH: &str = "motivation_hash";
+pub const RESPONSE_KEY_VERDICT_HASH: &str = "verdict_hash";
+pub const RESPONSE_KEY_VERDICT: &str = "verdict";

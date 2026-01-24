@@ -23,7 +23,7 @@ pub fn query_handler(
             to_json_binary(&query_constitution_status(deps)?)
         }
         AxoneGovQueryMsg::Decide { case, motivated } => {
-            to_json_binary(&query_decide(deps, &case, motivated)?)
+            to_json_binary(&query_decide(deps, &case, motivated.unwrap_or(false))?)
         }
     }
     .map_err(Into::into)

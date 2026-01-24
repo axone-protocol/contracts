@@ -9,11 +9,28 @@ use axone_gov::{
     msg::{AxoneGovExecuteMsgFns, AxoneGovInstantiateMsg, AxoneGovQueryMsgFns},
     AxoneGovInterface, AXONE_GOV_ID, AXONE_NAMESPACE,
 };
-use cosmwasm_std::{Binary, Checksum};
+use cosmwasm_std::{to_hex, Binary, Checksum};
 use cw_orch::{anyhow, prelude::*};
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+const MOCK_SENDER: &str = "mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f";
+const MOCK_BLOCK_HEIGHT: u64 = 12345;
+const MOCK_BLOCK_TIME: u64 = 1571797419;
+const MOCK_TX_INDEX: u32 = 0;
+const ABSTRACT_EVENT_TYPE: &str = "wasm-abstract";
+
+fn record_decision_context() -> String {
+    format!(
+        "'gov:module': module{{id: '{AXONE_GOV_ID}', version: '{PKG_VERSION}'}}, \
+'gov:cosmwasm': cosmwasm{{message: message{{sender: {MOCK_SENDER}, funds: []}}, \
+block: block{{height: {MOCK_BLOCK_HEIGHT}, time: {MOCK_BLOCK_TIME}, tx_index: {MOCK_TX_INDEX}}}}}"
+    )
+}
+
+fn record_decision_case(case_body: &str) -> String {
+    format!("case{{{case_body}, {}}}", record_decision_context())
+}
 
 #[derive(Clone)]
 struct LogicAskExpectations(Rc<RefCell<VecDeque<(String, QueryServiceAskResponse)>>>);
@@ -332,7 +349,7 @@ fn instantiate_succeeds_without_registered_gov() {
     let stored = contract
         .constitution()
         .expect("Failed to query constitution");
-    assert_eq!(stored.governance, constitution);
+    assert_eq!(stored.constitution, constitution);
 
     drop(hook);
     drop(expectations);
@@ -458,7 +475,9 @@ decide(case{action:withdraw}, denied, 'Insufficient funds')."
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let response = AxoneGovQueryMsgFns::decide(&env.app, "case{action:transfer}".to_string(), Some(true))
+    let response = env
+        .app
+        .decide("case{action:transfer}".to_string(), Some(true))
         .expect("Failed to query decide");
 
     assert_eq!(response.verdict, "allowed");
@@ -489,8 +508,9 @@ fn decide_fails_with_invalid_case() {
     ];
 
     for (case, expected_msg) in invalid_cases {
-        let err =  AxoneGovQueryMsgFns::decide(&env
-            .app, case.to_string(), Some(false))
+        let err = env
+            .app
+            .decide(case.to_string(), Some(false))
             .expect_err("Expected invalid case error");
 
         let msg = format!("{err:?}");
@@ -512,8 +532,9 @@ fn decide_fails_with_no_answer() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err =  AxoneGovQueryMsgFns::decide(&env
-        .app, "case{action:test}".to_string(), Some(false))
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), Some(false))
         .expect_err("Expected prolog engine no answer error");
 
     let msg = format!("{err:?}");
@@ -534,8 +555,9 @@ fn decide_fails_with_no_results() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err =  AxoneGovQueryMsgFns::decide(&env
-        .app, "case{action:test}".to_string(), Some(false))
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), Some(false))
         .expect_err("Expected decision no result error");
 
     let msg = format!("{err:?}");
@@ -556,8 +578,7 @@ fn decide_fails_with_prolog_error() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err =  AxoneGovQueryMsgFns::decide(&env
-        .app, "case{action:test}".to_string(), Some(false))
+    let err = AxoneGovQueryMsgFns::decide(&env.app, "case{action:test}".to_string(), Some(false))
         .expect_err("Expected decision failed error");
 
     let msg = format!("{err:?}");
@@ -584,8 +605,9 @@ fn decide_fails_with_missing_verdict() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err =  AxoneGovQueryMsgFns::decide(&env
-        .app, "case{action:test}".to_string(), Some(false))
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), Some(false))
         .expect_err("Expected missing verdict error");
 
     let msg = format!("{err:?}");
@@ -606,8 +628,167 @@ fn decide_fails_with_missing_motivation() {
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
-    let err =  AxoneGovQueryMsgFns::decide(&env
-        .app, "case{action:test}".to_string(), Some(true))
+    let err = env
+        .app
+        .decide("case{action:test}".to_string(), Some(true))
+        .expect_err("Expected missing motivation error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision motivation missing"),
+        "expected decision motivation missing, got: {msg}"
+    );
+}
+
+#[test]
+fn execute_record_decision_succeeds_without_motivation_and_emits_events() {
+    let constitution = Binary::from(
+        b"decide(case{action:transfer}, allowed).
+decide(case{action:withdraw}, denied)."
+            .to_vec(),
+    );
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let case = "case{action:transfer}";
+    let case_term = record_decision_case("action: transfer");
+    let verdict = "allowed";
+    let expected_query = format!("decide({case_term}, Verdict).");
+
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_decision_without_motivation(verdict))
+        .assert_query(1, move |query| {
+            assert_eq!(query, expected_query, "unexpected decide query");
+        })
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let response = env
+        .app
+        .record_decision(case.to_string(), None)
+        .expect("Failed to execute decide");
+
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "action")
+            .expect("Missing action attribute"),
+        "record_decision"
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "decision_id")
+            .expect("Missing decision_id attribute"),
+        "1"
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "constitution_revision")
+            .expect("Missing constitution_revision attribute"),
+        "0"
+    );
+
+    let expected_constitution_hash = to_hex(Checksum::generate(constitution.as_slice()).as_ref());
+    let expected_case_hash = to_hex(Checksum::generate(case_term.as_bytes()).as_ref());
+    let expected_verdict_hash = to_hex(Checksum::generate(verdict.as_bytes()).as_ref());
+
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "constitution_hash")
+            .expect("Missing constitution_hash attribute"),
+        expected_constitution_hash
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "case_hash")
+            .expect("Missing case_hash attribute"),
+        expected_case_hash
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "verdict_hash")
+            .expect("Missing verdict_hash attribute"),
+        expected_verdict_hash
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "verdict")
+            .expect("Missing verdict attribute"),
+        verdict
+    );
+    assert!(
+        response
+            .event_attr_values(ABSTRACT_EVENT_TYPE, "motivation_hash")
+            .is_empty(),
+        "motivation_hash should not be emitted without motivation"
+    );
+}
+
+#[test]
+fn execute_record_decision_increments_decision_id_and_supports_motivation() {
+    let constitution = Binary::from(
+        b"decide(case{action:transfer}, allowed).
+decide(case{action:withdraw}, denied)."
+            .to_vec(),
+    );
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let case_one = "case{action:transfer}";
+    let case_two = "case{action:withdraw}";
+    let case_one_term = record_decision_case("action: transfer");
+    let case_two_term = record_decision_case("action: withdraw");
+    let expected_query_one = format!("decide({case_one_term}, Verdict, Motivation).");
+    let expected_query_two = format!("decide({case_two_term}, Verdict).");
+
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_decision_with_motivation("allowed", "'reason'"))
+        .then(program, ask_decision_without_motivation("denied"))
+        .assert_query(1, move |query| {
+            assert_eq!(query, expected_query_one, "unexpected decide/3 query");
+        })
+        .assert_query(2, move |query| {
+            assert_eq!(query, expected_query_two, "unexpected decide/2 query");
+        })
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let response_one = env
+        .app
+        .record_decision(case_one.to_string(), Some(true))
+        .expect("Failed to execute decide with motivation");
+    let response_two = env
+        .app
+        .record_decision(case_two.to_string(), None)
+        .expect("Failed to execute decide without motivation");
+
+    assert_eq!(
+        response_one
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "decision_id")
+            .expect("Missing decision_id attribute"),
+        "1"
+    );
+    assert_eq!(
+        response_two
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "decision_id")
+            .expect("Missing decision_id attribute"),
+        "2"
+    );
+}
+
+#[test]
+fn execute_decide_fails_with_missing_motivation() {
+    let constitution = Binary::from(b"decide(_, verdict, motivation).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_decision_without_motivation("allowed"))
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    let err = env
+        .app
+        .record_decision("case{action:test}".to_string(), Some(true))
         .expect_err("Expected missing motivation error");
 
     let msg = format!("{err:?}");

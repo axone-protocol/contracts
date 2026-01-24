@@ -26,7 +26,9 @@ env = "GIT_COMMIT_AUTHOR"
 template = "chore(release): axone-gov {version}\n\n{changelog}"
 
 [tool.semantic_release.publish]
-dist_glob_patterns = ["../../target/wasm32-unknown-unknown/release/axone_gov.wasm"]
+dist_glob_patterns = [
+  "../../target/wasm32-unknown-unknown/release/axone_gov.wasm",
+]
 upload_to_vcs_release = true
 
 [tool.semantic_release.remote]

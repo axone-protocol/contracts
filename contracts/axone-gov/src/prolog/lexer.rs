@@ -285,7 +285,7 @@ pub enum Kind {
     Eof,
 }
 
-impl<'a> Tok<'a> {
+impl Tok<'_> {
     pub fn kind(&self) -> Kind {
         match self {
             Tok::LParen => Kind::LParen,

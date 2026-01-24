@@ -28,8 +28,7 @@ impl Term {
             Term::Variable(_) => false,
             Term::Compound(_, args) => args.iter().all(Term::is_ground),
             Term::List(elements, tail) => {
-                elements.iter().all(Term::is_ground)
-                    && tail.as_ref().map_or(true, |t| t.is_ground())
+                elements.iter().all(Term::is_ground) && tail.as_ref().is_none_or(|t| t.is_ground())
             }
             Term::Dict(_, pairs) => pairs.iter().all(|(_, value)| value.is_ground()),
         }

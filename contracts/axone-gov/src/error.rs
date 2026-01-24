@@ -26,6 +26,14 @@ pub enum AxoneGovError {
     #[error("{0}")]
     DappError(#[from] AppError),
 
+    /// The module is already installed for the account.
+    #[error("module already installed: {module_id} for account {account} at {address}")]
+    ModuleAlreadyInstalled {
+        module_id: String,
+        account: String,
+        address: String,
+    },
+
     /// The constitution is not valid UTF-8.
     ///
     /// The constitution is expected to be UTF-8 encoded Prolog source code.

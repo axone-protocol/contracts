@@ -62,10 +62,15 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.OPS_TOKEN }}
 
-      - name: Configure git author
+      - name: Configure git author from token
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          BOT_NAME=$(gh api user --jq .login)
+          BOT_EMAIL="${BOT_NAME}@users.noreply.github.com"
+          git config user.name "${BOT_NAME}"
+          git config user.email "${BOT_EMAIL}"
+          echo "Configured git author: ${BOT_NAME} <${BOT_EMAIL}>"
+        env:
+          GH_TOKEN: ${{ secrets.OPS_TOKEN }}
 
       - name: Sync to latest remote
         run: |

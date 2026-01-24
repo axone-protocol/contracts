@@ -51,7 +51,7 @@ schema = ["abstract-app/schema"]
 abstract-app.workspace = true
 abstract-client = { workspace = true, optional = true }
 abstract-interface.workspace = true
-axone-networks = { path = "../../packages/axone-networks", optional = true }
+axone-networks = { path = "../../packages/axone-networks", version = "0.1.0", optional = true }
 clap = { workspace = true, optional = true, features = ["derive"] }
 const_format.workspace = true
 cosmwasm-schema.workspace = true

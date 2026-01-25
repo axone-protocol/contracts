@@ -8,8 +8,8 @@ use crate::{
     state::load_constitution,
 };
 
-use crate::msg::DecisionResponse;
-use crate::state::{load_constitution_status, load_decision};
+use crate::msg::{DecisionResponse, DecisionsResponse};
+use crate::state::{load_constitution_status, load_decision, load_decisions};
 use cosmwasm_std::{to_json_binary, Binary, Deps, Env, QuerierWrapper};
 
 pub fn query_handler(
@@ -28,6 +28,9 @@ pub fn query_handler(
         }
         AxoneGovQueryMsg::Decision { decision_id } => {
             to_json_binary(&query_decision(deps, decision_id)?)
+        }
+        AxoneGovQueryMsg::Decisions { start_after, limit } => {
+            to_json_binary(&query_decisions(deps, start_after, limit)?)
         }
     }
     .map_err(Into::into)
@@ -96,6 +99,19 @@ fn query_decision(deps: Deps<'_>, decision_id: u64) -> AxoneGovResult<DecisionRe
     let record = load_decision(deps.storage, decision_id)?;
 
     Ok(DecisionResponse::from(&record))
+}
+
+fn query_decisions(
+    deps: Deps<'_>,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> AxoneGovResult<DecisionsResponse> {
+    let decisions = load_decisions(deps.storage, start_after, limit)?
+        .into_iter()
+        .map(DecisionResponse::from)
+        .collect();
+
+    Ok(DecisionsResponse { decisions })
 }
 
 fn find_substitution(result: &crate::gateway::logic::Result, variable: &str) -> Option<String> {

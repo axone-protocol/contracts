@@ -3,10 +3,13 @@ use crate::domain::{Constitution, Decision};
 use crate::error::AxoneGovError;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_hex, Addr, Binary, Checksum, OverflowError, OverflowOperation, StdError, Storage,
+    to_hex, Addr, Binary, Checksum, Order, OverflowError, OverflowOperation, StdError, Storage,
 };
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::{Bound, Item, Map};
 use getset::{CopyGetters, Getters};
+
+const MAX_DECISIONS_LIMIT: u32 = 50;
+const DEFAULT_DECISIONS_LIMIT: u32 = 10;
 
 pub(crate) struct StateAccess(());
 impl StateAccess {
@@ -152,6 +155,23 @@ pub fn load_decision(
 ) -> Result<DecisionRecord, AxoneGovError> {
     let record = DECISIONS.load(storage, decision_id)?;
     Ok(record)
+}
+
+pub fn load_decisions(
+    storage: &dyn Storage,
+    start_after: Option<u64>,
+    limit: Option<u32>,
+) -> Result<Vec<DecisionRecord>, AxoneGovError> {
+    let start = start_after.map(Bound::exclusive);
+    let limit = limit
+        .unwrap_or(DEFAULT_DECISIONS_LIMIT)
+        .min(MAX_DECISIONS_LIMIT) as usize;
+
+    DECISIONS
+        .range(storage, start, None, Order::Ascending)
+        .take(limit)
+        .map(|item| item.map(|(_id, record)| record).map_err(Into::into))
+        .collect()
 }
 
 fn next_decision_id(storage: &mut dyn Storage) -> Result<u64, AxoneGovError> {

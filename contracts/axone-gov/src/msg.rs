@@ -188,6 +188,17 @@ pub enum AxoneGovQueryMsg {
         /// The unique decision identifier.
         decision_id: u64,
     },
+
+    /// Return a paginated list of recorded decisions.
+    ///
+    /// Decisions are ordered by their unique identifier in ascending order.
+    #[returns(DecisionsResponse)]
+    Decisions {
+        /// Optional decision ID to start after (exclusive).
+        start_after: Option<u64>,
+        /// Optional maximum number of decisions to return (default: 10).
+        limit: Option<u32>,
+    },
 }
 
 /// Response returned by `QueryMsg::Constitution`.
@@ -281,4 +292,16 @@ impl From<&DecisionRecord> for DecisionResponse {
             block_time_seconds: value.block_time_seconds(),
         }
     }
+}
+
+impl From<DecisionRecord> for DecisionResponse {
+    fn from(r: DecisionRecord) -> Self {
+        Self::from(&r)
+    }
+}
+
+/// Response returned by `QueryMsg::Decisions`.
+#[cosmwasm_schema::cw_serde]
+pub struct DecisionsResponse {
+    pub decisions: Vec<DecisionResponse>,
 }

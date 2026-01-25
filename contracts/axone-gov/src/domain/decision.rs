@@ -1,12 +1,12 @@
 use crate::domain::constitution::ConstitutionStatus;
 use cosmwasm_std::Addr;
-use getset::Getters;
+use getset::{CopyGetters, Getters};
 
-#[derive(Clone, Debug, Getters, PartialEq)]
+#[derive(Clone, CopyGetters, Debug, Getters, PartialEq)]
 pub struct Decision {
-    #[getset(get = "pub")]
+    #[getset(get_copy = "pub")]
     constitution_revision: u64,
-    #[getset(get = "pub")]
+    #[getset(get_copy = "pub")]
     constitution_hash: [u8; 32],
     #[getset(get = "pub")]
     case: String,
@@ -16,9 +16,9 @@ pub struct Decision {
     motivation: Option<String>,
     #[getset(get = "pub")]
     author: Addr,
-    #[getset(get = "pub")]
+    #[getset(get_copy = "pub")]
     height: u64,
-    #[getset(get = "pub")]
+    #[getset(get_copy = "pub")]
     time_seconds: u64,
 }
 

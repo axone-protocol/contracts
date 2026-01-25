@@ -2,6 +2,7 @@ use crate::contract::AxoneGov;
 
 use crate::domain::constitution::ConstitutionStatus;
 use crate::domain::Constitution;
+use crate::state::DecisionRecord;
 use cosmwasm_schema::QueryResponses;
 use cosmwasm_std::Binary;
 
@@ -177,6 +178,16 @@ pub enum AxoneGovQueryMsg {
         ///   - If `true`, the contract calls `governance:decide/3` and returns both verdict and motivation.
         motivated: Option<bool>,
     },
+
+    /// Return a recorded decision by its unique identifier.
+    ///
+    /// The returned record is created by `ExecuteMsg::RecordDecision` and includes the decision payload
+    /// (case/verdict, optional motivation) along with constitution metadata (revision/hash) and block metadata.
+    #[returns(DecisionResponse)]
+    Decision {
+        /// The unique decision identifier.
+        decision_id: u64,
+    },
 }
 
 /// Response returned by `QueryMsg::Constitution`.
@@ -222,4 +233,52 @@ pub struct DecideResponse {
     pub verdict: String,
     /// Optional motivation term returned as the third argument of `decide/3`.
     pub motivation: Option<String>,
+}
+
+/// Response returned by `QueryMsg::Decision`.
+#[cosmwasm_schema::cw_serde]
+pub struct DecisionResponse {
+    /// The unique decision identifier.
+    pub decision_id: u64,
+    /// The constitution revision number at the time of decision.
+    pub constitution_revision: u64,
+    /// The constitution hash at the time of decision (32 bytes, sha256).
+    pub constitution_hash: Binary,
+    /// The case term as a Prolog term string.
+    pub case: String,
+    /// The case hash (32 bytes, sha256).
+    pub case_hash: Binary,
+    /// The verdict term as a Prolog term string.
+    pub verdict: String,
+    /// The verdict hash (32 bytes, sha256).
+    pub verdict_hash: Binary,
+    /// Optional motivation term as a Prolog term string.
+    pub motivation: Option<String>,
+    /// The motivation hash (32 bytes, sha256).
+    pub motivation_hash: Option<Binary>,
+    /// The author Bech32 address.
+    pub author: String,
+    /// The block height at which the decision was recorded.
+    pub block_height: u64,
+    /// The block time (seconds since epoch) at which the decision was recorded.
+    pub block_time_seconds: u64,
+}
+
+impl From<&DecisionRecord> for DecisionResponse {
+    fn from(value: &DecisionRecord) -> Self {
+        Self {
+            decision_id: value.id(),
+            constitution_revision: value.constitution_revision(),
+            constitution_hash: Binary::from(value.constitution_hash()),
+            case: value.case().clone(),
+            case_hash: Binary::from(value.case_hash()),
+            verdict: value.verdict().clone(),
+            verdict_hash: Binary::from(value.verdict_hash()),
+            motivation: value.motivation().clone(),
+            motivation_hash: value.motivation_hash().map(Binary::from),
+            author: value.author().to_string(),
+            block_height: value.block_height(),
+            block_time_seconds: value.block_time_seconds(),
+        }
+    }
 }

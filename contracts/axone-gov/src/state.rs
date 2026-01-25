@@ -6,7 +6,7 @@ use cosmwasm_std::{
     to_hex, Addr, Binary, Checksum, OverflowError, OverflowOperation, StdError, Storage,
 };
 use cw_storage_plus::{Item, Map};
-use getset::Getters;
+use getset::{CopyGetters, Getters};
 
 pub(crate) struct StateAccess(());
 impl StateAccess {
@@ -25,11 +25,11 @@ const DECISION_ID_COUNTER: Item<u64> = Item::new("decision_id_counter");
 const DECISIONS: Map<u64, DecisionRecord> = Map::new("decisions");
 
 #[cw_serde]
-#[derive(Getters)]
+#[derive(CopyGetters, Getters)]
 pub struct DecisionRecord {
-    #[getset(get = "pub")]
+    #[getset(get_copy = "pub")]
     id: u64,
-    #[getset(get = "pub")]
+    #[getset(get_copy = "pub")]
     constitution_revision: u64,
     #[getset(get = "pub")]
     constitution_hash: [u8; 32],
@@ -47,9 +47,9 @@ pub struct DecisionRecord {
     motivation_hash: Option<[u8; 32]>,
     #[getset(get = "pub")]
     author: Addr,
-    #[getset(get = "pub")]
+    #[getset(get_copy = "pub")]
     block_height: u64,
-    #[getset(get = "pub")]
+    #[getset(get_copy = "pub")]
     block_time_seconds: u64,
 }
 
@@ -125,8 +125,8 @@ pub fn record_decision(
 
     let record = DecisionRecord {
         id: decision_id,
-        constitution_revision: *decision.constitution_revision(),
-        constitution_hash: *decision.constitution_hash(),
+        constitution_revision: decision.constitution_revision(),
+        constitution_hash: decision.constitution_hash(),
         case: decision.case().to_string(),
         case_hash: *Checksum::generate(decision.case().as_bytes()).as_ref(),
         verdict: decision.verdict().to_string(),
@@ -137,11 +137,20 @@ pub fn record_decision(
             .as_ref()
             .map(|motivation| *Checksum::generate(motivation.as_bytes()).as_ref()),
         author: decision.author().clone(),
-        block_height: *decision.height(),
-        block_time_seconds: *decision.time_seconds(),
+        block_height: decision.height(),
+        block_time_seconds: decision.time_seconds(),
     };
 
     DECISIONS.save(storage, record.id, &record)?;
+
+    Ok(record)
+}
+
+pub fn load_decision(
+    storage: &dyn Storage,
+    decision_id: u64,
+) -> Result<DecisionRecord, AxoneGovError> {
+    let record = DECISIONS.load(storage, decision_id)?;
     Ok(record)
 }
 

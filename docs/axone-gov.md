@@ -102,15 +102,35 @@ Where:
 
 Execute messages.
 
+### ExecuteMsg::record_decision
+
+Record a decision on-chain by deciding a case using the stored constitution.
+
+The `case` parameter is a Prolog dict term string (typically `ctx{...}`) representing the decision context provided by the caller.
+
+Before evaluation, the contract enriches the case with contract-derived facts:
+
+`prolog ctx{ 'gov:module': module{ id: &lt;atom&gt;, version: &lt;atom&gt; }, 'gov:cosmwasm': cosmwasm{ message: message{ sender: &lt;atom&gt;,                    % Bech32 address of message sender funds: [coin(Amount, Denom), ...]  % List of coins sent with message }, block: block{ height: &lt;integer&gt;,        % Block height time: &lt;integer&gt;,          % Block timestamp (seconds since epoch) tx_index: &lt;integer&gt;       % Transaction index (optional) } }, &lt;caller_provided_keys&gt;: &lt;caller_provided_values&gt; } `
+
+Injected keys are authoritative and overwrite any caller-provided value under the same keys.
+
+The contract evaluates `governance:decide/2` or `governance:decide/3` depending on `motivated`, and records the resulting verdict (and optional motivation) as a durable decision record.
+
+| parameter                   | description                                                                                                                                                                                                                                                                      |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `record_decision`           | _(Required.) _ **object**.                                                                                                                                                                                                                                                       |
+| `record_decision.case`      | _(Required.) _ **string**. The decision context.                                                                                                                                                                                                                                 |
+| `record_decision.motivated` | **boolean\|null**. Whether to request a motivated decision (defaults to `false`).<br /><br />- If `false`, the contract calls `governance:decide/2` and records only the verdict. - If `true`, the contract calls `governance:decide/3` and records both verdict and motivation. |
+
 ### ExecuteMsg::revise_constitution
 
 Propose a constitutional revision (constitutional amendment).
 
 The contract asks the **current** constitution to decide whether the revision is allowed by evaluating a case that includes the intent `gov:revise_constitution`.
 
-The contract builds the decision case by merging the caller-provided `case` (if any) with contract-enriched context. The complete case structure is:
+The complete case structure is (keys containing `:` are quoted atoms):
 
-`prolog ctx{ intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': &lt;hex_string&gt;,   % SHA256 of constitution bytes (authoritative) 'gov:module': module{ id: &lt;atom&gt;,       % Contract module ID (e.g., 'axone:axone-gov') version: &lt;atom&gt;   % Contract version (e.g., '1.2.3') }, 'gov:cosmwasm': cosmwasm{ message: message{ sender: &lt;atom&gt;,                    % Bech32 address of message sender funds: [coin(Amount, Denom), ...]  % List of coins sent with message }, block: block{ height: &lt;integer&gt;,        % Block height time: &lt;integer&gt;,          % Block timestamp (seconds since epoch) tx_index: &lt;integer&gt;       % Transaction index } }, &lt;caller_provided_keys&gt;: &lt;caller_provided_values&gt;  % Any additional keys from caller's case } `
+`prolog ctx{ intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': &lt;atom&gt;,        % Hex string atom (authoritative SHA256 of payload) 'gov:module': module{ id: &lt;atom&gt;,       % Contract module ID (e.g., 'axone:axone-gov') version: &lt;atom&gt;   % Contract version (e.g., '1.2.3') }, 'gov:cosmwasm': cosmwasm{ message: message{ sender: &lt;atom&gt;,                    % Bech32 address of message sender funds: [coin(Amount, Denom), ...]  % List of coins sent with message }, block: block{ height: &lt;integer&gt;,        % Block height time: &lt;integer&gt;,          % Block timestamp (seconds since epoch) tx_index: &lt;integer&gt;       % Transaction index } }, &lt;caller_provided_keys&gt;: &lt;caller_provided_values&gt;  % Any additional keys from caller's case } `
 
 The revision is applied only if the decision verdict is exactly the atom `gov:permitted`. Any other verdict (atom or compound term) refuses the revision.
 
@@ -150,19 +170,44 @@ Example:
 
 `ctx{intent:read, user:"did:example:123", object:"obj:42"}`
 
-- If `motivated` is `false`, the contract calls `decide/2` and returns only the verdict. - If `motivated` is `true`, the contract calls `decide/3` and returns both verdict and motivation.
-
 The returned `verdict` is an arbitrary Prolog term (atom or compound), for example:
 
 - `gov:permitted` - `gov:forbidden` - `pay("did:...", 1000)`
 
 The optional `motivation` is an arbitrary Prolog term returned by the constitution and intended to justify the verdict (e.g. grounds/articles, findings, interpretation rules).
 
-| parameter          | description                 |
-| ------------------ | --------------------------- |
-| `decide`           | _(Required.) _ **object**.  |
-| `decide.case`      | _(Required.) _ **string**.  |
-| `decide.motivated` | _(Required.) _ **boolean**. |
+Before evaluation, the contract enriches the case with module metadata (`'gov:module'`).
+
+Injected keys are authoritative and overwrite any caller-provided value under the same keys.
+
+| parameter          | description                                                                                                                                                                                                                                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `decide`           | _(Required.) _ **object**.                                                                                                                                                                                                                                                       |
+| `decide.case`      | _(Required.) _ **string**. The decision context.                                                                                                                                                                                                                                 |
+| `decide.motivated` | **boolean\|null**. Whether to request a motivated decision (defaults to `false`).<br /><br />- If `false`, the contract calls `governance:decide/2` and returns only the verdict. - If `true`, the contract calls `governance:decide/3` and returns both verdict and motivation. |
+
+### QueryMsg::decision
+
+Return a recorded decision by its unique identifier.
+
+The returned record is created by `ExecuteMsg::RecordDecision` and includes the decision payload (case/verdict, optional motivation) along with constitution metadata (revision/hash) and block metadata.
+
+| parameter              | description                                                 |
+| ---------------------- | ----------------------------------------------------------- |
+| `decision`             | _(Required.) _ **object**.                                  |
+| `decision.decision_id` | _(Required.) _ **integer**. The unique decision identifier. |
+
+### QueryMsg::decisions
+
+Return a paginated list of recorded decisions.
+
+Decisions are ordered by their unique identifier in ascending order.
+
+| parameter               | description                                                                      |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `decisions`             | _(Required.) _ **object**.                                                       |
+| `decisions.limit`       | **integer\|null**. Optional maximum number of decisions to return (default: 10). |
+| `decisions.start_after` | **integer\|null**. Optional decision ID to start after (exclusive).              |
 
 ## MigrateMsg
 
@@ -185,9 +230,9 @@ Reserved for future migrations.
 
 Response returned by `QueryMsg::Constitution`.
 
-| property     | description                                                                               |
-| ------------ | ----------------------------------------------------------------------------------------- |
-| `governance` | _(Required.) _ **[Binary](#binary)**. The stored constitution (raw Prolog program bytes). |
+| property       | description                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| `constitution` | _(Required.) _ **[Binary](#binary)**. The stored constitution (raw Prolog program bytes). |
 
 ### constitution_status
 
@@ -207,6 +252,33 @@ Response returned by `QueryMsg::Decide`.
 | `motivation` | **string\|null**. Optional motivation term returned as the third argument of `decide/3`.     |
 | `verdict`    | _(Required.) _ **string**. The verdict returned by the constitution as a Prolog term string. |
 
+### decision
+
+Response returned by `QueryMsg::Decision`.
+
+| property                | description                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `author`                | _(Required.) _ **string**. The author Bech32 address.                                                   |
+| `block_height`          | _(Required.) _ **integer**. The block height at which the decision was recorded.                        |
+| `block_time_seconds`    | _(Required.) _ **integer**. The block time (seconds since epoch) at which the decision was recorded.    |
+| `case`                  | _(Required.) _ **string**. The case term as a Prolog term string.                                       |
+| `case_hash`             | _(Required.) _ **[Binary](#binary)**. The case hash (32 bytes, sha256).                                 |
+| `constitution_hash`     | _(Required.) _ **[Binary](#binary)**. The constitution hash at the time of decision (32 bytes, sha256). |
+| `constitution_revision` | _(Required.) _ **integer**. The constitution revision number at the time of decision.                   |
+| `decision_id`           | _(Required.) _ **integer**. The unique decision identifier.                                             |
+| `motivation`            | **string\|null**. Optional motivation term as a Prolog term string.                                     |
+| `motivation_hash`       | **[Binary](#binary)\|null**. The motivation hash (32 bytes, sha256).                                    |
+| `verdict`               | _(Required.) _ **string**. The verdict term as a Prolog term string.                                    |
+| `verdict_hash`          | _(Required.) _ **[Binary](#binary)**. The verdict hash (32 bytes, sha256).                              |
+
+### decisions
+
+Response returned by `QueryMsg::Decisions`.
+
+| property    | description                                                            |
+| ----------- | ---------------------------------------------------------------------- |
+| `decisions` | _(Required.) _ **Array&lt;[DecisionResponse](#decisionresponse)&gt;**. |
+
 ## Definitions
 
 ### Binary
@@ -217,6 +289,25 @@ A string containing Base64-encoded data.
 | ----------- |
 | **string**. |
 
+### DecisionResponse
+
+Response returned by `QueryMsg::Decision`.
+
+| property                | description                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `author`                | _(Required.) _ **string**. The author Bech32 address.                                                   |
+| `block_height`          | _(Required.) _ **integer**. The block height at which the decision was recorded.                        |
+| `block_time_seconds`    | _(Required.) _ **integer**. The block time (seconds since epoch) at which the decision was recorded.    |
+| `case`                  | _(Required.) _ **string**. The case term as a Prolog term string.                                       |
+| `case_hash`             | _(Required.) _ **[Binary](#binary)**. The case hash (32 bytes, sha256).                                 |
+| `constitution_hash`     | _(Required.) _ **[Binary](#binary)**. The constitution hash at the time of decision (32 bytes, sha256). |
+| `constitution_revision` | _(Required.) _ **integer**. The constitution revision number at the time of decision.                   |
+| `decision_id`           | _(Required.) _ **integer**. The unique decision identifier.                                             |
+| `motivation`            | **string\|null**. Optional motivation term as a Prolog term string.                                     |
+| `motivation_hash`       | **[Binary](#binary)\|null**. The motivation hash (32 bytes, sha256).                                    |
+| `verdict`               | _(Required.) _ **string**. The verdict term as a Prolog term string.                                    |
+| `verdict_hash`          | _(Required.) _ **[Binary](#binary)**. The verdict hash (32 bytes, sha256).                              |
+
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`9c380ee3f4499a8b`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`5f5c92435d2b7af4`)_

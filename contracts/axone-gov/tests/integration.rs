@@ -248,6 +248,42 @@ fn ask_empty_results() -> QueryServiceAskResponse {
     }
 }
 
+// --- Test helpers ---
+fn assert_hash_matches(payload: &[u8], got: &Binary) {
+    let expected = Checksum::generate(payload);
+    assert_eq!(*got, Binary::from(expected.as_slice()));
+}
+
+fn assert_decision_response(
+    record: &DecisionResponse,
+    expected_id: u64,
+    expected_constitution: &Binary,
+    expected_case: &str,
+    expected_verdict: &str,
+    expected_motivation: Option<&str>,
+) {
+    assert_eq!(record.decision_id, expected_id);
+    assert_eq!(record.constitution_revision, 0);
+    assert_hash_matches(expected_constitution.as_slice(), &record.constitution_hash);
+
+    assert_eq!(record.case, expected_case);
+    assert_hash_matches(expected_case.as_bytes(), &record.case_hash);
+
+    assert_eq!(record.verdict, expected_verdict);
+    assert_hash_matches(expected_verdict.as_bytes(), &record.verdict_hash);
+
+    assert_eq!(record.motivation, expected_motivation.map(str::to_string));
+    match (&record.motivation_hash, expected_motivation) {
+        (None, None) => {}
+        (Some(got), Some(motivation)) => assert_hash_matches(motivation.as_bytes(), got),
+        (got, expected) => panic!("unexpected motivation_hash: got={got:?} expected={expected:?}"),
+    }
+
+    assert_eq!(record.author, MOCK_SENDER);
+    assert_eq!(record.block_height, MOCK_BLOCK_HEIGHT);
+    assert_eq!(record.block_time_seconds, MOCK_BLOCK_TIME);
+}
+
 #[test]
 fn instantiate_succeeds_with_valid_constitution() {
     let constitution = Binary::from(b"valid.".to_vec());
@@ -819,31 +855,7 @@ fn query_decision_returns_recorded_decision_without_motivation() {
 
     let response = AxoneGovQueryMsgFns::decision(&env.app, 1).expect("Failed to query decision");
 
-    let expected_constitution_hash = Checksum::generate(constitution.as_slice());
-    let expected_case_hash = Checksum::generate(case_term.as_bytes());
-    let expected_verdict_hash = Checksum::generate(verdict.as_bytes());
-
-    assert_eq!(response.decision_id, 1);
-    assert_eq!(response.constitution_revision, 0);
-    assert_eq!(
-        response.constitution_hash,
-        Binary::from(expected_constitution_hash.as_slice())
-    );
-    assert_eq!(response.case, case_term);
-    assert_eq!(
-        response.case_hash,
-        Binary::from(expected_case_hash.as_slice())
-    );
-    assert_eq!(response.verdict, verdict);
-    assert_eq!(
-        response.verdict_hash,
-        Binary::from(expected_verdict_hash.as_slice())
-    );
-    assert_eq!(response.motivation, None);
-    assert_eq!(response.motivation_hash, None);
-    assert_eq!(response.author, MOCK_SENDER);
-    assert_eq!(response.block_height, MOCK_BLOCK_HEIGHT);
-    assert_eq!(response.block_time_seconds, MOCK_BLOCK_TIME);
+    assert_decision_response(&response, 1, &constitution, &case_term, verdict, None);
 }
 
 #[test]
@@ -868,35 +880,14 @@ fn query_decision_returns_recorded_decision_with_motivation() {
 
     let response = AxoneGovQueryMsgFns::decision(&env.app, 1).expect("Failed to query decision");
 
-    let expected_constitution_hash = Checksum::generate(constitution.as_slice());
-    let expected_case_hash = Checksum::generate(case_term.as_bytes());
-    let expected_verdict_hash = Checksum::generate(verdict.as_bytes());
-    let expected_motivation_hash = Checksum::generate(motivation.as_bytes());
-
-    assert_eq!(response.decision_id, 1);
-    assert_eq!(response.constitution_revision, 0);
-    assert_eq!(
-        response.constitution_hash,
-        Binary::from(expected_constitution_hash.as_slice())
+    assert_decision_response(
+        &response,
+        1,
+        &constitution,
+        &case_term,
+        verdict,
+        Some(motivation),
     );
-    assert_eq!(response.case, case_term);
-    assert_eq!(
-        response.case_hash,
-        Binary::from(expected_case_hash.as_slice())
-    );
-    assert_eq!(response.verdict, verdict);
-    assert_eq!(
-        response.verdict_hash,
-        Binary::from(expected_verdict_hash.as_slice())
-    );
-    assert_eq!(response.motivation, Some(motivation.to_string()));
-    assert_eq!(
-        response.motivation_hash,
-        Some(Binary::from(expected_motivation_hash.as_slice()))
-    );
-    assert_eq!(response.author, MOCK_SENDER);
-    assert_eq!(response.block_height, MOCK_BLOCK_HEIGHT);
-    assert_eq!(response.block_time_seconds, MOCK_BLOCK_TIME);
 }
 
 #[test]
@@ -922,8 +913,8 @@ fn query_decisions_returns_empty_when_no_records() {
     let constitution = Binary::from(b"decide(case{action:transfer}, allowed).".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
-    let env = TestEnv::setup(constitution, hook, expectations)
-        .expect("Failed to setup test environment");
+    let env =
+        TestEnv::setup(constitution, hook, expectations).expect("Failed to setup test environment");
 
     let response =
         AxoneGovQueryMsgFns::decisions(&env.app, None, None).expect("Failed to query decisions");
@@ -963,60 +954,26 @@ decide(case{action:mint}, allowed)."
         AxoneGovQueryMsgFns::decisions(&env.app, None, None).expect("Failed to query decisions");
     assert_eq!(response.decisions.len(), 3);
 
-    let expected_constitution_hash = Checksum::generate(constitution.as_slice());
-    let assert_record = |record: &DecisionResponse,
-                         expected_id: u64,
-                         expected_case: &str,
-                         expected_verdict: &str,
-                         expected_motivation: Option<&str>| {
-        let expected_case_hash = Checksum::generate(expected_case.as_bytes());
-        let expected_verdict_hash = Checksum::generate(expected_verdict.as_bytes());
-        let expected_motivation_hash =
-            expected_motivation.map(|motivation| Checksum::generate(motivation.as_bytes()));
-
-        assert_eq!(record.decision_id, expected_id);
-        assert_eq!(record.constitution_revision, 0);
-        assert_eq!(
-            record.constitution_hash,
-            Binary::from(expected_constitution_hash.as_slice())
-        );
-        assert_eq!(record.case, expected_case);
-        assert_eq!(record.case_hash, Binary::from(expected_case_hash.as_slice()));
-        assert_eq!(record.verdict, expected_verdict);
-        assert_eq!(
-            record.verdict_hash,
-            Binary::from(expected_verdict_hash.as_slice())
-        );
-        assert_eq!(
-            record.motivation,
-            expected_motivation.map(str::to_string)
-        );
-        assert_eq!(
-            record.motivation_hash,
-            expected_motivation_hash.map(|hash| Binary::from(hash.as_slice()))
-        );
-        assert_eq!(record.author, MOCK_SENDER);
-        assert_eq!(record.block_height, MOCK_BLOCK_HEIGHT);
-        assert_eq!(record.block_time_seconds, MOCK_BLOCK_TIME);
-    };
-
-    assert_record(
+    assert_decision_response(
         &response.decisions[0],
         1,
+        &constitution,
         &record_decision_case("action: transfer"),
         "allowed",
         None,
     );
-    assert_record(
+    assert_decision_response(
         &response.decisions[1],
         2,
+        &constitution,
         &record_decision_case("action: withdraw"),
         "denied",
         Some("reason"),
     );
-    assert_record(
+    assert_decision_response(
         &response.decisions[2],
         3,
+        &constitution,
         &record_decision_case("action: mint"),
         "allowed",
         None,

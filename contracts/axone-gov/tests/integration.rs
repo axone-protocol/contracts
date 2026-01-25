@@ -799,6 +799,125 @@ fn execute_decide_fails_with_missing_motivation() {
 }
 
 #[test]
+fn query_decision_returns_recorded_decision_without_motivation() {
+    let constitution = Binary::from(b"decide(case{action:transfer}, allowed).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let case_input = "case{action:transfer}";
+    let case_term = record_decision_case("action: transfer");
+    let verdict = "allowed";
+
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_decision_without_motivation(verdict))
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    env.app
+        .record_decision(case_input.to_string(), None)
+        .expect("Failed to record decision");
+
+    let response = AxoneGovQueryMsgFns::decision(&env.app, 1).expect("Failed to query decision");
+
+    let expected_constitution_hash = Checksum::generate(constitution.as_slice());
+    let expected_case_hash = Checksum::generate(case_term.as_bytes());
+    let expected_verdict_hash = Checksum::generate(verdict.as_bytes());
+
+    assert_eq!(response.decision_id, 1);
+    assert_eq!(response.constitution_revision, 0);
+    assert_eq!(
+        response.constitution_hash,
+        Binary::from(expected_constitution_hash.as_slice())
+    );
+    assert_eq!(response.case, case_term);
+    assert_eq!(
+        response.case_hash,
+        Binary::from(expected_case_hash.as_slice())
+    );
+    assert_eq!(response.verdict, verdict);
+    assert_eq!(
+        response.verdict_hash,
+        Binary::from(expected_verdict_hash.as_slice())
+    );
+    assert_eq!(response.motivation, None);
+    assert_eq!(response.motivation_hash, None);
+    assert_eq!(response.author, MOCK_SENDER);
+    assert_eq!(response.block_height, MOCK_BLOCK_HEIGHT);
+    assert_eq!(response.block_time_seconds, MOCK_BLOCK_TIME);
+}
+
+#[test]
+fn query_decision_returns_recorded_decision_with_motivation() {
+    let constitution = Binary::from(b"decide(case{action:transfer}, allowed, ok).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let case_input = "case{action:transfer}";
+    let case_term = record_decision_case("action: transfer");
+    let verdict = "allowed";
+    let motivation = "ok";
+
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_decision_with_motivation(verdict, motivation))
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    env.app
+        .record_decision(case_input.to_string(), Some(true))
+        .expect("Failed to record decision");
+
+    let response = AxoneGovQueryMsgFns::decision(&env.app, 1).expect("Failed to query decision");
+
+    let expected_constitution_hash = Checksum::generate(constitution.as_slice());
+    let expected_case_hash = Checksum::generate(case_term.as_bytes());
+    let expected_verdict_hash = Checksum::generate(verdict.as_bytes());
+    let expected_motivation_hash = Checksum::generate(motivation.as_bytes());
+
+    assert_eq!(response.decision_id, 1);
+    assert_eq!(response.constitution_revision, 0);
+    assert_eq!(
+        response.constitution_hash,
+        Binary::from(expected_constitution_hash.as_slice())
+    );
+    assert_eq!(response.case, case_term);
+    assert_eq!(
+        response.case_hash,
+        Binary::from(expected_case_hash.as_slice())
+    );
+    assert_eq!(response.verdict, verdict);
+    assert_eq!(
+        response.verdict_hash,
+        Binary::from(expected_verdict_hash.as_slice())
+    );
+    assert_eq!(response.motivation, Some(motivation.to_string()));
+    assert_eq!(
+        response.motivation_hash,
+        Some(Binary::from(expected_motivation_hash.as_slice()))
+    );
+    assert_eq!(response.author, MOCK_SENDER);
+    assert_eq!(response.block_height, MOCK_BLOCK_HEIGHT);
+    assert_eq!(response.block_time_seconds, MOCK_BLOCK_TIME);
+}
+
+#[test]
+fn query_decision_fails_when_missing() {
+    let constitution = Binary::from(b"decide(case{action:transfer}, allowed).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let env =
+        TestEnv::setup(constitution, hook, expectations).expect("Failed to setup test environment");
+
+    let err =
+        AxoneGovQueryMsgFns::decision(&env.app, 1).expect_err("Expected missing decision error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("not found"),
+        "expected decision not found error, got: {msg}"
+    );
+}
+
+#[test]
 fn revise_constitution_succeeds_with_permitted_verdict() {
     let constitution = Binary::from(b"decide(_, 'gov:permitted', 'Revision allowed').".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();

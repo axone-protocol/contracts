@@ -5,14 +5,17 @@ use crate::{
     gateway::logic::{query_service_ask, AxoneLogicQuery, QueryServiceAskRequest},
     msg::AxoneGovExecuteMsg,
     prolog::ast::Term,
-    queries::decision::build_decide_query_with_motivation,
-    state::{load_constitution, save_revised_constitution},
+    queries::decision::{build_decide_query, build_decide_query_with_motivation},
+    state::{load_constitution, load_constitution_status, save_revised_constitution},
     GOV_CTX_COSMWASM, GOV_CTX_MODULE, GOV_INTENT_REVISE_CONSTITUTION, GOV_VERDICT_PERMITTED,
-    RESPONSE_KEY_CONSTITUTION_HASH, RESPONSE_KEY_CONSTITUTION_REVISER,
-    RESPONSE_KEY_CONSTITUTION_REVISION,
+    RESPONSE_KEY_CASE_HASH, RESPONSE_KEY_CONSTITUTION_HASH, RESPONSE_KEY_CONSTITUTION_REVISER,
+    RESPONSE_KEY_CONSTITUTION_REVISION, RESPONSE_KEY_DECISION_ID, RESPONSE_KEY_MOTIVATION_HASH,
+    RESPONSE_KEY_VERDICT, RESPONSE_KEY_VERDICT_HASH,
 };
 
+use crate::domain::Decision;
 use crate::prolog::term as t;
+use crate::state::record_decision;
 use abstract_app::traits::AbstractResponse;
 use cosmwasm_std::{Binary, Coin, DepsMut, Env, MessageInfo, QuerierWrapper};
 
@@ -26,12 +29,15 @@ pub fn execute_handler(
 ) -> AxoneGovResult {
     match msg {
         AxoneGovExecuteMsg::ReviseConstitution { constitution, case } => {
-            revise_constitution(deps, env, info, module, constitution, case)
+            execute_revise_constitution(deps, env, info, module, constitution, case)
+        }
+        AxoneGovExecuteMsg::RecordDecision { case, motivated } => {
+            execute_record_decision(deps, env, info, module, case, motivated.unwrap_or(false))
         }
     }
 }
 
-fn revise_constitution(
+fn execute_revise_constitution(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
@@ -132,6 +138,120 @@ fn revise_constitution(
             ),
         ],
     ))
+}
+
+fn execute_record_decision(
+    deps: DepsMut<'_>,
+    env: Env,
+    info: MessageInfo,
+    module: AxoneGov,
+    case_input: String,
+    motivated: bool,
+) -> AxoneGovResult {
+    let mut case = Case::new(&case_input)?;
+    let enrichment_term = t::dict(
+        "ctx",
+        vec![
+            t::kv(GOV_CTX_MODULE, module_term(&module)),
+            t::kv(GOV_CTX_COSMWASM, cosmwasm_term(&env, &info)),
+        ],
+    );
+
+    let enrichment = Case::try_from(enrichment_term)?;
+    case.merge(&enrichment);
+
+    let case_term = case.to_string();
+
+    let constitution = load_constitution(deps.storage)?;
+    let status = load_constitution_status(deps.storage)?;
+    let program = constitution.source();
+    let query = if motivated {
+        build_decide_query_with_motivation(&case)
+    } else {
+        build_decide_query(&case)
+    };
+
+    let request = QueryServiceAskRequest::one(program, query);
+    let response = query_service_ask(
+        &QuerierWrapper::<AxoneLogicQuery>::new(&*deps.querier),
+        request,
+    )?;
+    let answer = response.answer.ok_or(AxoneGovError::PrologEngineNoAnswer)?;
+
+    if let Some(error) = answer
+        .results
+        .iter()
+        .find_map(|result| result.error.as_deref())
+    {
+        return Err(AxoneGovError::DecisionFailed(error.to_string()));
+    }
+
+    let result = answer
+        .results
+        .first()
+        .ok_or(AxoneGovError::DecisionNoResult)?;
+    let verdict =
+        find_substitution(result, "Verdict").ok_or(AxoneGovError::DecisionMissingVerdict)?;
+    let motivation = if motivated {
+        Some(
+            find_substitution(result, "Motivation")
+                .ok_or(AxoneGovError::DecisionMissingMotivation)?,
+        )
+    } else {
+        None
+    };
+
+    let decision = Decision::new(
+        &status,
+        case_term,
+        verdict,
+        motivation,
+        info.sender,
+        env.block.height,
+        env.block.time.seconds(),
+    );
+
+    let decision_record = record_decision(deps.storage, decision)?;
+    let mut attrs = vec![
+        (
+            RESPONSE_KEY_DECISION_ID.to_string(),
+            decision_record.id().to_string(),
+        ),
+        (
+            RESPONSE_KEY_CONSTITUTION_REVISION.to_string(),
+            decision_record.constitution_revision().to_string(),
+        ),
+        (
+            RESPONSE_KEY_CONSTITUTION_HASH.to_string(),
+            decision_record.constitution_hash_hex(),
+        ),
+        (
+            RESPONSE_KEY_CASE_HASH.to_string(),
+            decision_record.case_hash_hex(),
+        ),
+        (
+            RESPONSE_KEY_VERDICT.to_string(),
+            decision_record.verdict().clone(),
+        ),
+        (
+            RESPONSE_KEY_VERDICT_HASH.to_string(),
+            decision_record.verdict_hash_hex(),
+        ),
+    ];
+
+    if let Some(h) = decision_record.motivation_hash_hex() {
+        attrs.push((RESPONSE_KEY_MOTIVATION_HASH.to_string(), h));
+    }
+
+    Ok(module.custom_response("record_decision", attrs))
+}
+
+fn find_substitution(result: &crate::gateway::logic::Result, variable: &str) -> Option<String> {
+    result
+        .substitutions
+        .iter()
+        .find(|sub| sub.variable == variable)
+        .map(|sub| sub.expression.clone())
 }
 
 fn coin_term(c: &Coin) -> Term {

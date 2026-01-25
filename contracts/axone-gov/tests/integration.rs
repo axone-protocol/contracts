@@ -6,7 +6,7 @@ use axone_gov::{
         set_query_service_ask_handler, Answer, QueryServiceAskMockGuard, QueryServiceAskResponse,
         Result as LogicResult, Substitution,
     },
-    msg::{AxoneGovExecuteMsgFns, AxoneGovInstantiateMsg, AxoneGovQueryMsgFns},
+    msg::{AxoneGovExecuteMsgFns, AxoneGovInstantiateMsg, AxoneGovQueryMsgFns, DecisionResponse},
     AxoneGovInterface, AXONE_GOV_ID, AXONE_NAMESPACE,
 };
 use cosmwasm_std::{to_hex, Binary, Checksum};
@@ -915,6 +915,117 @@ fn query_decision_fails_when_missing() {
         msg.contains("not found"),
         "expected decision not found error, got: {msg}"
     );
+}
+
+#[test]
+fn query_decisions_returns_empty_when_no_records() {
+    let constitution = Binary::from(b"decide(case{action:transfer}, allowed).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let env = TestEnv::setup(constitution, hook, expectations)
+        .expect("Failed to setup test environment");
+
+    let response =
+        AxoneGovQueryMsgFns::decisions(&env.app, None, None).expect("Failed to query decisions");
+
+    assert!(response.decisions.is_empty());
+}
+
+#[test]
+fn query_decisions_returns_records_in_order_and_supports_pagination() {
+    let constitution = Binary::from(
+        b"decide(case{action:transfer}, allowed).
+decide(case{action:withdraw}, denied, reason).
+decide(case{action:mint}, allowed)."
+            .to_vec(),
+    );
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_decision_without_motivation("allowed"))
+        .then(program, ask_decision_with_motivation("denied", "reason"))
+        .then(program, ask_decision_without_motivation("allowed"))
+        .install();
+    let env =
+        TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
+
+    env.app
+        .record_decision("case{action:transfer}".to_string(), None)
+        .expect("Failed to record decision 1");
+    env.app
+        .record_decision("case{action:withdraw}".to_string(), Some(true))
+        .expect("Failed to record decision 2");
+    env.app
+        .record_decision("case{action:mint}".to_string(), None)
+        .expect("Failed to record decision 3");
+
+    let response =
+        AxoneGovQueryMsgFns::decisions(&env.app, None, None).expect("Failed to query decisions");
+    assert_eq!(response.decisions.len(), 3);
+
+    let expected_constitution_hash = Checksum::generate(constitution.as_slice());
+    let assert_record = |record: &DecisionResponse,
+                         expected_id: u64,
+                         expected_case: &str,
+                         expected_verdict: &str,
+                         expected_motivation: Option<&str>| {
+        let expected_case_hash = Checksum::generate(expected_case.as_bytes());
+        let expected_verdict_hash = Checksum::generate(expected_verdict.as_bytes());
+        let expected_motivation_hash =
+            expected_motivation.map(|motivation| Checksum::generate(motivation.as_bytes()));
+
+        assert_eq!(record.decision_id, expected_id);
+        assert_eq!(record.constitution_revision, 0);
+        assert_eq!(
+            record.constitution_hash,
+            Binary::from(expected_constitution_hash.as_slice())
+        );
+        assert_eq!(record.case, expected_case);
+        assert_eq!(record.case_hash, Binary::from(expected_case_hash.as_slice()));
+        assert_eq!(record.verdict, expected_verdict);
+        assert_eq!(
+            record.verdict_hash,
+            Binary::from(expected_verdict_hash.as_slice())
+        );
+        assert_eq!(
+            record.motivation,
+            expected_motivation.map(str::to_string)
+        );
+        assert_eq!(
+            record.motivation_hash,
+            expected_motivation_hash.map(|hash| Binary::from(hash.as_slice()))
+        );
+        assert_eq!(record.author, MOCK_SENDER);
+        assert_eq!(record.block_height, MOCK_BLOCK_HEIGHT);
+        assert_eq!(record.block_time_seconds, MOCK_BLOCK_TIME);
+    };
+
+    assert_record(
+        &response.decisions[0],
+        1,
+        &record_decision_case("action: transfer"),
+        "allowed",
+        None,
+    );
+    assert_record(
+        &response.decisions[1],
+        2,
+        &record_decision_case("action: withdraw"),
+        "denied",
+        Some("reason"),
+    );
+    assert_record(
+        &response.decisions[2],
+        3,
+        &record_decision_case("action: mint"),
+        "allowed",
+        None,
+    );
+
+    let page = AxoneGovQueryMsgFns::decisions(&env.app, Some(1), Some(1))
+        .expect("Failed to query decisions page");
+    assert_eq!(page.decisions.len(), 1);
+    assert_eq!(page.decisions[0].decision_id, 2);
 }
 
 #[test]

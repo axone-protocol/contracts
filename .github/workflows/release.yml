@@ -37,7 +37,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - id: set-matrix
         run: |
           PROJECT_DIRS=$(find contracts packages -maxdepth 2 -name "pyproject.toml" -print0 \
@@ -57,7 +57,7 @@ jobs:
       matrix:
         project_dir: ${{ fromJSON(needs.check-configured-projects.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.OPS_TOKEN }}

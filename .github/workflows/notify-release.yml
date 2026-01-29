@@ -85,7 +85,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch'
     steps:
       - name: Update docs repository
-        uses: fjogeleit/http-request-action@v1
+        uses: fjogeleit/http-request-action@v2
         with:
           url: "https://api.github.com/repos/axone-protocol/docs/actions/workflows/39152549/dispatches"
           method: "POST"
@@ -107,7 +107,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch'
     steps:
       - name: Update schema repository
-        uses: fjogeleit/http-request-action@v1
+        uses: fjogeleit/http-request-action@v2
         with:
           url: "https://api.github.com/repos/axone-protocol/axone-contract-schema/actions/workflows/68383422/dispatches"
           method: "POST"

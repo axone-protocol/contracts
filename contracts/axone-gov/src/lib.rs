@@ -7,6 +7,7 @@ pub mod msg;
 mod prolog;
 mod queries;
 mod replies;
+mod services;
 pub mod state;
 
 pub use error::AxoneGovError;
@@ -21,10 +22,13 @@ pub const AXONE_GOV_NAME: &str = "axone-gov";
 pub const AXONE_GOV_ID: &str = const_format::concatcp!(AXONE_NAMESPACE, ":", AXONE_GOV_NAME);
 
 // Governance domain constants
-pub const GOV_CTX_COSMWASM: &str = "gov:cosmwasm";
+pub const GOV_CTX_TX: &str = "cw:tx";
 pub const GOV_CTX_MODULE: &str = "gov:module";
+pub const GOV_CTX_PROPOSED_CONSTITUTION_SHA256: &str = "gov:proposed_constitution_sha256";
+pub const GOV_CTX_CURRENT_CONSTITUTION_SHA256: &str = "gov:current_constitution_sha256";
+pub const GOV_CTX_CURRENT_CONSTITUTION_REVISION: &str = "gov:current_constitution_revision";
+pub const GOV_INTENT_ESTABLISH: &str = "gov:establish";
 pub const GOV_INTENT_REVISE_CONSTITUTION: &str = "gov:revise_constitution";
-pub const GOV_VERDICT_FORBIDDEN: &str = "gov:forbidden";
 pub const GOV_VERDICT_PERMITTED: &str = "gov:permitted";
 
 // Response constants

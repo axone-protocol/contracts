@@ -1,11 +1,14 @@
+use crate::prolog::term as t;
 use crate::{
     contract::{AxoneGov, AxoneGovResult},
     domain::Constitution,
     error::AxoneGovError,
     gateway::logic::AxoneLogicQuery,
     msg::AxoneGovInstantiateMsg,
+    services::decision::{build_governance_case, decide_case_with_motivation},
     state::save_initial_constitution,
-    AXONE_GOV_ID, RESPONSE_KEY_CONSTITUTION_HASH, RESPONSE_KEY_CONSTITUTION_REVISION,
+    AXONE_GOV_ID, GOV_INTENT_ESTABLISH, GOV_VERDICT_PERMITTED, RESPONSE_KEY_CONSTITUTION_HASH,
+    RESPONSE_KEY_CONSTITUTION_REVISION,
 };
 use abstract_app::sdk::prelude::*;
 use abstract_app::sdk::AbstractResponse;
@@ -14,7 +17,7 @@ use cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
 pub fn instantiate_handler(
     deps: DepsMut<'_>,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     module: AxoneGov,
     msg: AxoneGovInstantiateMsg,
 ) -> AxoneGovResult {
@@ -22,6 +25,24 @@ pub fn instantiate_handler(
 
     let querier = QuerierWrapper::<AxoneLogicQuery>::new(&*deps.querier);
     let constitution = Constitution::try_new(msg.constitution, &querier)?;
+    let case = build_governance_case(
+        None,
+        GOV_INTENT_ESTABLISH,
+        &constitution,
+        None,
+        &module,
+        &env,
+        &info,
+    )?;
+    let decision = decide_case_with_motivation(&querier, constitution.source(), &case)?;
+
+    if decision.verdict != t::atom(GOV_VERDICT_PERMITTED) {
+        return Err(AxoneGovError::DecisionRefused {
+            intent: GOV_INTENT_ESTABLISH.to_string(),
+            verdict: decision.verdict.to_string(),
+            motivation: decision.motivation.to_string(),
+        });
+    }
 
     let status = save_initial_constitution(deps.storage, &constitution)?;
 

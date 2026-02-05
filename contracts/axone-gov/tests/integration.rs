@@ -23,8 +23,8 @@ const ABSTRACT_EVENT_TYPE: &str = "wasm-abstract";
 fn record_decision_context() -> String {
     format!(
         "'gov:module': module{{id: '{AXONE_GOV_ID}', version: '{PKG_VERSION}'}}, \
-'gov:cosmwasm': cosmwasm{{message: message{{sender: {MOCK_SENDER}, funds: []}}, \
-block: block{{height: {MOCK_BLOCK_HEIGHT}, time: {MOCK_BLOCK_TIME}, tx_index: {MOCK_TX_INDEX}}}}}"
+'cw:tx': tx{{message: msg{{sender: {MOCK_SENDER}, funds: []}}, \
+block: block{{height: {MOCK_BLOCK_HEIGHT}, time_seconds: {MOCK_BLOCK_TIME}, tx_index: {MOCK_TX_INDEX}}}}}"
     )
 }
 
@@ -224,6 +224,10 @@ fn ask_decision_with_motivation(
     ask_with_substitutions(substitutions)
 }
 
+fn ask_establish_permitted() -> QueryServiceAskResponse {
+    ask_decision_with_motivation("'gov:permitted'", "ok")
+}
+
 fn ask_no_answer() -> QueryServiceAskResponse {
     QueryServiceAskResponse {
         height: 0,
@@ -245,6 +249,18 @@ fn ask_empty_results() -> QueryServiceAskResponse {
         gas_used: 0,
         answer: Some(answer),
         user_output: None,
+    }
+}
+
+fn atom_literal(value: &str) -> String {
+    let mut chars = value.chars();
+    match chars.next() {
+        Some(c)
+            if c.is_ascii_lowercase() && chars.all(|c| c.is_ascii_alphanumeric() || c == '_') =>
+        {
+            value.to_string()
+        }
+        _ => format!("'{}'", value.replace('\'', "''")),
     }
 }
 
@@ -287,7 +303,10 @@ fn assert_decision_response(
 #[test]
 fn instantiate_succeeds_with_valid_constitution() {
     let constitution = Binary::from(b"valid.".to_vec());
-    let (hook, expectations) = LogicAskScenario::new().then("valid.", ask_ok()).install();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then("valid.", ask_ok())
+        .then("valid.", ask_establish_permitted())
+        .install();
     let env = TestEnv::setup(constitution.clone(), hook, expectations)
         .expect("Failed to setup test environment");
 
@@ -363,7 +382,10 @@ fn instantiate_rejects_constitution_missing_required_predicates() {
 fn instantiate_succeeds_without_registered_gov() {
     let constitution = Binary::from(b"valid.".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
-    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let (_hook, _expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
+        .install();
 
     let chain = MockBech32::new("mock");
     let contract = AxoneGovInterface::new("axone-gov-direct-missing", chain.clone());
@@ -386,17 +408,16 @@ fn instantiate_succeeds_without_registered_gov() {
         .constitution()
         .expect("Failed to query constitution");
     assert_eq!(stored.constitution, constitution);
-
-    drop(hook);
-    drop(expectations);
 }
 
 #[test]
 fn instantiate_fails_when_gov_already_registered() {
     let constitution = Binary::from(b"valid.".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
-
-    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let (_hook, _expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
+        .install();
 
     let chain = MockBech32::new("mock");
     let client = AbstractClient::builder(chain.clone())
@@ -447,9 +468,6 @@ fn instantiate_fails_when_gov_already_registered() {
         msg.contains(AXONE_GOV_ID),
         "expected module id '{AXONE_GOV_ID}' in error, got: {msg}"
     );
-
-    drop(hook);
-    drop(expectations);
 }
 
 #[test]
@@ -472,6 +490,7 @@ decide(case{action:withdraw}, denied)."
     for (case, description) in test_cases {
         let (hook, expectations) = LogicAskScenario::new()
             .then(program, ask_ok())
+            .then(program, ask_establish_permitted())
             .then(program, ask_decision_without_motivation("allowed"))
             .install();
         let env =
@@ -503,6 +522,7 @@ decide(case{action:withdraw}, denied, 'Insufficient funds')."
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(
             program,
             ask_decision_with_motivation("allowed", "'User is authorized'"),
@@ -527,7 +547,10 @@ decide(case{action:withdraw}, denied, 'Insufficient funds')."
 fn decide_fails_with_invalid_case() {
     let constitution = Binary::from(b"decide(_, verdict).".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
-    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
+        .install();
     let env =
         TestEnv::setup(constitution.clone(), hook, expectations).expect("Failed to setup test");
 
@@ -563,6 +586,7 @@ fn decide_fails_with_no_answer() {
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_no_answer())
         .install();
     let env =
@@ -586,6 +610,7 @@ fn decide_fails_with_no_results() {
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_empty_results())
         .install();
     let env =
@@ -609,6 +634,7 @@ fn decide_fails_with_prolog_error() {
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_error("predicate failed"))
         .install();
     let env =
@@ -630,6 +656,7 @@ fn decide_fails_with_missing_verdict() {
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(
             program,
             ask_with_substitutions(vec![Substitution {
@@ -659,6 +686,7 @@ fn decide_fails_with_missing_motivation() {
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_decision_without_motivation("allowed"))
         .install();
     let env =
@@ -691,8 +719,9 @@ decide(case{action:withdraw}, denied)."
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_decision_without_motivation(verdict))
-        .assert_query(1, move |query| {
+        .assert_query(2, move |query| {
             assert_eq!(query, expected_query, "unexpected decide query");
         })
         .install();
@@ -776,12 +805,13 @@ decide(case{action:withdraw}, denied)."
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_decision_with_motivation("allowed", "'reason'"))
         .then(program, ask_decision_without_motivation("denied"))
-        .assert_query(1, move |query| {
+        .assert_query(2, move |query| {
             assert_eq!(query, expected_query_one, "unexpected decide/3 query");
         })
-        .assert_query(2, move |query| {
+        .assert_query(3, move |query| {
             assert_eq!(query, expected_query_two, "unexpected decide/2 query");
         })
         .install();
@@ -817,6 +847,7 @@ fn execute_decide_fails_with_missing_motivation() {
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_decision_without_motivation("allowed"))
         .install();
     let env =
@@ -844,6 +875,7 @@ fn query_decision_returns_recorded_decision_without_motivation() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_decision_without_motivation(verdict))
         .install();
     let env =
@@ -869,6 +901,7 @@ fn query_decision_returns_recorded_decision_with_motivation() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_decision_with_motivation(verdict, motivation))
         .install();
     let env =
@@ -894,7 +927,10 @@ fn query_decision_returns_recorded_decision_with_motivation() {
 fn query_decision_fails_when_missing() {
     let constitution = Binary::from(b"decide(case{action:transfer}, allowed).".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
-    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
+        .install();
     let env =
         TestEnv::setup(constitution, hook, expectations).expect("Failed to setup test environment");
 
@@ -912,7 +948,10 @@ fn query_decision_fails_when_missing() {
 fn query_decisions_returns_empty_when_no_records() {
     let constitution = Binary::from(b"decide(case{action:transfer}, allowed).".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
-    let (hook, expectations) = LogicAskScenario::new().then(program, ask_ok()).install();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
+        .install();
     let env =
         TestEnv::setup(constitution, hook, expectations).expect("Failed to setup test environment");
 
@@ -933,6 +972,7 @@ decide(case{action:mint}, allowed)."
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(program, ask_decision_without_motivation("allowed"))
         .then(program, ask_decision_with_motivation("denied", "reason"))
         .then(program, ask_decision_without_motivation("allowed"))
@@ -994,11 +1034,13 @@ fn revise_constitution_succeeds_with_permitted_verdict() {
     let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(
             program,
             ask_decision_with_motivation("'gov:permitted'", "'Revision allowed'"),
         )
+        .then(new_constitution_program, ask_establish_permitted())
         .install();
     let env = TestEnv::setup(constitution.clone(), hook, expectations)
         .expect("Failed to setup test environment");
@@ -1034,11 +1076,13 @@ fn revise_constitution_succeeds_with_custom_case() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(
             program,
             ask_decision_with_motivation("'gov:permitted'", "'Revision allowed'"),
         )
+        .then(new_constitution_program, ask_establish_permitted())
         .install();
     let env = TestEnv::setup(constitution.clone(), hook, expectations)
         .expect("Failed to setup test environment");
@@ -1069,6 +1113,7 @@ fn revise_constitution_fails_with_invalid_new_constitution() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then("invalid(", ask_error("parse error"))
         .install();
     let env = TestEnv::setup(constitution.clone(), hook, expectations)
@@ -1094,6 +1139,7 @@ fn revise_constitution_fails_with_missing_required_predicates() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then("valid.", ask_empty_results())
         .install();
     let env = TestEnv::setup(constitution.clone(), hook, expectations)
@@ -1120,6 +1166,7 @@ fn revise_constitution_fails_with_denied_verdict() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(
             program,
@@ -1132,12 +1179,12 @@ fn revise_constitution_fails_with_denied_verdict() {
     let err = env
         .app
         .revise_constitution(new_constitution, None)
-        .expect_err("Expected revision refused error");
+        .expect_err("Expected decision refused error");
 
     let msg = format!("{err:?}");
     assert!(
-        msg.contains("revision refused"),
-        "expected revision refused, got: {msg}"
+        msg.contains("decision refused"),
+        "expected decision refused, got: {msg}"
     );
     assert!(
         msg.contains("denied"),
@@ -1154,6 +1201,7 @@ fn revise_constitution_fails_with_invalid_case() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(new_constitution_program, ask_ok())
         .then(new_constitution_program, ask_ok())
@@ -1193,6 +1241,7 @@ fn revise_constitution_fails_with_no_answer() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(program, ask_no_answer())
         .install();
@@ -1220,6 +1269,7 @@ fn revise_constitution_fails_with_no_results() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(program, ask_empty_results())
         .install();
@@ -1247,6 +1297,7 @@ fn revise_constitution_fails_with_prolog_error() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(program, ask_error("predicate failed"))
         .install();
@@ -1274,6 +1325,7 @@ fn revise_constitution_fails_with_missing_verdict() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(
             program,
@@ -1307,6 +1359,7 @@ fn revise_constitution_fails_with_missing_motivation() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(program, ask_decision_without_motivation("'gov:permitted'"))
         .install();
@@ -1334,6 +1387,7 @@ fn revise_constitution_fails_with_invalid_verdict_term() {
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(
             program,
@@ -1362,21 +1416,49 @@ fn revise_constitution_injects_complete_context_as_per_specification() {
     let new_constitution = Binary::from(b"decide(_, 'gov:permitted', ok).".to_vec());
     let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
 
-    let expected_query = format!("decide(ctx{{intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': '6686998504972527d11b4c1434169210facea0519f77b9ec3958283593e553c7', 'gov:module': module{{id: 'axone:axone-gov', version: '{}'}}, 'gov:cosmwasm': cosmwasm{{message: message{{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}}, block: block{{height: 12345, time: 1571797419, tx_index: 0}}}}}}, Verdict, Motivation).", PKG_VERSION);
+    let proposed_hash = atom_literal(&to_hex(
+        Checksum::generate(new_constitution.as_slice()).as_ref(),
+    ));
+    let current_hash = atom_literal(&to_hex(
+        Checksum::generate(constitution.as_slice()).as_ref(),
+    ));
+    let expected_revise_query = format!(
+        "decide(ctx{{intent: 'gov:revise_constitution', 'gov:proposed_constitution_sha256': {}, 'gov:current_constitution_sha256': {}, 'gov:current_constitution_revision': 0, 'gov:module': module{{id: 'axone:axone-gov', version: '{}'}}, 'cw:tx': tx{{message: msg{{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}}, block: block{{height: 12345, time_seconds: 1571797419, tx_index: 0}}}}}}, Verdict, Motivation).",
+        proposed_hash, current_hash, PKG_VERSION
+    );
+    let expected_establish_query = format!(
+        "decide(ctx{{intent: 'gov:establish', 'gov:proposed_constitution_sha256': {}, 'gov:current_constitution_sha256': {}, 'gov:current_constitution_revision': 0, 'gov:module': module{{id: 'axone:axone-gov', version: '{}'}}, 'cw:tx': tx{{message: msg{{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}}, block: block{{height: 12345, time_seconds: 1571797419, tx_index: 0}}}}}}, Verdict, Motivation).",
+        proposed_hash, current_hash, PKG_VERSION
+    );
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(
             program,
             ask_decision_with_motivation("'gov:permitted'", "ok"),
         )
-        .assert_query(2, move |query| {
-            assert_eq!(
-                query, expected_query,
-                "Query must exactly match the expected structure.\nExpected:\n{}\nGot:\n{}",
-                expected_query, query
-            );
+        .then(new_constitution_program, ask_establish_permitted())
+        .assert_query(3, {
+            let expected_revise_query = expected_revise_query.clone();
+            move |query| {
+                assert_eq!(
+                    query, expected_revise_query,
+                    "Query must exactly match the expected structure.\nExpected:\n{}\nGot:\n{}",
+                    expected_revise_query, query
+                );
+            }
+        })
+        .assert_query(4, {
+            let expected_establish_query = expected_establish_query.clone();
+            move |query| {
+                assert_eq!(
+                    query, expected_establish_query,
+                    "Query must exactly match the expected structure.\nExpected:\n{}\nGot:\n{}",
+                    expected_establish_query, query
+                );
+            }
         })
         .install();
 
@@ -1395,16 +1477,27 @@ fn revise_constitution_hash_value_matches_proposed_constitution() {
     let new_constitution = Binary::from(b"decide(_, allowed).".to_vec());
     let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
 
-    let expected_query = format!("decide(ctx{{intent: 'gov:revise_constitution', 'gov:proposed_constitution_hash': d0f6d6cf2ae210e1d6e18d7216273f23d7290825d81c2cbce5fd7358c0deed53, 'gov:module': module{{id: 'axone:axone-gov', version: '{}'}}, 'gov:cosmwasm': cosmwasm{{message: message{{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}}, block: block{{height: 12345, time: 1571797419, tx_index: 0}}}}}}, Verdict, Motivation).", PKG_VERSION);
+    let proposed_hash = atom_literal(&to_hex(
+        Checksum::generate(new_constitution.as_slice()).as_ref(),
+    ));
+    let current_hash = atom_literal(&to_hex(
+        Checksum::generate(constitution.as_slice()).as_ref(),
+    ));
+    let expected_query = format!(
+        "decide(ctx{{intent: 'gov:revise_constitution', 'gov:proposed_constitution_sha256': {}, 'gov:current_constitution_sha256': {}, 'gov:current_constitution_revision': 0, 'gov:module': module{{id: 'axone:axone-gov', version: '{}'}}, 'cw:tx': tx{{message: msg{{sender: mock1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qwrtv4f, funds: []}}, block: block{{height: 12345, time_seconds: 1571797419, tx_index: 0}}}}}}, Verdict, Motivation).",
+        proposed_hash, current_hash, PKG_VERSION
+    );
 
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_program, ask_ok())
         .then(
             program,
             ask_decision_with_motivation("'gov:permitted'", "ok"),
         )
-        .assert_query(2, move |query| {
+        .then(new_constitution_program, ask_establish_permitted())
+        .assert_query(3, move |query| {
             assert_eq!(
                 query, expected_query,
                 "Query must exactly match with correct hash.\nExpected:\n{}\nGot:\n{}",
@@ -1432,16 +1525,19 @@ fn revise_constitution_increments_revision_number() {
     let new_constitution_2_program = std::str::from_utf8(new_constitution_2.as_slice()).unwrap();
     let (hook, expectations) = LogicAskScenario::new()
         .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
         .then(new_constitution_1_program, ask_ok())
         .then(
             program,
             ask_decision_with_motivation("'gov:permitted'", "'Revision allowed'"),
         )
+        .then(new_constitution_1_program, ask_establish_permitted())
         .then(new_constitution_2_program, ask_ok())
         .then(
             new_constitution_1_program,
             ask_decision_with_motivation("'gov:permitted'", "'Second revision allowed'"),
         )
+        .then(new_constitution_2_program, ask_establish_permitted())
         .install();
     let env = TestEnv::setup(constitution.clone(), hook, expectations)
         .expect("Failed to setup test environment");

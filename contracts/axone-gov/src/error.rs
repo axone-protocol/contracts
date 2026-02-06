@@ -94,12 +94,21 @@ pub enum AxoneGovError {
     #[error("decision motivation missing in response")]
     DecisionMissingMotivation,
 
-    /// The revision of the constitution was refused by the current constitution rules.
-    #[error("revision refused: verdict={verdict}, motivation={motivation}")]
-    RevisionRefused {
-        /// The verdict returned by the constitution deciding logic.
+    /// A governance act was not permitted by the constitution.
+    ///
+    /// This error is raised when the contract evaluates a decision (via `governance:decide/3`) for a
+    /// specific intent (for example `gov:revise_constitution` or `gov:establish`) and the returned verdict
+    /// does not authorize the act.
+    ///
+    /// The `verdict` and `motivation` are returned by the constitution as Prolog terms. The contract does not
+    /// interpret the motivation: it may be empty or structured, and is preserved as-is for the caller.
+    #[error("decision refused: intent={intent}, verdict={verdict}, motivation={motivation}")]
+    DecisionRefused {
+        /// The intent evaluated for this decision.
+        intent: String,
+        /// The verdict returned by the constitution (a Prolog term).
         verdict: String,
-        /// The motivation provided for the refusal.
+        /// The motivation returned by the constitution (a Prolog term, may be empty).
         motivation: String,
     },
 }

@@ -19,8 +19,14 @@ abstract_app::app_msg_types!(AxoneGov, AxoneGovExecuteMsg, AxoneGovQueryMsg);
 ///
 /// The `constitution` payload MUST be a UTF-8 encoded Prolog program.
 ///
-/// On instantiation, the contract validates that the program can be evaluated and that it defines
-/// the required entrypoints:
+/// On instantiation, the contract performs a constitutive decision by asking the constitution to
+/// decide the intent `gov:establish` using a contract-enriched case (including `gov:module` metadata
+/// and the `cw:tx` runtime context).
+/// The app is instantiated only if the verdict is exactly the atom `gov:permitted`.
+///
+/// Precondition: the `constitution` payload MUST be a UTF-8 encoded Prolog program.
+///
+/// The contract validates that the program can be evaluated and that it defines the required entrypoints:
 ///
 ///    - `decide/2` as `governance:decide(+Case, -Verdict)`
 ///
@@ -35,6 +41,9 @@ abstract_app::app_msg_types!(AxoneGov, AxoneGovExecuteMsg, AxoneGovQueryMsg);
 ///
 ///    - `Motivation` is an arbitrary Prolog term intended to justify the verdict (e.g. applicable articles,
 ///      findings, interpretation rules).
+///
+/// The case structure used for `gov:establish` follows the same conventions as other governance acts
+/// (see `ReviseConstitution`), including `gov:module` metadata and the `cw:tx` runtime context.
 #[cosmwasm_schema::cw_serde]
 #[derive(Default)]
 pub struct AxoneGovInstantiateMsg {
@@ -56,14 +65,14 @@ pub enum AxoneGovExecuteMsg {
     /// ```prolog
     /// ctx{
     ///   'gov:module': module{ id: <atom>, version: <atom> },
-    ///   'gov:cosmwasm': cosmwasm{
-    ///     message: message{
+    ///   'cw:tx': tx{
+    ///     message: msg{
     ///       sender: <atom>,                    % Bech32 address of message sender
     ///       funds: [coin(Amount, Denom), ...]  % List of coins sent with message
     ///     },
     ///     block: block{
     ///       height: <integer>,        % Block height
-    ///       time: <integer>,          % Block timestamp (seconds since epoch)
+    ///       time_seconds: <integer>,  % Block timestamp (seconds since epoch)
     ///       tx_index: <integer>       % Transaction index (optional)
     ///     }
     ///   },
@@ -87,27 +96,34 @@ pub enum AxoneGovExecuteMsg {
     },
     /// Propose a constitutional revision (constitutional amendment).
     ///
-    /// The contract asks the **current** constitution to decide whether the revision is allowed by
-    /// evaluating a case that includes the intent `gov:revise_constitution`.
+    /// The revision is a two-step governance act:
+    ///
+    /// 1) The contract asks the **current** constitution to decide whether the revision is allowed by
+    ///    evaluating a case that includes the intent `gov:revise_constitution`.
+    ///
+    /// 2) The contract then asks the **proposed** constitution to decide the constitutive intent
+    ///    `gov:establish`, using the same contract-enriched case (including `cw:tx` funds).
     ///
     /// The complete case structure is (keys containing `:` are quoted atoms):
     ///
     /// ```prolog
     /// ctx{
-    ///   intent: 'gov:revise_constitution',
-    ///   'gov:proposed_constitution_hash': <atom>,        % Hex string atom (authoritative SHA256 of payload)
+    ///   intent: <intent_atom>, % 'gov:revise_constitution' or 'gov:establish'
+    ///   'gov:proposed_constitution_sha256': <hex_atom>,
+    ///   'gov:current_constitution_sha256': <hex_atom>,
+    ///   'gov:current_constitution_revision': <integer>,
     ///   'gov:module': module{
     ///     id: <atom>,       % Contract module ID (e.g., 'axone:axone-gov')
     ///     version: <atom>   % Contract version (e.g., '1.2.3')
     ///   },
-    ///   'gov:cosmwasm': cosmwasm{
-    ///     message: message{
+    ///   'cw:tx': tx{
+    ///     message: msg{
     ///       sender: <atom>,                    % Bech32 address of message sender
     ///       funds: [coin(Amount, Denom), ...]  % List of coins sent with message
     ///     },
     ///     block: block{
     ///       height: <integer>,        % Block height
-    ///       time: <integer>,          % Block timestamp (seconds since epoch)
+    ///       time_seconds: <integer>,  % Block timestamp (seconds since epoch)
     ///       tx_index: <integer>       % Transaction index
     ///     }
     ///   },
@@ -115,8 +131,7 @@ pub enum AxoneGovExecuteMsg {
     /// }
     /// ```
     ///
-    /// The revision is applied only if the decision verdict is exactly the atom `gov:permitted`.
-    /// Any other verdict (atom or compound term) refuses the revision.
+    /// The revision is applied only if both decisions return the verdict `gov:permitted`.
     ReviseConstitution {
         /// The proposed new constitution (UTF-8 Prolog program bytes).
         constitution: Binary,
@@ -158,7 +173,9 @@ pub enum AxoneGovQueryMsg {
     /// The returned `verdict` is an arbitrary Prolog term (atom or compound), for example:
     ///
     ///   - `gov:permitted`
+    ///
     ///   - `gov:forbidden`
+    ///
     ///   - `pay("did:...", 1000)`
     ///
     /// The optional `motivation` is an arbitrary Prolog term returned by the constitution and intended to

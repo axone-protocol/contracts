@@ -285,13 +285,9 @@ mod tests {
             ),
         ];
 
-        for (description, env, info, expected) in cases {
+        for (_description, env, info, expected) in cases {
             let got = tx_term(&env, &info).to_string();
-            assert_eq!(
-                got, expected,
-                "test case failed: {}\nexpected: {}\ngot: {}",
-                description, expected, got
-            );
+            assert_eq!(got, expected);
         }
     }
 }

@@ -379,6 +379,38 @@ fn instantiate_rejects_constitution_missing_required_predicates() {
 }
 
 #[test]
+fn instantiate_fails_with_denied_establish_verdict() {
+    let constitution = Binary::from(b"decide(_, denied, 'No').".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_decision_with_motivation("denied", "'No'"))
+        .install();
+
+    let err = match TestEnv::setup(constitution, hook, expectations) {
+        Ok(_) => panic!("Expected decision refused error"),
+        Err(err) => err,
+    };
+    let msg = err.to_string();
+    let chain = err
+        .chain()
+        .map(|cause| cause.to_string())
+        .collect::<Vec<_>>();
+    let has_refused = msg.contains("decision refused")
+        || chain.iter().any(|cause| cause.contains("decision refused"));
+    let has_intent =
+        msg.contains("gov:establish") || chain.iter().any(|cause| cause.contains("gov:establish"));
+    assert!(
+        has_refused,
+        "expected decision refused, got: {msg}; chain: {chain:?}"
+    );
+    assert!(
+        has_intent,
+        "expected gov:establish intent in error, got: {msg}; chain: {chain:?}"
+    );
+}
+
+#[test]
 fn instantiate_succeeds_without_registered_gov() {
     let constitution = Binary::from(b"valid.".to_vec());
     let program = std::str::from_utf8(constitution.as_slice()).unwrap();
@@ -1189,6 +1221,45 @@ fn revise_constitution_fails_with_denied_verdict() {
     assert!(
         msg.contains("denied"),
         "expected verdict 'denied' in error, got: {msg}"
+    );
+}
+
+#[test]
+fn revise_constitution_fails_when_proposed_constitution_refuses_establish() {
+    let constitution = Binary::from(b"decide(_, 'gov:permitted', ok).".to_vec());
+    let program = std::str::from_utf8(constitution.as_slice()).unwrap();
+    let new_constitution = Binary::from(b"decide(_, denied, 'No').".to_vec());
+    let new_constitution_program = std::str::from_utf8(new_constitution.as_slice()).unwrap();
+
+    let (hook, expectations) = LogicAskScenario::new()
+        .then(program, ask_ok())
+        .then(program, ask_establish_permitted())
+        .then(new_constitution_program, ask_ok())
+        .then(
+            program,
+            ask_decision_with_motivation("'gov:permitted'", "ok"),
+        )
+        .then(
+            new_constitution_program,
+            ask_decision_with_motivation("denied", "'No'"),
+        )
+        .install();
+    let env =
+        TestEnv::setup(constitution, hook, expectations).expect("Failed to setup test environment");
+
+    let err = env
+        .app
+        .revise_constitution(new_constitution, None)
+        .expect_err("Expected decision refused error");
+
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("decision refused"),
+        "expected decision refused, got: {msg}"
+    );
+    assert!(
+        msg.contains("gov:establish"),
+        "expected gov:establish intent in error, got: {msg}"
     );
 }
 

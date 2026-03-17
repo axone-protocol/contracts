@@ -63,12 +63,15 @@ jobs:
           token: ${{ secrets.OPS_TOKEN }}
 
       - name: Configure git author from token
+        id: git-config
         run: |
           BOT_NAME=$(gh api user --jq .login)
           BOT_EMAIL="${BOT_NAME}@users.noreply.github.com"
           git config user.name "${BOT_NAME}"
           git config user.email "${BOT_EMAIL}"
           echo "Configured git author: ${BOT_NAME} <${BOT_EMAIL}>"
+          echo "bot_name=${BOT_NAME}" >> $GITHUB_OUTPUT
+          echo "bot_email=${BOT_EMAIL}" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.OPS_TOKEN }}
 
@@ -117,5 +120,7 @@ jobs:
         with:
           directory: ${{ matrix.project_dir }}
           github_token: ${{ secrets.OPS_TOKEN }}
+          git_committer_name: ${{ steps.git-config.outputs.bot_name }}
+          git_committer_email: ${{ steps.git-config.outputs.bot_email }}
           verbosity: 1
           strict: true

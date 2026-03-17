@@ -5,7 +5,7 @@ tag_format = "axone-gov-v{version}"
 version_toml = ["Cargo.toml:package.version"]
 
 [tool.semantic_release.commit_parser_options]
-path_filters = ["./**", "../../Cargo.toml", "../../Cargo.lock"]
+path_filters = ["contracts/axone-gov/**", "Cargo.toml", "Cargo.lock"]
 
 [tool.semantic_release.branches.main]
 match = "main"

@@ -50,7 +50,7 @@ MAIN_MNEMONIC="your mainnet wallet mnemonic"
 | Network ID | Chain | Description |
 | - | - | - |
 | `local` | axone-localnet | Local Docker chain |
-| `testnet` | axone-dentrite-1 | Axone testnet |
+| `testnet` | axone-dendrite-2 | Axone testnet |
 | `mainnet` | axone-1 | Axone mainnet |
 | `axone-localnet` | axone-localnet | Alias for local |
 

@@ -77,7 +77,7 @@ fn publish(networks: Vec<ChainInfo>) {
 #[derive(Debug, Default, Parser)]
 #[command(author, version, about, long_about = None)]
 struct Arguments {
-    /// Network Id to publish on (supports: local, testnet, mainnet, axone-localnet, axone-dentrite-1, axone-1)
+    /// Network Id to publish on (supports: local, testnet, mainnet, axone-localnet, axone-dendrite-2, axone-1)
     #[arg(short, long, value_delimiter = ' ', num_args = 1..)]
     network_ids: Vec<String>,
 }

@@ -326,7 +326,7 @@ cargo make deploy-abstract local
 
 This command deploys the entire Abstract infrastructure to the specified network. You only need to do this once per network.
 
-**Supported networks:** `local`, `testnet`, `mainnet`, `axone-localnet`, `axone-dentrite-1`, `axone-1`.
+**Supported networks:** `local`, `testnet`, `mainnet`, `axone-localnet`, `axone-dendrite-2`, `axone-1`.
 
 #### 2️⃣ Publish Your Contracts
 

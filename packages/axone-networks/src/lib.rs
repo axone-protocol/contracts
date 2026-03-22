@@ -26,16 +26,16 @@ pub const AXONE_LOCAL: ChainInfo = ChainInfo {
 /// Axone testnet
 pub const AXONE_TESTNET: ChainInfo = ChainInfo {
     kind: ChainKind::Testnet,
-    chain_id: "axone-dentrite-1",
+    chain_id: "axone-dendrite-2",
     gas_denom: "uaxone",
     gas_price: 0.025,
-    grpc_urls: &["https://grpc.testnet.axone.xyz:443"],
+    grpc_urls: &["http://grpc.axone.aknodes.net:9290"],
     network_info: NetworkInfo {
         chain_name: "axone-testnet",
         pub_address_prefix: "axone",
         coin_type: 118u32,
     },
-    lcd_url: Some("https://api.testnet.axone.xyz"),
+    lcd_url: Some("https://api.axone.aknodes.net"),
     fcd_url: None,
 };
 
@@ -45,13 +45,13 @@ pub const AXONE_MAINNET: ChainInfo = ChainInfo {
     chain_id: "axone-1",
     gas_denom: "uaxone",
     gas_price: 0.025,
-    grpc_urls: &["https://grpc.mainnet.axone.xyz:443"],
+    grpc_urls: &["https://axone-grpc.highstakes.ch"],
     network_info: NetworkInfo {
         chain_name: "axone",
         pub_address_prefix: "axone",
         coin_type: 118u32,
     },
-    lcd_url: Some("https://api.mainnet.axone.xyz"),
+    lcd_url: Some("https://axone-api.highstakes.ch/"),
     fcd_url: None,
 };
 
@@ -59,7 +59,7 @@ pub const AXONE_MAINNET: ChainInfo = ChainInfo {
 ///
 /// Supported identifiers:
 /// - "axone-localnet", "local" → Local development network
-/// - "axone-dentrite-1", "testnet", "axone-testnet" → Testnet
+/// - "axone-dendrite-2", "testnet", "axone-testnet" → Testnet
 /// - "axone-1", "mainnet", "axone-mainnet" → Mainnet
 ///
 /// # Errors
@@ -68,10 +68,10 @@ pub const AXONE_MAINNET: ChainInfo = ChainInfo {
 pub fn parse_network(network_id: &str) -> anyhow::Result<ChainInfo> {
     match network_id.to_lowercase().as_str() {
         "axone-localnet" | "local" => Ok(AXONE_LOCAL),
-        "axone-dentrite-1" | "testnet" | "axone-testnet" => Ok(AXONE_TESTNET),
+        "axone-dendrite-2" | "testnet" | "axone-testnet" => Ok(AXONE_TESTNET),
         "axone-1" | "mainnet" | "axone-mainnet" => Ok(AXONE_MAINNET),
         _ => Err(anyhow::anyhow!(
-            "Unknown Axone network: {}. Supported: local, testnet, mainnet, axone-localnet, axone-dentrite-1, axone-1",
+            "Unknown Axone network: {}. Supported: local, testnet, mainnet, axone-localnet, axone-dendrite-2, axone-1",
             network_id
         )),
     }
@@ -94,13 +94,13 @@ mod tests {
     #[test]
     fn test_parse_testnet() {
         let network = parse_network("testnet").unwrap();
-        assert_eq!(network.chain_id, "axone-dentrite-1");
+        assert_eq!(network.chain_id, "axone-dendrite-2");
 
         let network = parse_network("axone-testnet").unwrap();
-        assert_eq!(network.chain_id, "axone-dentrite-1");
+        assert_eq!(network.chain_id, "axone-dendrite-2");
 
-        let network = parse_network("axone-dentrite-1").unwrap();
-        assert_eq!(network.chain_id, "axone-dentrite-1");
+        let network = parse_network("axone-dendrite-2").unwrap();
+        assert_eq!(network.chain_id, "axone-dendrite-2");
     }
 
     #[test]

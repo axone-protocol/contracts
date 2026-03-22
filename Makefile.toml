@@ -19,7 +19,7 @@ script = [
   "echo '  cargo make deploy-contract axone-gov testnet        # Deploy to Axone testnet'",
   "echo '  cargo make deploy-contract axone-gov local testnet  # Deploy to multiple networks'",
   "echo",
-  "echo 'Supported networks: local, testnet, mainnet, axone-localnet, axone-dentrite-1, axone-1'",
+  "echo 'Supported networks: local, testnet, mainnet, axone-localnet, axone-dendrite-2, axone-1';",
   "echo 'Also supports other cw-orch networks: uni-6, osmo-test-5, juno-1, etc.'",
 ]
 

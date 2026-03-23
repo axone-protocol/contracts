@@ -9,6 +9,9 @@ on:
       tag:
         description: "Release tag (leave empty for last one)"
 
+permissions:
+  contents: read
+
 jobs:
   set-env:
     runs-on: ubuntu-22.04
@@ -79,44 +82,3 @@ jobs:
           TWITTER_URL: ${{ vars.TWITTER_URL }}
           REPOSITORY_ID: ${{ vars.DISCUSSIONS_REPOSITORY_ID }}
           CATEGORY_ID: ${{ vars.DISCUSSIONS_CATEGORY_ID }}
-
-  update-docs:
-    runs-on: ubuntu-22.04
-    if: github.event_name != 'workflow_dispatch'
-    steps:
-      - name: Update docs repository
-        uses: fjogeleit/http-request-action@v2
-        with:
-          url: "https://api.github.com/repos/axone-protocol/docs/actions/workflows/39152549/dispatches"
-          method: "POST"
-          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OPS_TOKEN }}"}'
-          data: |-
-            {
-              "ref": "main",
-              "inputs": {
-                "version": "${{ github.event.release.tag_name }}",
-                "repository": "${{github.repository}}",
-                "section": "contracts",
-                "docs_directory": "docs/*",
-                "draft": "false"
-              }
-            }
-
-  update-schema:
-    runs-on: ubuntu-22.04
-    if: github.event_name != 'workflow_dispatch'
-    steps:
-      - name: Update schema repository
-        uses: fjogeleit/http-request-action@v2
-        with:
-          url: "https://api.github.com/repos/axone-protocol/axone-contract-schema/actions/workflows/68383422/dispatches"
-          method: "POST"
-          customHeaders: '{"Accept": "application/vnd.github+json", "Authorization": "Bearer ${{ secrets.OPS_TOKEN }}"}'
-          data: |-
-            {
-              "ref": "main",
-              "inputs": {
-                "ref": "${{ github.event.release.tag_name }}",
-                "draft": "false"
-              }
-            }

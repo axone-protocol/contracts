@@ -1,0 +1,44 @@
+name: Lint / Markdown
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/lint-markdown.yml
+      - .markdownlint.yaml
+      - '*.md'
+      - '**/*.md'
+      - '!**/CHANGELOG.md'
+      - '!docs/**/*.md'
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/lint-markdown.yml
+      - .markdownlint.yaml
+      - '*.md'
+      - '**/*.md'
+      - '!**/CHANGELOG.md'
+      - '!docs/**/*.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-markdown-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-markdown:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Lint markdown files
+        uses: avto-dev/markdown-lint@v1.5.0
+        with:
+          args: "**/*.md"
+          ignore: "CHANGELOG.md docs/**/*.md"

@@ -1,0 +1,72 @@
+name: Lint / Rust Format
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/lint-rust-format.yml
+      - .cargo/config.toml
+      - .sort-derives.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+      - scripts/**/*.rs
+      - scripts/**/Cargo.toml
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/lint-rust-format.yml
+      - .cargo/config.toml
+      - .sort-derives.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+      - scripts/**/*.rs
+      - scripts/**/Cargo.toml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-rust-format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-rust-format:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Check rust format
+        run: cargo make lint-rust-format

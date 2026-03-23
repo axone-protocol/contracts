@@ -1,20 +1,33 @@
-name: Build
+name: Lint / TOML
 
 on:
   workflow_call:
 
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - .github/workflows/lint-toml.yml
+      - .taplo.toml
+      - '*.toml'
+      - '**/*.toml'
 
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - .github/workflows/lint-toml.yml
+      - .taplo.toml
+      - '*.toml'
+      - '**/*.toml'
+
+permissions:
+  contents: read
 
 concurrency:
-  group: build-${{ github.ref }}
+  group: lint-toml-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-wasm:
+  lint-toml:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -37,5 +50,5 @@ jobs:
       - name: Install cargo make
         uses: davidB/rust-cargo-make@v1
 
-      - name: Build wasm
-        run: cargo make wasm
+      - name: Lint toml
+        run: cargo make lint-toml

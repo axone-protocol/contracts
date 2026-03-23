@@ -1,0 +1,66 @@
+name: Deploy Contracts / Testnet
+
+on:
+  workflow_dispatch:
+    inputs:
+      contract:
+        description: Contract name to deploy (for example, axone-gov)
+        required: true
+        type: string
+      ref:
+        description: Git ref to deploy (tag, branch, or SHA)
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-contracts-testnet
+  cancel-in-progress: false
+
+jobs:
+  deploy-contract:
+    if: github.repository == 'axone-protocol/contracts'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Validate contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          contract="${{ inputs.contract }}"
+          if [[ ! -d "contracts/${contract}" ]]; then
+            echo "Unknown contract: ${contract}" >&2
+            echo "Expected to find contracts/${contract}" >&2
+            exit 1
+          fi
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Deploy contract to Axone testnet
+        env:
+          RUST_LOG: info
+          TEST_MNEMONIC: ${{ secrets.AXONE_GITHUB_TESTNET_WALLET }}
+        run: cargo make deploy-contract "${{ inputs.contract }}" testnet

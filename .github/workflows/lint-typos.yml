@@ -1,0 +1,45 @@
+name: Lint / Typos
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/.DS_Store'
+      - '**/*.wasm'
+      - '**/*.webp'
+      - '**/lcov.info'
+      - artifacts/**
+      - contracts/**/schema/**
+
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**/.DS_Store'
+      - '**/*.wasm'
+      - '**/*.webp'
+      - '**/lcov.info'
+      - artifacts/**
+      - contracts/**/schema/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-typos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typos:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install codespell
+        run: pip install codespell==2.3.0
+
+      - name: Check for spelling errors
+        run: |
+          codespell --config .codespellrc

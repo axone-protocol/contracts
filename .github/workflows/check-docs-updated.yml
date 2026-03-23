@@ -1,0 +1,103 @@
+name: Check / Docs Updated
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/check-docs-updated.yml
+      - .cargo/config.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - contracts/**/Makefile.toml
+      - contracts/**/metadata.json
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/check-docs-updated.yml
+      - .cargo/config.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - contracts/**/Makefile.toml
+      - contracts/**/metadata.json
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-docs-updated-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-docs-updated:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 16
+
+      - name: Setup jq
+        uses: dcarbone/install-jq-action@v3
+        with:
+          version: 1.7
+          force: true
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Generate schema
+        run: cargo make schema
+
+      - name: Generate documentations
+        run: cargo make docs
+
+      - name: Verify changed docs files
+        id: verify-changed-docs-files
+        uses: tj-actions/verify-changed-files@v20
+        with:
+          files: |
+            docs/*.md
+
+      - name: Run step only when files change.
+        if: steps.verify-changed-docs-files.outputs.files_changed == 'true'
+        run: |
+          echo "❌ Documentation files have been updated."
+          echo "  Changed files : ${{ steps.verify-changed-docs-files.outputs.changed_files }}"
+          git diff --name-only | grep 'docs/' | while read file; do
+            echo "‣ Changes in $file:"
+            git diff HEAD $file
+          done
+          echo "Please generate docs using \`cargo make docs\` then commit this new documentation."
+          exit 1

@@ -1,16 +1,45 @@
-name: Test
+name: Test / Rust
 
 on:
   workflow_call:
 
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - .github/workflows/test-rust.yml
+      - .cargo/config.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+      - scripts/**/*.rs
+      - scripts/**/Cargo.toml
 
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - .github/workflows/test-rust.yml
+      - .cargo/config.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+      - scripts/**/*.rs
+      - scripts/**/Cargo.toml
+
+permissions:
+  contents: read
 
 concurrency:
-  group: test-${{ github.ref }}
+  group: test-rust-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

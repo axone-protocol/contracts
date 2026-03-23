@@ -1,0 +1,62 @@
+name: Lint / Cargo Makefile
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/lint-cargo-makefile.yml
+      - Makefile.toml
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/lint-cargo-makefile.yml
+      - Makefile.toml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-cargo-makefile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-cargo-makefile:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
+
+      - name: Lint cargo-make task names
+        run: |
+          FAILED=0
+          for task in $(cargo make --list-all-steps | awk '{print $1;}' | sort | grep -v -- '---' ); do
+            if echo "$task" | grep '_' > /dev/null; then
+              >&2 echo "❌ $task - use kebab-case style for task names (e.g. 'my-task' instead of 'my_task')"
+              FAILED=1
+            else
+              echo "✅ $task"
+            fi
+          done
+          if [ "${FAILED}" = "1" ]; then
+            exit 1
+          fi

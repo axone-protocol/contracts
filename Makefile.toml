@@ -427,6 +427,15 @@ then
   exit 1
 fi
 
+for network in "$@"
+do
+  case "$network" in
+    local|axone-localnet)
+      cargo make chain-start
+      ;;
+  esac
+done
+
 echo "🚀 Running script '${script}' for package '${package}' on networks: ${networks}"
 ARTIFACTS_DIR="${DIR_WASM}" cargo run --bin ${script} --package ${package} --features="daemon-bin" -- --network-ids ${networks}
 '''
@@ -469,7 +478,6 @@ cargo make deploy-script publish ${contract} ${networks}
 
 [tasks.deploy-abstract]
 category = "Deployment"
-dependencies = ["chain-start"]
 description = "Deploy Abstract infrastructure to specified networks. Usage: cargo make deploy-abstract <network-ids...>"
 script = '''
 if [ -z "$1" ]
@@ -479,6 +487,15 @@ then
 fi
 
 networks="$@"
+
+for network in "$@"
+do
+  case "$network" in
+    local|axone-localnet)
+      cargo make chain-start
+      ;;
+  esac
+done
 
 echo "🚀 Deploying Abstract infrastructure to networks: ${networks}"
 cargo run --bin deploy_abstract --package axone-scripts -- --network-ids ${networks}
@@ -527,6 +544,32 @@ then
     set -- --network-ids ${networks} "$@"
   fi
 fi
+
+networks_started=0
+for arg in "$@"
+do
+  if [ "$networks_started" -eq 0 ]
+  then
+    case "$arg" in
+      --network-ids|-n)
+        networks_started=1
+        continue
+        ;;
+    esac
+  fi
+
+  if [ "$networks_started" -eq 1 ]
+  then
+    case "$arg" in
+      -*)
+        break
+        ;;
+      local|axone-localnet)
+        cargo make chain-start
+        ;;
+    esac
+  fi
+done
 
 echo "📥 Installing ${contract} with args: $*"
 cargo run --bin install --package ${contract} --features="daemon-bin" -- "$@"

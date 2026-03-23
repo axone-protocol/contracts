@@ -37,6 +37,9 @@ on:
       - scripts/**/*.rs
       - scripts/**/Cargo.toml
 
+permissions:
+  contents: read
+
 concurrency:
   group: test-rust-${{ github.ref }}
   cancel-in-progress: true

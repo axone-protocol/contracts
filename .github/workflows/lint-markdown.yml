@@ -23,6 +23,9 @@ on:
       - '!**/CHANGELOG.md'
       - '!docs/**/*.md'
 
+permissions:
+  contents: read
+
 concurrency:
   group: lint-markdown-${{ github.ref }}
   cancel-in-progress: true

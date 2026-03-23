@@ -21,6 +21,9 @@ on:
       - '*.toml'
       - '**/*.toml'
 
+permissions:
+  contents: read
+
 concurrency:
   group: lint-toml-format-${{ github.ref }}
   cancel-in-progress: true

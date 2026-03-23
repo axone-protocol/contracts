@@ -9,6 +9,9 @@ on:
       tag:
         description: "Release tag (leave empty for last one)"
 
+permissions:
+  contents: read
+
 jobs:
   set-env:
     runs-on: ubuntu-22.04

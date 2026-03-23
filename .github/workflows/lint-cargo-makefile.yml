@@ -17,6 +17,9 @@ on:
       - .github/workflows/lint-cargo-makefile.yml
       - Makefile.toml
 
+permissions:
+  contents: read
+
 concurrency:
   group: lint-cargo-makefile-${{ github.ref }}
   cancel-in-progress: true

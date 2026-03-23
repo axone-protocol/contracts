@@ -19,6 +19,9 @@ on:
       - Makefile.toml
       - README.md
 
+permissions:
+  contents: read
+
 concurrency:
   group: check-readme-updated-${{ github.ref }}
   cancel-in-progress: true

@@ -25,6 +25,9 @@ on:
       - '**/*.yml'
       - '**/*.yaml'
 
+permissions:
+  contents: read
+
 concurrency:
   group: lint-yaml-${{ github.ref }}
   cancel-in-progress: true

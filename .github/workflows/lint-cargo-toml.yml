@@ -25,6 +25,9 @@ on:
       - packages/**/Cargo.toml
       - scripts/**/Cargo.toml
 
+permissions:
+  contents: read
+
 concurrency:
   group: lint-cargo-toml-${{ github.ref }}
   cancel-in-progress: true

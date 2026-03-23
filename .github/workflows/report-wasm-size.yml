@@ -18,6 +18,9 @@ on:
       - packages/**/*.rs
       - packages/**/Cargo.toml
 
+permissions:
+  contents: read
+
 concurrency:
   group: report-wasm-size-${{ github.ref }}
   cancel-in-progress: true

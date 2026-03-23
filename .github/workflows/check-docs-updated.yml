@@ -37,6 +37,9 @@ on:
       - packages/**/*.rs
       - packages/**/Cargo.toml
 
+permissions:
+  contents: read
+
 concurrency:
   group: check-docs-updated-${{ github.ref }}
   cancel-in-progress: true

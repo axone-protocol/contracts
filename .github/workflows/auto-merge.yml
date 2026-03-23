@@ -3,6 +3,9 @@ name: Auto merge
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   auto-merge-dependabot:
     runs-on: ubuntu-22.04

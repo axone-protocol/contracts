@@ -23,6 +23,9 @@ on:
       - artifacts/**
       - contracts/**/schema/**
 
+permissions:
+  contents: read
+
 concurrency:
   group: lint-typos-${{ github.ref }}
   cancel-in-progress: true

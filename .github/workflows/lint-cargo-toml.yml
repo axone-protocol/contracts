@@ -1,0 +1,46 @@
+name: Lint / Cargo.toml
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/lint-cargo-toml.yml
+      - Cargo.toml
+      - Makefile.toml
+      - contracts/**/Cargo.toml
+      - packages/**/Cargo.toml
+      - scripts/**/Cargo.toml
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/lint-cargo-toml.yml
+      - Cargo.toml
+      - Makefile.toml
+      - contracts/**/Cargo.toml
+      - packages/**/Cargo.toml
+      - scripts/**/Cargo.toml
+
+concurrency:
+  group: lint-cargo-toml-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-cargo-toml:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup rust toolchain
+        uses: ./.github/actions/setup-rust
+
+      - name: Lint all Cargo.toml files
+        run: cargo make lint-cargo-toml
+
+      - name: Lint all unused dependencies in Cargo.toml files
+        run: cargo make lint-cargo-deps

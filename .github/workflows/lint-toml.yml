@@ -1,0 +1,39 @@
+name: Lint / TOML
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/lint-toml.yml
+      - .taplo.toml
+      - '*.toml'
+      - '**/*.toml'
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/lint-toml.yml
+      - .taplo.toml
+      - '*.toml'
+      - '**/*.toml'
+
+concurrency:
+  group: lint-toml-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-toml:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup rust toolchain
+        uses: ./.github/actions/setup-rust
+
+      - name: Lint toml
+        run: cargo make lint-toml

@@ -1,0 +1,57 @@
+name: Lint / Rust Format
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/lint-rust-format.yml
+      - .cargo/config.toml
+      - .sort-derives.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+      - scripts/**/*.rs
+      - scripts/**/Cargo.toml
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/lint-rust-format.yml
+      - .cargo/config.toml
+      - .sort-derives.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+      - scripts/**/*.rs
+      - scripts/**/Cargo.toml
+
+concurrency:
+  group: lint-rust-format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-rust-format:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup rust toolchain
+        uses: ./.github/actions/setup-rust
+
+      - name: Check rust format
+        run: cargo make lint-rust-format

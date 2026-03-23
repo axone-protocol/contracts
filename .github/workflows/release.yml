@@ -18,21 +18,84 @@ permissions:
   issues: write
 
 jobs:
-  lint:
+  lint-commits:
     if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/lint.yml
+    uses: ./.github/workflows/lint-commits.yml
 
-  build:
+  lint-markdown:
     if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/lint-markdown.yml
 
-  test:
+  lint-yaml:
     if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/test.yml
+    uses: ./.github/workflows/lint-yaml.yml
+
+  lint-cargo-toml:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/lint-cargo-toml.yml
+
+  lint-cargo-makefile:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/lint-cargo-makefile.yml
+
+  lint-rust:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/lint-rust.yml
+
+  lint-rust-format:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/lint-rust-format.yml
+
+  lint-toml:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/lint-toml.yml
+
+  lint-toml-format:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/lint-toml-format.yml
+
+  lint-typos:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/lint-typos.yml
+
+  check-contracts:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/check-contracts.yml
+
+  check-docs-updated:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/check-docs-updated.yml
+
+  check-readme-updated:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/check-readme-updated.yml
+
+  build-wasm:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/build-wasm.yml
+
+  test-rust:
+    if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/test-rust.yml
 
   check-configured-projects:
     if: github.repository == 'axone-protocol/contracts' && github.ref == 'refs/heads/main'
-    needs: [lint, build, test]
+    needs:
+      - lint-commits
+      - lint-markdown
+      - lint-yaml
+      - lint-cargo-toml
+      - lint-cargo-makefile
+      - lint-rust
+      - lint-rust-format
+      - lint-toml
+      - lint-toml-format
+      - lint-typos
+      - check-contracts
+      - check-docs-updated
+      - check-readme-updated
+      - build-wasm
+      - test-rust
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -82,22 +145,8 @@ jobs:
           git checkout "${GITHUB_REF_NAME}"
           git reset --hard "origin/${GITHUB_REF_NAME}"
 
-      - name: Cache cargo registry
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Install cargo make
-        uses: davidB/rust-cargo-make@v1
+      - name: Setup rust toolchain
+        uses: ./.github/actions/setup-rust
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4

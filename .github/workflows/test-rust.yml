@@ -1,0 +1,62 @@
+name: Test / Rust
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/test-rust.yml
+      - .cargo/config.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+      - scripts/**/*.rs
+      - scripts/**/Cargo.toml
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/test-rust.yml
+      - .cargo/config.toml
+      - Cargo.toml
+      - Cargo.lock
+      - Makefile.toml
+      - rust-toolchain.toml
+      - contracts/**/*.rs
+      - contracts/**/Cargo.toml
+      - packages/**/*.rs
+      - packages/**/Cargo.toml
+      - scripts/**/*.rs
+      - scripts/**/Cargo.toml
+
+concurrency:
+  group: test-rust-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-rust:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup rust toolchain
+        uses: ./.github/actions/setup-rust
+
+      - name: Test rust code
+        run: cargo make test-coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./lcov.info
+          fail_ci_if_error: false

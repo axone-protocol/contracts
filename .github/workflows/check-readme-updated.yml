@@ -1,0 +1,56 @@
+name: Check / README Updated
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/check-readme-updated.yml
+      - Makefile.toml
+      - README.md
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/check-readme-updated.yml
+      - Makefile.toml
+      - README.md
+
+concurrency:
+  group: check-readme-updated-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-readme-updated:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup rust toolchain
+        uses: ./.github/actions/setup-rust
+
+      - name: Generate readme
+        run: cargo make readme
+
+      - name: Verify changed readme files
+        id: verify-changed-readme-files
+        uses: tj-actions/verify-changed-files@v20
+        with:
+          files: |
+            README.md
+
+      - name: Run step only when files change.
+        if: steps.verify-changed-readme-files.outputs.files_changed == 'true'
+        run: |
+          echo "❌ README.md has been updated."
+          echo "  Changed files : ${{ steps.verify-changed-readme-files.outputs.changed_files }}"
+          git diff --name-only | grep 'README.md' | while read file; do
+            echo "‣ Changes in $file:"
+            git diff HEAD $file
+          done
+          echo "Please generate readme using \`cargo make readme\` then commit this new documentation."
+          exit 1

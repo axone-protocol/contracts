@@ -1,0 +1,45 @@
+name: Lint / TOML Format
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/lint-toml-format.yml
+      - .taplo.toml
+      - '*.toml'
+      - '**/*.toml'
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/actions/setup-rust/**
+      - .github/workflows/lint-toml-format.yml
+      - .taplo.toml
+      - '*.toml'
+      - '**/*.toml'
+
+concurrency:
+  group: lint-toml-format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-toml-format:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Setup rust toolchain
+        uses: ./.github/actions/setup-rust
+
+      - name: Check toml files are formatted
+        run: |
+          cargo make format-toml
+          if [[ $(git status -s | grep .toml) ]]; then
+            >&2 echo "❌ There is a diff between formatted files and source code"
+            >&2 git status
+            exit 1
+          fi

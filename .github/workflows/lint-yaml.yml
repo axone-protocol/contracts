@@ -1,0 +1,40 @@
+name: Lint / YAML
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .coderabbit.yaml
+      - .github/workflows/lint-yaml.yml
+      - .yamllint.yaml
+      - '*.yml'
+      - '*.yaml'
+      - '**/*.yml'
+      - '**/*.yaml'
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .coderabbit.yaml
+      - .github/workflows/lint-yaml.yml
+      - .yamllint.yaml
+      - '*.yml'
+      - '*.yaml'
+      - '**/*.yml'
+      - '**/*.yaml'
+
+concurrency:
+  group: lint-yaml-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-yaml:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Lint yaml files
+        uses: ibiqlik/action-yamllint@v3.1.1

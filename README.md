@@ -114,7 +114,7 @@ Be sure you have the following tools installed:
 - [Rust](https://www.rust-lang.org/tools/install) v1.81 or higher
 - [cargo-make](https://github.com/sagiegurari/cargo-make) v0.36.3 or higher
 - [Docker](https://docs.docker.com/get-docker/)
-- [jq](https://stedolan.github.io/jq/download/) v1.6 or higher
+- [jq](https://jqlang.org/download/) v1.6 or higher
 - [npx](https://www.npmjs.com/package/npx) v8.19.2 or higher
 
 And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List_of_GNU_Core_Utilities_commands):
@@ -365,7 +365,7 @@ cargo make deploy-contract axone-gov local && \
 cargo make deploy-install axone-gov local
 ```
 
-**Note:** Contracts must be compiled first. If WASM files are not found, the `deploy-contract` task will automatically build them. See the [Build](#-build) section for more details.
+**Note:** Contracts must be compiled first. If WASM files are not found, the `deploy-contract` task will automatically build them. See the [Build](#build) section for more details.
 
 Now, you can interact with the deployed Smart Contracts and test them out.
 

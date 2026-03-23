@@ -43,4 +43,3 @@ jobs:
       - name: Check for spelling errors
         run: |
           codespell --config .codespellrc
-          exit $?

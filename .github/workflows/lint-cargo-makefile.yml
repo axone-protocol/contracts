@@ -46,7 +46,7 @@ jobs:
       - name: Install cargo make
         uses: davidB/rust-cargo-make@v1
 
-      - name: Lint Cargo.toml file
+      - name: Lint cargo-make task names
         run: |
           FAILED=0
           for task in $(cargo make --list-all-steps | awk '{print $1;}' | sort | grep -v -- '---' ); do

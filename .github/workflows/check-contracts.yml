@@ -63,5 +63,4 @@ jobs:
         uses: davidB/rust-cargo-make@v1
 
       - name: Check contracts
-        shell: bash
         run: cargo make check-contracts

@@ -93,7 +93,7 @@ jobs:
       - name: Run step only when files change.
         if: steps.verify-changed-docs-files.outputs.files_changed == 'true'
         run: |
-          echo "❌ Documentation files has been updated."
+          echo "❌ Documentation files have been updated."
           echo "  Changed files : ${{ steps.verify-changed-docs-files.outputs.changed_files }}"
           git diff --name-only | grep 'docs/' | while read file; do
             echo "‣ Changes in $file:"

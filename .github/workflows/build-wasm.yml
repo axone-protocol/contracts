@@ -6,7 +6,6 @@ on:
   push:
     branches: [main]
     paths:
-      - .github/actions/setup-rust/**
       - .github/workflows/build-wasm.yml
       - .cargo/config.toml
       - Cargo.toml
@@ -21,7 +20,6 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - .github/actions/setup-rust/**
       - .github/workflows/build-wasm.yml
       - .cargo/config.toml
       - Cargo.toml
@@ -47,8 +45,22 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Setup rust toolchain
-        uses: ./.github/actions/setup-rust
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install cargo make
+        uses: davidB/rust-cargo-make@v1
 
       - name: Build wasm
         run: cargo make wasm

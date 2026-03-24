@@ -2,9 +2,9 @@
 
 > [CosmWasm](https://cosmwasm.com) contracts for the [AXONE network](http://axone.xyz).
 
-[![build](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/build.yml?label=build&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/build.yml)
-[![lint](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/lint.yml?label=lint&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/lint.yml)
-[![test](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/test.yml?label=test&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/test.yml)
+[![build](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/build-wasm.yml?label=build&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/build-wasm.yml)
+[![lint](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/lint-rust.yml?label=lint&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/lint-rust.yml)
+[![test](https://img.shields.io/github/actions/workflow/status/axone-protocol/contracts/test-rust.yml?label=test&style=for-the-badge&logo=github)](https://github.com/axone-protocol/contracts/actions/workflows/test-rust.yml)
 [![coverage](https://img.shields.io/codecov/c/github/axone-protocol/contracts?style=for-the-badge)](https://app.codecov.io/gh/axone-protocol/contracts)
 
 [![built with cargo-make](https://img.shields.io/badge/build_with-cargo_make-d39f59?style=for-the-badge)](https://sagiegurari.github.io/cargo-make)

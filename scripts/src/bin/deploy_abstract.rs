@@ -3,7 +3,6 @@
 //! This script deploys the core Abstract contracts (registry, account factory, module factory, etc.)
 //! to the specified network. This must be done before publishing any Abstract modules.
 
-use abstract_interface::Abstract;
 use axone_networks::parse_network as parse_axone_network;
 use clap::Parser;
 use cw_orch::{anyhow, daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};

@@ -200,6 +200,7 @@ contract-query - Query a specific contract. The contract must be already deploye
 Deployment
 ----------
 deploy-abstract - Deploy Abstract infrastructure to specified networks. Usage: cargo make deploy-abstract <network-ids...>
+deploy-abstract-info - List Abstract deployment info for specified networks. Usage: cargo make deploy-abstract-info <network-ids...>
 deploy-contract - Publish a contract to Abstract on specified networks. Usage: cargo make deploy-contract <contract-name> <network-ids...>
 deploy-install - Install a module on an Abstract Account. Usage: cargo make deploy-install <contract-name> <network-ids...>
 deploy-script - Run a contract deployment script. Usage: cargo make deploy-script <script> <package> <network-ids...>
@@ -327,6 +328,24 @@ cargo make deploy-abstract local
 This command deploys the entire Abstract infrastructure to the specified network. You only need to do this once per network.
 
 **Supported networks:** `local`, `testnet`, `mainnet`, `axone-localnet`, `axone-dendrite-2`, `axone-1`.
+
+#### 1b️⃣ Inspect Abstract Infrastructure
+
+To display the main addresses and identifiers of an existing Abstract deployment on a target network:
+
+```sh
+cargo make deploy-abstract-info local
+```
+
+Example output:
+
+```text
+NETWORK: local
+CHAIN_ID: axone-localnet
+ACCOUNT_CODE_ID: 5
+MODULE_FACTORY_ADDR: axone1...
+REGISTRY_ADDR: axone1...
+```
 
 #### 2️⃣ Publish Your Contracts
 

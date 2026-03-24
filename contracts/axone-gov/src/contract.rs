@@ -3,7 +3,7 @@ use crate::{
     handlers,
     msg::{AxoneGovExecuteMsg, AxoneGovInstantiateMsg, AxoneGovMigrateMsg, AxoneGovQueryMsg},
     replies::{self, INSTANTIATE_REPLY_ID},
-    APP_VERSION, AXONE_GOV_ID,
+    APP_VERSION, AXONE_GOV_ID, AXONE_GOV_NAME,
 };
 
 use abstract_app::AppContract;
@@ -21,7 +21,17 @@ pub type AxoneGov = AppContract<
     AxoneGovMigrateMsg,
 >;
 
-const APP: AxoneGov = AxoneGov::new(AXONE_GOV_ID, APP_VERSION, None)
+const APP_METADATA_URL: Option<&str> = Some(const_format::concatcp!(
+    "https://raw.githubusercontent.com/axone-protocol/contracts/refs/tags/",
+    AXONE_GOV_NAME,
+    "-v",
+    APP_VERSION,
+    "/contracts/",
+    AXONE_GOV_NAME,
+    "/metadata.json"
+));
+
+const APP: AxoneGov = AxoneGov::new(AXONE_GOV_ID, APP_VERSION, APP_METADATA_URL)
     .with_instantiate(handlers::instantiate_handler)
     .with_execute(handlers::execute_handler)
     .with_query(handlers::query_handler)

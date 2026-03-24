@@ -1,9 +1,9 @@
 {
-  "name": "AxoneGov",
-  "description": "App description.",
-  "website": "",
-  "docs": "",
+  "name": "AXONE Governance Contract",
+  "description": "Governance app for AXONE resources represented by Abstract Accounts. It stores a Prolog constitution, evaluates governance cases, and supports constitution revisions.",
+  "website": "https://axone.xyz/",
+  "docs": "https://docs.axone.xyz/",
   "type": "app",
-  "icon": "GiTrade",
+  "icon": "GiVote",
   "enabled": true
 }

@@ -737,9 +737,12 @@ name = "axone-scripts"
 version = "0.1.0"
 dependencies = [
  "abstract-interface",
+ "abstract-std",
  "anyhow",
  "axone-networks",
  "clap",
+ "cosmrs 0.19.0",
+ "cosmwasm-std",
  "cw-orch 0.28.0",
  "dotenv",
  "env_logger",

@@ -8,11 +8,18 @@ version = "0.1.0"
 name = "deploy_abstract"
 path = "src/bin/deploy_abstract.rs"
 
+[[bin]]
+name = "deploy_abstract_info"
+path = "src/bin/deploy_abstract_info.rs"
+
 [dependencies]
 abstract-interface.workspace = true
+abstract-std.workspace = true
 anyhow = { workspace = true }
 axone-networks = { path = "../packages/axone-networks" }
 clap = { workspace = true, features = ["derive"] }
+cosmrs = "0.19.0"
+cosmwasm-std.workspace = true
 cw-orch = { workspace = true, features = ["daemon"] }
 dotenv = { workspace = true }
 env_logger = { workspace = true }

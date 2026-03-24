@@ -501,6 +501,31 @@ echo "🚀 Deploying Abstract infrastructure to networks: ${networks}"
 cargo run --bin deploy_abstract --package axone-scripts -- --network-ids ${networks}
 '''
 
+[tasks.deploy-abstract-info]
+category = "Deployment"
+description = "List Abstract deployment info for specified networks. Usage: cargo make deploy-abstract-info <network-ids...>"
+script = '''
+if [ -z "$1" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+networks="$@"
+
+for network in "$@"
+do
+  case "$network" in
+    local|axone-localnet)
+      cargo make chain-start
+      ;;
+  esac
+done
+
+echo "🔎 Listing Abstract deployment info for networks: ${networks}"
+cargo run --bin deploy_abstract_info --package axone-scripts -- --network-ids ${networks}
+'''
+
 [tasks.deploy-install]
 category = "Deployment"
 description = "Install a module on an Abstract Account. Usage: cargo make deploy-install <contract-name> <network-ids...>"

@@ -44,6 +44,8 @@ jobs:
             `chore/**`               | Other changes that don't modify source
           fail_if_invalid_branch_name: "true"
           ignore_branch_pattern: "main"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Close non-compliant branch
         if: ${{ failure() }}

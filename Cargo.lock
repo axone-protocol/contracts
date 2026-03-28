@@ -759,6 +759,7 @@ dependencies = [
  "abstract-interface",
  "axone-networks",
  "axone-vc",
+ "bech32",
  "clap",
  "const_format",
  "cosmwasm-schema",

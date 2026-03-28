@@ -1,4 +1,5 @@
 pub mod contract;
+pub mod domain;
 pub mod error;
 mod handlers;
 pub mod msg;

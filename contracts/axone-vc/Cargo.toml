@@ -10,10 +10,7 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 version = "0.1.0"
 
-exclude = [
-  "contract.wasm",
-  "hash.txt",
-]
+exclude = ["contract.wasm", "hash.txt"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -50,6 +47,7 @@ abstract-app.workspace = true
 abstract-client = { workspace = true, optional = true }
 abstract-interface.workspace = true
 axone-networks = { path = "../../packages/axone-networks", version = "0.1.0", optional = true }
+bech32 = "0.11.0"
 clap = { workspace = true, optional = true, features = ["derive"] }
 const_format.workspace = true
 cosmwasm-schema.workspace = true

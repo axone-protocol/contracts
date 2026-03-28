@@ -8,3 +8,8 @@ and structuring the credential lifecycle around submission, revocation, suspensi
 reinstatement and verification.
 
 It targets credentials represented as RDF datasets.
+
+The authority identifier exposed by the contract currently uses the `did:pkh` method,
+with the host Abstract Account rendered as a canonical Cosmos account address:
+
+`did:pkh:cosmos:<chain_id>:cosmos1...`

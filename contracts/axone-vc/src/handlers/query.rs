@@ -1,7 +1,7 @@
 use crate::{
     contract::{AxoneVc, AxoneVcResult},
-    msg::{AxoneVcQueryMsg, FooResponse},
-    state::FOO,
+    msg::{AuthorityResponse, AxoneVcQueryMsg},
+    state::AUTHORITY,
 };
 
 use cosmwasm_std::{to_json_binary, Binary, Deps, Env};
@@ -13,13 +13,14 @@ pub fn query_handler(
     msg: AxoneVcQueryMsg,
 ) -> AxoneVcResult<Binary> {
     match msg {
-        AxoneVcQueryMsg::Foo {} => to_json_binary(&query_foo(deps)?),
+        AxoneVcQueryMsg::Authority {} => to_json_binary(&query_authority(deps)?),
     }
     .map_err(Into::into)
 }
 
-fn query_foo(deps: Deps<'_>) -> AxoneVcResult<FooResponse> {
-    Ok(FooResponse {
-        value: FOO.load(deps.storage)?,
+fn query_authority(deps: Deps<'_>) -> AxoneVcResult<AuthorityResponse> {
+    let authority = AUTHORITY.load(deps.storage)?;
+    Ok(AuthorityResponse {
+        did: authority.did().to_string(),
     })
 }

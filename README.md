@@ -97,7 +97,7 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
   <tr>
     <td>
       <img alt="type: credential" src="https://img.shields.io/badge/type-🪪%20credential-seagreen?style=for-the-badge" />
-      <img alt="kind: rdf" src="https://img.shields.io/badge/kind-🕸️%20rdf-lightskyblue?style=for-the-badge" />
+      <img alt="kind: verifiable credential" src="https://img.shields.io/badge/kind-✅%20verifiable%20credential-lightskyblue?style=for-the-badge" />
     </td>
   </tr>
 </table>
@@ -184,7 +184,6 @@ For local development, the default `LOCAL_MNEMONIC` in `.env.example` is safe to
 The project uses [cargo-make](https://github.com/sagiegurari/cargo-make) to manage common development tasks. Here are the main tasks available:
 
 <!-- TASKS -->
-
 ```text
 Build
 ----------
@@ -286,7 +285,6 @@ check-npx - Check npx is installed
 check-perl - Check perl is installed
 check-prerequisites - Check all the prerequisites are installed.
 ```
-
 <!-- TASKS -->
 
 ### 🔧 Compiling Smart Contracts to Wasm

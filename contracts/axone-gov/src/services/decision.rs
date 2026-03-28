@@ -171,7 +171,7 @@ mod tests {
     use cosmwasm_std::{Addr, BlockInfo, ContractInfo, Timestamp, TransactionInfo, Uint128};
 
     #[test]
-    fn test_build_tx_term() {
+    fn builds_transaction_term_correctly() {
         let cases = vec![
             (
                 "basic case with no funds and no transaction",

@@ -682,7 +682,7 @@ fn pow10_i128(exp: u32) -> Result<i128, String> {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_numbers() {
+    fn parses_numeric_literals() {
         use super::*;
         use std::str::FromStr;
 
@@ -744,7 +744,7 @@ mod tests {
     }
 
     #[test]
-    fn test_atoms() {
+    fn parses_atom_literals() {
         use super::*;
 
         let cases = vec![
@@ -812,7 +812,7 @@ mod tests {
     }
 
     #[test]
-    fn test_variables() {
+    fn parses_variable_names() {
         use super::*;
 
         let cases = vec![
@@ -830,7 +830,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compounds() {
+    fn parses_compound_terms() {
         use super::*;
 
         let cases = vec![
@@ -978,7 +978,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lists() {
+    fn parses_list_structures() {
         use super::*;
         use std::str::FromStr;
 
@@ -1120,7 +1120,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dicts() {
+    fn parses_dictionary_structures() {
         use super::*;
         use std::str::FromStr;
 
@@ -1260,7 +1260,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pathological() {
+    fn handles_pathological_cases() {
         use super::*;
 
         let cases = vec![
@@ -1288,7 +1288,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_errors() {
+    fn reports_parse_errors_correctly() {
         use super::*;
 
         let cases = vec![
@@ -1320,7 +1320,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prefix_operators() {
+    fn parses_prefix_operators() {
         use super::*;
 
         let cases = vec![
@@ -1415,7 +1415,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unexpected_stop_token() {
+    fn handles_unexpected_stop_tokens() {
         use super::*;
 
         let parse = |s: &str| Parser::new(s).and_then(|p| p.parse_root());
@@ -1438,7 +1438,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prefix_plus_variations() {
+    fn parses_prefix_plus_variations() {
         use super::*;
 
         let cases = vec![
@@ -1486,7 +1486,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unary_minus_variations() {
+    fn parses_unary_minus_variations() {
         use super::*;
 
         let cases = vec![
@@ -1538,7 +1538,7 @@ mod tests {
     }
 
     #[test]
-    fn test_char_codes() {
+    fn parses_character_codes() {
         use super::*;
 
         let cases = vec![
@@ -1562,7 +1562,7 @@ mod tests {
     }
 
     #[test]
-    fn test_float_scientific_notation() {
+    fn parses_float_scientific_notation() {
         use super::*;
 
         let cases = vec!["1.0e10", "1.5e-5", "3.14e2", "2.5e3"];
@@ -1581,7 +1581,7 @@ mod tests {
     }
 
     #[test]
-    fn test_operators_as_atoms() {
+    fn parses_operators_as_atoms() {
         use super::*;
 
         let cases = vec![
@@ -1609,7 +1609,7 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_expressions() {
+    fn parses_complex_expressions() {
         use super::*;
 
         let cases = vec![
@@ -1644,7 +1644,7 @@ mod tests {
     }
 
     #[test]
-    fn test_based_integers() {
+    fn parses_based_integer_literals() {
         use super::*;
 
         let cases = vec![
@@ -1669,7 +1669,7 @@ mod tests {
     }
 
     #[test]
-    fn test_edge_case_errors() {
+    fn detects_edge_case_errors() {
         use super::*;
 
         let error_cases = vec![

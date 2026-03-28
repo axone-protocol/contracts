@@ -1,0 +1,42 @@
+name: Lint / Shell
+
+on:
+  workflow_call:
+
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/lint-shell.yml
+      - '*.sh'
+      - '*.bash'
+      - '**/*.sh'
+      - '**/*.bash'
+
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/lint-shell.yml
+      - '*.sh'
+      - '*.bash'
+      - '**/*.sh'
+      - '**/*.bash'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-shell-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-shell:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Lint shell scripts
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: .
+          version: v0.11.0

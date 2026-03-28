@@ -40,9 +40,6 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
       <a href="#-maturity">
         <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
       </a>
-      <a href="https://crates.io/crates/axone-gov" target="_blank">
-        <img alt="crates" src="https://img.shields.io/crates/v/axone-gov.svg?style=for-the-badge&color=orange"/>
-      </a>
     </td>
   </tr>
   <tr>
@@ -85,9 +82,6 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
       <a href="#-maturity">
         <img alt="status: initial" src="https://img.shields.io/badge/status-🥚-black?style=for-the-badge" />
       </a>
-      <a href="https://crates.io/crates/axone-vc" target="_blank">
-        <img alt="crates" src="https://img.shields.io/crates/v/axone-vc.svg?style=for-the-badge&color=orange"/>
-      </a>
     </td>
   </tr>
   <tr>
@@ -103,7 +97,7 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
   <tr>
     <td>
       <img alt="type: credential" src="https://img.shields.io/badge/type-🪪%20credential-seagreen?style=for-the-badge" />
-      <img alt="kind: rdf" src="https://img.shields.io/badge/kind-🕸️%20rdf-lightskyblue?style=for-the-badge" />
+      <img alt="kind: verifiable credential" src="https://img.shields.io/badge/kind-✅%20verifiable%20credential-lightskyblue?style=for-the-badge" />
     </td>
   </tr>
 </table>
@@ -471,32 +465,31 @@ irreversible.
 ## 📚 Documentation
 
 The documentation of the Smart Contracts must be committed to the repository. The documentation is generated from the
-Smart Contracts' schema.
-
-To generate the documentation follow the steps below.
+Smart Contracts' schemas and metadata.
 
 ### 🔨 Documentation Pre-requisites
 
 Be sure you have the following tools installed:
 
-- [Yarn](https://classic.yarnpkg.com/en/docs/install) v1.22.10 or higher
-
-Then, install the dependencies:
-
-```sh
-yarn global add @adobe/jsonschema2md@7.1.5
-```
+- [npx](https://www.npmjs.com/package/npx)
+- [jq](https://jqlang.org/download/) v1.7 or higher
+- `awk`
+- `perl`
 
 ### 🖨 Generate the documentation
 
 To generate the documentation, just run:
 
 ```sh
-cargo make schema
 cargo make docs
 ```
 
-You'll find the generated documentation under the `docs` folder.
+`cargo make docs` regenerates the schemas first.
+
+Generated artifacts include:
+
+- `docs/*.md`
+- `contracts/*/schema/*`
 
 ### 🗒 Commit the documentation
 
@@ -504,7 +497,7 @@ When developing a new contract, you should commit the generated documentation to
 documentation and commit the changes:
 
 ```sh
-git commit -am "docs: update generated documentation"
+git commit -am "docs: regenerate generated documentation"
 ```
 
 ## 🍀 Quality assurance approach
@@ -517,9 +510,9 @@ git commit -am "docs: update generated documentation"
 
 ## 🛡️ Audit
 
-| Date | Auditor | Version | Report |
-|---|---|---|---|
-| 2024/08/08 | [BlockApex](https://blockapex.io/) | [0cae9ec (v6.0.0)](https://github.com/axone-protocol/contracts/tree/0cae9ecf24c4ded86abecd34aec2303e82413672) | [Axone Smart Contract Audit Report.pdf](https://github.com/BlockApex/Audit-Reports/blob/15d8765ac45b4a83bb2f1446fc9bf869c123f8d2/Axone%20Smart%20Contract%20Audit%20Report.pdf)|
+| Date       | Auditor                            | Version                                                                                                       | Report                                                                                                                                                                          |
+| ---------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2024/08/08 | [BlockApex](https://blockapex.io/) | [0cae9ec (v6.0.0)](https://github.com/axone-protocol/contracts/tree/0cae9ecf24c4ded86abecd34aec2303e82413672) | [Axone Smart Contract Audit Report.pdf](https://github.com/BlockApex/Audit-Reports/blob/15d8765ac45b4a83bb2f1446fc9bf869c123f8d2/Axone%20Smart%20Contract%20Audit%20Report.pdf) |
 
 ## 📘 Resources
 

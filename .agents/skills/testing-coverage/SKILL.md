@@ -9,165 +9,21 @@ metadata:
 
 # Testing and Code Coverage for CosmWasm Contracts
 
-This skill helps you write comprehensive tests and achieve high code coverage for Axone protocol smart contracts.
+## Coverage Targets
 
-## Test Environment Setup
+| Component            | Target |
+| -------------------- | ------ |
+| **Handlers**         | 100%   |
+| **State operations** | 100%   |
+| **Error paths**      | 90%+   |
+| **Message parsing**  | 80%+   |
+| **Overall**          | 90%+   |
 
-### Integration Test Structure
+## Minimum Cases to Cover
 
-```rust
-// tests/integration.rs
-use my_contract::{
-    contract::interface::MyContractInterface,
-    msg::{
-        MyContractExecuteMsgFns, MyContractInstantiateMsg,
-        MyContractQueryMsgFns, ConfigResponse,
-    },
-    MyContractError, AXONE_NAMESPACE,
-};
-
-use abstract_app::objects::namespace::Namespace;
-use abstract_client::{AbstractClient, Application, Environment};
-use cosmwasm_std::coins;
-use cw_orch::{anyhow, prelude::*};
-
-struct TestEnv<Env: CwEnv> {
-    abs: AbstractClient<Env>,
-    app: Application<Env, MyContractInterface<Env>>,
-}
-
-impl TestEnv<MockBech32> {
-    fn setup() -> anyhow::Result<TestEnv<MockBech32>> {
-        let mock = MockBech32::new("mock");
-        let sender = mock.sender_addr();
-        let namespace = Namespace::new(AXONE_NAMESPACE)?;
-
-        // Build Abstract client
-        let abs_client = AbstractClient::builder(mock.clone()).build()?;
-
-        // Add initial balance
-        mock.add_balance(&sender, coins(1_000_000, "uaxone"))?;
-
-        // Create publisher account
-        let publisher = abs_client
-            .account_builder()
-            .namespace(namespace)
-            .build()?
-            .publisher()?;
-
-        // Publish and install the app
-        publisher.publish_app::<MyContractInterface<_>>()?;
-        let app = publisher
-            .account()
-            .install_app::<MyContractInterface<_>>(
-                &MyContractInstantiateMsg::default(),
-                &[]
-            )?;
-
-        Ok(TestEnv {
-            abs: abs_client,
-            app,
-        })
-    }
-}
-```
-
-## Test Patterns
-
-### Success Case Testing
-
-```rust
-#[test]
-fn successful_install() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let app = env.app;
-
-    let config = app.config()?;
-    assert_eq!(config, ConfigResponse { /* expected */ });
-    Ok(())
-}
-
-#[test]
-fn successful_execute() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let app = env.app;
-
-    // Execute action
-    app.do_something("param")?;
-
-    // Verify state changed
-    let result = app.query_something()?;
-    assert_eq!(result.value, expected_value);
-    Ok(())
-}
-```
-
-### Error Case Testing
-
-```rust
-#[test]
-fn unauthorized_access() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let app = env.app;
-
-    // Call as non-admin
-    let err: MyContractError = app
-        .call_as(&Addr::unchecked("not_admin"))
-        .admin_only_action()
-        .unwrap_err()
-        .downcast()
-        .unwrap();
-
-    assert_eq!(err, MyContractError::Unauthorized {});
-    Ok(())
-}
-```
-
-### Balance and Fund Testing
-
-```rust
-#[test]
-fn balance_operations() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let account = env.app.account();
-
-    // Add balance to account
-    let funds = coins(100, "uaxone");
-    account.add_balance(&funds)?;
-
-    let balances = account.query_balances()?;
-    assert_eq!(balances, funds);
-
-    // Add balance to any address
-    let mock_env = env.abs.environment();
-    mock_env.add_balance(&env.app.address()?, funds.clone())?;
-
-    Ok(())
-}
-```
-
-### Multiple User Testing
-
-```rust
-#[test]
-fn multi_user_scenario() -> anyhow::Result<()> {
-    let env = TestEnv::setup()?;
-    let mock = env.abs.environment();
-
-    // Create additional users
-    let alice = mock.addr_make("alice");
-    let bob = mock.addr_make("bob");
-
-    mock.add_balance(&alice, coins(1000, "uaxone"))?;
-    mock.add_balance(&bob, coins(1000, "uaxone"))?;
-
-    // Test as different users
-    env.app.call_as(&alice).user_action()?;
-    env.app.call_as(&bob).user_action()?;
-
-    Ok(())
-}
-```
+- For handlers: cover the happy path, parameter variations, error paths, and resulting state changes.
+- For queries: cover empty state, populated state, pagination behavior, and non-existent items.
+- For state transitions: cover initial state, updates after execute, and persistence across operations.
 
 ## Running Tests
 
@@ -185,11 +41,9 @@ cargo make test-coverage
 cargo test test_name -- --nocapture
 ```
 
-## Coverage Analysis
+Coverage output is written to `lcov.info`.
 
-After running `cargo make test-coverage`, coverage is saved to `lcov.info`.
-
-### Viewing Coverage
+## Viewing Coverage
 
 ```bash
 # Generate HTML report (requires lcov)
@@ -199,138 +53,16 @@ genhtml lcov.info --output-directory coverage/
 cargo llvm-cov --html --open
 ```
 
-### Coverage Goals
+## Test Design Rules
 
-| Component            | Target |
-| -------------------- | ------ |
-| **Handlers**         | 100%   |
-| **State operations** | 100%   |
-| **Error paths**      | 90%+   |
-| **Message parsing**  | 80%+   |
-| **Overall**          | 90%+   |
+1. Isolate tests. Each test should set up its own environment.
+2. Test contract behavior, not framework internals.
+3. Assert exact errors when possible.
+4. Cover edge cases such as zero values, empty strings, and upper bounds.
+5. Prefer descriptive test names without a `test_` prefix.
+6. Use tuple-driven cases for simple matrices and structs only when the case shape needs named fields.
 
-## Test Checklist
+## References
 
-### For Each Handler
-
-- [ ] Happy path test
-- [ ] All parameter variations tested
-- [ ] Error cases tested (unauthorized, invalid input, etc.)
-- [ ] State changes verified
-- [ ] Events/attributes checked if applicable
-
-### For Queries
-
-- [ ] Empty state returns appropriate response
-- [ ] Populated state returns correct data
-- [ ] Pagination works correctly (if applicable)
-- [ ] Non-existent items handled gracefully
-
-### For State
-
-- [ ] Initial state after instantiation
-- [ ] State updates correctly after execute
-- [ ] State persists across operations
-
-## Best Practices
-
-### Test Naming Convention
-
-Use descriptive names without `test_` prefix (modern Rust convention):
-
-```rust
-#[test]
-fn should_increment_counter_successfully() { }
-
-#[test]
-fn unauthorized_user_cannot_execute_admin_action() { }
-
-#[test]
-fn canonical_cosmos_address_conversion() { }
-
-#[test]
-fn invalid_bech32_address() { }
-```
-
-Avoid weak/generic naming:
-
-```rust
-// Don't use this
-#[test]
-fn test_increment() { }
-
-#[test]
-fn test_unauthorized() { }
-```
-
-### Data-Driven Tests
-
-Use tuples for simple test cases:
-
-```rust
-#[test]
-fn canonical_cosmos_address_conversion() {
-    let cases = vec![
-        ("axone", "axone-localnet-1"),
-        ("cosmos", "cosmoshub-4"),
-        ("osmo", "osmosis-1"),
-    ];
-
-    for (input_hrp, chain_id) in cases {
-        let result = convert_address(input_hrp, chain_id);
-        assert!(result.is_ok());
-        assert!(result.unwrap().contains(chain_id));
-    }
-}
-```
-
-Use structs only when cases have > 3 fields or require explicit field semantics:
-
-```rust
-struct TestCase {
-    input: &'static str,
-    expected_success: bool,
-    config: Option<&'static str>,
-    should_retry: bool,
-    timeout_ms: u64,
-}
-
-#[test]
-fn complex_scenario_with_multiple_parameters() {
-    let cases = vec![
-        TestCase {
-            input: "valid",
-            expected_success: true,
-            config: Some("default"),
-            should_retry: false,
-            timeout_ms: 1000,
-        },
-        TestCase {
-            input: "invalid",
-            expected_success: false,
-            config: None,
-            should_retry: true,
-            timeout_ms: 5000,
-        },
-    ];
-
-    for case in cases {
-        let result = process_with_config(case.input, case.config, case.timeout_ms);
-        assert_eq!(result.is_ok(), case.expected_success);
-        if !case.expected_success && case.should_retry {
-            assert!(result.unwrap_err().is_retryable());
-        }
-    }
-}
-```
-
----
-
-## General Best Practices
-
-1. Isolate tests - Each test should set up its own environment
-2. Test business logic - Focus on contract behavior, not framework
-3. Use descriptive names - Follow test naming conventions
-4. Assert specific errors - Check exact error type, not just failure
-5. Clean up - Don't leave state that could affect other tests
-6. Test edge cases - Zero values, max values, empty strings
+- For cw-orch integration harness patterns and common integration scenarios, read [integration-patterns](./references/integration-patterns.md).
+- For naming and data-driven test examples, read [test-style](./references/test-style.md).

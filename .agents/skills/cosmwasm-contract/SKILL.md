@@ -9,8 +9,6 @@ metadata:
 
 # CosmWasm Smart Contract Development with Abstract SDK
 
-This skill helps you develop CosmWasm smart contracts for the Axone protocol using the Abstract SDK framework.
-
 ## Contract Structure
 
 Every contract follows this standard structure:

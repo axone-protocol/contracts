@@ -9,8 +9,6 @@ metadata:
 
 # CosmWasm API Design Best Practices
 
-This skill helps you design clean, minimal, and well-documented APIs for CosmWasm smart contracts.
-
 ## Core Principles
 
 1. **Minimalism** - Include only what's necessary; avoid bloated APIs
@@ -200,13 +198,3 @@ pub struct InstantiateMsg {
 pub owner_addr: Addr,
 ```
 
-## Checklist for New APIs
-
-- [ ] All message variants have doc comments
-- [ ] All struct fields have doc comments
-- [ ] Query messages have `#[returns(...)]` attribute
-- [ ] Execute messages describe potential errors
-- [ ] Pagination is included for list queries
-- [ ] Optional fields use `Option<T>` or `#[serde(default)]`
-- [ ] Response types are defined for all queries
-- [ ] Types use `Addr`/`Uint128` not raw strings/numbers

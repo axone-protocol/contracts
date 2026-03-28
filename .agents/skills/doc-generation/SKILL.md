@@ -9,8 +9,6 @@ metadata:
 
 # Generated Documentation
 
-This skill covers the repository's generated documentation pipeline for smart contracts.
-
 ## Source of Truth
 
 Generated docs come from Rust API types and schema metadata:
@@ -95,11 +93,3 @@ Even if CI only reports drift on `docs/*.md`, schema files are still generated s
 - `cargo make docs` is the preferred entrypoint; it already triggers schema generation.
 - The docs renderer uses `@fadroma/schema`, `jq`, `awk`, `perl`, and `prettier` through `Makefile.toml`.
 - The generated docs reflect the semantics encoded in Rust doc comments. Fix the Rust comments first, then regenerate.
-
-## Quick Checklist
-
-- [ ] API or metadata changes have been reflected in source code first
-- [ ] `cargo make docs` ran successfully
-- [ ] Generated changes in `docs/*.md` were reviewed
-- [ ] Generated changes in `contracts/*/schema/*` were reviewed
-- [ ] Commit message clearly says `regenerate` or `document`, not `update`

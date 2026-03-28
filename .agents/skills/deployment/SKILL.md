@@ -9,8 +9,6 @@ metadata:
 
 # Contract Deployment with cw-orchestrator
 
-This skill helps you deploy Axone protocol smart contracts using cw-orchestrator and the Abstract SDK framework.
-
 ## Environment Setup
 
 ### Configure Credentials
@@ -221,13 +219,3 @@ cargo make wasm
 
 For local: Balances are pre-configured.
 For testnet: Use the Axone faucet.
-
-## Deployment Checklist
-
-- [ ] Environment file configured (`.env`)
-- [ ] Chain running (for local)
-- [ ] Abstract infrastructure deployed
-- [ ] Contract WASM built
-- [ ] Contract published to registry
-- [ ] Module installed on Abstract Account
-- [ ] Deployment verified with queries

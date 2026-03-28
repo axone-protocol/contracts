@@ -9,8 +9,6 @@ metadata:
 
 # API Doc Comments
 
-This skill covers how to write schema-friendly Rust doc comments for Axone smart contract APIs.
-
 ## Core Rule
 
 The generated documentation is only as good as the Rust doc comments on schema-facing types.
@@ -129,12 +127,3 @@ Weak details to avoid:
 - Use `api-design` to shape the contract surface itself.
 - Use this skill to make that surface intelligible in generated documentation.
 - Use `doc-generation` after comment changes to refresh generated artifacts.
-
-## Quick Checklist
-
-- [ ] Every public schema-facing type has a meaningful doc comment
-- [ ] Every public field is documented
-- [ ] Constraints and defaults are stated explicitly
-- [ ] Domain-specific encodings are explained
-- [ ] Examples are included when the payload syntax is non-obvious
-- [ ] Comments describe caller-visible behavior, not internal mechanics

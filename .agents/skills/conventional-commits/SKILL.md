@@ -9,8 +9,6 @@ metadata:
 
 # Conventional Commits
 
-This skill helps you write commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification, adapted to Axone protocol preferences.
-
 ## Commit Message Format
 
 ```text
@@ -77,7 +75,7 @@ Use **precise, action-oriented verbs**:
 
 ## Examples
 
-See [examples](./assets/examples.md) for comprehensive good and bad examples.
+See [examples](./references/examples.md) for comprehensive good and bad examples.
 
 Quick reference:
 
@@ -128,13 +126,3 @@ npm i -g @commitlint/cli @commitlint/config-conventional
 echo "feat(gov): introduce voting mechanism" | commitlint --extends @commitlint/config-conventional
 ```
 
-## Quick Checklist
-
-Before committing, verify:
-
-- [ ] Uses a strong, precise verb
-- [ ] Subject describes intent clearly
-- [ ] Scope is present if it adds clarity
-- [ ] One intention per commit
-- [ ] No generic or vague wording
-- [ ] Commit message passes linting

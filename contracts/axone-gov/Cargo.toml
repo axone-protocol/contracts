@@ -73,3 +73,6 @@ abstract-app = { workspace = true, features = ["test-utils"] }
 abstract-client.workspace = true
 axone-gov = { path = ".", features = ["mock-logic-query"] }
 serde.workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["serde"]

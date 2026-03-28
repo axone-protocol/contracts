@@ -1,20 +1,16 @@
 [package]
 authors = { workspace = true }
-description = "AXONE governance contract built with Abstract SDK."
+description = "AXONE verifiable credential contract built with Abstract SDK."
 edition = { workspace = true }
 homepage = { workspace = true }
 keywords = { workspace = true }
 license = { workspace = true }
-name = "axone-gov"
+name = "axone-vc"
 repository = { workspace = true }
 rust-version = { workspace = true }
-version = "1.0.0"
+version = "0.1.0"
 
-exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
-]
+exclude = ["contract.wasm", "hash.txt"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -44,7 +40,6 @@ daemon-bin = [
 default = ["export"]
 export = []
 library = []
-mock-logic-query = []
 schema = ["abstract-app/schema"]
 
 [dependencies]
@@ -52,26 +47,23 @@ abstract-app.workspace = true
 abstract-client = { workspace = true, optional = true }
 abstract-interface.workspace = true
 axone-networks = { path = "../../packages/axone-networks", version = "0.1.0", optional = true }
+bech32 = "0.11.0"
 clap = { workspace = true, optional = true, features = ["derive"] }
 const_format.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
-cw-asset.workspace = true
-cw-controllers.workspace = true
 cw-orch.workspace = true
 cw-storage-plus.workspace = true
 dotenv = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
-getset = { workspace = true }
 log = { workspace = true, optional = true }
-logos = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror.workspace = true
 
 [dev-dependencies]
 abstract-app = { workspace = true, features = ["test-utils"] }
 abstract-client.workspace = true
-axone-gov = { path = ".", features = ["mock-logic-query"] }
+axone-vc = { path = "." }
 serde.workspace = true
 
 [package.metadata.cargo-machete]

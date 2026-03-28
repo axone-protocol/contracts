@@ -1,0 +1,21 @@
+[tasks.generate_schema]
+args = ["run", "--bin", "schema", "--features", "schema"]
+command = "cargo"
+
+[tasks.schema]
+dependencies = ["generate_schema"]
+script = '''
+SCHEMA_FILE="schema/module-schema.json"
+
+if [ ! -f "${SCHEMA_FILE}" ]; then
+  echo "❌ Unable to locate ${SCHEMA_FILE}"
+  exit 1
+fi
+
+TITLE=$(jq -r '.name // "Axone Contract"' metadata.json)
+DESCRIPTION=$(cat README.md)
+
+jq --arg title "$TITLE" --arg description "$DESCRIPTION" \
+  '. + {contract_name: $title, title: $title, description: $description}' \
+  "${SCHEMA_FILE}" > "${SCHEMA_FILE}.tmp" && mv "${SCHEMA_FILE}.tmp" "${SCHEMA_FILE}"
+'''

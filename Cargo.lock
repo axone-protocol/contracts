@@ -751,6 +751,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "axone-vc"
+version = "0.1.0"
+dependencies = [
+ "abstract-app",
+ "abstract-client",
+ "abstract-interface",
+ "axone-networks",
+ "axone-vc",
+ "bech32",
+ "clap",
+ "const_format",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-orch 0.28.0",
+ "cw-storage-plus",
+ "dotenv",
+ "env_logger",
+ "log",
+ "serde",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "axum"
 version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"

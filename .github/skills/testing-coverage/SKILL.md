@@ -30,7 +30,7 @@ Use this skill when you need to:
 use my_contract::{
     contract::interface::MyContractInterface,
     msg::{
-        MyContractExecuteMsgFns, MyContractInstantiateMsg, 
+        MyContractExecuteMsgFns, MyContractInstantiateMsg,
         MyContractQueryMsgFns, ConfigResponse,
     },
     MyContractError, AXONE_NAMESPACE,
@@ -54,23 +54,23 @@ impl TestEnv<MockBech32> {
 
         // Build Abstract client
         let abs_client = AbstractClient::builder(mock.clone()).build()?;
-        
+
         // Add initial balance
         mock.add_balance(&sender, coins(1_000_000, "uaxone"))?;
-        
+
         // Create publisher account
         let publisher = abs_client
             .account_builder()
             .namespace(namespace)
             .build()?
             .publisher()?;
-        
+
         // Publish and install the app
         publisher.publish_app::<MyContractInterface<_>>()?;
         let app = publisher
             .account()
             .install_app::<MyContractInterface<_>>(
-                &MyContractInstantiateMsg::default(), 
+                &MyContractInstantiateMsg::default(),
                 &[]
             )?;
 
@@ -104,7 +104,7 @@ fn successful_execute() -> anyhow::Result<()> {
 
     // Execute action
     app.do_something("param")?;
-    
+
     // Verify state changed
     let result = app.query_something()?;
     assert_eq!(result.value, expected_value);
@@ -127,7 +127,7 @@ fn unauthorized_access() -> anyhow::Result<()> {
         .unwrap_err()
         .downcast()
         .unwrap();
-    
+
     assert_eq!(err, MyContractError::Unauthorized {});
     Ok(())
 }
@@ -144,14 +144,14 @@ fn balance_operations() -> anyhow::Result<()> {
     // Add balance to account
     let funds = coins(100, "uaxone");
     account.add_balance(&funds)?;
-    
+
     let balances = account.query_balances()?;
     assert_eq!(balances, funds);
 
     // Add balance to any address
     let mock_env = env.abs.environment();
     mock_env.add_balance(&env.app.address()?, funds.clone())?;
-    
+
     Ok(())
 }
 ```
@@ -163,18 +163,18 @@ fn balance_operations() -> anyhow::Result<()> {
 fn multi_user_scenario() -> anyhow::Result<()> {
     let env = TestEnv::setup()?;
     let mock = env.abs.environment();
-    
+
     // Create additional users
     let alice = mock.addr_make("alice");
     let bob = mock.addr_make("bob");
-    
+
     mock.add_balance(&alice, coins(1000, "uaxone"))?;
     mock.add_balance(&bob, coins(1000, "uaxone"))?;
-    
+
     // Test as different users
     env.app.call_as(&alice).user_action()?;
     env.app.call_as(&bob).user_action()?;
-    
+
     Ok(())
 }
 ```
@@ -211,13 +211,13 @@ cargo llvm-cov --html --open
 
 ### Coverage Goals
 
-| Component | Target |
-| - | - |
-| **Handlers** | 100% |
-| **State operations** | 100% |
-| **Error paths** | 90%+ |
-| **Message parsing** | 80%+ |
-| **Overall** | 90%+ |
+| Component            | Target |
+| -------------------- | ------ |
+| **Handlers**         | 100%   |
+| **State operations** | 100%   |
+| **Error paths**      | 90%+   |
+| **Message parsing**  | 80%+   |
+| **Overall**          | 90%+   |
 
 ## Test Checklist
 
@@ -244,9 +244,74 @@ cargo llvm-cov --html --open
 
 ## Best Practices
 
-1. **Isolate tests** - Each test should set up its own environment
-2. **Test business logic** - Focus on contract behavior, not framework
-3. **Use descriptive names** - `test_increment_when_paused_fails`
-4. **Assert specific errors** - Check exact error type, not just failure
-5. **Clean up** - Don't leave state that could affect other tests
-6. **Test edge cases** - Zero values, max values, empty strings
+### Data-Driven Tests
+
+Use tuples for simple test cases:
+
+```rust
+#[test]
+fn canonical_cosmos_address_conversion() {
+    let cases = vec![
+        ("axone", "axone-localnet-1"),
+        ("cosmos", "cosmoshub-4"),
+        ("osmo", "osmosis-1"),
+    ];
+
+    for (input_hrp, chain_id) in cases {
+        let result = convert_address(input_hrp, chain_id);
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains(chain_id));
+    }
+}
+```
+
+Use structs only when cases have > 3 fields or require explicit field semantics:
+
+```rust
+struct TestCase {
+    input: &'static str,
+    expected_success: bool,
+    config: Option<&'static str>,
+    should_retry: bool,
+    timeout_ms: u64,
+}
+
+#[test]
+fn complex_scenario_with_multiple_parameters() {
+    let cases = vec![
+        TestCase {
+            input: "valid",
+            expected_success: true,
+            config: Some("default"),
+            should_retry: false,
+            timeout_ms: 1000,
+        },
+        TestCase {
+            input: "invalid",
+            expected_success: false,
+            config: None,
+            should_retry: true,
+            timeout_ms: 5000,
+        },
+    ];
+
+    for case in cases {
+        let result = process_with_config(case.input, case.config, case.timeout_ms);
+        assert_eq!(result.is_ok(), case.expected_success);
+        if !case.expected_success && case.should_retry {
+            assert!(result.unwrap_err().is_retryable());
+        }
+    }
+}
+```
+
+---
+
+## General Best Practices
+
+1. Isolate tests - Each test should set up its own environment
+2. Test business logic - Focus on contract behavior, not framework
+3. Use descriptive names - Follow test naming conventions
+4. Assert specific errors - Check exact error type, not just failure
+5. Clean up - Don't leave state that could affect other tests
+6. Test edge cases - Zero values, max values, empty strings

@@ -1,0 +1,33 @@
+[tool.semantic_release]
+commit_message = "chore(release): axone-vc {version}"
+commit_parser = "conventional-monorepo"
+major_on_zero = false
+tag_format = "axone-vc-v{version}"
+version_toml = ["Cargo.toml:package.version"]
+
+[tool.semantic_release.commit_parser_options]
+path_filters = ["contracts/axone-vc/**", "Cargo.toml", "Cargo.lock"]
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+prerelease_token = "rc"
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = []
+mode = "update"
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+
+[tool.semantic_release.publish]
+dist_glob_patterns = [
+  "../../target/wasm32-unknown-unknown/release/axone_vc.wasm",
+]
+upload_to_vcs_release = true
+
+[tool.semantic_release.remote]
+type = "github"
+
+[tool.semantic_release.remote.token]
+env = "GH_TOKEN"

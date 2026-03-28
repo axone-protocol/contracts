@@ -409,7 +409,7 @@ mod tests {
     }
 
     #[test]
-    fn display_float_always_has_decimal_point() {
+    fn float_display_includes_decimal_point() {
         // Test that Term::Float display always includes a decimal point,
         // even when SignedDecimal::to_string() might omit it
         use std::str::FromStr;

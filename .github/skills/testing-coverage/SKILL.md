@@ -244,6 +244,35 @@ cargo llvm-cov --html --open
 
 ## Best Practices
 
+### Test Naming Convention
+
+Use descriptive names without `test_` prefix (modern Rust convention):
+
+```rust
+#[test]
+fn should_increment_counter_successfully() { }
+
+#[test]
+fn unauthorized_user_cannot_execute_admin_action() { }
+
+#[test]
+fn canonical_cosmos_address_conversion() { }
+
+#[test]
+fn invalid_bech32_address() { }
+```
+
+Avoid weak/generic naming:
+
+```rust
+// Don't use this
+#[test]
+fn test_increment() { }
+
+#[test]
+fn test_unauthorized() { }
+```
+
 ### Data-Driven Tests
 
 Use tuples for simple test cases:

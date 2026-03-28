@@ -65,6 +65,49 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
   </tr>
 </table>
 
+### 🪪 Verifiable Credentials
+
+> Smart Contracts designed to issue, track and verify verifiable credentials on-chain.
+
+<table>
+  <tr>
+    <th rowspan="4" width="30%">
+      <div align="center">
+        <img alt="axone-vc logo" src="contracts/axone-vc/axone-vc-card.webp" width="150px"/>
+              <div><b>axone-vc</b></div>
+      <div>
+      <sub><a href="contracts/axone-vc/README.md">→ Tech documentation</a></sub>
+      </div>
+    </th>
+  </tr>
+  <tr>
+    <td>
+      <a href="#-maturity">
+        <img alt="status: initial" src="https://img.shields.io/badge/status-🥚-black?style=for-the-badge" />
+      </a>
+      <a href="https://crates.io/crates/axone-vc" target="_blank">
+        <img alt="crates" src="https://img.shields.io/crates/v/axone-vc.svg?style=for-the-badge&color=orange"/>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p>
+        The <b>Verifiable Credential</b> contract of the protocol. It is intended to bind a credential authority to an <a href="https://docs.abstract.money/">Abstract Account (AA)</a> and manage credential lifecycle and verification.
+      </p>
+      <p>
+        It targets RDF dataset-based credentials and provides the contract surface for submission, revocation, suspension, reinstatement and verification.
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img alt="type: credential" src="https://img.shields.io/badge/type-🪪%20credential-seagreen?style=for-the-badge" />
+      <img alt="kind: rdf" src="https://img.shields.io/badge/kind-🕸️%20rdf-lightskyblue?style=for-the-badge" />
+    </td>
+  </tr>
+</table>
+
 ## 🥚 Maturity
 
 The maturity of each contract is indicated by the following emojis.

@@ -1,0 +1,9 @@
+{
+  "name": "AxoneVc",
+  "description": "Verifiable credential app scaffold.",
+  "website": "",
+  "docs": "",
+  "type": "app",
+  "icon": "GiRibbonMedal",
+  "enabled": true
+}

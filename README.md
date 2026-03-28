@@ -40,9 +40,6 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
       <a href="#-maturity">
         <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
       </a>
-      <a href="https://crates.io/crates/axone-gov" target="_blank">
-        <img alt="crates" src="https://img.shields.io/crates/v/axone-gov.svg?style=for-the-badge&color=orange"/>
-      </a>
     </td>
   </tr>
   <tr>
@@ -84,9 +81,6 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
     <td>
       <a href="#-maturity">
         <img alt="status: initial" src="https://img.shields.io/badge/status-🥚-black?style=for-the-badge" />
-      </a>
-      <a href="https://crates.io/crates/axone-vc" target="_blank">
-        <img alt="crates" src="https://img.shields.io/crates/v/axone-vc.svg?style=for-the-badge&color=orange"/>
       </a>
     </td>
   </tr>

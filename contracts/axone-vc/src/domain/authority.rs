@@ -43,19 +43,97 @@ mod tests {
     use cosmwasm_std::Addr;
 
     #[test]
-    fn builds_did_using_canonical_cosmos_hrp() {
+    fn canonical_cosmos_address_conversion() {
+        let cases = vec![
+            ("axone", "axone-localnet-1"),
+            ("cosmos", "cosmoshub-4"),
+            ("osmo", "osmosis-1"),
+            ("neutron", "neutron-1"),
+        ];
+
         let payload = [0x42; 20];
+
+        for (input_hrp, chain_id) in cases {
+            let input_addr = bech32::encode::<Bech32>(Hrp::parse(input_hrp).unwrap(), &payload)
+                .expect("valid bech32 address");
+            let cosmos_addr = bech32::encode::<Bech32>(Hrp::parse("cosmos").unwrap(), &payload)
+                .expect("valid cosmos bech32 address");
+
+            let authority = Authority::new(chain_id, &Addr::unchecked(input_addr));
+
+            assert!(
+                authority.is_ok(),
+                "authority creation should succeed for HRP: {}",
+                input_hrp
+            );
+
+            let authority = authority.unwrap();
+            let expected_did = format!("did:pkh:cosmos:{}:{}", chain_id, cosmos_addr);
+
+            assert_eq!(
+                authority.did(),
+                expected_did,
+                "DID mismatch for HRP: {} on chain: {}",
+                input_hrp,
+                chain_id
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_bech32_address() {
+        let cases = vec![
+            "not-a-valid-address",
+            "cosmos1invalid_address",
+            "",
+            "cosmos1",
+        ];
+
+        for invalid_addr in cases {
+            let result = Authority::new("axone-localnet-1", &Addr::unchecked(invalid_addr));
+            assert!(
+                result.is_err(),
+                "authority creation should fail for invalid address: {}",
+                invalid_addr
+            );
+        }
+    }
+
+    #[test]
+    fn did_includes_chain_id() {
+        let cases = vec!["axone-localnet-1", "axone-testnet", "axone-1"];
+
+        let payload = [0xAA; 20];
         let axone_addr = bech32::encode::<Bech32>(Hrp::parse("axone").unwrap(), &payload)
             .expect("valid axone bech32 address");
         let cosmos_addr = bech32::encode::<Bech32>(Hrp::parse("cosmos").unwrap(), &payload)
             .expect("valid cosmos bech32 address");
 
-        let authority = Authority::new("axone-localnet-1", &Addr::unchecked(axone_addr))
+        for chain_id in cases {
+            let authority = Authority::new(chain_id, &Addr::unchecked(&axone_addr))
+                .expect("authority should build");
+
+            let expected = format!("did:pkh:cosmos:{}:{}", chain_id, cosmos_addr);
+            assert_eq!(authority.did(), expected);
+        }
+    }
+
+    #[test]
+    fn did_prefix_is_correct() {
+        let payload = [0xFF; 20];
+        let cosmos_addr = bech32::encode::<Bech32>(Hrp::parse("cosmos").unwrap(), &payload)
+            .expect("valid cosmos bech32 address");
+        let address = bech32::encode::<Bech32>(Hrp::parse("test").unwrap(), &payload)
+            .expect("valid test bech32 address");
+
+        let authority = Authority::new("test-chain", &Addr::unchecked(address))
             .expect("authority should build");
 
-        assert_eq!(
-            authority.did(),
-            format!("did:pkh:cosmos:axone-localnet-1:{cosmos_addr}")
+        assert!(
+            authority.did().starts_with("did:pkh:cosmos:"),
+            "DID should start with 'did:pkh:cosmos:'"
         );
+        assert!(authority.did().contains("test-chain"));
+        assert!(authority.did().contains(&cosmos_addr));
     }
 }

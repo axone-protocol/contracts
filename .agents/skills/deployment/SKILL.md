@@ -11,16 +11,6 @@ metadata:
 
 This skill helps you deploy Axone protocol smart contracts using cw-orchestrator and the Abstract SDK framework.
 
-## When to use this skill
-
-Use this skill when you need to:
-
-- Deploy contracts to local, testnet, or mainnet
-- Publish modules to Abstract's registry
-- Install modules on Abstract Accounts
-- Manage local development chains
-- Configure deployment environments
-
 ## Environment Setup
 
 ### Configure Credentials

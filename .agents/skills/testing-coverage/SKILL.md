@@ -11,16 +11,6 @@ metadata:
 
 This skill helps you write comprehensive tests and achieve high code coverage for Axone protocol smart contracts.
 
-## When to use this skill
-
-Use this skill when you need to:
-
-- Write unit tests for contract logic
-- Create integration tests with Abstract SDK
-- Set up test environments with cw-orch
-- Analyze and improve code coverage
-- Test error conditions and edge cases
-
 ## Test Environment Setup
 
 ### Integration Test Structure

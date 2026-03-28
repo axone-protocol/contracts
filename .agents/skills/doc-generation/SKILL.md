@@ -11,16 +11,6 @@ metadata:
 
 This skill covers the repository's generated documentation pipeline for smart contracts.
 
-## When to use this skill
-
-Use this skill when you need to:
-
-- Regenerate docs after changing contract APIs
-- Regenerate docs after changing `metadata.json`
-- Check whether generated docs are out of date
-- Prepare a documentation-only commit for generated artifacts
-- Understand which commands and files are part of the docs pipeline
-
 ## Source of Truth
 
 Generated docs come from Rust API types and schema metadata:

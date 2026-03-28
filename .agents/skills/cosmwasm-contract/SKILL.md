@@ -11,16 +11,6 @@ metadata:
 
 This skill helps you develop CosmWasm smart contracts for the Axone protocol using the Abstract SDK framework.
 
-## When to use this skill
-
-Use this skill when you need to:
-
-- Create a new smart contract from scratch
-- Implement contract handlers (instantiate, execute, query, migrate)
-- Define contract state and storage
-- Work with the Abstract `AppContract` pattern
-- Define error types for contracts
-
 ## Contract Structure
 
 Every contract follows this standard structure:

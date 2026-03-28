@@ -11,16 +11,6 @@ metadata:
 
 This skill helps you design clean, minimal, and well-documented APIs for CosmWasm smart contracts.
 
-## When to use this skill
-
-Use this skill when you need to:
-
-- Define message types (InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg)
-- Design execute or query interfaces
-- Document APIs for schema generation
-- Apply serde patterns for optional fields
-- Ensure API consistency across contracts
-
 ## Core Principles
 
 1. **Minimalism** - Include only what's necessary; avoid bloated APIs

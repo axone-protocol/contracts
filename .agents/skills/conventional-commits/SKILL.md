@@ -11,14 +11,6 @@ metadata:
 
 This skill helps you write commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification, adapted to Axone protocol preferences.
 
-## When to use this skill
-
-Use this skill when you need to:
-
-- Write commit messages for changes
-- Review or improve commit messages
-- Structure commits for a pull request
-
 ## Commit Message Format
 
 ```text

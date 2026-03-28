@@ -11,16 +11,6 @@ metadata:
 
 This skill covers how to write schema-friendly Rust doc comments for Axone smart contract APIs.
 
-## When to use this skill
-
-Use this skill when you need to:
-
-- Document `InstantiateMsg`, `ExecuteMsg`, `QueryMsg`, and `MigrateMsg`
-- Document response types returned by queries
-- Improve generated docs without changing the pipeline itself
-- Explain domain-specific payloads such as Prolog terms, DIDs, hashes, or binary payloads
-- Clarify preconditions, defaults, and behavioral guarantees for public APIs
-
 ## Core Rule
 
 The generated documentation is only as good as the Rust doc comments on schema-facing types.

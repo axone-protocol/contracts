@@ -9,7 +9,7 @@ abstract_app::app_msg_types!(AxoneVc, AxoneVcExecuteMsg, AxoneVcQueryMsg);
 /// Instantiating this app attaches a verifiable credential authority to the resource
 /// represented by the host Abstract Account.
 ///
-/// This contract currently requires no caller-provided configuration.
+/// This contract requires no caller-provided configuration.
 #[cosmwasm_schema::cw_serde]
 #[derive(Default)]
 pub struct AxoneVcInstantiateMsg {}
@@ -47,16 +47,16 @@ pub enum AxoneVcQueryMsg {
     Authority {},
 }
 
-/// Response returned by `QueryMsg::Authority`.
+/// Response returned by `AxoneVcQueryMsg::Authority`.
 #[cosmwasm_schema::cw_serde]
 pub struct AuthorityResponse {
     /// The authority DID recognized by this contract.
     ///
-    /// The current representation uses the `did:pkh` method over the on-chain
+    /// This representation uses the `did:pkh` method over the on-chain
     /// address of the host Abstract Account, rendered as a CAIP-compatible
     /// canonical Cosmos Bech32 account address.
     ///
-    /// Current form:
+    /// Form:
     ///
     /// `did:pkh:cosmos:<chain_id>:cosmos1...`
     pub did: String,

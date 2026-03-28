@@ -9,7 +9,18 @@ reinstatement and verification.
 
 It targets credentials represented as RDF datasets.
 
-The authority identifier exposed by the contract currently uses the `did:pkh` method,
-with the host Abstract Account rendered as a canonical Cosmos account address:
+## Authority
+
+The contract exposes the identifier of the credential authority through the `Authority`
+query.
+
+This identifier is the DID of the resource bound to the host Abstract Account for this
+VC capability.
+
+The current representation uses the `did:pkh` method and is grounded in the on-chain
+address of the host Abstract Account, rendered as a CAIP-compatible canonical Cosmos
+Bech32 account address.
+
+Form:
 
 `did:pkh:cosmos:<chain_id>:cosmos1...`

@@ -1,13 +1,13 @@
 ---
-name: testing-coverage
-description: Guide for writing tests and achieving high code coverage for CosmWasm contracts. Use when creating unit tests, integration tests, or analyzing coverage reports.
+name: rust-testing
+description: Patterns for Rust testing in Axone CosmWasm contracts. Use when adding unit tests, integration tests, data-driven cases, or coverage-oriented test scenarios.
 license: BSD-3-Clause
 metadata:
   author: axone.xyz
   version: "1.0"
 ---
 
-# Testing and Code Coverage for CosmWasm Contracts
+# Rust Testing
 
 ## Coverage Targets
 

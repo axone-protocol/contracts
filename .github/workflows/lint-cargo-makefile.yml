@@ -27,10 +27,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Cache cargo registry
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
         with:
           path: |
             ~/.cargo/registry
@@ -41,10 +41,10 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1
 
       - name: Install cargo make
-        uses: davidB/rust-cargo-make@v1
+        uses: davidB/rust-cargo-make@291dc18d931d07d4960a5c40e9b6afcea9287f5b # v1
 
       - name: Lint cargo-make task names
         run: |

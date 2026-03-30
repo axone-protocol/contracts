@@ -20,7 +20,7 @@ jobs:
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Check branch name conventions
-        uses: AlbertHernandez/branch-name-action@v1.0.2
+        uses: AlbertHernandez/branch-name-action@106d820c9f9275a7d0f8cf3d4ef637a46bb7b4ba # v1.0.2
         with:
           branch_pattern: "feat|fix|build|ci|docs|style|refactor|perf|test|chore"
           comment_for_invalid_branch_name: |
@@ -49,7 +49,7 @@ jobs:
 
       - name: Close non-compliant branch
         if: ${{ failure() }}
-        uses: codelytv/no-pull-requests@v1
+        uses: codelytv/no-pull-requests@53f1180ae5c5a7ccacdc55e03d5152ecfaeb1e00 # v1
         with:
           GITHUB_TOKEN: ${{ secrets.OPS_TOKEN }}
           message: 🙅 Closing the PR because it does not respect naming conventions. Edit the branch name and submit a new PR.

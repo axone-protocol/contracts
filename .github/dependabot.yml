@@ -4,20 +4,12 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    reviewers:
-      - amimart
-      - ccamel
     assignees:
-      - amimart
       - ccamel
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 5
-    reviewers:
-      - amimart
-      - ccamel
     assignees:
-      - amimart
       - ccamel

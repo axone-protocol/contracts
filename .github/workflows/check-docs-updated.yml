@@ -95,9 +95,9 @@ jobs:
         run: |
           echo "❌ Documentation files have been updated."
           echo "  Changed files : ${{ steps.verify-changed-docs-files.outputs.changed_files }}"
-          git diff --name-only | grep 'docs/' | while read file; do
+          git diff --name-only | grep 'docs/' | while read -r file; do
             echo "‣ Changes in $file:"
-            git diff HEAD $file
+            git diff HEAD "$file"
           done
           echo "Please generate docs using \`cargo make docs\` then commit this new documentation."
           exit 1

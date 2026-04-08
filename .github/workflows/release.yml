@@ -108,7 +108,7 @@ jobs:
             | jq -R -s -c 'split("\n")[:-1]')
 
           echo "Found projects: $PROJECT_DIRS"
-          echo "matrix=$PROJECT_DIRS" >> $GITHUB_OUTPUT
+          echo "matrix=$PROJECT_DIRS" >> "$GITHUB_OUTPUT"
 
   release:
     needs: check-configured-projects
@@ -133,8 +133,8 @@ jobs:
           git config user.name "${BOT_NAME}"
           git config user.email "${BOT_EMAIL}"
           echo "Configured git author: ${BOT_NAME} <${BOT_EMAIL}>"
-          echo "bot_name=${BOT_NAME}" >> $GITHUB_OUTPUT
-          echo "bot_email=${BOT_EMAIL}" >> $GITHUB_OUTPUT
+          echo "bot_name=${BOT_NAME}" >> "$GITHUB_OUTPUT"
+          echo "bot_email=${BOT_EMAIL}" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.OPS_TOKEN }}
 

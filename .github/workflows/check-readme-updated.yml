@@ -63,9 +63,9 @@ jobs:
         run: |
           echo "❌ README.md has been updated."
           echo "  Changed files : ${{ steps.verify-changed-readme-files.outputs.changed_files }}"
-          git diff --name-only | grep 'README.md' | while read file; do
+          git diff --name-only | grep 'README.md' | while read -r file; do
             echo "‣ Changes in $file:"
-            git diff HEAD $file
+            git diff HEAD "$file"
           done
           echo "Please generate readme using \`cargo make readme\` then commit this new documentation."
           exit 1

@@ -53,7 +53,7 @@ jobs:
       - name: Check toml files are formatted
         run: |
           cargo make format-toml
-          if [[ $(git status -s | grep .toml) ]]; then
+          if git status -s | grep -q .toml; then
             >&2 echo "❌ There is a diff between formatted files and source code"
             >&2 git status
             exit 1

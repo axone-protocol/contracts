@@ -61,7 +61,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1
+        uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7 # v1
 
       - name: Install cargo make
         uses: davidB/rust-cargo-make@184c522bf8152f601a20749ca36c742b57ba568b # v1

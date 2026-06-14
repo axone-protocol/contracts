@@ -1,11 +1,19 @@
 use abstract_app::objects::namespace::Namespace;
 use abstract_client::{AbstractClient, Application};
 use axone_vc::{
-    msg::{AxoneVcExecuteMsgFns, AxoneVcInstantiateMsg, AxoneVcQueryMsgFns},
+    msg::{AxoneVcExecuteMsgFns, AxoneVcInstantiateMsg, AxoneVcQueryMsgFns, CredentialInputFormat},
     AxoneVcInterface, AXONE_NAMESPACE,
 };
 use bech32::{Bech32, Hrp};
+use cosmwasm_std::Binary;
+use cw_orch::contract::interface_traits::CallAs;
 use cw_orch::{anyhow, prelude::*};
+
+const COLLAB_AI_ZONE_PROFILE: &str = include_str!("fixtures/collab-ai-zone-profile.nq");
+const RESOURCE_LICENSE_ASSERTION: &str = include_str!("fixtures/resource-license-assertion.nq");
+const VC_ISSUER_PREDICATE: &str = "<https://www.w3.org/2018/credentials#issuer>";
+const SOURCE_ISSUER_DID: &str =
+    "<did:pkh:cosmos:axone-1:cosmos1s7auhjsmvjpiubqwco6bxxehsqwnvepvabhbrv>";
 
 struct TestEnv<Env: CwEnv> {
     app: Application<Env, AxoneVcInterface<Env>>,
@@ -54,29 +62,77 @@ fn authority_query_returns_canonical_did() -> anyhow::Result<()> {
 }
 
 #[test]
-fn execute_foo_updates_state() -> anyhow::Result<()> {
+fn issue_credential_accepts_resource_license_assertion_example() -> anyhow::Result<()> {
     let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = resource_license_assertion_payload(&authority.did);
 
-    env.app.foo("test_value".to_string())?;
+    env.app.issue_credential(Binary::from(credential), None)?;
 
     Ok(())
 }
 
 #[test]
-fn execute_foo_with_empty_string() -> anyhow::Result<()> {
+fn issue_credential_accepts_collab_ai_zone_profile_example_without_issuer() -> anyhow::Result<()> {
     let env = TestEnv::setup()?;
+    let credential = Binary::from(collab_ai_zone_profile_payload_without_issuer());
 
-    env.app.foo("".to_string())?;
+    env.app
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))?;
 
     Ok(())
 }
 
 #[test]
-fn execute_foo_with_long_string() -> anyhow::Result<()> {
+fn issue_credential_rejects_duplicates() -> anyhow::Result<()> {
     let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = Binary::from(resource_license_assertion_payload(&authority.did));
 
-    let long_value = "a".repeat(1000);
-    env.app.foo(long_value)?;
+    env.app
+        .issue_credential(credential.clone(), Some(CredentialInputFormat::NQuads))?;
+    let err = env
+        .app
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))
+        .expect_err("duplicate submit should fail");
+
+    assert!(
+        format!("{err:?}").contains("credential already exists"),
+        "{err:?}"
+    );
 
     Ok(())
+}
+
+#[test]
+fn issue_credential_rejects_non_host_account_sender() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = Binary::from(resource_license_assertion_payload(&authority.did));
+    let unauthorized = env.app.environment().addr_make("unauthorized");
+
+    let err = env
+        .app
+        .call_as(&unauthorized)
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))
+        .expect_err("non-host sender should be rejected");
+
+    assert!(format!("{err:?}").contains("Caller is not admin"));
+
+    Ok(())
+}
+
+fn resource_license_assertion_payload(authority_did: &str) -> Vec<u8> {
+    RESOURCE_LICENSE_ASSERTION
+        .replace(SOURCE_ISSUER_DID, &format!("<{}>", authority_did))
+        .into_bytes()
+}
+
+fn collab_ai_zone_profile_payload_without_issuer() -> Vec<u8> {
+    COLLAB_AI_ZONE_PROFILE
+        .lines()
+        .filter(|line| !line.contains(VC_ISSUER_PREDICATE))
+        .collect::<Vec<_>>()
+        .join("\n")
+        .into_bytes()
 }

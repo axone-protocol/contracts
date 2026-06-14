@@ -1,8 +1,8 @@
 use crate::{
     contract::{AxoneVc, AxoneVcResult},
-    domain::Authority,
     msg::AxoneVcInstantiateMsg,
-    state::{AUTHORITY, DEFAULT_FOO_VALUE, FOO},
+    services::initialize_authority,
+    RESPONSE_KEY_AUTHORITY,
 };
 
 use abstract_app::traits::AbstractResponse;
@@ -16,18 +16,15 @@ pub fn instantiate_handler(
     module: AxoneVc,
     _msg: AxoneVcInstantiateMsg,
 ) -> AxoneVcResult {
-    let authority = Authority::new(
-        &env.block.chain_id,
-        module.load_state(deps.storage)?.account.addr(),
-    )?;
-    AUTHORITY.save(deps.storage, &authority)?;
-    FOO.save(deps.storage, &DEFAULT_FOO_VALUE.to_string())?;
+    let account = module.load_state(deps.storage)?;
+    let authority =
+        initialize_authority(deps.storage, &env.block.chain_id, account.account.addr())?;
 
     Ok(module.custom_response(
         "instantiate",
-        vec![
-            ("authority".to_string(), authority.did().to_string()),
-            ("foo".to_string(), DEFAULT_FOO_VALUE.to_string()),
-        ],
+        vec![(
+            RESPONSE_KEY_AUTHORITY.to_string(),
+            authority.did().to_string(),
+        )],
     ))
 }

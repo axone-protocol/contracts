@@ -18,6 +18,11 @@ pub const AXONE_VC_NAME: &str = "axone-vc";
 pub const AXONE_VC_ID: &str = const_format::concatcp!(AXONE_NAMESPACE, ":", AXONE_VC_NAME);
 pub const RESPONSE_KEY_AUTHORITY: &str = "authority";
 pub const RESPONSE_KEY_CREDENTIAL_ID: &str = "credential_id";
+pub const RESPONSE_KEY_IDENTIFIER: &str = "identifier";
+pub const RESPONSE_KEY_ISSUER: &str = "issuer";
+pub const RESPONSE_KEY_SUBJECT: &str = "subject";
+pub const RESPONSE_KEY_TYPES: &str = "types";
+pub const RESPONSE_KEY_ISSUED_AT: &str = "issued_at";
 
 // oxrdf pulls rand/getrandom transitively, but CosmWasm contracts must not depend
 // on host randomness. This custom backend keeps wasm32-unknown-unknown builds

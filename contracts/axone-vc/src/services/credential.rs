@@ -7,12 +7,16 @@ use crate::{
     translation::{decode_nquads_credential, CredentialDecodingError},
 };
 
-use cosmwasm_std::Storage;
+use cosmwasm_std::{Storage, Timestamp};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
 pub struct IssueCredentialResult {
     pub credential_id: String,
+    pub issuer: String,
+    pub subject: String,
+    pub types: Vec<String>,
+    pub issued_at: Timestamp,
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -33,12 +37,17 @@ pub fn issue_credential(
     format: CredentialInputFormat,
 ) -> AxoneVcResult<IssueCredentialResult> {
     let authority = authority(storage)?;
-    let (credential_id, record) =
-        issue_credential_with_authority(storage, authority, input, format)?;
+    let (credential, record) = issue_credential_with_authority(storage, authority, input, format)?;
 
-    record_credential(storage, credential_id.as_str(), &record)?;
+    record_credential(storage, credential.id(), &record)?;
 
-    Ok(IssueCredentialResult { credential_id })
+    Ok(IssueCredentialResult {
+        credential_id: credential.id().clone(),
+        issuer: credential.issuer().clone(),
+        subject: credential.subject_id().clone(),
+        types: credential.types().clone(),
+        issued_at: credential.issuance_date(),
+    })
 }
 
 fn issue_credential_with_authority(
@@ -46,7 +55,7 @@ fn issue_credential_with_authority(
     authority: crate::domain::Authority,
     input: &[u8],
     format: CredentialInputFormat,
-) -> Result<(String, CredentialRecord), IssueCredentialError> {
+) -> Result<(Credential, CredentialRecord), IssueCredentialError> {
     let decoded = match format {
         CredentialInputFormat::NQuads => decode_nquads_credential(input)?,
     };
@@ -57,10 +66,7 @@ fn issue_credential_with_authority(
         return Err(IssueCredentialError::CredentialAlreadyExists);
     }
 
-    Ok((
-        credential.id().clone(),
-        CredentialRecord::new(canonical_nquads),
-    ))
+    Ok((credential, CredentialRecord::new(canonical_nquads)))
 }
 
 #[cfg(test)]
@@ -127,6 +133,16 @@ mod tests {
         .expect("submit should succeed");
 
         assert_eq!(result.credential_id, credential_id);
+        assert_eq!(result.issuer, authority.did());
+        assert_eq!(result.subject, "did:example:subject");
+        assert_eq!(
+            result.types,
+            vec!["https://www.w3.org/2018/credentials#VerifiableCredential"]
+        );
+        assert_eq!(
+            result.issued_at,
+            cosmwasm_std::Timestamp::from_seconds(1_735_689_600)
+        );
 
         let record = load_credential(deps.as_ref().storage, credential_id)
             .expect("credential should be persisted");

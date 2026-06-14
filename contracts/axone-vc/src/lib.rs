@@ -3,7 +3,9 @@ pub mod domain;
 pub mod error;
 mod handlers;
 pub mod msg;
+mod services;
 pub mod state;
+mod translation;
 
 pub use contract::interface::AxoneVcInterface;
 pub use error::AxoneVcError;
@@ -14,3 +16,5 @@ pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const AXONE_NAMESPACE: &str = "axone";
 pub const AXONE_VC_NAME: &str = "axone-vc";
 pub const AXONE_VC_ID: &str = const_format::concatcp!(AXONE_NAMESPACE, ":", AXONE_VC_NAME);
+pub const RESPONSE_KEY_AUTHORITY: &str = "authority";
+pub const RESPONSE_KEY_CREDENTIAL_ID: &str = "credential_id";

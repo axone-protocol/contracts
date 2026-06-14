@@ -1,7 +1,8 @@
 use crate::{
     contract::{AxoneVc, AxoneVcResult},
     msg::AxoneVcExecuteMsg,
-    state::FOO,
+    services::issue_credential,
+    RESPONSE_KEY_CREDENTIAL_ID,
 };
 
 use abstract_app::traits::AbstractResponse;
@@ -15,12 +16,25 @@ pub fn execute_handler(
     msg: AxoneVcExecuteMsg,
 ) -> AxoneVcResult {
     match msg {
-        AxoneVcExecuteMsg::Foo { value } => execute_foo(deps, module, value),
+        AxoneVcExecuteMsg::IssueCredential { credential, format } => execute_issue_credential(
+            deps,
+            module,
+            credential.as_slice(),
+            format.unwrap_or_default(),
+        ),
     }
 }
 
-fn execute_foo(deps: DepsMut<'_>, module: AxoneVc, value: String) -> AxoneVcResult {
-    FOO.save(deps.storage, &value)?;
+fn execute_issue_credential(
+    deps: DepsMut<'_>,
+    module: AxoneVc,
+    credential: &[u8],
+    format: crate::msg::CredentialInputFormat,
+) -> AxoneVcResult {
+    let result = issue_credential(deps.storage, credential, format)?;
 
-    Ok(module.custom_response("foo", vec![("foo".to_string(), value)]))
+    Ok(module.custom_response(
+        "issue_credential",
+        vec![(RESPONSE_KEY_CREDENTIAL_ID.to_string(), result.credential_id)],
+    ))
 }

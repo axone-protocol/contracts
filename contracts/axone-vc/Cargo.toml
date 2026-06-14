@@ -56,9 +56,14 @@ cw-orch.workspace = true
 cw-storage-plus.workspace = true
 dotenv = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
+getset.workspace = true
 log = { workspace = true, optional = true }
+oxrdf = "0.2.4"
+oxttl = "0.1.8"
+rdf-canon = "0.15.3"
 serde = { workspace = true, features = ["derive"] }
 thiserror.workspace = true
+time = { version = "0.3.44", features = ["parsing"] }
 
 [dev-dependencies]
 abstract-app = { workspace = true, features = ["test-utils"] }

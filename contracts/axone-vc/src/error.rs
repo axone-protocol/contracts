@@ -1,3 +1,4 @@
+use crate::services::IssueCredentialError;
 use abstract_app::sdk::AbstractSdkError;
 use abstract_app::std::AbstractError;
 use abstract_app::AppError;
@@ -17,4 +18,7 @@ pub enum AxoneVcError {
 
     #[error("{0}")]
     DappError(#[from] AppError),
+
+    #[error(transparent)]
+    IssueCredential(#[from] IssueCredentialError),
 }

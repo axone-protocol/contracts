@@ -2,7 +2,8 @@ use crate::{
     contract::{AxoneVc, AxoneVcResult},
     msg::AxoneVcExecuteMsg,
     services::issue_credential,
-    RESPONSE_KEY_CREDENTIAL_ID,
+    RESPONSE_KEY_CREDENTIAL_ID, RESPONSE_KEY_IDENTIFIER, RESPONSE_KEY_ISSUED_AT,
+    RESPONSE_KEY_ISSUER, RESPONSE_KEY_SUBJECT, RESPONSE_KEY_TYPES,
 };
 
 use abstract_app::traits::AbstractResponse;
@@ -43,6 +44,19 @@ fn execute_issue_credential(
 
     Ok(module.custom_response(
         "issue_credential",
-        vec![(RESPONSE_KEY_CREDENTIAL_ID.to_string(), result.credential_id)],
+        vec![
+            (
+                RESPONSE_KEY_CREDENTIAL_ID.to_string(),
+                result.credential_id.clone(),
+            ),
+            (RESPONSE_KEY_IDENTIFIER.to_string(), result.credential_id),
+            (RESPONSE_KEY_ISSUER.to_string(), result.issuer),
+            (RESPONSE_KEY_SUBJECT.to_string(), result.subject),
+            (RESPONSE_KEY_TYPES.to_string(), result.types.join(",")),
+            (
+                RESPONSE_KEY_ISSUED_AT.to_string(),
+                result.issued_at.to_string(),
+            ),
+        ],
     ))
 }

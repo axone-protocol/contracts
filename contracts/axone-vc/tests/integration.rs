@@ -14,6 +14,7 @@ const RESOURCE_LICENSE_ASSERTION: &str = include_str!("fixtures/resource-license
 const VC_ISSUER_PREDICATE: &str = "<https://www.w3.org/2018/credentials#issuer>";
 const SOURCE_ISSUER_DID: &str =
     "<did:pkh:cosmos:axone-1:cosmos1s7auhjsmvjpiubqwco6bxxehsqwnvepvabhbrv>";
+const ABSTRACT_EVENT_TYPE: &str = "wasm-abstract";
 
 struct TestEnv<Env: CwEnv> {
     app: Application<Env, AxoneVcInterface<Env>>,
@@ -68,6 +69,57 @@ fn issue_credential_accepts_resource_license_assertion_example() -> anyhow::Resu
     let credential = resource_license_assertion_payload(&authority.did);
 
     env.app.issue_credential(Binary::from(credential), None)?;
+
+    Ok(())
+}
+
+#[test]
+fn issue_credential_emits_event() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = resource_license_assertion_payload(&authority.did);
+
+    let response = env.app.issue_credential(
+        Binary::from(credential),
+        Some(CredentialInputFormat::NQuads),
+    )?;
+
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "action")
+            .expect("Missing action attribute"),
+        "issue_credential"
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "identifier")
+            .expect("Missing identifier attribute"),
+        "https://credentials.axone.xyz/assertion/resource-license"
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "issuer")
+            .expect("Missing issuer attribute"),
+        authority.did
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "subject")
+            .expect("Missing subject attribute"),
+        "urn:uuid:5d29ea71-003f-46e7-a74d-d8d598629ed8"
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "types")
+            .expect("Missing types attribute"),
+        "https://w3id.org/axone/ontology/v4/schema/core/assertion/AssertionCredential,https://www.w3.org/2018/credentials#VerifiableCredential"
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "issued_at")
+            .expect("Missing issued_at attribute"),
+        "1781128800.000000000"
+    );
 
     Ok(())
 }

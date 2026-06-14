@@ -111,16 +111,11 @@ fn parse_nquads(input: &[u8]) -> Result<Dataset, CredentialDecodingError> {
 }
 
 fn find_credential_subject(dataset: &Dataset) -> Result<Subject, CredentialDecodingError> {
-    let candidate_subjects: HashSet<Subject> = [
-        rdf::TYPE,
-        VC_ISSUER,
-        VC_ISSUANCE_DATE,
-        VC_CREDENTIAL_SUBJECT,
-    ]
-    .into_iter()
-    .flat_map(|predicate| dataset.quads_for_predicate(predicate))
-    .map(|quad| quad.subject.into_owned())
-    .collect();
+    let candidate_subjects: HashSet<Subject> = [VC_ISSUER, VC_ISSUANCE_DATE, VC_CREDENTIAL_SUBJECT]
+        .into_iter()
+        .flat_map(|predicate| dataset.quads_for_predicate(predicate))
+        .map(|quad| quad.subject.into_owned())
+        .collect();
 
     let mut subjects = candidate_subjects.into_iter();
     let subject = subjects
@@ -233,8 +228,8 @@ fn map_canonicalization_error(_: rdf_canon::CanonicalizationError) -> Credential
 mod tests {
     use super::{
         decode_nquads_credential, extract_issuance_date, extract_issuer, extract_subject_id,
-        map_canonicalization_error, parse_issuance_date, parse_nquads, subject_to_identifier,
-        CredentialDecodingError, DecodedUri, VC_ISSUER,
+        find_credential_subject, map_canonicalization_error, parse_issuance_date, parse_nquads,
+        subject_to_identifier, CredentialDecodingError, DecodedUri, VC_ISSUER,
     };
     use oxrdf::{BlankNode, Literal, NamedNodeRef, Subject};
 
@@ -398,6 +393,28 @@ mod tests {
         .expect_err("multiple credential subjects should fail");
 
         assert_eq!(err, CredentialDecodingError::InvalidDataset);
+    }
+
+    #[test]
+    fn find_credential_subject_ignores_typed_nodes_unrelated_to_credential_identity() {
+        let dataset = parsed_dataset(
+            format!(
+                r#"<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuer> <{AUTHORITY_DID}> .
+<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<{CREDENTIAL_ID}> <{VC_NAMESPACE}credentialSubject> <did:example:subject> .
+<did:example:subject> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://example.com/types/Agent> .
+"#
+            )
+            .as_bytes(),
+        );
+
+        let subject =
+            find_credential_subject(&dataset).expect("typed related nodes should not shadow VC");
+
+        assert_eq!(
+            subject,
+            Subject::NamedNode(NamedNodeRef::new_unchecked(CREDENTIAL_ID).into_owned())
+        );
     }
 
     #[test]

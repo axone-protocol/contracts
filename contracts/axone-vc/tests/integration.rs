@@ -96,7 +96,10 @@ fn issue_credential_rejects_duplicates() -> anyhow::Result<()> {
         .issue_credential(credential, Some(CredentialInputFormat::NQuads))
         .expect_err("duplicate submit should fail");
 
-    assert!(!err.to_string().is_empty());
+    assert!(
+        format!("{err:?}").contains("credential already exists"),
+        "{err:?}"
+    );
 
     Ok(())
 }

@@ -1,0 +1,13 @@
+<did:pkh:cosmos:axone-1:cosmos1s7auhjsmvjpiubqwco6bxxehsqwnvepvabhbrv> <http://schema.org/name> "Axone" .
+<did:pkh:cosmos:axone-1:cosmos1unn7us5oknykkzprw8np5haotf4t2fxyudho5z> <http://schema.org/description> "Collaborative AI Zone is dedicated to training AI models in a collaborative and open way." .
+<did:pkh:cosmos:axone-1:cosmos1unn7us5oknykkzprw8np5haotf4t2fxyudho5z> <http://schema.org/name> "Collaborative AI Zone" .
+<did:pkh:cosmos:axone-1:cosmos1unn7us5oknykkzprw8np5haotf4t2fxyudho5z> <http://schema.org/sameAs> <https://docs.axone.xyz> .
+<did:pkh:cosmos:axone-1:cosmos1unn7us5oknykkzprw8np5haotf4t2fxyudho5z> <https://w3id.org/axone/ontology/v4/schema/core/profile/link> <https://axone.xyz> .
+<did:pkh:cosmos:axone-1:cosmos1unn7us5oknykkzprw8np5haotf4t2fxyudho5z> <https://w3id.org/axone/ontology/v4/schema/core/profile/tag> "AI" .
+<did:pkh:cosmos:axone-1:cosmos1unn7us5oknykkzprw8np5haotf4t2fxyudho5z> <https://w3id.org/axone/ontology/v4/schema/core/profile/tag> "Collaboration" .
+<did:pkh:cosmos:axone-1:cosmos1unn7us5oknykkzprw8np5haotf4t2fxyudho5z> <https://w3id.org/axone/ontology/v4/schema/core/profile/tag> "Machine Learning" .
+<https://credentials.axone.xyz/profile/collab-ai-zone> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/axone/ontology/v4/schema/core/profile/ProfileCredential> .
+<https://credentials.axone.xyz/profile/collab-ai-zone> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<https://credentials.axone.xyz/profile/collab-ai-zone> <https://www.w3.org/2018/credentials#credentialSubject> <did:pkh:cosmos:axone-1:cosmos1unn7us5oknykkzprw8np5haotf4t2fxyudho5z> .
+<https://credentials.axone.xyz/profile/collab-ai-zone> <https://www.w3.org/2018/credentials#issuanceDate> "2026-06-11T00:00:00.000000+02:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<https://credentials.axone.xyz/profile/collab-ai-zone> <https://www.w3.org/2018/credentials#issuer> <did:pkh:cosmos:axone-1:cosmos1s7auhjsmvjpiubqwco6bxxehsqwnvepvabhbrv> .

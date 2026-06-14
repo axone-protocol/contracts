@@ -764,6 +764,7 @@ dependencies = [
  "const_format",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-controllers",
  "cw-orch 0.28.0",
  "cw-storage-plus",
  "dotenv",

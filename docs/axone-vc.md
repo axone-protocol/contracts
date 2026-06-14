@@ -45,6 +45,8 @@ Execute messages.
 
 Issue a verifiable credential from this authority.
 
+Only the app authority is allowed to call this message.
+
 The submitted payload must match the declared `format` and must describe exactly one credential that satisfies the contract invariants.
 
 The credential is accepted only if it provides: - an identifier - either no issuer or an issuer equal to the authority DID exposed by this contract - an issuance date - a subject identifier - at least one type, including `VerifiableCredential`
@@ -134,4 +136,4 @@ N-Quads extends N-Triples to represent RDF datasets by allowing an optional four
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`3837cfeea5bcefce`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`d6a66ab44dc4de1f`)_

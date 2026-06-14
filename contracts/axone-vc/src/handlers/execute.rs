@@ -10,14 +10,16 @@ use cosmwasm_std::{DepsMut, Env, MessageInfo};
 
 pub fn execute_handler(
     deps: DepsMut<'_>,
-    _env: Env,
-    _info: MessageInfo,
+    env: Env,
+    info: MessageInfo,
     module: AxoneVc,
     msg: AxoneVcExecuteMsg,
 ) -> AxoneVcResult {
     match msg {
         AxoneVcExecuteMsg::IssueCredential { credential, format } => execute_issue_credential(
             deps,
+            env,
+            info,
             module,
             credential.as_slice(),
             format.unwrap_or_default(),
@@ -27,10 +29,16 @@ pub fn execute_handler(
 
 fn execute_issue_credential(
     deps: DepsMut<'_>,
+    env: Env,
+    info: MessageInfo,
     module: AxoneVc,
     credential: &[u8],
     format: crate::msg::CredentialInputFormat,
 ) -> AxoneVcResult {
+    module
+        .admin
+        .assert_admin(deps.as_ref(), &env, &info.sender)?;
+
     let result = issue_credential(deps.storage, credential, format)?;
 
     Ok(module.custom_response(

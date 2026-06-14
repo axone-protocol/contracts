@@ -52,6 +52,7 @@ clap = { workspace = true, optional = true, features = ["derive"] }
 const_format.workspace = true
 cosmwasm-schema.workspace = true
 cosmwasm-std.workspace = true
+cw-controllers.workspace = true
 cw-orch.workspace = true
 cw-storage-plus.workspace = true
 dotenv = { workspace = true, optional = true }

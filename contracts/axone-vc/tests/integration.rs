@@ -6,6 +6,7 @@ use axone_vc::{
 };
 use bech32::{Bech32, Hrp};
 use cosmwasm_std::Binary;
+use cw_orch::contract::interface_traits::CallAs;
 use cw_orch::{anyhow, prelude::*};
 
 const COLLAB_AI_ZONE_PROFILE: &str = include_str!("fixtures/collab-ai-zone-profile.nq");
@@ -96,6 +97,24 @@ fn issue_credential_rejects_duplicates() -> anyhow::Result<()> {
         .expect_err("duplicate submit should fail");
 
     assert!(!err.to_string().is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn issue_credential_rejects_non_host_account_sender() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = Binary::from(resource_license_assertion_payload(&authority.did));
+    let unauthorized = env.app.environment().addr_make("unauthorized");
+
+    let err = env
+        .app
+        .call_as(&unauthorized)
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))
+        .expect_err("non-host sender should be rejected");
+
+    assert!(format!("{err:?}").contains("Caller is not admin"));
 
     Ok(())
 }

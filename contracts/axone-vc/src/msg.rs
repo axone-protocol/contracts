@@ -21,6 +21,8 @@ pub struct AxoneVcInstantiateMsg {}
 pub enum AxoneVcExecuteMsg {
     /// Issue a verifiable credential from this authority.
     ///
+    /// Only the app authority is allowed to call this message.
+    ///
     /// The submitted payload must match the declared `format` and must describe
     /// exactly one credential that satisfies the contract invariants.
     ///

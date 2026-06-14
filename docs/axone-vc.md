@@ -41,12 +41,23 @@ This contract requires no caller-provided configuration.
 
 Execute messages.
 
-### ExecuteMsg::foo
+### ExecuteMsg::issue_credential
 
-| parameter   | description                |
-| ----------- | -------------------------- |
-| `foo`       | _(Required.) _ **object**. |
-| `foo.value` | _(Required.) _ **string**. |
+Issue a verifiable credential from this authority.
+
+The submitted payload must match the declared `format` and must describe exactly one credential that satisfies the contract invariants.
+
+The credential is accepted only if it provides: - an identifier - either no issuer or an issuer equal to the authority DID exposed by this contract - an issuance date - a subject identifier - at least one type, including `VerifiableCredential`
+
+The submitted payload may omit the issuer. In that case, the contract treats the credential as issued by its authority DID.
+
+Issuance fails if the payload format is not supported, if the credential representation cannot be interpreted according to that format, or if a credential with the same identifier has already been issued by this authority.
+
+| parameter                     | description                                                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `issue_credential`            | _(Required.) _ **object**.                                                                                                                                                     |
+| `issue_credential.credential` | _(Required.) _ **[Binary](#binary)**. Serialized credential payload.<br /><br />The expected binary encoding and semantic representation are determined by the `format` field. |
+| `issue_credential.format`     | **[CredentialInputFormat](#credentialinputformat)\|null**. Encoding used by the submitted credential payload.<br /><br />Defaults to `n_quads` when omitted.                   |
 
 ## QueryMsg
 
@@ -93,6 +104,34 @@ Response returned by `AxoneVcQueryMsg::Authority`.
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `did`    | _(Required.) _ **string**. The authority DID recognized by this contract.<br /><br />This representation uses the `did:pkh` method over the on-chain address of the host Abstract Account, rendered as a CAIP-compatible canonical Cosmos Bech32 account address.<br /><br />Form:<br /><br />`did:pkh:cosmos:&lt;chain_id&gt;:cosmos1...` |
 
+## Definitions
+
+### Binary
+
+A string containing Base64-encoded data.
+
+| type        |
+| ----------- |
+| **string**. |
+
+### CredentialInputFormat
+
+Supported credential input encodings.
+
+| variant   | description                                                                                                                                                                                                                                                      |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| undefined | **string**: `n_quads`. UTF-8 RDF dataset serialized as N-Quads.<br /><br />N-Quads extends N-Triples to represent RDF datasets by allowing an optional fourth term that carries the graph name. See the [N-Quads specification](https://www.w3.org/TR/n-quads/). |
+
+### undefined
+
+UTF-8 RDF dataset serialized as N-Quads.
+
+N-Quads extends N-Triples to represent RDF datasets by allowing an optional fourth term that carries the graph name. See the [N-Quads specification](https://www.w3.org/TR/n-quads/).
+
+| literal     |
+| ----------- |
+| `"n_quads"` |
+
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`0818b58701a06f58`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`3837cfeea5bcefce`)_

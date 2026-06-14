@@ -768,6 +768,7 @@ dependencies = [
  "cw-storage-plus",
  "dotenv",
  "env_logger",
+ "getrandom 0.2.12",
  "getset",
  "log",
  "oxrdf",

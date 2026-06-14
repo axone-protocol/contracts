@@ -65,6 +65,9 @@ serde = { workspace = true, features = ["derive"] }
 thiserror.workspace = true
 time = { version = "0.3.44", features = ["parsing"] }
 
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "0.2", features = ["custom"] }
+
 [dev-dependencies]
 abstract-app = { workspace = true, features = ["test-utils"] }
 abstract-client.workspace = true

@@ -12,7 +12,12 @@ path = "src/bin/deploy_abstract.rs"
 name = "deploy_abstract_info"
 path = "src/bin/deploy_abstract_info.rs"
 
+[[bin]]
+name = "create_abstract_accounts"
+path = "src/bin/create_abstract_accounts.rs"
+
 [dependencies]
+abstract-client.workspace = true
 abstract-interface.workspace = true
 abstract-std.workspace = true
 anyhow = { workspace = true }

@@ -1,6 +1,6 @@
 name: Deploy Contracts / Testnet
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       contract:
@@ -12,6 +12,11 @@ on:
         required: false
         default: main
         type: string
+      deploy_abstract:
+        description: Deploy Abstract infrastructure before publishing the contract
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -58,6 +63,13 @@ jobs:
 
       - name: Install cargo make
         uses: davidB/rust-cargo-make@184c522bf8152f601a20749ca36c742b57ba568b # v1
+
+      - name: Deploy Abstract to Axone testnet
+        if: inputs.deploy_abstract
+        env:
+          RUST_LOG: info
+          TEST_MNEMONIC: ${{ secrets.AXONE_GITHUB_TESTNET_WALLET }}
+        run: cargo make deploy-abstract testnet
 
       - name: Deploy contract to Axone testnet
         env:

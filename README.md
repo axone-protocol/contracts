@@ -236,6 +236,7 @@ contract-query - Query a specific contract. The contract must be already deploye
 
 Deployment
 ----------
+create-abstract-accounts - Create synthetic Abstract Accounts on a network. Usage: cargo make create-abstract-accounts [network-id] [-- --count 5]
 deploy-abstract - Deploy Abstract infrastructure to specified networks. Usage: cargo make deploy-abstract <network-ids...>
 deploy-abstract-info - List Abstract deployment info for specified networks. Usage: cargo make deploy-abstract-info <network-ids...>
 deploy-contract - Publish a contract to Abstract on specified networks. Usage: cargo make deploy-contract <contract-name> <network-ids...>

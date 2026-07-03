@@ -736,6 +736,7 @@ dependencies = [
 name = "axone-scripts"
 version = "0.1.0"
 dependencies = [
+ "abstract-client",
  "abstract-interface",
  "abstract-std",
  "anyhow",

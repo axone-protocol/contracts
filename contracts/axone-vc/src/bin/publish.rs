@@ -5,7 +5,9 @@ use axone_vc::AXONE_VC_ID;
 use abstract_app::objects::namespace::Namespace;
 use abstract_client::{AbstractClient, Publisher};
 use abstract_interface::Abstract;
-use axone_networks::parse_network as parse_axone_network;
+use axone_networks::{
+    abstract_deployment::seed_abstract_addresses, parse_network as parse_axone_network,
+};
 use axone_vc::AxoneVcInterface;
 use clap::Parser;
 use cw_orch::{daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
@@ -22,11 +24,25 @@ fn publish(networks: Vec<ChainInfo>) {
         let app_namespace =
             Namespace::from_id(AXONE_VC_ID).expect("Failed to parse namespace from module ID");
 
+        match seed_abstract_addresses(&chain, &network, &rt) {
+            Ok(_) => info!(
+                "Seeded Abstract addresses for {} from on-chain deployment",
+                network.chain_id
+            ),
+            Err(err) => warn!(
+                "Failed to seed Abstract addresses from on-chain deployment for {}: {}",
+                network.chain_id, err
+            ),
+        }
+
         let abstract_client: AbstractClient<Daemon> = AbstractClient::new(chain.clone())
             .unwrap_or_else(|e| {
                 panic!(
-                    "Failed to connect to Abstract infrastructure on {}.\nError: {}",
-                    network.chain_id, e
+                    "Failed to connect to Abstract infrastructure on {}.\n\
+                    Error: {}\n\n\
+                    Please deploy Abstract first using:\n\
+                    cargo make deploy-abstract {}",
+                    network.chain_id, e, network.chain_id
                 )
             });
 

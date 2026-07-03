@@ -7,6 +7,8 @@
 
 use cw_orch::daemon::networks::{ChainInfo, ChainKind, NetworkInfo};
 
+pub mod abstract_deployment;
+
 /// Axone local network (for development)
 pub const AXONE_LOCAL: ChainInfo = ChainInfo {
     kind: ChainKind::Local,

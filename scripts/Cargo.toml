@@ -19,12 +19,9 @@ path = "src/bin/create_abstract_accounts.rs"
 [dependencies]
 abstract-client.workspace = true
 abstract-interface.workspace = true
-abstract-std.workspace = true
 anyhow = { workspace = true }
 axone-networks = { path = "../packages/axone-networks" }
 clap = { workspace = true, features = ["derive"] }
-cosmrs = "0.19.0"
-cosmwasm-std.workspace = true
 cw-orch = { workspace = true, features = ["daemon"] }
 dotenv = { workspace = true }
 env_logger = { workspace = true }

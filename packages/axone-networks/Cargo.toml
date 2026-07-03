@@ -13,3 +13,8 @@ version = "0.1.0"
 [dependencies]
 anyhow.workspace = true
 cw-orch.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+abstract-std.workspace = true
+cosmrs.workspace = true
+cosmwasm-std.workspace = true

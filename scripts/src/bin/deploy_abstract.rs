@@ -4,10 +4,64 @@
 //! to the specified network. This must be done before publishing any Abstract modules.
 
 use abstract_interface::Abstract;
-use axone_networks::parse_network as parse_axone_network;
+use axone_networks::{
+    abstract_deployment::{discover_abstract_deployment_from_creators, discover_blob_creators},
+    parse_network as parse_axone_network,
+};
 use clap::Parser;
 use cw_orch::{anyhow, daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
 use log::info;
+
+fn is_abstract_deployed(network: &ChainInfo, rt: &Runtime) -> anyhow::Result<bool> {
+    let chain = DaemonBuilder::new(network.clone())
+        .handle(rt.handle())
+        .is_test(true)
+        .build_sender(())?;
+
+    let creators = discover_blob_creators(&chain)?;
+    info!(
+        "   Discovered {} blob creator(s) for Abstract",
+        creators.len()
+    );
+    if creators.is_empty() {
+        return Ok(false);
+    }
+
+    match discover_abstract_deployment_from_creators(&chain, creators) {
+        Ok(deployment) => {
+            info!(
+                "   Found Abstract deployment for creator {}",
+                deployment.creator_addr
+            );
+            Ok(true)
+        }
+        Err(_) => Ok(false),
+    }
+}
+
+fn ensure_abstract_deployed(network: &ChainInfo, rt: &Runtime) -> anyhow::Result<()> {
+    if is_abstract_deployed(network, rt)? {
+        info!("✅ Abstract infrastructure already deployed on this chain");
+        return Ok(());
+    }
+
+    let chain = DaemonBuilder::new(network.clone())
+        .handle(rt.handle())
+        .build()?;
+
+    info!("📦 Deploying Abstract core contracts...");
+    if let Err(err) = Abstract::deploy_on(chain, ()) {
+        if is_abstract_deployed(network, rt)? {
+            info!("✅ Abstract infrastructure is available after the deployment attempt");
+            return Ok(());
+        }
+
+        return Err(anyhow::Error::new(err).context("failed to deploy Abstract infrastructure"));
+    }
+
+    info!("✅ Abstract infrastructure deployed successfully!");
+    Ok(())
+}
 
 fn deploy_abstract(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
     for network in networks {
@@ -17,18 +71,10 @@ fn deploy_abstract(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
         );
 
         let rt = Runtime::new()?;
-        let chain = DaemonBuilder::new(network.clone())
-            .handle(rt.handle())
-            .build()?;
 
         info!("   Connected to: {}", network.chain_id);
-        info!("   Sender: {}", chain.sender_addr());
 
-        // Deploy Abstract infrastructure - this uploads and instantiates all core contracts
-        info!("📦 Deploying Abstract core contracts...");
-        let _abstr = Abstract::deploy_on(chain.clone(), ())?;
-
-        info!("✅ Abstract infrastructure deployed successfully!");
+        ensure_abstract_deployed(&network, &rt)?;
     }
     Ok(())
 }

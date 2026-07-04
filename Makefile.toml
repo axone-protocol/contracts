@@ -128,7 +128,7 @@ args = [
   "--output-path",
   "lcov.info",
   "--ignore-filename-regex",
-  "scripts/src/bin/.*",
+  "scripts/src/bin/.*|packages/axone-networks/src/abstract_deployment.rs",
 ]
 category = "Testing"
 command = "cargo"

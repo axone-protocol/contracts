@@ -54,25 +54,24 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
+            ~/.rustup
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1
-
-      - name: Install cargo make
-        uses: davidB/rust-cargo-make@184c522bf8152f601a20749ca36c742b57ba568b # v1
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Deploy Abstract to Axone testnet
         if: inputs.deploy_abstract
         env:
           RUST_LOG: info
           TEST_MNEMONIC: ${{ secrets.AXONE_GITHUB_TESTNET_WALLET }}
-        run: cargo make deploy-abstract testnet
+        run: nix develop -c cargo make deploy-abstract testnet
 
       - name: Deploy contract to Axone testnet
         env:
           RUST_LOG: info
           TEST_MNEMONIC: ${{ secrets.AXONE_GITHUB_TESTNET_WALLET }}
-        run: cargo make deploy-contract "${{ inputs.contract }}" testnet
+          CONTRACT: ${{ inputs.contract }}
+        run: nix develop -c cargo make deploy-contract "${CONTRACT}" testnet

@@ -8,3 +8,7 @@ lcov.info
 contracts/*/schema/
 artifacts
 .env
+
+# Nix
+.direnv/
+result

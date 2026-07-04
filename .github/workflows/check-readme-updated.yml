@@ -7,14 +7,20 @@ on:
     branches: [main]
     paths:
       - .github/workflows/check-readme-updated.yml
+      - .github/actions/setup-nix/action.yml
       - Makefile.toml
+      - flake.nix
+      - flake.lock
       - README.md
 
   pull_request:
     branches: [main]
     paths:
       - .github/workflows/check-readme-updated.yml
+      - .github/actions/setup-nix/action.yml
       - Makefile.toml
+      - flake.nix
+      - flake.lock
       - README.md
 
 permissions:
@@ -38,18 +44,16 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
+            ~/.rustup
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1
-
-      - name: Install cargo make
-        uses: davidB/rust-cargo-make@184c522bf8152f601a20749ca36c742b57ba568b # v1
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Generate readme
-        run: cargo make readme
+        run: nix develop -c cargo make readme
 
       - name: Verify changed readme files
         id: verify-changed-readme-files

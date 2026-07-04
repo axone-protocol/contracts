@@ -7,13 +7,19 @@ on:
     branches: [main]
     paths:
       - .github/workflows/lint-cargo-makefile.yml
+      - .github/actions/setup-nix/action.yml
       - Makefile.toml
+      - flake.nix
+      - flake.lock
 
   pull_request:
     branches: [main]
     paths:
       - .github/workflows/lint-cargo-makefile.yml
+      - .github/actions/setup-nix/action.yml
       - Makefile.toml
+      - flake.nix
+      - flake.lock
 
 permissions:
   contents: read
@@ -36,20 +42,18 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
+            ~/.rustup
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1
-
-      - name: Install cargo make
-        uses: davidB/rust-cargo-make@184c522bf8152f601a20749ca36c742b57ba568b # v1
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Lint cargo-make task names
         run: |
           FAILED=0
-          for task in $(cargo make --list-all-steps | awk '{print $1;}' | sort | grep -v -- '---' ); do
+          for task in $(nix develop -c cargo make --list-all-steps | awk '{print $1;}' | sort | grep -v -- '---' ); do
             if echo "$task" | grep '_' > /dev/null; then
               >&2 echo "❌ $task - use kebab-case style for task names (e.g. 'my-task' instead of 'my_task')"
               FAILED=1

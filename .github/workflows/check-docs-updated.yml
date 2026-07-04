@@ -7,11 +7,14 @@ on:
     branches: [main]
     paths:
       - .github/workflows/check-docs-updated.yml
+      - .github/actions/setup-nix/action.yml
       - .cargo/config.toml
       - Cargo.toml
       - Cargo.lock
       - Makefile.toml
       - rust-toolchain.toml
+      - flake.nix
+      - flake.lock
       - contracts/**/*.rs
       - contracts/**/Cargo.toml
       - contracts/**/Makefile.toml
@@ -23,11 +26,14 @@ on:
     branches: [main]
     paths:
       - .github/workflows/check-docs-updated.yml
+      - .github/actions/setup-nix/action.yml
       - .cargo/config.toml
       - Cargo.toml
       - Cargo.lock
       - Makefile.toml
       - rust-toolchain.toml
+      - flake.nix
+      - flake.lock
       - contracts/**/*.rs
       - contracts/**/Cargo.toml
       - contracts/**/Makefile.toml
@@ -49,17 +55,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Setup node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version: 16
-
-      - name: Setup jq
-        uses: dcarbone/install-jq-action@4fcb5062d7ce9bc4382d1a352d19ba3ba2c317c1 # v4.0.1
-        with:
-          version: 1.7
-          force: true
-
       - name: Cache cargo registry
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -67,21 +62,19 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
+            ~/.rustup
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1
-
-      - name: Install cargo make
-        uses: davidB/rust-cargo-make@184c522bf8152f601a20749ca36c742b57ba568b # v1
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Generate schema
-        run: cargo make schema
+        run: nix develop -c cargo make schema
 
       - name: Generate documentations
-        run: cargo make docs
+        run: nix develop -c cargo make docs
 
       - name: Verify changed docs files
         id: verify-changed-docs-files

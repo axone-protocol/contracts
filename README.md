@@ -146,18 +146,19 @@ The project is structured around a set of Rust workspaces, each defining a Smart
 
 ### 🔨 Pre-requisites
 
-Be sure you have the following tools installed:
+This project uses [Nix](https://nixos.org/) to provide the development environment.
 
-- [Rust](https://www.rust-lang.org/tools/install) v1.81 or higher
-- [cargo-make](https://github.com/sagiegurari/cargo-make) v0.36.3 or higher
-- [Docker](https://docs.docker.com/get-docker/)
-- [jq](https://jqlang.org/download/) v1.6 or higher
-- [npx](https://www.npmjs.com/package/npx) v8.19.2 or higher
+With direnv:
 
-And the following common [GNU Core utilities](https://en.wikipedia.org/wiki/List_of_GNU_Core_Utilities_commands):
+```sh
+direnv allow
+```
 
-- [shasum](https://linuxhint.com/shasum-linux/) v6.02 or higher
-- [sed](https://www.gnu.org/software/sed/) v4.8 or higher
+Without direnv, prefix commands with `nix develop -c`, for example:
+
+```sh
+nix develop -c cargo make test
+```
 
 ### 🔧 Environment setup
 

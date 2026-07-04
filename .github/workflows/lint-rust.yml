@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/lint-rust.yml
+      - .github/actions/setup-nix/action.yml
       - .cargo/config.toml
       - .sort-derives.toml
       - Cargo.toml
@@ -15,6 +16,8 @@ on:
       - clippy.toml
       - Makefile.toml
       - rust-toolchain.toml
+      - flake.nix
+      - flake.lock
       - contracts/**/*.rs
       - contracts/**/Cargo.toml
       - packages/**/*.rs
@@ -26,6 +29,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/lint-rust.yml
+      - .github/actions/setup-nix/action.yml
       - .cargo/config.toml
       - .sort-derives.toml
       - Cargo.toml
@@ -34,6 +38,8 @@ on:
       - clippy.toml
       - Makefile.toml
       - rust-toolchain.toml
+      - flake.nix
+      - flake.lock
       - contracts/**/*.rs
       - contracts/**/Cargo.toml
       - packages/**/*.rs
@@ -63,15 +69,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
+            ~/.rustup
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1
-
-      - name: Install cargo make
-        uses: davidB/rust-cargo-make@184c522bf8152f601a20749ca36c742b57ba568b # v1
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Lint rust code
-        run: cargo make lint-rust
+        run: nix develop -c cargo make lint-rust

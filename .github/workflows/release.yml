@@ -152,21 +152,19 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
+            ~/.rustup
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Setup rust
-        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1
-
-      - name: Install cargo make
-        uses: davidB/rust-cargo-make@184c522bf8152f601a20749ca36c742b57ba568b # v1
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
       - name: Build WASM artifacts
-        run: cargo make release-wasm
+        run: nix develop -c cargo make release-wasm
 
       - name: Python Semantic Release (Dry Run)
         if: github.event.inputs.dry_run == 'true'

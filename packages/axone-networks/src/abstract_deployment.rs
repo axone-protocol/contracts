@@ -110,11 +110,7 @@ pub fn discover_abstract_deployment_from_creators(
             continue;
         };
 
-        let Some(module_response) = account_module.modules.first() else {
-            continue;
-        };
-
-        let ModuleReference::Account(account_code_id) = module_response.module.reference else {
+        let Some(account_code_id) = account_code_id_from_response(&account_module) else {
             continue;
         };
 
@@ -132,6 +128,14 @@ pub fn discover_abstract_deployment_from_creators(
         REGISTRY,
         MODULE_FACTORY
     );
+}
+
+fn account_code_id_from_response(response: &ModulesResponse) -> Option<u64> {
+    let module_response = response.modules.first()?;
+    match module_response.module.reference {
+        ModuleReference::Account(account_code_id) => Some(account_code_id),
+        _ => None,
+    }
 }
 
 pub fn seed_abstract_addresses(
@@ -154,6 +158,86 @@ pub fn seed_abstract_addresses(
     chain
         .state()
         .set_address(MODULE_FACTORY, &deployment.module_factory_addr);
+    chain
+        .state()
+        .set_code_id(ACCOUNT, deployment.account_code_id);
 
     Ok(deployment)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use abstract_std::{
+        objects::module::Module,
+        registry::{ModuleConfiguration, ModuleResponse},
+    };
+
+    #[test]
+    fn addr_from_instantiate2_is_deterministic_for_same_creator_and_salt() {
+        let creator = "axone1gel7g6wzjyt9zpz6r3ea3uewlfljl0uyel84c5";
+
+        let first = addr_from_instantiate2(creator, REGISTRY_SALT).unwrap();
+        let second = addr_from_instantiate2(creator, REGISTRY_SALT).unwrap();
+
+        assert_eq!(first, second);
+        assert_eq!(
+            first.as_str(),
+            "axone1cjfrzdjtm8hp2jl24e7u2frm9xr8gy62uugl6yy08m5nw77ku6psh2p7yn"
+        );
+    }
+
+    #[test]
+    fn addr_from_instantiate2_uses_the_salt() {
+        let creator = "axone1gel7g6wzjyt9zpz6r3ea3uewlfljl0uyel84c5";
+
+        let registry = addr_from_instantiate2(creator, REGISTRY_SALT).unwrap();
+        let ans_host = addr_from_instantiate2(creator, ANS_HOST_SALT).unwrap();
+
+        assert_ne!(registry, ans_host);
+    }
+
+    #[test]
+    fn addr_from_instantiate2_rejects_invalid_creator_addresses() {
+        let result = addr_from_instantiate2("not-an-address", REGISTRY_SALT);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn account_code_id_from_response_returns_account_reference_code_id() {
+        let response = ModulesResponse {
+            modules: vec![ModuleResponse {
+                module: Module::from((
+                    ModuleInfo::from_id_latest(ACCOUNT).unwrap(),
+                    ModuleReference::Account(42),
+                )),
+                config: ModuleConfiguration::default(),
+            }],
+        };
+
+        assert_eq!(account_code_id_from_response(&response), Some(42));
+    }
+
+    #[test]
+    fn account_code_id_from_response_ignores_non_account_references() {
+        let response = ModulesResponse {
+            modules: vec![ModuleResponse {
+                module: Module::from((
+                    ModuleInfo::from_id_latest(REGISTRY).unwrap(),
+                    ModuleReference::Native(Addr::unchecked("registry")),
+                )),
+                config: ModuleConfiguration::default(),
+            }],
+        };
+
+        assert_eq!(account_code_id_from_response(&response), None);
+    }
+
+    #[test]
+    fn account_code_id_from_response_returns_none_without_modules() {
+        let response = ModulesResponse { modules: vec![] };
+
+        assert_eq!(account_code_id_from_response(&response), None);
+    }
 }

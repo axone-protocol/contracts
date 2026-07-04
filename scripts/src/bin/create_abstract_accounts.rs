@@ -1,7 +1,9 @@
 //! Create synthetic Abstract Accounts on a target network.
 
 use abstract_client::AbstractClient;
-use axone_networks::parse_network as parse_axone_network;
+use axone_networks::{
+    abstract_deployment::seed_abstract_addresses, parse_network as parse_axone_network,
+};
 use clap::Parser;
 use cw_orch::{anyhow, daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
 use log::info;
@@ -28,6 +30,12 @@ fn create_abstract_accounts(network: ChainInfo, args: &Arguments) -> anyhow::Res
 
     info!("Connected to: {}", network.chain_id);
     info!("Sender: {}", chain.sender_addr());
+
+    seed_abstract_addresses(&chain, &network, &rt)?;
+    info!(
+        "Seeded Abstract addresses for {} from on-chain deployment",
+        network.chain_id
+    );
 
     let abstract_client = AbstractClient::new(chain)?;
     let run_marker = run_marker();

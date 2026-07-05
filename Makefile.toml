@@ -633,6 +633,83 @@ echo "📥 Installing ${contract} with args: $*"
 cargo run --bin install --package ${contract} --features="daemon-bin" -- "$@"
 '''
 
+[tasks.gov-install]
+category = "Deployment"
+description = "Install axone-gov on an existing Abstract Account. Usage: cargo make gov-install [axone-gov] <network-ids...> -- --account-id <id> --constitution-file <path>"
+script = '''
+set -- "$@"
+
+if [ "${1:-}" = "axone-gov" ]
+then
+  shift
+fi
+
+networks=""
+while [ "$#" -gt 0 ]
+do
+  case "$1" in
+    --)
+      shift
+      break
+      ;;
+    -*)
+      break
+      ;;
+    *)
+      networks="${networks} $1"
+      shift
+      ;;
+  esac
+done
+
+if [ -z "${networks}" ]
+then
+  echo "❌ Please provide at least one network id (e.g., local, testnet, mainnet)"
+  exit 1
+fi
+
+for network in ${networks}
+do
+  case "${network}" in
+    local|axone-localnet)
+      cargo make chain-start
+      ;;
+  esac
+done
+
+echo "🏛️ Installing axone-gov governance on networks:${networks}"
+cargo run --bin install --package axone-gov --features="daemon-bin" -- --network-ids ${networks} "$@"
+'''
+
+[tasks.gov-interact]
+category = "Deployment"
+description = "Interact with axone-gov installed on an Abstract Account. Usage: cargo make gov-interact [network-id] -- --account-id <id> <command>"
+script = '''
+network="${1:-testnet}"
+if [ "${network}" = "--" ]
+then
+  network="testnet"
+  shift
+elif [ "$#" -gt 0 ]
+then
+  shift
+fi
+
+if [ "${1:-}" = "--" ]
+then
+  shift
+fi
+
+case "${network}" in
+  local|axone-localnet)
+    cargo make chain-start
+    ;;
+esac
+
+echo "🏛️ Interacting with axone-gov on ${network}"
+cargo run --bin interact --package axone-gov --features="daemon-bin" -- --network-id "${network}" "$@"
+'''
+
 [tasks.clean-chain]
 category = "Cleanup"
 condition = { fail_message = "🚫 The chain is running" }

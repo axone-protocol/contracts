@@ -243,6 +243,8 @@ deploy-abstract-info - List Abstract deployment info for specified networks. Usa
 deploy-contract - Publish a contract to Abstract on specified networks. Usage: cargo make deploy-contract <contract-name> <network-ids...>
 deploy-install - Install a module on an Abstract Account. Usage: cargo make deploy-install <contract-name> <network-ids...>
 deploy-script - Run a contract deployment script. Usage: cargo make deploy-script <script> <package> <network-ids...>
+gov-install - Install axone-gov on an existing Abstract Account. Usage: cargo make gov-install [axone-gov] <network-ids...> -- --account-id <id> --constitution-file <path>
+gov-interact - Interact with axone-gov installed on an Abstract Account. Usage: cargo make gov-interact [network-id] -- --account-id <id> <command>
 
 Development Tools
 ----------

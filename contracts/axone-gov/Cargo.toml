@@ -31,6 +31,10 @@ required-features = ["daemon-bin"]
 name = "install"
 required-features = ["daemon-bin"]
 
+[[bin]]
+name = "interact"
+required-features = ["daemon-bin"]
+
 [features]
 daemon-bin = [
   "cw-orch/daemon",

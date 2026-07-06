@@ -4,20 +4,20 @@
 //! The module must be published first using the publish script.
 //! ```
 
-use axone_gov::{
-    contract::interface::AxoneGovInterface, msg::AxoneGovInstantiateMsg, AXONE_GOV_ID,
-};
+use axone_gov::{contract::interface::AxoneGovInterface, msg::AxoneGovInstantiateMsg};
 
-use abstract_app::objects::namespace::Namespace;
+use abstract_app::objects::AccountId;
 use abstract_client::{AbstractClient, Application};
-use axone_networks::parse_network as parse_axone_network;
+use axone_networks::{
+    abstract_deployment::seed_abstract_addresses, parse_network as parse_axone_network,
+};
 use clap::{ArgGroup, Parser};
 use cosmwasm_std::Binary;
 use cw_orch::{daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
 use log::info;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
-fn install(networks: Vec<ChainInfo>, constitution: Binary) {
+fn install(networks: Vec<ChainInfo>, account_id: AccountId, constitution: Binary) {
     for network in networks {
         info!("📥 Installing axone-gov on {}...", network.chain_id);
 
@@ -30,17 +30,24 @@ fn install(networks: Vec<ChainInfo>, constitution: Binary) {
         info!("   Connected to: {}", network.chain_id);
         info!("   Sender: {}", chain.sender_addr());
 
+        seed_abstract_addresses(&chain, &network, &rt).unwrap_or_else(|err| {
+            panic!(
+                "Failed to seed Abstract addresses for {} from on-chain deployment: {}",
+                network.chain_id, err
+            )
+        });
+
         let abstract_client: AbstractClient<Daemon> =
             AbstractClient::new(chain.clone()).expect("Failed to connect to Abstract client");
 
-        let app_namespace =
-            Namespace::from_id(AXONE_GOV_ID).expect("Failed to parse namespace from module ID");
         let account = abstract_client
-            .fetch_or_build_account(app_namespace, |builder| {
-                builder
-                    .namespace(Namespace::from_id(AXONE_GOV_ID).expect("Failed to parse namespace"))
-            })
-            .expect("Failed to fetch or build account");
+            .fetch_account(account_id.clone())
+            .unwrap_or_else(|err| {
+                panic!(
+                    "Failed to fetch target Abstract Account on {}: {}",
+                    network.chain_id, err
+                )
+            });
 
         info!(
             "📦 Account address: {}",
@@ -87,6 +94,9 @@ struct Arguments {
     /// Network IDs to install on (e.g., local, testnet, mainnet)
     #[arg(short, long, value_delimiter = ' ', num_args = 1..)]
     network_ids: Vec<String>,
+    /// Abstract Account ID to govern (for example, local-42).
+    #[arg(long, value_parser = parse_account_id)]
+    account_id: AccountId,
     /// Path to a Prolog constitution file.
     #[arg(long)]
     constitution_file: Option<PathBuf>,
@@ -109,7 +119,11 @@ fn main() {
 
     let constitution = load_constitution(&args);
 
-    install(networks, constitution);
+    install(networks, args.account_id, constitution);
+}
+
+fn parse_account_id(input: &str) -> Result<AccountId, String> {
+    AccountId::from_str(input).map_err(|err| err.to_string())
 }
 
 fn load_constitution(args: &Arguments) -> Binary {

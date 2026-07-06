@@ -177,7 +177,7 @@ jobs:
 
       - name: Python Semantic Release (Real)
         if: github.event.inputs.dry_run != 'true'
-        uses: python-semantic-release/python-semantic-release@350c48fcb3ffcdfd2e0a235206bc2ecea6b69df0 # v10
+        uses: python-semantic-release/python-semantic-release@39dd2052f2ce8282a5d932c31d58a2ca06d2550e # v10
         with:
           directory: ${{ matrix.project_dir }}
           github_token: ${{ secrets.OPS_TOKEN }}

@@ -24,6 +24,9 @@ pub enum IssueCredentialError {
     #[error("credential already exists")]
     CredentialAlreadyExists,
 
+    #[error("credential revoked")]
+    CredentialRevoked,
+
     #[error(transparent)]
     Decode(#[from] CredentialDecodingError),
 
@@ -64,6 +67,10 @@ fn issue_credential_with_authority(
 
     if has_credential(storage, credential.id()) {
         return Err(IssueCredentialError::CredentialAlreadyExists);
+    }
+
+    if is_revoked(storage, credential.id()) {
+        return Err(IssueCredentialError::CredentialRevoked);
     }
 
     Ok((credential, CredentialRecord::new(canonical_nquads)))

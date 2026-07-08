@@ -6,6 +6,7 @@ use crate::{
     RESPONSE_KEY_ISSUER, RESPONSE_KEY_SUBJECT, RESPONSE_KEY_TYPES,
 };
 
+use crate::domain::Uri;
 use abstract_app::traits::AbstractResponse;
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
 
@@ -25,6 +26,9 @@ pub fn execute_handler(
             credential.as_slice(),
             format.unwrap_or_default(),
         ),
+        AxoneVcExecuteMsg::RevokeCredential { identifier } => {
+            execute_revoke_credential(deps, env, info, module, identifier)
+        }
     }
 }
 
@@ -59,4 +63,14 @@ fn execute_issue_credential(
             ),
         ],
     ))
+}
+
+fn execute_revoke_credential(
+    _deps: DepsMut<'_>,
+    _env: Env,
+    _info: MessageInfo,
+    module: AxoneVc,
+    _identifier: Uri,
+) -> AxoneVcResult {
+    Ok(module.response("todo"))
 }

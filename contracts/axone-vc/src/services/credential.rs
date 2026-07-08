@@ -98,11 +98,11 @@ pub fn revoke_credential(
     at: Timestamp,
 ) -> AxoneVcResult<RevokeCredentialResult> {
     let authority = authority(storage)?;
-    if !has_credential(storage, credential_id) {
-        return Err(RevokeCredentialError::UnknownCredential.into());
-    }
     if is_revoked(storage, credential_id) {
         return Err(RevokeCredentialError::CredentialAlreadyRevoked.into());
+    }
+    if !has_credential(storage, credential_id) {
+        return Err(RevokeCredentialError::UnknownCredential.into());
     }
 
     let tombstone = CredentialTombstone::new(at);
@@ -111,7 +111,7 @@ pub fn revoke_credential(
     Ok(RevokeCredentialResult {
         identifier: credential_id.to_string(),
         issuer: authority.did().to_string(),
-        revoked_at: Default::default(),
+        revoked_at: at,
     })
 }
 
@@ -328,6 +328,7 @@ mod tests {
     fn revoke_credential_rejects_unknown_credential() {
         let mut deps = mock_dependencies();
         let env = mock_env();
+        initialized_authority(&mut deps);
 
         let err = revoke_credential(
             deps.as_mut().storage,

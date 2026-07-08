@@ -105,7 +105,7 @@ pub fn revoke_credential(
         return Err(RevokeCredentialError::CredentialAlreadyRevoked.into());
     }
 
-    let tombstone = CredentialTombstone { revoked_at: at };
+    let tombstone = CredentialTombstone::new(at);
     state::revoke_credential(storage, credential_id, &tombstone)?;
 
     Ok(RevokeCredentialResult {
@@ -117,13 +117,14 @@ pub fn revoke_credential(
 
 #[cfg(test)]
 mod tests {
-    use super::{issue_credential, issue_credential_with_authority, IssueCredentialError};
+    use super::*;
+    use crate::state::revoke_credential;
     use crate::{
         domain::Authority, error::AxoneVcError, msg::CredentialInputFormat,
         services::initialize_authority, state::load_credential,
     };
     use bech32::{Bech32, Hrp};
-    use cosmwasm_std::{testing::mock_dependencies, Addr};
+    use cosmwasm_std::{testing::mock_dependencies, testing::mock_env, Addr};
 
     fn credential_payload(authority_did: &str, id: &str) -> Vec<u8> {
         format!(
@@ -260,5 +261,34 @@ mod tests {
         .expect_err("second submit should fail");
 
         assert_eq!(err, IssueCredentialError::CredentialAlreadyExists);
+    }
+
+    #[test]
+    fn issue_credential_with_authority_rejects_revoked() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let authority = initialized_authority(&mut deps);
+        let payload = credential_payload(authority.did(), "urn:uuid:credential-1");
+
+        issue_credential(
+            deps.as_mut().storage,
+            &payload,
+            CredentialInputFormat::NQuads,
+        )
+        .expect("first submit should succeed");
+
+        let tombstone = CredentialTombstone::new(env.block.time);
+        revoke_credential(deps.as_mut().storage, "urn:uuid:credential-1", &tombstone)
+            .expect("revocation should succeed");
+
+        let err = issue_credential_with_authority(
+            deps.as_ref().storage,
+            authority,
+            &payload,
+            CredentialInputFormat::NQuads,
+        )
+        .expect_err("second submit should fail");
+
+        assert_eq!(err, IssueCredentialError::CredentialRevoked);
     }
 }

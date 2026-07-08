@@ -3,10 +3,10 @@ use crate::{
     domain::{Credential, CredentialError},
     msg::CredentialInputFormat,
     services::authority,
-    state::{has_credential, record_credential, CredentialRecord},
+    state,
+    state::{has_credential, is_revoked, record_credential, CredentialRecord, CredentialTombstone},
     translation::{decode_nquads_credential, CredentialDecodingError},
 };
-
 use cosmwasm_std::{Storage, Timestamp};
 use thiserror::Error;
 
@@ -69,6 +69,13 @@ fn issue_credential_with_authority(
     Ok((credential, CredentialRecord::new(canonical_nquads)))
 }
 
+#[derive(Debug, PartialEq)]
+pub struct RevokeCredentialResult {
+    pub identifier: String,
+    pub issuer: String,
+    pub revoked_at: Timestamp,
+}
+
 #[derive(Debug, Error, PartialEq)]
 pub enum RevokeCredentialError {
     #[error("credential already revoked")]
@@ -76,6 +83,29 @@ pub enum RevokeCredentialError {
 
     #[error("credential unknown")]
     UnknownCredential,
+}
+
+pub fn revoke_credential(
+    storage: &mut dyn Storage,
+    credential_id: &str,
+    at: Timestamp,
+) -> AxoneVcResult<RevokeCredentialResult> {
+    let authority = authority(storage)?;
+    if !has_credential(storage, credential_id) {
+        return Err(RevokeCredentialError::UnknownCredential.into());
+    }
+    if is_revoked(storage, credential_id) {
+        return Err(RevokeCredentialError::CredentialAlreadyRevoked.into());
+    }
+
+    let tombstone = CredentialTombstone { revoked_at: at };
+    state::revoke_credential(storage, credential_id, &tombstone)?;
+
+    Ok(RevokeCredentialResult {
+        identifier: credential_id.to_string(),
+        issuer: authority.did().to_string(),
+        revoked_at: Default::default(),
+    })
 }
 
 #[cfg(test)]

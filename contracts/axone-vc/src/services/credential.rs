@@ -118,7 +118,6 @@ pub fn revoke_credential(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::revoke_credential;
     use crate::{
         domain::Authority, error::AxoneVcError, msg::CredentialInputFormat,
         services::initialize_authority, state::load_credential,
@@ -277,9 +276,12 @@ mod tests {
         )
         .expect("first submit should succeed");
 
-        let tombstone = CredentialTombstone::new(env.block.time);
-        revoke_credential(deps.as_mut().storage, "urn:uuid:credential-1", &tombstone)
-            .expect("revocation should succeed");
+        revoke_credential(
+            deps.as_mut().storage,
+            "urn:uuid:credential-1",
+            env.block.time,
+        )
+        .expect("revocation should succeed");
 
         let err = issue_credential_with_authority(
             deps.as_ref().storage,
@@ -290,5 +292,87 @@ mod tests {
         .expect_err("second submit should fail");
 
         assert_eq!(err, IssueCredentialError::CredentialRevoked);
+    }
+
+    #[test]
+    fn revoke_credential_success() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let authority = initialized_authority(&mut deps);
+        let payload = credential_payload(authority.did(), "urn:uuid:credential-1");
+
+        issue_credential(
+            deps.as_mut().storage,
+            &payload,
+            CredentialInputFormat::NQuads,
+        )
+        .expect("submit should succeed");
+
+        let res = revoke_credential(
+            deps.as_mut().storage,
+            "urn:uuid:credential-1",
+            env.block.time,
+        );
+        assert!(res.is_ok(), "revoke should succeed");
+        assert_eq!(
+            res.unwrap(),
+            RevokeCredentialResult {
+                identifier: "urn:uuid:credential-1".to_string(),
+                issuer: authority.did().to_string(),
+                revoked_at: env.block.time,
+            }
+        );
+    }
+
+    #[test]
+    fn revoke_credential_rejects_unknown_credential() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let err = revoke_credential(
+            deps.as_mut().storage,
+            "urn:uuid:credential-1",
+            env.block.time,
+        )
+        .expect_err("revocation should fail");
+
+        assert_eq!(
+            err,
+            AxoneVcError::RevokeCredential(RevokeCredentialError::UnknownCredential)
+        );
+    }
+
+    #[test]
+    fn revoke_credential_rejects_revoked_credential() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let authority = initialized_authority(&mut deps);
+        let payload = credential_payload(authority.did(), "urn:uuid:credential-1");
+
+        issue_credential(
+            deps.as_mut().storage,
+            &payload,
+            CredentialInputFormat::NQuads,
+        )
+        .expect("submit should succeed");
+
+        revoke_credential(
+            deps.as_mut().storage,
+            "urn:uuid:credential-1",
+            env.block.time,
+        )
+        .expect("first revoke should succeed");
+
+        let err = revoke_credential(
+            deps.as_mut().storage,
+            "urn:uuid:credential-1",
+            env.block.time,
+        )
+        .expect_err("second revocation should fail");
+
+        assert_eq!(
+            err,
+            AxoneVcError::RevokeCredential(RevokeCredentialError::CredentialAlreadyRevoked)
+        );
     }
 }

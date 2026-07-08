@@ -69,6 +69,15 @@ fn issue_credential_with_authority(
     Ok((credential, CredentialRecord::new(canonical_nquads)))
 }
 
+#[derive(Debug, Error, PartialEq)]
+pub enum RevokeCredentialError {
+    #[error("credential already revoked")]
+    CredentialAlreadyRevoked,
+
+    #[error("credential unknown")]
+    UnknownCredential,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{issue_credential, issue_credential_with_authority, IssueCredentialError};

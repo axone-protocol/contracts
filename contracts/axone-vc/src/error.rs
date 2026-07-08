@@ -1,4 +1,4 @@
-use crate::services::IssueCredentialError;
+use crate::services::{IssueCredentialError, RevokeCredentialError};
 use abstract_app::sdk::AbstractSdkError;
 use abstract_app::std::AbstractError;
 use abstract_app::AppError;
@@ -25,4 +25,7 @@ pub enum AxoneVcError {
 
     #[error(transparent)]
     IssueCredential(#[from] IssueCredentialError),
+
+    #[error(transparent)]
+    RevokeCredential(#[from] RevokeCredentialError),
 }

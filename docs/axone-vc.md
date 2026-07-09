@@ -61,6 +61,21 @@ Issuance fails if the payload format is not supported, if the credential represe
 | `issue_credential.credential` | _(Required.) _ **[Binary](#binary)**. Serialized credential payload.<br /><br />The expected binary encoding and semantic representation are determined by the `format` field. |
 | `issue_credential.format`     | **[CredentialInputFormat](#credentialinputformat)\|null**. Encoding used by the submitted credential payload.<br /><br />Defaults to `n_quads` when omitted.                   |
 
+### ExecuteMsg::revoke_credential
+
+Revoke a verifiable credential from this authority.
+
+Only the app authority is allowed to call this message.
+
+The revocation is terminal, the same identifier cannot be issued again.
+
+Revocation fails if the identifier is unknown or already revoked.
+
+| parameter                      | description                                                     |
+| ------------------------------ | --------------------------------------------------------------- |
+| `revoke_credential`            | _(Required.) _ **object**.                                      |
+| `revoke_credential.identifier` | _(Required.) _ **string**. The credential identifier to revoke. |
+
 ## QueryMsg
 
 Query messages.
@@ -136,4 +151,4 @@ N-Quads extends N-Triples to represent RDF datasets by allowing an optional four
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`d6a66ab44dc4de1f`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`a466d08b9b644044`)_

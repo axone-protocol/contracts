@@ -14,6 +14,8 @@ const RESOURCE_LICENSE_ASSERTION: &str = include_str!("fixtures/resource-license
 const VC_ISSUER_PREDICATE: &str = "<https://www.w3.org/2018/credentials#issuer>";
 const SOURCE_ISSUER_DID: &str =
     "<did:pkh:cosmos:axone-1:cosmos1s7auhjsmvjpiubqwco6bxxehsqwnvepvabhbrv>";
+const RESOURCE_LICENSE_ASSERTION_ID: &str =
+    "https://credentials.axone.xyz/assertion/resource-license";
 const ABSTRACT_EVENT_TYPE: &str = "wasm-abstract";
 
 struct TestEnv<Env: CwEnv> {
@@ -94,7 +96,7 @@ fn issue_credential_emits_event() -> anyhow::Result<()> {
         response
             .event_attr_value(ABSTRACT_EVENT_TYPE, "identifier")
             .expect("Missing identifier attribute"),
-        "https://credentials.axone.xyz/assertion/resource-license"
+        RESOURCE_LICENSE_ASSERTION_ID
     );
     assert_eq!(
         response
@@ -167,6 +169,135 @@ fn issue_credential_rejects_non_host_account_sender() -> anyhow::Result<()> {
         .app
         .call_as(&unauthorized)
         .issue_credential(credential, Some(CredentialInputFormat::NQuads))
+        .expect_err("non-host sender should be rejected");
+
+    assert!(format!("{err:?}").contains("Caller is not admin"));
+
+    Ok(())
+}
+
+#[test]
+fn revoke_credential_accepts_issued_credential() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = Binary::from(resource_license_assertion_payload(&authority.did));
+
+    env.app
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))?;
+    env.app
+        .revoke_credential(RESOURCE_LICENSE_ASSERTION_ID.to_string())?;
+
+    Ok(())
+}
+
+#[test]
+fn revoke_credential_emits_event() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = Binary::from(resource_license_assertion_payload(&authority.did));
+
+    env.app
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))?;
+    let response = env
+        .app
+        .revoke_credential(RESOURCE_LICENSE_ASSERTION_ID.to_string())?;
+
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "action")
+            .expect("Missing action attribute"),
+        "revoke_credential"
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "identifier")
+            .expect("Missing identifier attribute"),
+        RESOURCE_LICENSE_ASSERTION_ID
+    );
+    assert_eq!(
+        response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "issuer")
+            .expect("Missing issuer attribute"),
+        authority.did
+    );
+    assert!(response
+        .event_attr_value(ABSTRACT_EVENT_TYPE, "revoked_at")
+        .expect("Missing revoked_at attribute")
+        .contains('.'));
+
+    Ok(())
+}
+
+#[test]
+fn revoke_credential_rejects_unknown_credential() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+
+    let err = env
+        .app
+        .revoke_credential(RESOURCE_LICENSE_ASSERTION_ID.to_string())
+        .expect_err("unknown credential should be rejected");
+
+    assert!(format!("{err:?}").contains("credential unknown"), "{err:?}");
+
+    Ok(())
+}
+
+#[test]
+fn revoke_credential_rejects_duplicates() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = Binary::from(resource_license_assertion_payload(&authority.did));
+
+    env.app
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))?;
+    env.app
+        .revoke_credential(RESOURCE_LICENSE_ASSERTION_ID.to_string())?;
+    let err = env
+        .app
+        .revoke_credential(RESOURCE_LICENSE_ASSERTION_ID.to_string())
+        .expect_err("duplicate revocation should fail");
+
+    assert!(
+        format!("{err:?}").contains("credential already revoked"),
+        "{err:?}"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn revoke_credential_prevents_reissuing_same_identifier() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = Binary::from(resource_license_assertion_payload(&authority.did));
+
+    env.app
+        .issue_credential(credential.clone(), Some(CredentialInputFormat::NQuads))?;
+    env.app
+        .revoke_credential(RESOURCE_LICENSE_ASSERTION_ID.to_string())?;
+    let err = env
+        .app
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))
+        .expect_err("revoked credential identifier should not be reusable");
+
+    assert!(format!("{err:?}").contains("credential revoked"), "{err:?}");
+
+    Ok(())
+}
+
+#[test]
+fn revoke_credential_rejects_non_host_account_sender() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential = Binary::from(resource_license_assertion_payload(&authority.did));
+    let unauthorized = env.app.environment().addr_make("unauthorized");
+
+    env.app
+        .issue_credential(credential, Some(CredentialInputFormat::NQuads))?;
+    let err = env
+        .app
+        .call_as(&unauthorized)
+        .revoke_credential(RESOURCE_LICENSE_ASSERTION_ID.to_string())
         .expect_err("non-host sender should be rejected");
 
     assert!(format!("{err:?}").contains("Caller is not admin"));

@@ -3,9 +3,10 @@ use crate::{
     msg::AxoneVcExecuteMsg,
     services::issue_credential,
     RESPONSE_KEY_CREDENTIAL_ID, RESPONSE_KEY_IDENTIFIER, RESPONSE_KEY_ISSUED_AT,
-    RESPONSE_KEY_ISSUER, RESPONSE_KEY_SUBJECT, RESPONSE_KEY_TYPES,
+    RESPONSE_KEY_ISSUER, RESPONSE_KEY_REVOKED_AT, RESPONSE_KEY_SUBJECT, RESPONSE_KEY_TYPES,
 };
 
+use crate::services::revoke_credential;
 use abstract_app::traits::AbstractResponse;
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
 
@@ -25,6 +26,9 @@ pub fn execute_handler(
             credential.as_slice(),
             format.unwrap_or_default(),
         ),
+        AxoneVcExecuteMsg::RevokeCredential { identifier } => {
+            execute_revoke_credential(deps, env, info, module, identifier)
+        }
     }
 }
 
@@ -56,6 +60,32 @@ fn execute_issue_credential(
             (
                 RESPONSE_KEY_ISSUED_AT.to_string(),
                 result.issued_at.to_string(),
+            ),
+        ],
+    ))
+}
+
+fn execute_revoke_credential(
+    deps: DepsMut<'_>,
+    env: Env,
+    info: MessageInfo,
+    module: AxoneVc,
+    identifier: String,
+) -> AxoneVcResult {
+    module
+        .admin
+        .assert_admin(deps.as_ref(), &env, &info.sender)?;
+
+    let result = revoke_credential(deps.storage, &identifier, env.block.time)?;
+
+    Ok(module.custom_response(
+        "revoke_credential",
+        vec![
+            (RESPONSE_KEY_IDENTIFIER.to_string(), result.identifier),
+            (RESPONSE_KEY_ISSUER.to_string(), result.issuer),
+            (
+                RESPONSE_KEY_REVOKED_AT.to_string(),
+                result.revoked_at.to_string(),
             ),
         ],
     ))

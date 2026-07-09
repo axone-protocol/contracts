@@ -23,6 +23,7 @@ pub const RESPONSE_KEY_ISSUER: &str = "issuer";
 pub const RESPONSE_KEY_SUBJECT: &str = "subject";
 pub const RESPONSE_KEY_TYPES: &str = "types";
 pub const RESPONSE_KEY_ISSUED_AT: &str = "issued_at";
+pub const RESPONSE_KEY_REVOKED_AT: &str = "revoked_at";
 
 // oxrdf pulls rand/getrandom transitively, but CosmWasm contracts must not depend
 // on host randomness. This custom backend keeps wasm32-unknown-unknown builds

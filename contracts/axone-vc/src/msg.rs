@@ -51,6 +51,18 @@ pub enum AxoneVcExecuteMsg {
         #[serde(default)]
         format: Option<CredentialInputFormat>,
     },
+
+    /// Revoke a verifiable credential from this authority.
+    ///
+    /// Only the app authority is allowed to call this message.
+    ///
+    /// The revocation is terminal, the same identifier cannot be issued again.
+    ///
+    /// Revocation fails if the identifier is unknown or already revoked.
+    RevokeCredential {
+        /// The credential identifier to revoke.
+        identifier: String,
+    },
 }
 
 /// Supported credential input encodings.

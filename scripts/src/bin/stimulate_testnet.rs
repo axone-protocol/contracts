@@ -28,7 +28,7 @@ use cw_orch::{
     tokio::runtime::Runtime,
 };
 use log::info;
-use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 const CONSTITUTION: &str = include_str!("../../examples/constitution.pl");
 
@@ -49,15 +49,14 @@ impl Profile {
     }
 }
 
-fn select_profile(rng: &mut impl rand::Rng) -> Profile {
-    *[
+fn select_profile(rng: &mut impl Rng) -> Profile {
+    let profiles = [
         Profile::AccountOnly,
         Profile::Governance,
         Profile::Credential,
         Profile::GovernanceAndCredential,
-    ]
-    .choose(rng)
-    .expect("profile list is not empty")
+    ];
+    profiles[rng.gen_range(0..profiles.len())]
 }
 
 #[derive(Debug, Parser)]
@@ -132,8 +131,7 @@ fn stimulate(network: ChainInfo, args: &Arguments) -> anyhow::Result<()> {
         .unwrap_or_else(synthetic_account::default_marker);
     let mut rng = args
         .seed
-        .map(StdRng::seed_from_u64)
-        .unwrap_or_else(StdRng::from_entropy);
+        .map_or_else(StdRng::from_entropy, StdRng::seed_from_u64);
     let profile = select_profile(&mut rng);
     info!("Selected synthetic profile: {profile:?}");
 
@@ -163,10 +161,7 @@ fn stimulate(network: ChainInfo, args: &Arguments) -> anyhow::Result<()> {
             "case{action:withdraw}",
             "case{action:mint}",
         ];
-        let case = cases
-            .choose(&mut rng)
-            .expect("case list is not empty")
-            .to_string();
+        let case = cases[rng.gen_range(0..cases.len())].to_string();
         app.execute(
             &gov_execute(AxoneGovExecuteMsg::RecordDecision {
                 case,

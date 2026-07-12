@@ -13,17 +13,26 @@ name = "deploy_abstract_info"
 path = "src/bin/deploy_abstract_info.rs"
 
 [[bin]]
-name = "create_abstract_accounts"
-path = "src/bin/create_abstract_accounts.rs"
+name = "create_abstract_account"
+path = "src/bin/create_abstract_account.rs"
+
+[[bin]]
+name = "stimulate_testnet"
+path = "src/bin/stimulate_testnet.rs"
 
 [dependencies]
 abstract-client.workspace = true
 abstract-interface.workspace = true
+abstract-std.workspace = true
 anyhow = { workspace = true }
 axone-networks = { path = "../packages/axone-networks" }
+axone-gov = { path = "../contracts/axone-gov", features = ["daemon-bin"] }
+axone-vc = { path = "../contracts/axone-vc", features = ["daemon-bin"] }
 clap = { workspace = true, features = ["derive"] }
+cosmwasm-std.workspace = true
 cw-orch = { workspace = true, features = ["daemon"] }
 dotenv = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
+rand = "0.8.5"
 tokio = { version = "1.0", features = ["rt", "macros"] }

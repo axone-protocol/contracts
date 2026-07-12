@@ -534,9 +534,9 @@ echo "🔎 Listing Abstract deployment info for networks: ${networks}"
 cargo run --bin deploy_abstract_info --package axone-scripts -- --network-ids ${networks}
 '''
 
-[tasks.create-abstract-accounts]
+[tasks.create-abstract-account]
 category = "Deployment"
-description = "Create synthetic Abstract Accounts on a network. Usage: cargo make create-abstract-accounts [network-id] [-- --count 5]"
+description = "Create one synthetic Abstract Account on a network. Usage: cargo make create-abstract-account [network-id] [-- --run-marker <marker>]"
 script = '''
 network="${1:-testnet}"
 if [ "$#" -gt 0 ]
@@ -555,8 +555,27 @@ case "$network" in
     ;;
 esac
 
-echo "🧬 Creating Abstract Accounts on ${network} with args: $*"
-cargo run --bin create_abstract_accounts --package axone-scripts -- --network-id "${network}" "$@"
+echo "🧬 Creating one Abstract Account on ${network} with args: $*"
+cargo run --bin create_abstract_account --package axone-scripts -- --network-id "${network}" "$@"
+'''
+
+[tasks.stimulate-testnet]
+category = "Deployment"
+description = "Create one varied synthetic testnet scenario. Usage: cargo make stimulate-testnet [network-id] [-- --run-marker <marker>]"
+script = '''
+network="${1:-testnet}"
+if [ "$#" -gt 0 ]
+then
+  shift
+fi
+
+if [ "${1:-}" = "--" ]
+then
+  shift
+fi
+
+echo "🧬 Stimulating ${network} with args: $*"
+cargo run --bin stimulate_testnet --package axone-scripts -- --network-id "${network}" "$@"
 '''
 
 [tasks.deploy-install]

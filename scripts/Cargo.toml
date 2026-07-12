@@ -25,8 +25,8 @@ abstract-client.workspace = true
 abstract-interface.workspace = true
 abstract-std.workspace = true
 anyhow = { workspace = true }
-axone-networks = { path = "../packages/axone-networks" }
 axone-gov = { path = "../contracts/axone-gov", features = ["daemon-bin"] }
+axone-networks = { path = "../packages/axone-networks" }
 axone-vc = { path = "../contracts/axone-vc", features = ["daemon-bin"] }
 clap = { workspace = true, features = ["derive"] }
 cosmwasm-std.workspace = true

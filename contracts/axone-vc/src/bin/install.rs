@@ -6,40 +6,32 @@ use abstract_app::objects::namespace::Namespace;
 use abstract_client::{AbstractClient, Application};
 use axone_networks::parse_network as parse_axone_network;
 use clap::Parser;
-use cw_orch::{daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
+use cw_orch::{anyhow, daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
 use log::info;
 
-fn install(networks: Vec<ChainInfo>) {
+fn install(networks: Vec<ChainInfo>) -> anyhow::Result<()> {
     for network in networks {
         info!("Installing axone-vc on {}...", network.chain_id);
 
-        let rt = Runtime::new().expect("Failed to create tokio runtime");
+        let rt = Runtime::new()?;
         let chain = DaemonBuilder::new(network.clone())
             .handle(rt.handle())
-            .build()
-            .expect("Failed to build daemon connection");
+            .build()?;
 
-        let abstract_client: AbstractClient<Daemon> =
-            AbstractClient::new(chain.clone()).expect("Failed to connect to Abstract client");
+        let abstract_client: AbstractClient<Daemon> = AbstractClient::new(chain)?;
 
-        let app_namespace =
-            Namespace::from_id(AXONE_VC_ID).expect("Failed to parse namespace from module ID");
-        let account = abstract_client
-            .fetch_or_build_account(app_namespace, |builder| {
-                builder
-                    .namespace(Namespace::from_id(AXONE_VC_ID).expect("Failed to parse namespace"))
-            })
-            .expect("Failed to fetch or build account");
+        let app_namespace = Namespace::from_id(AXONE_VC_ID)?;
+        let account = abstract_client.fetch_or_build_account(app_namespace.clone(), |builder| {
+            builder.namespace(app_namespace.clone())
+        })?;
 
-        let app: Application<Daemon, AxoneVcInterface<Daemon>> = account
-            .install_app::<AxoneVcInterface<_>>(&AxoneVcInstantiateMsg {}, &[])
-            .expect("Failed to install axone-vc module");
+        let app: Application<Daemon, AxoneVcInterface<Daemon>> =
+            account.install_app::<AxoneVcInterface<_>>(&AxoneVcInstantiateMsg {}, &[])?;
 
-        info!(
-            "axone-vc installed at {}",
-            app.address().expect("Failed to get app address")
-        );
+        info!("axone-vc installed at {}", app.address()?);
     }
+
+    Ok(())
 }
 
 #[derive(Debug, Default, Parser)]
@@ -49,7 +41,7 @@ struct Arguments {
     network_ids: Vec<String>,
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
@@ -57,9 +49,9 @@ fn main() {
     let networks = args
         .network_ids
         .iter()
-        .map(|n| parse_axone_network(n).or_else(|_| cw_orch::daemon::networks::parse_network(n)))
+        .map(|n| parse_axone_network(n).or_else(|_| networks::parse_network(n)))
         .collect::<Result<Vec<_>, _>>()
-        .expect("Failed to parse network IDs. Please check your network configuration.");
+        .map_err(anyhow::Error::msg)?;
 
-    install(networks);
+    install(networks)
 }

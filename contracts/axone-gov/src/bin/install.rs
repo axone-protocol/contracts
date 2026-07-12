@@ -13,46 +13,33 @@ use axone_networks::{
 };
 use clap::{ArgGroup, Parser};
 use cosmwasm_std::Binary;
-use cw_orch::{daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
+use cw_orch::{anyhow, daemon::networks::ChainInfo, prelude::*, tokio::runtime::Runtime};
 use log::info;
 use std::{path::PathBuf, str::FromStr};
 
-fn install(networks: Vec<ChainInfo>, account_id: AccountId, constitution: Binary) {
+fn install(
+    networks: Vec<ChainInfo>,
+    account_id: AccountId,
+    constitution: Binary,
+) -> anyhow::Result<()> {
     for network in networks {
         info!("📥 Installing axone-gov on {}...", network.chain_id);
 
-        let rt = Runtime::new().expect("Failed to create tokio runtime");
+        let rt = Runtime::new()?;
         let chain = DaemonBuilder::new(network.clone())
             .handle(rt.handle())
-            .build()
-            .expect("Failed to build daemon connection");
+            .build()?;
 
         info!("   Connected to: {}", network.chain_id);
         info!("   Sender: {}", chain.sender_addr());
 
-        seed_abstract_addresses(&chain, &network, &rt).unwrap_or_else(|err| {
-            panic!(
-                "Failed to seed Abstract addresses for {} from on-chain deployment: {}",
-                network.chain_id, err
-            )
-        });
+        seed_abstract_addresses(&chain, &network, &rt)?;
 
-        let abstract_client: AbstractClient<Daemon> =
-            AbstractClient::new(chain.clone()).expect("Failed to connect to Abstract client");
+        let abstract_client: AbstractClient<Daemon> = AbstractClient::new(chain.clone())?;
 
-        let account = abstract_client
-            .fetch_account(account_id.clone())
-            .unwrap_or_else(|err| {
-                panic!(
-                    "Failed to fetch target Abstract Account on {}: {}",
-                    network.chain_id, err
-                )
-            });
+        let account = abstract_client.fetch_account(account_id.clone())?;
 
-        info!(
-            "📦 Account address: {}",
-            account.address().expect("Failed to get account address")
-        );
+        info!("📦 Account address: {}", account.address()?);
 
         info!("📥 Installing axone-gov module...");
         let app: Application<Daemon, AxoneGovInterface<Daemon>> = account
@@ -61,26 +48,21 @@ fn install(networks: Vec<ChainInfo>, account_id: AccountId, constitution: Binary
                     constitution: constitution.clone(),
                 },
                 &[],
-            )
-            .expect("Failed to install axone-gov module");
+            )?;
 
         info!("✅ axone-gov installed successfully!");
         info!("Module details:");
-        info!(
-            "   Address: {}",
-            app.address().expect("Failed to get app address")
-        );
-        info!(
-            "   Account: {}",
-            account.address().expect("Failed to get account address")
-        );
+        info!("   Address: {}", app.address()?);
+        info!("   Account: {}", account.address()?);
 
         info!("✅ Module installed correctly!");
         info!(
             "You can now interact with the module at: {}",
-            app.address().expect("Failed to get app address")
+            app.address()?
         );
     }
+
+    Ok(())
 }
 
 #[derive(Debug, Parser)]
@@ -105,7 +87,7 @@ struct Arguments {
     constitution: Option<String>,
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
@@ -113,30 +95,30 @@ fn main() {
     let networks = args
         .network_ids
         .iter()
-        .map(|n| parse_axone_network(n).or_else(|_| cw_orch::daemon::networks::parse_network(n)))
+        .map(|n| parse_axone_network(n).or_else(|_| networks::parse_network(n)))
         .collect::<Result<Vec<_>, _>>()
-        .expect("Failed to parse network IDs. Please check your network configuration.");
+        .map_err(anyhow::Error::msg)?;
 
-    let constitution = load_constitution(&args);
+    let constitution = load_constitution(&args)?;
 
-    install(networks, args.account_id, constitution);
+    install(networks, args.account_id, constitution)
 }
 
 fn parse_account_id(input: &str) -> Result<AccountId, String> {
     AccountId::from_str(input).map_err(|err| err.to_string())
 }
 
-fn load_constitution(args: &Arguments) -> Binary {
+fn load_constitution(args: &Arguments) -> anyhow::Result<Binary> {
     if let Some(path) = &args.constitution_file {
         info!("📜 Using constitution file: {}", path.display());
-        let data = std::fs::read(path).expect("Failed to read constitution file");
-        return Binary::from(data);
+        let data = std::fs::read(path)?;
+        return Ok(Binary::from(data));
     }
 
     if let Some(text) = &args.constitution {
         info!("📜 Using inline constitution program");
-        return Binary::from(text.clone().into_bytes());
+        return Ok(Binary::from(text.clone().into_bytes()));
     }
 
-    unreachable!("constitution source is enforced by clap");
+    anyhow::bail!("constitution source is required")
 }

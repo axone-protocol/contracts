@@ -35,7 +35,7 @@ fn install(
 
         seed_abstract_addresses(&chain, &network, &rt)?;
 
-        let abstract_client: AbstractClient<Daemon> = AbstractClient::new(chain.clone())?;
+        let abstract_client: AbstractClient<Daemon> = AbstractClient::new(chain)?;
 
         let account = abstract_client.fetch_account(account_id.clone())?;
 

@@ -7,9 +7,9 @@ name: Stimulate / Testnet
   workflow_dispatch:
     inputs:
       count:
-        description: Number of Abstract Accounts to create
+        description: Number of synthetic scenarios to run
         required: false
-        default: "5"
+        default: "1"
         type: string
 
 permissions:
@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  create-abstract-accounts:
+  stimulate-testnet:
     if: github.repository == 'axone-protocol/contracts'
     runs-on: ubuntu-22.04
     steps:
@@ -48,7 +48,7 @@ jobs:
       - name: Validate count
         shell: bash
         env:
-          ACCOUNT_COUNT: ${{ github.event.inputs.count || '5' }}
+          ACCOUNT_COUNT: ${{ github.event.inputs.count || '1' }}
         run: |
           set -euo pipefail
 
@@ -62,9 +62,13 @@ jobs:
             exit 1
           fi
 
-      - name: Create Abstract Accounts on Axone testnet
+      - name: Generate synthetic Axone testnet activity
         env:
-          ACCOUNT_COUNT: ${{ github.event.inputs.count || '5' }}
+          ACCOUNT_COUNT: ${{ github.event.inputs.count || '1' }}
           RUST_LOG: info
           TEST_MNEMONIC: ${{ secrets.AXONE_GITHUB_TESTNET_WALLET }}
-        run: nix develop -c cargo make create-abstract-accounts testnet -- --count "${ACCOUNT_COUNT}"
+        run: |
+          set -euo pipefail
+          for index in $(seq 1 "${ACCOUNT_COUNT}"); do
+            nix develop -c cargo make stimulate-testnet testnet -- --run-marker "gh${GITHUB_RUN_ID}a${GITHUB_RUN_ATTEMPT}-${index}"
+          done

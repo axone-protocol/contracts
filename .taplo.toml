@@ -1,5 +1,7 @@
 include = ["**/*.toml"]
 
+exclude = [".direnv/**", "target/**"]
+
 [formatting]
 align_entries = false
 reorder_keys = true

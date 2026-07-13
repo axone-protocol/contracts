@@ -741,13 +741,18 @@ version = "0.1.0"
 dependencies = [
  "abstract-client",
  "abstract-interface",
+ "abstract-std",
  "anyhow",
+ "axone-gov",
  "axone-networks",
+ "axone-vc",
  "clap",
+ "cosmwasm-std",
  "cw-orch 0.28.0",
  "dotenv",
  "env_logger",
  "log",
+ "rand 0.8.6",
  "tokio",
 ]
 

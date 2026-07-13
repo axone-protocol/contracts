@@ -35,7 +35,7 @@ fn interact(network: ChainInfo, args: Arguments) -> anyhow::Result<()> {
 
     seed_abstract_addresses(&chain, &network, &rt)?;
 
-    let abstract_client: AbstractClient<Daemon> = AbstractClient::new(chain.clone())?;
+    let abstract_client: AbstractClient<Daemon> = AbstractClient::new(chain)?;
     let account = abstract_client.fetch_account(args.account_id.clone())?;
     let app: Application<Daemon, AxoneGovInterface<Daemon>> = account.application()?;
 
@@ -158,7 +158,7 @@ fn main() -> anyhow::Result<()> {
 
     let args = Arguments::parse();
     let network = parse_axone_network(&args.network_id)
-        .or_else(|_| cw_orch::daemon::networks::parse_network(&args.network_id))
+        .or_else(|_| networks::parse_network(&args.network_id))
         .map_err(anyhow::Error::msg)?;
 
     interact(network, args)

@@ -237,7 +237,7 @@ contract-query - Query a specific contract. The contract must be already deploye
 
 Deployment
 ----------
-create-abstract-accounts - Create synthetic Abstract Accounts on a network. Usage: cargo make create-abstract-accounts [network-id] [-- --count 5]
+create-abstract-account - Create one synthetic Abstract Account on a network. Usage: cargo make create-abstract-account [network-id] [-- --run-marker <marker>]
 deploy-abstract - Deploy Abstract infrastructure to specified networks. Usage: cargo make deploy-abstract <network-ids...>
 deploy-abstract-info - List Abstract deployment info for specified networks. Usage: cargo make deploy-abstract-info <network-ids...>
 deploy-contract - Publish a contract to Abstract on specified networks. Usage: cargo make deploy-contract <contract-name> <network-ids...>
@@ -245,6 +245,7 @@ deploy-install - Install a module on an Abstract Account. Usage: cargo make depl
 deploy-script - Run a contract deployment script. Usage: cargo make deploy-script <script> <package> <network-ids...>
 gov-install - Install axone-gov on an existing Abstract Account. Usage: cargo make gov-install [axone-gov] <network-ids...> -- --account-id <id> --constitution-file <path>
 gov-interact - Interact with axone-gov installed on an Abstract Account. Usage: cargo make gov-interact [network-id] -- --account-id <id> <command>
+stimulate-testnet - Create one varied synthetic testnet scenario. Usage: cargo make stimulate-testnet [network-id] [-- --run-marker <marker>]
 
 Development Tools
 ----------

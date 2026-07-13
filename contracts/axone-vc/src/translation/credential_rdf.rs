@@ -105,13 +105,11 @@ pub fn decode_nquads_credential(
     let quads = parse_nquads_quads(utf8.as_bytes())?;
     let dataset = Dataset::from_iter(quads.iter().cloned());
     let credential_subject = find_credential_subject(&dataset)?;
-    ensure_single_validity_bound(&quads, &credential_subject, VC_VALID_FROM)?;
-    ensure_single_validity_bound(&quads, &credential_subject, VC_VALID_UNTIL)?;
     let id = subject_to_identifier(&credential_subject);
     let issuer = extract_issuer(&dataset, &credential_subject)?;
     let issuance_date = extract_issuance_date(&dataset, &credential_subject)?;
-    let valid_from = extract_validity_bound(&dataset, &credential_subject, VC_VALID_FROM)?;
-    let valid_until = extract_validity_bound(&dataset, &credential_subject, VC_VALID_UNTIL)?;
+    let valid_from = extract_validity_bound(&quads, &credential_subject, VC_VALID_FROM)?;
+    let valid_until = extract_validity_bound(&quads, &credential_subject, VC_VALID_UNTIL)?;
     let subject_id = extract_subject_id(&dataset, &credential_subject)?;
     let types = extract_types(&dataset, &credential_subject);
     let canonical_nquads = canonicalize_dataset(&dataset)?;
@@ -213,14 +211,16 @@ fn parse_issuance_date(literal: &Literal) -> Result<Timestamp, CredentialDecodin
 }
 
 fn extract_validity_bound(
-    dataset: &Dataset,
+    quads: &[Quad],
     credential_subject: &Subject,
     predicate: NamedNodeRef<'_>,
 ) -> Result<Option<Timestamp>, CredentialDecodingError> {
-    let objects: Vec<Term> = dataset
-        .quads_for_subject(credential_subject.as_ref())
-        .filter(|quad| quad.predicate == predicate)
-        .map(|quad| quad.object.into_owned())
+    let objects: Vec<&Term> = quads
+        .iter()
+        .filter(|quad| {
+            quad.subject.as_ref() == credential_subject.as_ref() && quad.predicate == predicate
+        })
+        .map(|quad| &quad.object)
         .collect();
 
     match objects.as_slice() {
@@ -228,25 +228,6 @@ fn extract_validity_bound(
         [Term::Literal(literal)] => parse_validity_bound(literal).map(Some),
         _ => Err(CredentialDecodingError::InvalidDataset),
     }
-}
-
-fn ensure_single_validity_bound(
-    quads: &[Quad],
-    credential_subject: &Subject,
-    predicate: NamedNodeRef<'_>,
-) -> Result<(), CredentialDecodingError> {
-    let count = quads
-        .iter()
-        .filter(|quad| {
-            quad.subject.as_ref() == credential_subject.as_ref() && quad.predicate == predicate
-        })
-        .count();
-
-    if count > 1 {
-        return Err(CredentialDecodingError::InvalidDataset);
-    }
-
-    Ok(())
 }
 
 fn parse_validity_bound(literal: &Literal) -> Result<Timestamp, CredentialDecodingError> {
@@ -314,8 +295,8 @@ mod tests {
     use super::{
         decode_nquads_credential, extract_issuance_date, extract_issuer, extract_subject_id,
         extract_validity_bound, find_credential_subject, map_canonicalization_error,
-        parse_issuance_date, parse_nquads, parse_validity_bound, subject_to_identifier,
-        CredentialDecodingError, DecodedUri, VC_ISSUER, VC_VALID_FROM,
+        parse_issuance_date, parse_nquads, parse_nquads_quads, parse_validity_bound,
+        subject_to_identifier, CredentialDecodingError, DecodedUri, VC_ISSUER, VC_VALID_FROM,
     };
     use cosmwasm_std::Timestamp;
     use oxrdf::{BlankNode, Literal, NamedNodeRef, Subject};
@@ -651,16 +632,17 @@ mod tests {
 
     #[test]
     fn extract_validity_bound_accepts_date_time_stamp() {
-        let dataset = parsed_dataset(
+        let quads = parse_nquads_quads(
             format!(
                 r#"<{CREDENTIAL_ID}> <{VC_NAMESPACE}validFrom> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
 "#
             )
             .as_bytes(),
-        );
+        )
+        .expect("quads should parse");
 
         let bound = extract_validity_bound(
-            &dataset,
+            &quads,
             &Subject::NamedNode(NamedNodeRef::new_unchecked(CREDENTIAL_ID).into_owned()),
             VC_VALID_FROM,
         )
@@ -671,17 +653,18 @@ mod tests {
 
     #[test]
     fn extract_validity_bound_rejects_duplicate_claims() {
-        let dataset = parsed_dataset(
+        let quads = parse_nquads_quads(
             format!(
                 r#"<{CREDENTIAL_ID}> <{VC_NAMESPACE}validFrom> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
 <{CREDENTIAL_ID}> <{VC_NAMESPACE}validFrom> "2025-01-02T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
 "#
             )
             .as_bytes(),
-        );
+        )
+        .expect("quads should parse");
 
         let err = extract_validity_bound(
-            &dataset,
+            &quads,
             &Subject::NamedNode(NamedNodeRef::new_unchecked(CREDENTIAL_ID).into_owned()),
             VC_VALID_FROM,
         )

@@ -94,6 +94,15 @@ pub fn revoke_credential(
 }
 
 #[cfg(test)]
+pub fn load_credential(
+    storage: &dyn Storage,
+    credential_id: &str,
+) -> Result<CredentialRecord, AxoneVcError> {
+    credential(storage, credential_id)?
+        .ok_or_else(|| StdError::not_found("CredentialRecord").into())
+}
+
+#[cfg(test)]
 mod tests {
     use super::CredentialRecord;
     use cosmwasm_std::from_json;
@@ -106,12 +115,4 @@ mod tests {
         assert_eq!(record.valid_from, None);
         assert_eq!(record.valid_until, None);
     }
-}
-
-#[cfg(test)]
-pub fn load_credential(
-    storage: &dyn Storage,
-    credential_id: &str,
-) -> Result<CredentialRecord, AxoneVcError> {
-    Ok(CREDENTIALS.load(storage, credential_id)?)
 }

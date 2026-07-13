@@ -119,6 +119,19 @@ pub enum AxoneVcQueryMsg {
         /// When omitted, every active credential is considered valid.
         valid_at: Option<Timestamp>,
     },
+
+    /// Return the canonical serialized representation stored for an active credential.
+    ///
+    /// The returned representation is the contract's canonical storage format. It is
+    /// not guaranteed to preserve the encoding or presentation of the issued payload.
+    ///
+    /// This query fails when the identifier is unknown or the credential has been
+    /// revoked.
+    #[returns(CredentialRawResponse)]
+    CredentialRaw {
+        /// Identifier of the credential to retrieve.
+        identifier: Uri,
+    },
 }
 
 /// Response returned by `AxoneVcQueryMsg::Authority`.
@@ -145,4 +158,14 @@ pub struct VerifyCredentialResponse {
     ///
     /// This is equal to `exists` when no instant was requested.
     pub valid: bool,
+}
+
+/// Response returned by `AxoneVcQueryMsg::CredentialRaw`.
+#[cosmwasm_schema::cw_serde]
+pub struct CredentialRawResponse {
+    /// Canonical serialized credential representation persisted by the contract.
+    ///
+    /// This binary value is base64-encoded in JSON responses and is independent
+    /// from the format and presentation of the credential submitted at issuance.
+    pub credential: Binary,
 }

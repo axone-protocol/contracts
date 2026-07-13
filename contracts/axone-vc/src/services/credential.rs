@@ -10,7 +10,7 @@ use crate::{
     },
     translation::{decode_nquads_credential, CredentialDecodingError},
 };
-use cosmwasm_std::{Storage, Timestamp};
+use cosmwasm_std::{Binary, StdError, Storage, Timestamp};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
@@ -111,6 +111,13 @@ pub fn verify_credential(
         exists: true,
         valid,
     })
+}
+
+pub fn credential_raw(storage: &dyn Storage, credential_id: &str) -> AxoneVcResult<Binary> {
+    let record =
+        credential(storage, credential_id)?.ok_or_else(|| StdError::not_found("credential"))?;
+
+    Ok(Binary::from(record.canonical_nquads.into_bytes()))
 }
 
 #[derive(Debug, PartialEq)]

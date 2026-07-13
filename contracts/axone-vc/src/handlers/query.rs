@@ -1,7 +1,7 @@
 use crate::{
     contract::{AxoneVc, AxoneVcResult},
-    msg::{AuthorityResponse, AxoneVcQueryMsg, VerifyCredentialResponse},
-    services::{authority, verify_credential},
+    msg::{AuthorityResponse, AxoneVcQueryMsg, CredentialRawResponse, VerifyCredentialResponse},
+    services::{authority, credential_raw, verify_credential},
 };
 
 use cosmwasm_std::{to_json_binary, Binary, Deps, Env};
@@ -18,6 +18,9 @@ pub fn query_handler(
             identifier,
             valid_at,
         } => to_json_binary(&query_verify_credential(deps, identifier, valid_at)?),
+        AxoneVcQueryMsg::CredentialRaw { identifier } => {
+            to_json_binary(&query_credential_raw(deps, identifier)?)
+        }
     }
     .map_err(Into::into)
 }
@@ -31,6 +34,15 @@ fn query_verify_credential(
     Ok(VerifyCredentialResponse {
         exists: result.exists,
         valid: result.valid,
+    })
+}
+
+fn query_credential_raw(
+    deps: Deps<'_>,
+    identifier: String,
+) -> AxoneVcResult<CredentialRawResponse> {
+    Ok(CredentialRawResponse {
+        credential: credential_raw(deps.storage, &identifier)?,
     })
 }
 

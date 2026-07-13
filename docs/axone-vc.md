@@ -108,6 +108,19 @@ Revoked credentials are not part of the active credential set and therefore retu
 | `verify_credential.identifier` | _(Required.) _ **string**. Identifier of the credential to check.                                                                                                                |
 | `verify_credential.valid_at`   | **[Timestamp](#timestamp)\|null**. Optional instant at which to evaluate the credential validity interval.<br /><br />When omitted, every active credential is considered valid. |
 
+### QueryMsg::credential_raw
+
+Return the canonical serialized representation stored for an active credential.
+
+The returned representation is the contract's canonical storage format. It is not guaranteed to preserve the encoding or presentation of the issued payload.
+
+This query fails when the identifier is unknown or the credential has been revoked.
+
+| parameter                   | description                                                          |
+| --------------------------- | -------------------------------------------------------------------- |
+| `credential_raw`            | _(Required.) _ **object**.                                           |
+| `credential_raw.identifier` | _(Required.) _ **string**. Identifier of the credential to retrieve. |
+
 ## MigrateMsg
 
 Migrate message.
@@ -132,6 +145,14 @@ Response returned by `AxoneVcQueryMsg::Authority`.
 | property | description                                                                                                                                                                                                                                                                                                                                |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `did`    | _(Required.) _ **string**. The authority DID recognized by this contract.<br /><br />This representation uses the `did:pkh` method over the on-chain address of the host Abstract Account, rendered as a CAIP-compatible canonical Cosmos Bech32 account address.<br /><br />Form:<br /><br />`did:pkh:cosmos:&lt;chain_id&gt;:cosmos1...` |
+
+### credential_raw
+
+Response returned by `AxoneVcQueryMsg::CredentialRaw`.
+
+| property     | description                                                                                                                                                                                                                                                                   |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `credential` | _(Required.) _ **[Binary](#binary)**. Canonical serialized credential representation persisted by the contract.<br /><br />This binary value is base64-encoded in JSON responses and is independent from the format and presentation of the credential submitted at issuance. |
 
 ### verify_credential
 
@@ -202,5 +223,5 @@ N-Quads extends N-Triples to represent RDF datasets by allowing an optional four
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`26f5dd9a90e01a6a`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`162b8e70829dbb0d`)*
 ````

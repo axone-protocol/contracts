@@ -33,13 +33,12 @@ impl CredentialRecord {
 }
 
 #[cw_serde]
-pub struct CredentialTombstone {
-    pub revoked_at: Timestamp,
-}
+#[derive(Default)]
+pub struct CredentialTombstone {}
 
 impl CredentialTombstone {
-    pub fn new(revoked_at: Timestamp) -> Self {
-        Self { revoked_at }
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 

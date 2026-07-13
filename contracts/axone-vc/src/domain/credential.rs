@@ -18,9 +18,6 @@ pub enum CredentialError {
     #[error("credential issuer is invalid")]
     InvalidIssuer,
 
-    #[error("credential issuance date missing")]
-    MissingIssuanceDate,
-
     #[error("credential subject missing")]
     MissingSubject,
 
@@ -40,8 +37,6 @@ pub struct Credential {
     id: Uri,
     #[getset(get = "pub")]
     issuer: Uri,
-    #[getset(get_copy = "pub")]
-    issuance_date: Timestamp,
     #[getset(get_copy = "pub")]
     valid_from: Option<Timestamp>,
     #[getset(get_copy = "pub")]
@@ -65,9 +60,6 @@ impl TryFrom<(DecodedCredential, Authority)> for Credential {
             DecodedUri::Invalid => return Err(CredentialError::InvalidIssuer),
             DecodedUri::Uri(uri) => uri.clone(),
         };
-        let issuance_date = decoded
-            .issuance_date()
-            .ok_or(CredentialError::MissingIssuanceDate)?;
         let valid_from = *decoded.valid_from();
         let valid_until = *decoded.valid_until();
         let subject_id = match decoded.subject_id() {
@@ -97,7 +89,6 @@ impl TryFrom<(DecodedCredential, Authority)> for Credential {
         Ok(Self {
             id,
             issuer,
-            issuance_date,
             valid_from,
             valid_until,
             subject_id,
@@ -126,7 +117,6 @@ mod tests {
         DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Uri(AUTHORITY_DID.to_string()),
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Uri("did:example:subject".to_string()),
             vec![
                 VC_TYPE.to_string(),
@@ -152,7 +142,6 @@ mod tests {
         let decoded = DecodedCredential::new(
             None,
             DecodedUri::Uri(AUTHORITY_DID.to_string()),
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Uri("did:example:subject".to_string()),
             vec![
                 VC_TYPE.to_string(),
@@ -171,7 +160,6 @@ mod tests {
         let decoded = DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Missing,
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Uri("did:example:subject".to_string()),
             vec![
                 VC_TYPE.to_string(),
@@ -190,7 +178,6 @@ mod tests {
         let decoded = DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Uri("did:example:issuer".to_string()),
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Uri("did:example:subject".to_string()),
             vec![
                 VC_TYPE.to_string(),
@@ -209,7 +196,6 @@ mod tests {
         let decoded = DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Invalid,
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Uri("did:example:subject".to_string()),
             vec![
                 VC_TYPE.to_string(),
@@ -224,30 +210,10 @@ mod tests {
     }
 
     #[test]
-    fn try_from_requires_issuance_date() {
-        let decoded = DecodedCredential::new(
-            Some("urn:uuid:credential-1".to_string()),
-            DecodedUri::Uri(AUTHORITY_DID.to_string()),
-            None,
-            DecodedUri::Uri("did:example:subject".to_string()),
-            vec![
-                VC_TYPE.to_string(),
-                "https://example.com/types/Test".to_string(),
-            ],
-            String::new(),
-        );
-        let err = Credential::try_from((decoded, authority()))
-            .expect_err("missing issuance date should fail");
-
-        assert_eq!(err, CredentialError::MissingIssuanceDate);
-    }
-
-    #[test]
     fn try_from_requires_subject() {
         let decoded = DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Uri(AUTHORITY_DID.to_string()),
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Missing,
             vec![
                 VC_TYPE.to_string(),
@@ -266,7 +232,6 @@ mod tests {
         let decoded = DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Uri(AUTHORITY_DID.to_string()),
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Uri("did:example:subject".to_string()),
             vec![],
             String::new(),
@@ -282,7 +247,6 @@ mod tests {
         let decoded = DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Uri(AUTHORITY_DID.to_string()),
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Uri("did:example:subject".to_string()),
             vec!["https://example.com/types/Test".to_string()],
             String::new(),
@@ -298,7 +262,6 @@ mod tests {
         let decoded = DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Uri(AUTHORITY_DID.to_string()),
-            Some(Timestamp::from_seconds(1_735_689_600)),
             DecodedUri::Uri("did:example:subject".to_string()),
             vec![VC_TYPE.to_string()],
             String::new(),

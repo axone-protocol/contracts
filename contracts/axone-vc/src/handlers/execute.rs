@@ -2,8 +2,7 @@ use crate::{
     contract::{AxoneVc, AxoneVcResult},
     msg::AxoneVcExecuteMsg,
     services::issue_credential,
-    RESPONSE_KEY_CREDENTIAL_ID, RESPONSE_KEY_IDENTIFIER, RESPONSE_KEY_ISSUED_AT,
-    RESPONSE_KEY_ISSUER, RESPONSE_KEY_REVOKED_AT, RESPONSE_KEY_SUBJECT, RESPONSE_KEY_TYPES,
+    RESPONSE_KEY_IDENTIFIER, RESPONSE_KEY_ISSUER, RESPONSE_KEY_SUBJECT, RESPONSE_KEY_TYPES,
 };
 
 use crate::services::revoke_credential;
@@ -46,23 +45,20 @@ fn execute_issue_credential(
 
     let result = issue_credential(deps.storage, credential, format)?;
 
-    Ok(module.custom_response(
-        "issue_credential",
-        vec![
-            (
-                RESPONSE_KEY_CREDENTIAL_ID.to_string(),
-                result.credential_id.clone(),
-            ),
-            (RESPONSE_KEY_IDENTIFIER.to_string(), result.credential_id),
-            (RESPONSE_KEY_ISSUER.to_string(), result.issuer),
-            (RESPONSE_KEY_SUBJECT.to_string(), result.subject),
-            (RESPONSE_KEY_TYPES.to_string(), result.types.join(",")),
-            (
-                RESPONSE_KEY_ISSUED_AT.to_string(),
-                result.issued_at.to_string(),
-            ),
-        ],
-    ))
+    let mut attributes = vec![
+        (RESPONSE_KEY_IDENTIFIER.to_string(), result.credential_id),
+        (RESPONSE_KEY_ISSUER.to_string(), result.issuer),
+        (RESPONSE_KEY_SUBJECT.to_string(), result.subject),
+        (RESPONSE_KEY_TYPES.to_string(), result.types.join(",")),
+    ];
+    if let Some(valid_from) = result.valid_from {
+        attributes.push(("valid_from".to_string(), valid_from.to_string()));
+    }
+    if let Some(valid_until) = result.valid_until {
+        attributes.push(("valid_until".to_string(), valid_until.to_string()));
+    }
+
+    Ok(module.custom_response("issue_credential", attributes))
 }
 
 fn execute_revoke_credential(
@@ -76,17 +72,13 @@ fn execute_revoke_credential(
         .admin
         .assert_admin(deps.as_ref(), &env, &info.sender)?;
 
-    let result = revoke_credential(deps.storage, &identifier, env.block.time)?;
+    let result = revoke_credential(deps.storage, &identifier)?;
 
     Ok(module.custom_response(
         "revoke_credential",
         vec![
             (RESPONSE_KEY_IDENTIFIER.to_string(), result.identifier),
             (RESPONSE_KEY_ISSUER.to_string(), result.issuer),
-            (
-                RESPONSE_KEY_REVOKED_AT.to_string(),
-                result.revoked_at.to_string(),
-            ),
         ],
     ))
 }

@@ -19,7 +19,8 @@ pub struct IssueCredentialResult {
     pub issuer: String,
     pub subject: String,
     pub types: Vec<String>,
-    pub issued_at: Timestamp,
+    pub valid_from: Option<Timestamp>,
+    pub valid_until: Option<Timestamp>,
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -52,7 +53,8 @@ pub fn issue_credential(
         issuer: credential.issuer().clone(),
         subject: credential.subject_id().clone(),
         types: credential.types().clone(),
-        issued_at: credential.issuance_date(),
+        valid_from: credential.valid_from(),
+        valid_until: credential.valid_until(),
     })
 }
 
@@ -124,7 +126,6 @@ pub fn credential_raw(storage: &dyn Storage, credential_id: &str) -> AxoneVcResu
 pub struct RevokeCredentialResult {
     pub identifier: String,
     pub issuer: String,
-    pub revoked_at: Timestamp,
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -139,7 +140,6 @@ pub enum RevokeCredentialError {
 pub fn revoke_credential(
     storage: &mut dyn Storage,
     credential_id: &str,
-    at: Timestamp,
 ) -> AxoneVcResult<RevokeCredentialResult> {
     let authority = authority(storage)?;
     if is_revoked(storage, credential_id) {
@@ -149,13 +149,12 @@ pub fn revoke_credential(
         return Err(RevokeCredentialError::UnknownCredential.into());
     }
 
-    let tombstone = CredentialTombstone::new(at);
+    let tombstone = CredentialTombstone::new();
     state::revoke_credential(storage, credential_id, &tombstone)?;
 
     Ok(RevokeCredentialResult {
         identifier: credential_id.to_string(),
         issuer: authority.did().to_string(),
-        revoked_at: at,
     })
 }
 
@@ -168,7 +167,7 @@ mod tests {
         translation::CredentialDecodingError,
     };
     use bech32::{Bech32, Hrp};
-    use cosmwasm_std::{testing::mock_dependencies, testing::mock_env, Addr};
+    use cosmwasm_std::{testing::mock_dependencies, Addr};
 
     fn credential_payload(authority_did: &str, id: &str) -> Vec<u8> {
         format!(
@@ -248,10 +247,8 @@ mod tests {
             result.types,
             vec!["https://www.w3.org/2018/credentials#VerifiableCredential"]
         );
-        assert_eq!(
-            result.issued_at,
-            cosmwasm_std::Timestamp::from_seconds(1_735_689_600)
-        );
+        assert_eq!(result.valid_from, None);
+        assert_eq!(result.valid_until, None);
 
         let record = load_credential(deps.as_ref().storage, credential_id)
             .expect("credential should be persisted");
@@ -330,7 +327,6 @@ mod tests {
     #[test]
     fn issue_credential_with_authority_rejects_revoked() {
         let mut deps = mock_dependencies();
-        let env = mock_env();
         let authority = initialized_authority(&mut deps);
         let payload = credential_payload(authority.did(), "urn:uuid:credential-1");
 
@@ -341,12 +337,8 @@ mod tests {
         )
         .expect("first submit should succeed");
 
-        revoke_credential(
-            deps.as_mut().storage,
-            "urn:uuid:credential-1",
-            env.block.time,
-        )
-        .expect("revocation should succeed");
+        revoke_credential(deps.as_mut().storage, "urn:uuid:credential-1")
+            .expect("revocation should succeed");
 
         let err = issue_credential_with_authority(
             deps.as_ref().storage,
@@ -451,7 +443,6 @@ mod tests {
     #[test]
     fn verify_credential_treats_unknown_and_revoked_credentials_as_absent() {
         let mut deps = mock_dependencies();
-        let env = mock_env();
         let authority = initialized_authority(&mut deps);
         let credential_id = "urn:uuid:credential-1";
 
@@ -470,8 +461,7 @@ mod tests {
             CredentialInputFormat::NQuads,
         )
         .expect("credential should issue");
-        revoke_credential(deps.as_mut().storage, credential_id, env.block.time)
-            .expect("credential should revoke");
+        revoke_credential(deps.as_mut().storage, credential_id).expect("credential should revoke");
 
         assert_eq!(
             verify_credential(deps.as_ref().storage, credential_id, None)
@@ -486,7 +476,6 @@ mod tests {
     #[test]
     fn revoke_credential_success() {
         let mut deps = mock_dependencies();
-        let env = mock_env();
         let authority = initialized_authority(&mut deps);
         let payload = credential_payload(authority.did(), "urn:uuid:credential-1");
 
@@ -497,18 +486,13 @@ mod tests {
         )
         .expect("submit should succeed");
 
-        let res = revoke_credential(
-            deps.as_mut().storage,
-            "urn:uuid:credential-1",
-            env.block.time,
-        );
+        let res = revoke_credential(deps.as_mut().storage, "urn:uuid:credential-1");
         assert!(res.is_ok(), "revoke should succeed");
         assert_eq!(
             res.unwrap(),
             RevokeCredentialResult {
                 identifier: "urn:uuid:credential-1".to_string(),
                 issuer: authority.did().to_string(),
-                revoked_at: env.block.time,
             }
         );
     }
@@ -516,15 +500,10 @@ mod tests {
     #[test]
     fn revoke_credential_rejects_unknown_credential() {
         let mut deps = mock_dependencies();
-        let env = mock_env();
         initialized_authority(&mut deps);
 
-        let err = revoke_credential(
-            deps.as_mut().storage,
-            "urn:uuid:credential-1",
-            env.block.time,
-        )
-        .expect_err("revocation should fail");
+        let err = revoke_credential(deps.as_mut().storage, "urn:uuid:credential-1")
+            .expect_err("revocation should fail");
 
         assert_eq!(
             err,
@@ -535,7 +514,6 @@ mod tests {
     #[test]
     fn revoke_credential_rejects_revoked_credential() {
         let mut deps = mock_dependencies();
-        let env = mock_env();
         let authority = initialized_authority(&mut deps);
         let payload = credential_payload(authority.did(), "urn:uuid:credential-1");
 
@@ -546,19 +524,11 @@ mod tests {
         )
         .expect("submit should succeed");
 
-        revoke_credential(
-            deps.as_mut().storage,
-            "urn:uuid:credential-1",
-            env.block.time,
-        )
-        .expect("first revoke should succeed");
+        revoke_credential(deps.as_mut().storage, "urn:uuid:credential-1")
+            .expect("first revoke should succeed");
 
-        let err = revoke_credential(
-            deps.as_mut().storage,
-            "urn:uuid:credential-1",
-            env.block.time,
-        )
-        .expect_err("second revocation should fail");
+        let err = revoke_credential(deps.as_mut().storage, "urn:uuid:credential-1")
+            .expect_err("second revocation should fail");
 
         assert_eq!(
             err,

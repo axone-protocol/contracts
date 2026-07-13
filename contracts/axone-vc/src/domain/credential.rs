@@ -29,6 +29,9 @@ pub enum CredentialError {
 
     #[error("credential is not a verifiable credential")]
     NotVerifiableCredential,
+
+    #[error("credential validity interval is invalid")]
+    InvalidValidityInterval,
 }
 
 #[derive(Clone, CopyGetters, Debug, Getters, PartialEq)]
@@ -39,6 +42,10 @@ pub struct Credential {
     issuer: Uri,
     #[getset(get_copy = "pub")]
     issuance_date: Timestamp,
+    #[getset(get_copy = "pub")]
+    valid_from: Option<Timestamp>,
+    #[getset(get_copy = "pub")]
+    valid_until: Option<Timestamp>,
     #[getset(get = "pub")]
     subject_id: Uri,
     #[getset(get = "pub")]
@@ -61,6 +68,8 @@ impl TryFrom<(DecodedCredential, Authority)> for Credential {
         let issuance_date = decoded
             .issuance_date()
             .ok_or(CredentialError::MissingIssuanceDate)?;
+        let valid_from = *decoded.valid_from();
+        let valid_until = *decoded.valid_until();
         let subject_id = match decoded.subject_id() {
             DecodedUri::Uri(uri) => uri.clone(),
             DecodedUri::Missing | DecodedUri::Invalid => {
@@ -81,10 +90,16 @@ impl TryFrom<(DecodedCredential, Authority)> for Credential {
             return Err(CredentialError::NotVerifiableCredential);
         }
 
+        if matches!((valid_from, valid_until), (Some(from), Some(until)) if from >= until) {
+            return Err(CredentialError::InvalidValidityInterval);
+        }
+
         Ok(Self {
             id,
             issuer,
             issuance_date,
+            valid_from,
+            valid_until,
             subject_id,
             types,
         })
@@ -276,5 +291,26 @@ mod tests {
             Credential::try_from((decoded, authority())).expect_err("missing vc type should fail");
 
         assert_eq!(err, CredentialError::NotVerifiableCredential);
+    }
+
+    #[test]
+    fn try_from_rejects_inverted_validity_interval() {
+        let decoded = DecodedCredential::new(
+            Some("urn:uuid:credential-1".to_string()),
+            DecodedUri::Uri(AUTHORITY_DID.to_string()),
+            Some(Timestamp::from_seconds(1_735_689_600)),
+            DecodedUri::Uri("did:example:subject".to_string()),
+            vec![VC_TYPE.to_string()],
+            String::new(),
+        )
+        .with_validity(
+            Some(Timestamp::from_seconds(20)),
+            Some(Timestamp::from_seconds(10)),
+        );
+
+        let err = Credential::try_from((decoded, authority()))
+            .expect_err("inverted validity interval should fail");
+
+        assert_eq!(err, CredentialError::InvalidValidityInterval);
     }
 }

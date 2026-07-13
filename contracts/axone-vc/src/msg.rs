@@ -1,7 +1,7 @@
-use crate::contract::AxoneVc;
+use crate::{contract::AxoneVc, domain::Uri};
 
 use cosmwasm_schema::QueryResponses;
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Timestamp};
 
 abstract_app::app_msg_types!(AxoneVc, AxoneVcExecuteMsg, AxoneVcQueryMsg);
 
@@ -32,6 +32,8 @@ pub enum AxoneVcExecuteMsg {
     /// - an issuance date
     /// - a subject identifier
     /// - at least one type, including `VerifiableCredential`
+    /// - optional `validFrom` and `validUntil` claims, when present, encoded as
+    ///   `xsd:dateTimeStamp` instants with `validFrom < validUntil`
     ///
     /// The submitted payload may omit the issuer. In that case, the contract
     /// treats the credential as issued by its authority DID.
@@ -103,6 +105,20 @@ pub enum AxoneVcQueryMsg {
     /// `did:pkh:cosmos:<chain_id>:cosmos1...`
     #[returns(AuthorityResponse)]
     Authority {},
+
+    /// Check whether a credential is active and, optionally, valid at a given instant.
+    ///
+    /// Revoked credentials are not part of the active credential set and therefore
+    /// return the same result as unknown identifiers.
+    #[returns(VerifyCredentialResponse)]
+    VerifyCredential {
+        /// Identifier of the credential to check.
+        identifier: Uri,
+        /// Optional instant at which to evaluate the credential validity interval.
+        ///
+        /// When omitted, every active credential is considered valid.
+        valid_at: Option<Timestamp>,
+    },
 }
 
 /// Response returned by `AxoneVcQueryMsg::Authority`.
@@ -118,4 +134,15 @@ pub struct AuthorityResponse {
     ///
     /// `did:pkh:cosmos:<chain_id>:cosmos1...`
     pub did: String,
+}
+
+/// Response returned by `AxoneVcQueryMsg::VerifyCredential`.
+#[cosmwasm_schema::cw_serde]
+pub struct VerifyCredentialResponse {
+    /// Whether the identifier belongs to an active credential.
+    pub exists: bool,
+    /// Whether the active credential is valid for the requested instant.
+    ///
+    /// This is equal to `exists` when no instant was requested.
+    pub valid: bool,
 }

@@ -5,7 +5,7 @@ use axone_vc::{
     AxoneVcInterface, AXONE_NAMESPACE,
 };
 use bech32::{Bech32, Hrp};
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Timestamp};
 use cw_orch::contract::interface_traits::CallAs;
 use cw_orch::{anyhow, prelude::*};
 
@@ -177,6 +177,53 @@ fn issue_credential_rejects_non_host_account_sender() -> anyhow::Result<()> {
 }
 
 #[test]
+fn verify_credential_reports_activity_and_validity_interval() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential_id = "urn:uuid:credential-validity";
+
+    assert_eq!(
+        AxoneVcQueryMsgFns::verify_credential(&env.app, credential_id.to_string(), None)?,
+        axone_vc::msg::VerifyCredentialResponse {
+            exists: false,
+            valid: false,
+        }
+    );
+
+    env.app.issue_credential(
+        Binary::from(credential_payload_with_validity(
+            &authority.did,
+            credential_id,
+            "1970-01-01T00:00:10Z",
+            "1970-01-01T00:00:20Z",
+        )),
+        Some(CredentialInputFormat::NQuads),
+    )?;
+
+    for (at, expected_valid) in [
+        (None, true),
+        (Some(Timestamp::from_seconds(10)), true),
+        (Some(Timestamp::from_seconds(20)), false),
+    ] {
+        let response =
+            AxoneVcQueryMsgFns::verify_credential(&env.app, credential_id.to_string(), at)?;
+        assert!(response.exists);
+        assert_eq!(response.valid, expected_valid);
+    }
+
+    env.app.revoke_credential(credential_id.to_string())?;
+    assert_eq!(
+        AxoneVcQueryMsgFns::verify_credential(&env.app, credential_id.to_string(), None)?,
+        axone_vc::msg::VerifyCredentialResponse {
+            exists: false,
+            valid: false,
+        }
+    );
+
+    Ok(())
+}
+
+#[test]
 fn revoke_credential_accepts_issued_credential() -> anyhow::Result<()> {
     let env = TestEnv::setup()?;
     let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
@@ -318,4 +365,22 @@ fn collab_ai_zone_profile_payload_without_issuer() -> Vec<u8> {
         .collect::<Vec<_>>()
         .join("\n")
         .into_bytes()
+}
+
+fn credential_payload_with_validity(
+    authority_did: &str,
+    credential_id: &str,
+    valid_from: &str,
+    valid_until: &str,
+) -> Vec<u8> {
+    format!(
+        r#"<{credential_id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{credential_id}> <https://www.w3.org/2018/credentials#issuer> <{authority_did}> .
+<{credential_id}> <https://www.w3.org/2018/credentials#issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<{credential_id}> <https://www.w3.org/2018/credentials#validFrom> "{valid_from}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+<{credential_id}> <https://www.w3.org/2018/credentials#validUntil> "{valid_until}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+<{credential_id}> <https://www.w3.org/2018/credentials#credentialSubject> <did:example:subject> .
+"#
+    )
+    .into_bytes()
 }

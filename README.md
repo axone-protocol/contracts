@@ -1,3 +1,13 @@
+[![axone github banner](https://raw.githubusercontent.com/axone-protocol/.github/main/profile/static/axone-banner.jpg)](https://axone.xyz)
+
+<p align="center">
+  <a href="https://discord.gg/axone"><img src="https://img.shields.io/discord/946759919678406696.svg?label=discord&labelColor=7289DA&logo=discord&logoColor=white&color=gray&style=for-the-badge" /></a> &nbsp;
+  <a href="https://www.linkedin.com/company/axone-protocol/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" /></a> &nbsp;
+  <a href="https://twitter.com/axonexyz"><img src="https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white" /></a> &nbsp;
+  <a href="https://blog.axone.xyz"><img src="https://img.shields.io/badge/Medium-12100E?style=for-the-badge&logo=medium&logoColor=white" /></a> &nbsp;
+  <a href="https://www.youtube.com/channel/UCiOfcTaUyv2Szv4OQIepIvg"><img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" /></a>
+</p>
+
 # 📜 AXONE Smart Contracts
 
 > [CosmWasm](https://cosmwasm.com) contracts for the [AXONE network](http://axone.xyz).

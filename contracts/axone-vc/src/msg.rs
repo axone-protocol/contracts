@@ -29,7 +29,6 @@ pub enum AxoneVcExecuteMsg {
     /// The credential is accepted only if it provides:
     /// - an identifier
     /// - either no issuer or an issuer equal to the authority DID exposed by this contract
-    /// - an issuance date
     /// - a subject identifier
     /// - at least one type, including `VerifiableCredential`
     /// - optional `validFrom` and `validUntil` claims, when present, encoded as
@@ -63,7 +62,7 @@ pub enum AxoneVcExecuteMsg {
     /// Revocation fails if the identifier is unknown or already revoked.
     RevokeCredential {
         /// The credential identifier to revoke.
-        identifier: String,
+        identifier: Uri,
     },
 }
 

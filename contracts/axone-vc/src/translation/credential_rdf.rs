@@ -12,8 +12,6 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 const VC_ISSUER: NamedNodeRef<'static> =
     NamedNodeRef::new_unchecked("https://www.w3.org/2018/credentials#issuer");
-const VC_ISSUANCE_DATE: NamedNodeRef<'static> =
-    NamedNodeRef::new_unchecked("https://www.w3.org/2018/credentials#issuanceDate");
 const VC_VALID_FROM: NamedNodeRef<'static> =
     NamedNodeRef::new_unchecked("https://www.w3.org/2018/credentials#validFrom");
 const VC_VALID_UNTIL: NamedNodeRef<'static> =
@@ -53,8 +51,6 @@ pub struct DecodedCredential {
     #[getset(get = "pub(crate)")]
     issuer: DecodedUri,
     #[getset(get = "pub(crate)")]
-    issuance_date: Option<Timestamp>,
-    #[getset(get = "pub(crate)")]
     valid_from: Option<Timestamp>,
     #[getset(get = "pub(crate)")]
     valid_until: Option<Timestamp>,
@@ -70,7 +66,6 @@ impl DecodedCredential {
     pub(crate) fn new(
         id: Option<String>,
         issuer: DecodedUri,
-        issuance_date: Option<Timestamp>,
         subject_id: DecodedUri,
         types: Vec<String>,
         canonical_nquads: String,
@@ -78,7 +73,6 @@ impl DecodedCredential {
         Self {
             id,
             issuer,
-            issuance_date,
             valid_from: None,
             valid_until: None,
             subject_id,
@@ -107,22 +101,16 @@ pub fn decode_nquads_credential(
     let credential_subject = find_credential_subject(&dataset)?;
     let id = subject_to_identifier(&credential_subject);
     let issuer = extract_issuer(&dataset, &credential_subject)?;
-    let issuance_date = extract_issuance_date(&dataset, &credential_subject)?;
     let valid_from = extract_validity_bound(&quads, &credential_subject, VC_VALID_FROM)?;
     let valid_until = extract_validity_bound(&quads, &credential_subject, VC_VALID_UNTIL)?;
     let subject_id = extract_subject_id(&dataset, &credential_subject)?;
     let types = extract_types(&dataset, &credential_subject);
     let canonical_nquads = canonicalize_dataset(&dataset)?;
 
-    Ok(DecodedCredential::new(
-        id,
-        issuer,
-        issuance_date,
-        subject_id,
-        types,
-        canonical_nquads,
+    Ok(
+        DecodedCredential::new(id, issuer, subject_id, types, canonical_nquads)
+            .with_validity(valid_from, valid_until),
     )
-    .with_validity(valid_from, valid_until))
 }
 
 #[cfg(test)]
@@ -140,7 +128,6 @@ fn parse_nquads_quads(input: &[u8]) -> Result<Vec<Quad>, CredentialDecodingError
 fn find_credential_subject(dataset: &Dataset) -> Result<Subject, CredentialDecodingError> {
     let candidate_subjects: HashSet<Subject> = [
         VC_ISSUER,
-        VC_ISSUANCE_DATE,
         VC_VALID_FROM,
         VC_VALID_UNTIL,
         VC_CREDENTIAL_SUBJECT,
@@ -181,33 +168,6 @@ fn extract_issuer(
         [_] => Ok(DecodedUri::Invalid),
         _ => Err(CredentialDecodingError::InvalidDataset),
     }
-}
-
-fn extract_issuance_date(
-    dataset: &Dataset,
-    credential_subject: &Subject,
-) -> Result<Option<Timestamp>, CredentialDecodingError> {
-    let objects = collect_objects(dataset, credential_subject, VC_ISSUANCE_DATE);
-
-    match objects.as_slice() {
-        [] => Ok(None),
-        [Term::Literal(literal)] => parse_issuance_date(literal).map(Some),
-        _ => Err(CredentialDecodingError::InvalidDataset),
-    }
-}
-
-fn parse_issuance_date(literal: &Literal) -> Result<Timestamp, CredentialDecodingError> {
-    let datatype = literal.datatype();
-    if datatype != xsd::DATE_TIME && datatype != xsd::DATE_TIME_STAMP {
-        return Err(CredentialDecodingError::InvalidDataset);
-    }
-
-    let datetime = OffsetDateTime::parse(literal.value(), &Rfc3339)
-        .map_err(|_| CredentialDecodingError::InvalidDataset)?;
-    let nanos = datetime.unix_timestamp_nanos();
-    let nanos = u64::try_from(nanos).map_err(|_| CredentialDecodingError::InvalidDataset)?;
-
-    Ok(Timestamp::from_nanos(nanos))
 }
 
 fn extract_validity_bound(
@@ -293,10 +253,10 @@ fn map_canonicalization_error(_: rdf_canon::CanonicalizationError) -> Credential
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_nquads_credential, extract_issuance_date, extract_issuer, extract_subject_id,
-        extract_validity_bound, find_credential_subject, map_canonicalization_error,
-        parse_issuance_date, parse_nquads, parse_nquads_quads, parse_validity_bound,
-        subject_to_identifier, CredentialDecodingError, DecodedUri, VC_ISSUER, VC_VALID_FROM,
+        decode_nquads_credential, extract_issuer, extract_subject_id, extract_validity_bound,
+        find_credential_subject, map_canonicalization_error, parse_nquads, parse_nquads_quads,
+        parse_validity_bound, subject_to_identifier, CredentialDecodingError, DecodedUri,
+        VC_ISSUER, VC_VALID_FROM,
     };
     use cosmwasm_std::Timestamp;
     use oxrdf::{BlankNode, Literal, NamedNodeRef, Subject};
@@ -425,8 +385,8 @@ mod tests {
     }
 
     #[test]
-    fn decode_credential_requires_valid_date() {
-        let err = decode_nquads_credential(
+    fn decode_credential_ignores_issuance_date() {
+        let decoded = decode_nquads_credential(
             format!(
                 r#"<{CREDENTIAL_ID}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
 <{CREDENTIAL_ID}> <{VC_NAMESPACE}issuer> <{AUTHORITY_DID}> .
@@ -436,9 +396,9 @@ mod tests {
             )
             .as_bytes(),
         )
-        .expect_err("invalid date should fail");
+        .expect("issuance date should be ignored");
 
-        assert_eq!(err, CredentialDecodingError::InvalidDataset);
+        assert_eq!(decoded.id().as_deref(), Some(CREDENTIAL_ID));
     }
 
     #[test]
@@ -548,45 +508,6 @@ mod tests {
     }
 
     #[test]
-    fn extract_issuance_date_rejects_non_literal_object() {
-        let dataset = parsed_dataset(
-            format!(
-                r#"<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuanceDate> <did:example:not-a-literal> .
-"#
-            )
-            .as_bytes(),
-        );
-
-        let err = extract_issuance_date(
-            &dataset,
-            &Subject::NamedNode(NamedNodeRef::new_unchecked(CREDENTIAL_ID).into_owned()),
-        )
-        .expect_err("non-literal issuance date should fail");
-
-        assert_eq!(err, CredentialDecodingError::InvalidDataset);
-    }
-
-    #[test]
-    fn extract_issuance_date_rejects_multiple_values() {
-        let dataset = parsed_dataset(
-            format!(
-                r#"<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
-<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuanceDate> "2025-01-02T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
-"#
-            )
-            .as_bytes(),
-        );
-
-        let err = extract_issuance_date(
-            &dataset,
-            &Subject::NamedNode(NamedNodeRef::new_unchecked(CREDENTIAL_ID).into_owned()),
-        )
-        .expect_err("multiple issuance dates should fail");
-
-        assert_eq!(err, CredentialDecodingError::InvalidDataset);
-    }
-
-    #[test]
     fn extract_subject_id_rejects_multiple_values() {
         let dataset = parsed_dataset(
             format!(
@@ -602,30 +523,6 @@ mod tests {
             &Subject::NamedNode(NamedNodeRef::new_unchecked(CREDENTIAL_ID).into_owned()),
         )
         .expect_err("multiple credential subjects should fail");
-
-        assert_eq!(err, CredentialDecodingError::InvalidDataset);
-    }
-
-    #[test]
-    fn parse_issuance_date_rejects_wrong_datatype() {
-        let literal = Literal::new_typed_literal(
-            "2025-01-01T00:00:00Z",
-            NamedNodeRef::new_unchecked("http://www.w3.org/2001/XMLSchema#string"),
-        );
-
-        let err = parse_issuance_date(&literal).expect_err("wrong datatype should fail");
-
-        assert_eq!(err, CredentialDecodingError::InvalidDataset);
-    }
-
-    #[test]
-    fn parse_issuance_date_rejects_pre_unix_epoch_values() {
-        let literal = Literal::new_typed_literal(
-            "1960-01-01T00:00:00Z",
-            NamedNodeRef::new_unchecked("http://www.w3.org/2001/XMLSchema#dateTime"),
-        );
-
-        let err = parse_issuance_date(&literal).expect_err("negative timestamps should fail");
 
         assert_eq!(err, CredentialDecodingError::InvalidDataset);
     }

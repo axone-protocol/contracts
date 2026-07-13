@@ -116,12 +116,15 @@ fn issue_credential_emits_event() -> anyhow::Result<()> {
             .expect("Missing types attribute"),
         "https://w3id.org/axone/ontology/v4/schema/core/assertion/AssertionCredential,https://www.w3.org/2018/credentials#VerifiableCredential"
     );
-    assert_eq!(
-        response
-            .event_attr_value(ABSTRACT_EVENT_TYPE, "issued_at")
-            .expect("Missing issued_at attribute"),
-        "1781128800.000000000"
-    );
+    assert!(response
+        .event_attr_value(ABSTRACT_EVENT_TYPE, "issued_at")
+        .is_err());
+    assert!(response
+        .event_attr_value(ABSTRACT_EVENT_TYPE, "valid_from")
+        .is_err());
+    assert!(response
+        .event_attr_value(ABSTRACT_EVENT_TYPE, "valid_until")
+        .is_err());
 
     Ok(())
 }
@@ -190,7 +193,7 @@ fn verify_credential_reports_activity_and_validity_interval() -> anyhow::Result<
         }
     );
 
-    env.app.issue_credential(
+    let issue_response = env.app.issue_credential(
         Binary::from(credential_payload_with_validity(
             &authority.did,
             credential_id,
@@ -199,6 +202,18 @@ fn verify_credential_reports_activity_and_validity_interval() -> anyhow::Result<
         )),
         Some(CredentialInputFormat::NQuads),
     )?;
+    assert_eq!(
+        issue_response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "valid_from")
+            .expect("Missing valid_from attribute"),
+        "10.000000000"
+    );
+    assert_eq!(
+        issue_response
+            .event_attr_value(ABSTRACT_EVENT_TYPE, "valid_until")
+            .expect("Missing valid_until attribute"),
+        "20.000000000"
+    );
 
     for (at, expected_valid) in [
         (None, true),
@@ -337,8 +352,7 @@ fn revoke_credential_emits_event() -> anyhow::Result<()> {
     );
     assert!(response
         .event_attr_value(ABSTRACT_EVENT_TYPE, "revoked_at")
-        .expect("Missing revoked_at attribute")
-        .contains('.'));
+        .is_err());
 
     Ok(())
 }
@@ -444,7 +458,6 @@ fn credential_payload_with_validity(
     format!(
         r#"<{credential_id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
 <{credential_id}> <https://www.w3.org/2018/credentials#issuer> <{authority_did}> .
-<{credential_id}> <https://www.w3.org/2018/credentials#issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <{credential_id}> <https://www.w3.org/2018/credentials#validFrom> "{valid_from}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
 <{credential_id}> <https://www.w3.org/2018/credentials#validUntil> "{valid_until}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
 <{credential_id}> <https://www.w3.org/2018/credentials#credentialSubject> <did:example:subject> .

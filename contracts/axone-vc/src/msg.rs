@@ -62,7 +62,7 @@ pub enum AxoneVcExecuteMsg {
     /// Revocation fails if the identifier is unknown or already revoked.
     RevokeCredential {
         /// The credential identifier to revoke.
-        identifier: String,
+        identifier: Uri,
     },
 }
 

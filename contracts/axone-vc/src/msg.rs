@@ -32,6 +32,8 @@ pub enum AxoneVcExecuteMsg {
     /// - an issuance date
     /// - a subject identifier
     /// - at least one type, including `VerifiableCredential`
+    /// - optional `validFrom` and `validUntil` claims, when present, encoded as
+    ///   `xsd:dateTimeStamp` instants with `validFrom < validUntil`
     ///
     /// The submitted payload may omit the issuer. In that case, the contract
     /// treats the credential as issued by its authority DID.

@@ -12,11 +12,23 @@ const REVOKED_CREDENTIALS: Map<&str, CredentialTombstone> = Map::new("revoked_cr
 #[cw_serde]
 pub struct CredentialRecord {
     pub canonical_nquads: String,
+    #[serde(default)]
+    pub valid_from: Option<Timestamp>,
+    #[serde(default)]
+    pub valid_until: Option<Timestamp>,
 }
 
 impl CredentialRecord {
-    pub fn new(canonical_nquads: String) -> Self {
-        Self { canonical_nquads }
+    pub fn new(
+        canonical_nquads: String,
+        valid_from: Option<Timestamp>,
+        valid_until: Option<Timestamp>,
+    ) -> Self {
+        Self {
+            canonical_nquads,
+            valid_from,
+            valid_until,
+        }
     }
 }
 
@@ -51,6 +63,13 @@ pub fn has_credential(storage: &dyn Storage, credential_id: &str) -> bool {
     CREDENTIALS.has(storage, credential_id)
 }
 
+pub fn credential(
+    storage: &dyn Storage,
+    credential_id: &str,
+) -> Result<Option<CredentialRecord>, AxoneVcError> {
+    Ok(CREDENTIALS.may_load(storage, credential_id)?)
+}
+
 pub fn record_credential(
     storage: &mut dyn Storage,
     credential_id: &str,
@@ -72,6 +91,21 @@ pub fn revoke_credential(
     CREDENTIALS.remove(storage, credential_id);
     REVOKED_CREDENTIALS.save(storage, credential_id, tombstone)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CredentialRecord;
+    use cosmwasm_std::from_json;
+
+    #[test]
+    fn credential_record_without_validity_bounds_deserializes_as_unbounded() {
+        let record: CredentialRecord = from_json(br#"{"canonical_nquads":"<credential>"}"#)
+            .expect("legacy credential record should deserialize");
+
+        assert_eq!(record.valid_from, None);
+        assert_eq!(record.valid_until, None);
+    }
 }
 
 #[cfg(test)]

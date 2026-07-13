@@ -4,7 +4,10 @@ use crate::{
     msg::CredentialInputFormat,
     services::authority,
     state,
-    state::{has_credential, is_revoked, record_credential, CredentialRecord, CredentialTombstone},
+    state::{
+        credential, has_credential, is_revoked, record_credential, CredentialRecord,
+        CredentialTombstone,
+    },
     translation::{decode_nquads_credential, CredentialDecodingError},
 };
 use cosmwasm_std::{Storage, Timestamp};
@@ -63,6 +66,8 @@ fn issue_credential_with_authority(
         CredentialInputFormat::NQuads => decode_nquads_credential(input)?,
     };
     let canonical_nquads = decoded.canonical_nquads().clone();
+    let valid_from = *decoded.valid_from();
+    let valid_until = *decoded.valid_until();
     let credential = Credential::try_from((decoded, authority))?;
 
     if has_credential(storage, credential.id()) {
@@ -73,7 +78,39 @@ fn issue_credential_with_authority(
         return Err(IssueCredentialError::CredentialRevoked);
     }
 
-    Ok((credential, CredentialRecord::new(canonical_nquads)))
+    Ok((
+        credential,
+        CredentialRecord::new(canonical_nquads, valid_from, valid_until),
+    ))
+}
+
+#[derive(Debug, PartialEq)]
+pub struct VerifyCredentialResult {
+    pub exists: bool,
+    pub valid: bool,
+}
+
+pub fn verify_credential(
+    storage: &dyn Storage,
+    credential_id: &str,
+    valid_at: Option<Timestamp>,
+) -> AxoneVcResult<VerifyCredentialResult> {
+    let Some(record) = credential(storage, credential_id)? else {
+        return Ok(VerifyCredentialResult {
+            exists: false,
+            valid: false,
+        });
+    };
+
+    let valid = valid_at.is_none_or(|at| {
+        record.valid_from.is_none_or(|from| from <= at)
+            && record.valid_until.is_none_or(|until| at < until)
+    });
+
+    Ok(VerifyCredentialResult {
+        exists: true,
+        valid,
+    })
 }
 
 #[derive(Debug, PartialEq)]
@@ -121,6 +158,7 @@ mod tests {
     use crate::{
         domain::Authority, error::AxoneVcError, msg::CredentialInputFormat,
         services::initialize_authority, state::load_credential,
+        translation::CredentialDecodingError,
     };
     use bech32::{Bech32, Hrp};
     use cosmwasm_std::{testing::mock_dependencies, testing::mock_env, Addr};
@@ -140,6 +178,24 @@ mod tests {
         format!(
             r#"<{id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
 <{id}> <https://www.w3.org/2018/credentials#issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<{id}> <https://www.w3.org/2018/credentials#credentialSubject> <did:example:subject> .
+"#
+        )
+        .into_bytes()
+    }
+
+    fn credential_payload_with_validity(
+        authority_did: &str,
+        id: &str,
+        valid_from: &str,
+        valid_until: &str,
+    ) -> Vec<u8> {
+        format!(
+            r#"<{id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{id}> <https://www.w3.org/2018/credentials#issuer> <{authority_did}> .
+<{id}> <https://www.w3.org/2018/credentials#issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<{id}> <https://www.w3.org/2018/credentials#validFrom> "{valid_from}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+<{id}> <https://www.w3.org/2018/credentials#validUntil> "{valid_until}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
 <{id}> <https://www.w3.org/2018/credentials#credentialSubject> <did:example:subject> .
 "#
         )
@@ -194,6 +250,8 @@ mod tests {
             .expect("credential should be persisted");
         assert!(record.canonical_nquads.contains(credential_id));
         assert!(record.canonical_nquads.contains(authority.did()));
+        assert_eq!(record.valid_from, None);
+        assert_eq!(record.valid_until, None);
     }
 
     #[test]
@@ -292,6 +350,130 @@ mod tests {
         .expect_err("second submit should fail");
 
         assert_eq!(err, IssueCredentialError::CredentialRevoked);
+    }
+
+    #[test]
+    fn issue_credential_persists_validity_interval_and_verifies_boundaries() {
+        let mut deps = mock_dependencies();
+        let authority = initialized_authority(&mut deps);
+        let credential_id = "urn:uuid:credential-validity";
+        let valid_from = Timestamp::from_seconds(10);
+        let valid_until = Timestamp::from_seconds(20);
+
+        issue_credential(
+            deps.as_mut().storage,
+            &credential_payload_with_validity(
+                authority.did(),
+                credential_id,
+                "1970-01-01T00:00:10Z",
+                "1970-01-01T00:00:20Z",
+            ),
+            CredentialInputFormat::NQuads,
+        )
+        .expect("credential should issue");
+
+        let record = load_credential(deps.as_ref().storage, credential_id)
+            .expect("credential should be stored");
+        assert_eq!(record.valid_from, Some(valid_from));
+        assert_eq!(record.valid_until, Some(valid_until));
+
+        let cases = [
+            (None, true),
+            (Some(Timestamp::from_seconds(9)), false),
+            (Some(valid_from), true),
+            (Some(Timestamp::from_seconds(19)), true),
+            (Some(valid_until), false),
+        ];
+        for (at, expected_valid) in cases {
+            assert_eq!(
+                verify_credential(deps.as_ref().storage, credential_id, at)
+                    .expect("verification should succeed"),
+                VerifyCredentialResult {
+                    exists: true,
+                    valid: expected_valid,
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn issue_credential_rejects_invalid_validity_claims() {
+        let mut deps = mock_dependencies();
+        let authority = initialized_authority(&mut deps);
+
+        let wrong_type = String::from_utf8(credential_payload_with_validity(
+            authority.did(),
+            "urn:uuid:wrong-validity-type",
+            "1970-01-01T00:00:10Z",
+            "1970-01-01T00:00:20Z",
+        ))
+        .expect("test payload should be UTF-8")
+        .replace("#dateTimeStamp", "#dateTime");
+        let err = issue_credential(
+            deps.as_mut().storage,
+            wrong_type.as_bytes(),
+            CredentialInputFormat::NQuads,
+        )
+        .expect_err("non-dateTimeStamp validity claims should fail");
+        assert_eq!(
+            err,
+            AxoneVcError::IssueCredential(IssueCredentialError::Decode(
+                CredentialDecodingError::InvalidDataset
+            ))
+        );
+
+        let err = issue_credential(
+            deps.as_mut().storage,
+            &credential_payload_with_validity(
+                authority.did(),
+                "urn:uuid:inverted-validity",
+                "1970-01-01T00:00:20Z",
+                "1970-01-01T00:00:10Z",
+            ),
+            CredentialInputFormat::NQuads,
+        )
+        .expect_err("inverted validity interval should fail");
+        assert_eq!(
+            err,
+            AxoneVcError::IssueCredential(IssueCredentialError::Domain(
+                CredentialError::InvalidValidityInterval
+            ))
+        );
+    }
+
+    #[test]
+    fn verify_credential_treats_unknown_and_revoked_credentials_as_absent() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let authority = initialized_authority(&mut deps);
+        let credential_id = "urn:uuid:credential-1";
+
+        assert_eq!(
+            verify_credential(deps.as_ref().storage, credential_id, None)
+                .expect("verification should succeed"),
+            VerifyCredentialResult {
+                exists: false,
+                valid: false,
+            }
+        );
+
+        issue_credential(
+            deps.as_mut().storage,
+            &credential_payload(authority.did(), credential_id),
+            CredentialInputFormat::NQuads,
+        )
+        .expect("credential should issue");
+        revoke_credential(deps.as_mut().storage, credential_id, env.block.time)
+            .expect("credential should revoke");
+
+        assert_eq!(
+            verify_credential(deps.as_ref().storage, credential_id, None)
+                .expect("verification should succeed"),
+            VerifyCredentialResult {
+                exists: false,
+                valid: false,
+            }
+        );
     }
 
     #[test]

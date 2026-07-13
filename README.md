@@ -50,6 +50,10 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
       <a href="#-maturity">
         <img alt="status: intermediate" src="https://img.shields.io/badge/status-🐣-black?style=for-the-badge" />
       </a>
+      &nbsp;
+      <a href="https://github.com/axone-protocol/contracts/releases">
+        <img alt="latest axone-gov release" src="https://img.shields.io/github/v/release/axone-protocol/contracts?filter=axone-gov-v*&label=latest%20release&style=for-the-badge" />
+      </a>
     </td>
   </tr>
   <tr>
@@ -91,6 +95,10 @@ This foundation allows AXONE to go beyond simple transactions, enabling the exec
     <td>
       <a href="#-maturity">
         <img alt="status: initial" src="https://img.shields.io/badge/status-🥚-black?style=for-the-badge" />
+      </a>
+      &nbsp;
+      <a href="https://github.com/axone-protocol/contracts/releases">
+        <img alt="latest axone-vc release" src="https://img.shields.io/github/v/release/axone-protocol/contracts?filter=axone-vc-v*&label=latest%20release&style=for-the-badge" />
       </a>
     </td>
   </tr>

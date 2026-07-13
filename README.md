@@ -231,7 +231,7 @@ lint-cargo-deps - Check for unused dependencies.
 lint-cargo-toml - Check lint of all Cargo.toml files.
 lint-cargo-toml-file - Check lint of the given toml file
 lint-rust - Check all Rust linting (formatting and clippy).
-lint-rust-clippy - Check lint of all sources files (clippy via rust-toolchain.toml).
+lint-rust-clippy - Strictly lint all deployable Rust sources (clippy via rust-toolchain.toml).
 lint-rust-format - Check formatting and derives order (rustfmt via rust-toolchain.toml).
 lint-toml - Check lint of all toml files.
 

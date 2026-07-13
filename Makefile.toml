@@ -40,7 +40,7 @@ args = ["cranky"]
 category = "Code Quality"
 command = "cargo"
 dependencies = ["install-cranky"]
-description = "Check lint of all sources files (clippy via rust-toolchain.toml)."
+description = "Strictly lint all deployable Rust sources (clippy via rust-toolchain.toml)."
 
 [tasks.lint-rust]
 category = "Code Quality"

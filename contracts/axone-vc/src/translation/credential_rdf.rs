@@ -117,13 +117,13 @@ fn decode_dataset_credential(
     dataset: &Dataset,
     canonical_nquads: String,
 ) -> Result<DecodedCredential, CredentialDecodingError> {
-    let credential_subject = find_credential_subject(&dataset)?;
+    let credential_subject = find_credential_subject(dataset)?;
     let id = subject_to_identifier(&credential_subject);
-    let issuer = extract_issuer(&dataset, &credential_subject)?;
-    let valid_from = extract_validity_bound(&quads, &credential_subject, VC_VALID_FROM)?;
-    let valid_until = extract_validity_bound(&quads, &credential_subject, VC_VALID_UNTIL)?;
-    let subject_id = extract_subject_id(&dataset, &credential_subject)?;
-    let types = extract_types(&dataset, &credential_subject);
+    let issuer = extract_issuer(dataset, &credential_subject)?;
+    let valid_from = extract_validity_bound(quads, &credential_subject, VC_VALID_FROM)?;
+    let valid_until = extract_validity_bound(quads, &credential_subject, VC_VALID_UNTIL)?;
+    let subject_id = extract_subject_id(dataset, &credential_subject)?;
+    let types = extract_types(dataset, &credential_subject);
 
     Ok(
         DecodedCredential::new(id, issuer, subject_id, types, canonical_nquads)

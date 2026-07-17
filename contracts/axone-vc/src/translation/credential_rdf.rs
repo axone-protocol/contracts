@@ -98,6 +98,25 @@ pub fn decode_nquads_credential(
     let utf8 = str::from_utf8(input).map_err(|_| CredentialDecodingError::InvalidUtf8)?;
     let quads = parse_nquads_quads(utf8.as_bytes())?;
     let dataset = Dataset::from_iter(quads.iter().cloned());
+    let canonical_nquads = canonicalize_dataset(&dataset)?;
+
+    decode_dataset_credential(&quads, &dataset, canonical_nquads)
+}
+
+pub(crate) fn decode_canonical_nquads_credential(
+    input: &str,
+) -> Result<DecodedCredential, CredentialDecodingError> {
+    let quads = parse_nquads_quads(input.as_bytes())?;
+    let dataset = Dataset::from_iter(quads.iter().cloned());
+
+    decode_dataset_credential(&quads, &dataset, input.to_string())
+}
+
+fn decode_dataset_credential(
+    quads: &[Quad],
+    dataset: &Dataset,
+    canonical_nquads: String,
+) -> Result<DecodedCredential, CredentialDecodingError> {
     let credential_subject = find_credential_subject(&dataset)?;
     let id = subject_to_identifier(&credential_subject);
     let issuer = extract_issuer(&dataset, &credential_subject)?;
@@ -105,7 +124,6 @@ pub fn decode_nquads_credential(
     let valid_until = extract_validity_bound(&quads, &credential_subject, VC_VALID_UNTIL)?;
     let subject_id = extract_subject_id(&dataset, &credential_subject)?;
     let types = extract_types(&dataset, &credential_subject);
-    let canonical_nquads = canonicalize_dataset(&dataset)?;
 
     Ok(
         DecodedCredential::new(id, issuer, subject_id, types, canonical_nquads)
@@ -125,7 +143,7 @@ fn parse_nquads_quads(input: &[u8]) -> Result<Vec<Quad>, CredentialDecodingError
         .map_err(|_| CredentialDecodingError::InvalidNQuads)
 }
 
-fn find_credential_subject(dataset: &Dataset) -> Result<Subject, CredentialDecodingError> {
+pub fn find_credential_subject(dataset: &Dataset) -> Result<Subject, CredentialDecodingError> {
     let candidate_subjects: HashSet<Subject> = [
         VC_ISSUER,
         VC_VALID_FROM,
@@ -149,7 +167,7 @@ fn find_credential_subject(dataset: &Dataset) -> Result<Subject, CredentialDecod
     Ok(subject)
 }
 
-fn subject_to_identifier(subject: &Subject) -> Option<String> {
+pub fn subject_to_identifier(subject: &Subject) -> Option<String> {
     match subject {
         Subject::NamedNode(node) => Some(node.as_str().to_string()),
         Subject::BlankNode(_) => None,

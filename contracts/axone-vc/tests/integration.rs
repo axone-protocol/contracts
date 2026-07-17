@@ -1,7 +1,10 @@
 use abstract_app::objects::namespace::Namespace;
 use abstract_client::{AbstractClient, Application};
 use axone_vc::{
-    msg::{AxoneVcExecuteMsgFns, AxoneVcInstantiateMsg, AxoneVcQueryMsgFns, CredentialInputFormat},
+    msg::{
+        AxoneVcExecuteMsgFns, AxoneVcInstantiateMsg, AxoneVcQueryMsgFns, CredentialInputFormat,
+        Quad,
+    },
     AxoneVcInterface, AXONE_NAMESPACE,
 };
 use bech32::{Bech32, Hrp};
@@ -314,15 +317,40 @@ fn credential_query_returns_metadata_and_canonical_rdf() -> anyhow::Result<()> {
         "1970-01-01T00:00:10Z",
         "1970-01-01T00:00:20Z",
     );
-    let expected_quads = format!(
-        r#"<{credential_id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
-<{credential_id}> <https://www.w3.org/2018/credentials#credentialSubject> <did:example:subject> .
-<{credential_id}> <https://www.w3.org/2018/credentials#issuer> <{}> .
-<{credential_id}> <https://www.w3.org/2018/credentials#validFrom> "1970-01-01T00:00:10Z"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
-<{credential_id}> <https://www.w3.org/2018/credentials#validUntil> "1970-01-01T00:00:20Z"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
-"#,
-        authority.did
-    );
+    let expected_quads = vec![
+        Quad {
+            subject: format!("<{credential_id}>"),
+            predicate: "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>".to_string(),
+            object: "<https://www.w3.org/2018/credentials#VerifiableCredential>".to_string(),
+            graph_name: None,
+        },
+        Quad {
+            subject: format!("<{credential_id}>"),
+            predicate: "<https://www.w3.org/2018/credentials#credentialSubject>".to_string(),
+            object: "<did:example:subject>".to_string(),
+            graph_name: None,
+        },
+        Quad {
+            subject: format!("<{credential_id}>"),
+            predicate: "<https://www.w3.org/2018/credentials#issuer>".to_string(),
+            object: format!("<{}>", authority.did),
+            graph_name: None,
+        },
+        Quad {
+            subject: format!("<{credential_id}>"),
+            predicate: "<https://www.w3.org/2018/credentials#validFrom>".to_string(),
+            object: "\"1970-01-01T00:00:10Z\"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp>"
+                .to_string(),
+            graph_name: None,
+        },
+        Quad {
+            subject: format!("<{credential_id}>"),
+            predicate: "<https://www.w3.org/2018/credentials#validUntil>".to_string(),
+            object: "\"1970-01-01T00:00:20Z\"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp>"
+                .to_string(),
+            graph_name: None,
+        },
+    ];
 
     env.app
         .issue_credential(Binary::from(input), Some(CredentialInputFormat::NQuads))?;

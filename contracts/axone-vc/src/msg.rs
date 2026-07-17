@@ -132,11 +132,11 @@ pub enum AxoneVcQueryMsg {
         identifier: Uri,
     },
 
-    /// Return an active issued credential with its canonical RDF dataset.
+    /// Return an active issued credential with its RDF dataset.
     ///
     /// The returned metadata is reconstructed from the credential RDF dataset
-    /// accepted at issuance. The `quads` field contains the canonical N-Quads
-    /// string representation stored by this authority.
+    /// accepted at issuance. The `quads` field contains the canonical dataset
+    /// as structured RDF quads.
     ///
     /// This query fails when the identifier is unknown or the credential has been
     /// revoked.
@@ -198,6 +198,19 @@ pub struct CredentialResponse {
     pub valid_from: Option<Timestamp>,
     /// Optional exclusive upper bound of the credential validity interval.
     pub valid_until: Option<Timestamp>,
-    /// Canonical N-Quads string representation of the credential RDF dataset.
-    pub quads: String,
+    /// Canonical credential RDF dataset represented as structured quads.
+    pub quads: Vec<Quad>,
+}
+
+/// RDF quad returned by `AxoneVcQueryMsg::Credential`.
+#[cosmwasm_schema::cw_serde]
+pub struct Quad {
+    /// RDF subject term serialized with N-Quads term syntax.
+    pub subject: String,
+    /// RDF predicate IRI serialized with N-Quads term syntax.
+    pub predicate: String,
+    /// RDF object term serialized with N-Quads term syntax.
+    pub object: String,
+    /// RDF graph name serialized with N-Quads term syntax, or `None` for the default graph.
+    pub graph_name: Option<String>,
 }

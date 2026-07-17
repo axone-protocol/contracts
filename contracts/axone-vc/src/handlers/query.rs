@@ -2,12 +2,14 @@ use crate::{
     contract::{AxoneVc, AxoneVcResult},
     msg::{
         AuthorityResponse, AxoneVcQueryMsg, CredentialRawResponse, CredentialResponse,
-        VerifyCredentialResponse,
+        Quad as QuadResponse, VerifyCredentialResponse,
     },
     services::{authority, credential, credential_raw, verify_credential},
+    translation::DecodedQuad,
 };
 
 use cosmwasm_std::{to_json_binary, Binary, Deps, Env};
+use oxrdf::GraphName;
 
 pub fn query_handler(
     deps: Deps<'_>,
@@ -61,7 +63,7 @@ fn query_credential(deps: Deps<'_>, identifier: String) -> AxoneVcResult<Credent
         subject: result.parsed.subject_id().clone(),
         valid_from: result.parsed.valid_from(),
         valid_until: result.parsed.valid_until(),
-        quads: result.canonical,
+        quads: result.quads.into_iter().map(QuadResponse::from).collect(),
     })
 }
 
@@ -70,4 +72,18 @@ fn query_authority(deps: Deps<'_>) -> AxoneVcResult<AuthorityResponse> {
     Ok(AuthorityResponse {
         did: authority.did().to_string(),
     })
+}
+
+impl From<DecodedQuad> for QuadResponse {
+    fn from(quad: DecodedQuad) -> Self {
+        Self {
+            subject: quad.subject.to_string(),
+            predicate: quad.predicate.to_string(),
+            object: quad.object.to_string(),
+            graph_name: match quad.graph_name {
+                GraphName::DefaultGraph => None,
+                graph_name => Some(graph_name.to_string()),
+            },
+        }
+    }
 }

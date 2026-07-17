@@ -10,7 +10,7 @@ use crate::{
     },
     translation::{
         decode_canonical_nquads_credential, decode_nquads_credential_for_issuer,
-        CredentialDecodingError,
+        CredentialDecodingError, DecodedQuad,
     },
 };
 use cosmwasm_std::{Binary, StdError, Storage, Timestamp};
@@ -130,7 +130,7 @@ pub fn credential_raw(storage: &dyn Storage, credential_id: &str) -> AxoneVcResu
 #[derive(Debug, PartialEq)]
 pub struct CredentialResult {
     pub parsed: Credential,
-    pub canonical: String,
+    pub quads: Vec<DecodedQuad>,
 }
 
 pub fn credential(storage: &dyn Storage, credential_id: &str) -> AxoneVcResult<CredentialResult> {
@@ -138,10 +138,10 @@ pub fn credential(storage: &dyn Storage, credential_id: &str) -> AxoneVcResult<C
         .ok_or_else(|| StdError::not_found("credential"))?;
     let canonical = record.canonical_nquads;
     let decoded = decode_canonical_nquads_credential(&canonical)?;
-    let canonical = decoded.canonical_nquads().clone();
+    let quads = decoded.quads().clone();
     let parsed = Credential::try_from(decoded)?;
 
-    Ok(CredentialResult { parsed, canonical })
+    Ok(CredentialResult { parsed, quads })
 }
 
 #[derive(Debug, PartialEq)]
@@ -426,7 +426,7 @@ mod tests {
     }
 
     #[test]
-    fn credential_returns_parsed_credential_and_canonical_representation() {
+    fn credential_returns_parsed_credential_and_decoded_quads() {
         let mut deps = mock_dependencies();
         let authority = initialized_authority(&mut deps);
         let credential_id = "urn:uuid:credential-query";
@@ -457,10 +457,16 @@ mod tests {
         );
         assert_eq!(result.parsed.valid_from(), Some(valid_from));
         assert_eq!(result.parsed.valid_until(), Some(valid_until));
-        assert!(result.canonical.contains(credential_id));
-        assert!(result.canonical.contains(authority.did()));
-        assert!(result.canonical.contains("validFrom"));
-        assert!(result.canonical.contains("validUntil"));
+        let quads = result
+            .quads
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(quads.contains(credential_id));
+        assert!(quads.contains(authority.did()));
+        assert!(quads.contains("validFrom"));
+        assert!(quads.contains("validUntil"));
     }
 
     #[test]

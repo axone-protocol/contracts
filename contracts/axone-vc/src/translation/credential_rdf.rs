@@ -10,6 +10,8 @@ use std::{collections::HashSet, str};
 use thiserror::Error;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
+pub(crate) type DecodedQuad = Quad;
+
 const VC_ISSUER: NamedNodeRef<'static> =
     NamedNodeRef::new_unchecked("https://www.w3.org/2018/credentials#issuer");
 const VC_VALID_FROM: NamedNodeRef<'static> =
@@ -60,6 +62,8 @@ pub struct DecodedCredential {
     types: Vec<String>,
     #[getset(get = "pub(crate)")]
     canonical_nquads: String,
+    #[getset(get = "pub(crate)")]
+    quads: Vec<DecodedQuad>,
 }
 
 impl DecodedCredential {
@@ -78,7 +82,13 @@ impl DecodedCredential {
             subject_id,
             types,
             canonical_nquads,
+            quads: Vec::new(),
         }
+    }
+
+    pub(crate) fn with_quads(mut self, quads: Vec<DecodedQuad>) -> Self {
+        self.quads = quads;
+        self
     }
 
     pub(crate) fn with_validity(
@@ -152,6 +162,7 @@ fn decode_dataset_credential(
 
     Ok(
         DecodedCredential::new(id, issuer, subject_id, types, canonical_nquads)
+            .with_quads(quads.to_vec())
             .with_validity(valid_from, valid_until),
     )
 }

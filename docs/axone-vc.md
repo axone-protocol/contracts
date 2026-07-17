@@ -121,6 +121,19 @@ This query fails when the identifier is unknown or the credential has been revok
 | `credential_raw`            | _(Required.) _ **object**.                                           |
 | `credential_raw.identifier` | _(Required.) _ **string**. Identifier of the credential to retrieve. |
 
+### QueryMsg::credential
+
+Return an active issued credential with its canonical RDF dataset.
+
+The returned metadata is reconstructed from the credential RDF dataset accepted at issuance. The `quads` field contains the canonical N-Quads string representation stored by this authority.
+
+This query fails when the identifier is unknown or the credential has been revoked.
+
+| parameter               | description                                                          |
+| ----------------------- | -------------------------------------------------------------------- |
+| `credential`            | _(Required.) _ **object**.                                           |
+| `credential.identifier` | _(Required.) _ **string**. Identifier of the credential to retrieve. |
+
 ## MigrateMsg
 
 Migrate message.
@@ -145,6 +158,20 @@ Response returned by `AxoneVcQueryMsg::Authority`.
 | property | description                                                                                                                                                                                                                                                                                                                                |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `did`    | _(Required.) _ **string**. The authority DID recognized by this contract.<br /><br />This representation uses the `did:pkh` method over the on-chain address of the host Abstract Account, rendered as a CAIP-compatible canonical Cosmos Bech32 account address.<br /><br />Form:<br /><br />`did:pkh:cosmos:&lt;chain_id&gt;:cosmos1...` |
+
+### credential
+
+Response returned by `AxoneVcQueryMsg::Credential`.
+
+| property      | description                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| `identifier`  | _(Required.) _ **string**. Credential identifier extracted from the VC `id`.                           |
+| `issuer`      | _(Required.) _ **string**. Authority DID recorded as the credential issuer.                            |
+| `quads`       | _(Required.) _ **string**. Canonical N-Quads string representation of the credential RDF dataset.      |
+| `subject`     | _(Required.) _ **string**. Credential subject identifier.                                              |
+| `types`       | _(Required.) _ **Array&lt;string&gt;**. Credential type URIs extracted from the VC `type` values.      |
+| `valid_from`  | **[Timestamp](#timestamp)\|null**. Optional lower bound of the credential validity interval.           |
+| `valid_until` | **[Timestamp](#timestamp)\|null**. Optional exclusive upper bound of the credential validity interval. |
 
 ### credential_raw
 
@@ -223,5 +250,5 @@ N-Quads extends N-Triples to represent RDF datasets by allowing an optional four
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`dd24f8a7a1cbe498`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`9700c996ace7178b`)*
 ````

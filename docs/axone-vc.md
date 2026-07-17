@@ -123,9 +123,9 @@ This query fails when the identifier is unknown or the credential has been revok
 
 ### QueryMsg::credential
 
-Return an active issued credential with its canonical RDF dataset.
+Return an active issued credential with its RDF dataset.
 
-The returned metadata is reconstructed from the credential RDF dataset accepted at issuance. The `quads` field contains the canonical N-Quads string representation stored by this authority.
+The returned metadata is reconstructed from the credential RDF dataset accepted at issuance. The `quads` field contains the canonical dataset as structured RDF quads.
 
 This query fails when the identifier is unknown or the credential has been revoked.
 
@@ -163,15 +163,15 @@ Response returned by `AxoneVcQueryMsg::Authority`.
 
 Response returned by `AxoneVcQueryMsg::Credential`.
 
-| property      | description                                                                                            |
-| ------------- | ------------------------------------------------------------------------------------------------------ |
-| `identifier`  | _(Required.) _ **string**. Credential identifier extracted from the VC `id`.                           |
-| `issuer`      | _(Required.) _ **string**. Authority DID recorded as the credential issuer.                            |
-| `quads`       | _(Required.) _ **string**. Canonical N-Quads string representation of the credential RDF dataset.      |
-| `subject`     | _(Required.) _ **string**. Credential subject identifier.                                              |
-| `types`       | _(Required.) _ **Array&lt;string&gt;**. Credential type URIs extracted from the VC `type` values.      |
-| `valid_from`  | **[Timestamp](#timestamp)\|null**. Optional lower bound of the credential validity interval.           |
-| `valid_until` | **[Timestamp](#timestamp)\|null**. Optional exclusive upper bound of the credential validity interval. |
+| property      | description                                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `identifier`  | _(Required.) _ **string**. Credential identifier extracted from the VC `id`.                                     |
+| `issuer`      | _(Required.) _ **string**. Authority DID recorded as the credential issuer.                                      |
+| `quads`       | _(Required.) _ **Array&lt;[Quad](#quad)&gt;**. Canonical credential RDF dataset represented as structured quads. |
+| `subject`     | _(Required.) _ **string**. Credential subject identifier.                                                        |
+| `types`       | _(Required.) _ **Array&lt;string&gt;**. Credential type URIs extracted from the VC `type` values.                |
+| `valid_from`  | **[Timestamp](#timestamp)\|null**. Optional lower bound of the credential validity interval.                     |
+| `valid_until` | **[Timestamp](#timestamp)\|null**. Optional exclusive upper bound of the credential validity interval.           |
 
 ### credential_raw
 
@@ -207,6 +207,17 @@ Supported credential input encodings.
 | variant   | description                                                                                                                                                                                                                                                      |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | undefined | **string**: `n_quads`. UTF-8 RDF dataset serialized as N-Quads.<br /><br />N-Quads extends N-Triples to represent RDF datasets by allowing an optional fourth term that carries the graph name. See the [N-Quads specification](https://www.w3.org/TR/n-quads/). |
+
+### Quad
+
+RDF quad returned by `AxoneVcQueryMsg::Credential`.
+
+| property     | description                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| `graph_name` | **string\|null**. RDF graph name serialized with N-Quads term syntax, or `None` for the default graph. |
+| `object`     | _(Required.) _ **string**. RDF object term serialized with N-Quads term syntax.                        |
+| `predicate`  | _(Required.) _ **string**. RDF predicate IRI serialized with N-Quads term syntax.                      |
+| `subject`    | _(Required.) _ **string**. RDF subject term serialized with N-Quads term syntax.                       |
 
 ### Timestamp
 
@@ -250,5 +261,5 @@ N-Quads extends N-Triples to represent RDF datasets by allowing an optional four
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`9700c996ace7178b`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`ac159514587baa44`)*
 ````

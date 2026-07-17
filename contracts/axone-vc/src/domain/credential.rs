@@ -60,19 +60,62 @@ impl TryFrom<(DecodedCredential, Authority)> for Credential {
             DecodedUri::Invalid => return Err(CredentialError::InvalidIssuer),
             DecodedUri::Uri(uri) => uri.clone(),
         };
-        let valid_from = *decoded.valid_from();
-        let valid_until = *decoded.valid_until();
-        let subject_id = match decoded.subject_id() {
+        if issuer != authority.did() {
+            return Err(CredentialError::InvalidIssuer);
+        }
+
+        Self::try_new(
+            id,
+            issuer,
+            *decoded.valid_from(),
+            *decoded.valid_until(),
+            decoded.subject_id(),
+            decoded.types().clone(),
+        )
+    }
+}
+
+impl TryFrom<DecodedCredential> for Credential {
+    type Error = CredentialError;
+
+    fn try_from(decoded: DecodedCredential) -> Result<Self, Self::Error> {
+        let id = decoded
+            .id()
+            .clone()
+            .ok_or(CredentialError::MissingIdentifier)?;
+        let issuer = match decoded.issuer() {
+            DecodedUri::Uri(uri) => uri.clone(),
+            DecodedUri::Missing | DecodedUri::Invalid => {
+                return Err(CredentialError::InvalidIssuer);
+            }
+        };
+
+        Self::try_new(
+            id,
+            issuer,
+            *decoded.valid_from(),
+            *decoded.valid_until(),
+            decoded.subject_id(),
+            decoded.types().clone(),
+        )
+    }
+}
+
+impl Credential {
+    fn try_new(
+        id: Uri,
+        issuer: Uri,
+        valid_from: Option<Timestamp>,
+        valid_until: Option<Timestamp>,
+        subject_id: &DecodedUri,
+        types: Vec<String>,
+    ) -> Result<Self, CredentialError> {
+        let subject_id = match subject_id {
             DecodedUri::Uri(uri) => uri.clone(),
             DecodedUri::Missing | DecodedUri::Invalid => {
                 return Err(CredentialError::MissingSubject);
             }
         };
-        let types = decoded.types().clone();
-
-        if issuer != authority.did() {
-            return Err(CredentialError::InvalidIssuer);
-        }
 
         if types.is_empty() {
             return Err(CredentialError::MissingType);
@@ -135,6 +178,32 @@ mod tests {
         assert_eq!(credential.issuer(), AUTHORITY_DID);
         assert_eq!(credential.subject_id(), "did:example:subject");
         assert_eq!(credential.types().len(), 2);
+    }
+
+    #[test]
+    fn try_from_decoded_credential_accepts_stored_credential() {
+        let credential =
+            Credential::try_from(decoded_credential()).expect("credential should be valid");
+
+        assert_eq!(credential.id(), "urn:uuid:credential-1");
+        assert_eq!(credential.issuer(), AUTHORITY_DID);
+        assert_eq!(credential.subject_id(), "did:example:subject");
+        assert_eq!(credential.types().len(), 2);
+    }
+
+    #[test]
+    fn try_from_decoded_credential_requires_explicit_issuer() {
+        let decoded = DecodedCredential::new(
+            Some("urn:uuid:credential-1".to_string()),
+            DecodedUri::Missing,
+            DecodedUri::Uri("did:example:subject".to_string()),
+            vec![VC_TYPE.to_string()],
+            String::new(),
+        );
+
+        let err = Credential::try_from(decoded).expect_err("missing issuer should fail");
+
+        assert_eq!(err, CredentialError::InvalidIssuer);
     }
 
     #[test]

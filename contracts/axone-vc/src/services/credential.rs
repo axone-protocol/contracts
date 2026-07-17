@@ -5,10 +5,12 @@ use crate::{
     services::authority,
     state,
     state::{
-        credential, has_credential, is_revoked, record_credential, CredentialRecord,
-        CredentialTombstone,
+        credential as stored_credential, has_credential, is_revoked, record_credential,
+        CredentialRecord, CredentialTombstone,
     },
-    translation::{decode_nquads_credential, CredentialDecodingError},
+    translation::{
+        decode_canonical_nquads_credential, decode_nquads_credential, CredentialDecodingError,
+    },
 };
 use cosmwasm_std::{Binary, StdError, Storage, Timestamp};
 use thiserror::Error;
@@ -97,7 +99,7 @@ pub fn verify_credential(
     credential_id: &str,
     valid_at: Option<Timestamp>,
 ) -> AxoneVcResult<VerifyCredentialResult> {
-    let Some(record) = credential(storage, credential_id)? else {
+    let Some(record) = stored_credential(storage, credential_id)? else {
         return Ok(VerifyCredentialResult {
             exists: false,
             valid: false,
@@ -116,10 +118,27 @@ pub fn verify_credential(
 }
 
 pub fn credential_raw(storage: &dyn Storage, credential_id: &str) -> AxoneVcResult<Binary> {
-    let record =
-        credential(storage, credential_id)?.ok_or_else(|| StdError::not_found("credential"))?;
+    let record = stored_credential(storage, credential_id)?
+        .ok_or_else(|| StdError::not_found("credential"))?;
 
     Ok(Binary::from(record.canonical_nquads.into_bytes()))
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CredentialResult {
+    pub parsed: Credential,
+    pub canonical: String,
+}
+
+pub fn credential(storage: &dyn Storage, credential_id: &str) -> AxoneVcResult<CredentialResult> {
+    let record = stored_credential(storage, credential_id)?
+        .ok_or_else(|| StdError::not_found("credential"))?;
+    let canonical = record.canonical_nquads;
+    let decoded = decode_canonical_nquads_credential(&canonical)?;
+    let canonical = decoded.canonical_nquads().clone();
+    let parsed = Credential::try_from(decoded)?;
+
+    Ok(CredentialResult { parsed, canonical })
 }
 
 #[derive(Debug, PartialEq)]
@@ -393,6 +412,67 @@ mod tests {
                 }
             );
         }
+    }
+
+    #[test]
+    fn credential_returns_parsed_credential_and_canonical_representation() {
+        let mut deps = mock_dependencies();
+        let authority = initialized_authority(&mut deps);
+        let credential_id = "urn:uuid:credential-query";
+        let valid_from = Timestamp::from_seconds(10);
+        let valid_until = Timestamp::from_seconds(20);
+
+        issue_credential(
+            deps.as_mut().storage,
+            &credential_payload_with_validity(
+                authority.did(),
+                credential_id,
+                "1970-01-01T00:00:10Z",
+                "1970-01-01T00:00:20Z",
+            ),
+            CredentialInputFormat::NQuads,
+        )
+        .expect("credential should issue");
+
+        let result =
+            credential(deps.as_ref().storage, credential_id).expect("credential should load");
+
+        assert_eq!(result.parsed.id(), credential_id);
+        assert_eq!(result.parsed.issuer(), authority.did());
+        assert_eq!(result.parsed.subject_id(), "did:example:subject");
+        assert_eq!(
+            result.parsed.types(),
+            &vec!["https://www.w3.org/2018/credentials#VerifiableCredential".to_string()]
+        );
+        assert_eq!(result.parsed.valid_from(), Some(valid_from));
+        assert_eq!(result.parsed.valid_until(), Some(valid_until));
+        assert!(result.canonical.contains(credential_id));
+        assert!(result.canonical.contains(authority.did()));
+        assert!(result.canonical.contains("validFrom"));
+        assert!(result.canonical.contains("validUntil"));
+    }
+
+    #[test]
+    fn credential_rejects_unknown_and_revoked_credentials() {
+        let mut deps = mock_dependencies();
+        let authority = initialized_authority(&mut deps);
+        let credential_id = "urn:uuid:credential-query";
+
+        let err = credential(deps.as_ref().storage, credential_id)
+            .expect_err("unknown credential should fail");
+        assert!(err.to_string().contains("credential not found"));
+
+        issue_credential(
+            deps.as_mut().storage,
+            &credential_payload(authority.did(), credential_id),
+            CredentialInputFormat::NQuads,
+        )
+        .expect("credential should issue");
+        revoke_credential(deps.as_mut().storage, credential_id).expect("credential should revoke");
+
+        let err = credential(deps.as_ref().storage, credential_id)
+            .expect_err("revoked credential should fail");
+        assert!(err.to_string().contains("credential not found"));
     }
 
     #[test]

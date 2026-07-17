@@ -1,4 +1,8 @@
-use crate::services::{IssueCredentialError, RevokeCredentialError};
+use crate::{
+    domain::CredentialError,
+    services::{IssueCredentialError, RevokeCredentialError},
+    translation::CredentialDecodingError,
+};
 use abstract_app::sdk::AbstractSdkError;
 use abstract_app::std::AbstractError;
 use abstract_app::AppError;
@@ -28,4 +32,10 @@ pub enum AxoneVcError {
 
     #[error(transparent)]
     RevokeCredential(#[from] RevokeCredentialError),
+
+    #[error(transparent)]
+    Credential(#[from] CredentialError),
+
+    #[error(transparent)]
+    CredentialDecode(#[from] CredentialDecodingError),
 }

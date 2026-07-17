@@ -131,6 +131,20 @@ pub enum AxoneVcQueryMsg {
         /// Identifier of the credential to retrieve.
         identifier: Uri,
     },
+
+    /// Return an active issued credential with its canonical RDF dataset.
+    ///
+    /// The returned metadata is reconstructed from the credential RDF dataset
+    /// accepted at issuance. The `quads` field contains the canonical N-Quads
+    /// string representation stored by this authority.
+    ///
+    /// This query fails when the identifier is unknown or the credential has been
+    /// revoked.
+    #[returns(CredentialResponse)]
+    Credential {
+        /// Identifier of the credential to retrieve.
+        identifier: Uri,
+    },
 }
 
 /// Response returned by `AxoneVcQueryMsg::Authority`.
@@ -167,4 +181,23 @@ pub struct CredentialRawResponse {
     /// This binary value is base64-encoded in JSON responses and is independent
     /// from the format and presentation of the credential submitted at issuance.
     pub credential: Binary,
+}
+
+/// Response returned by `AxoneVcQueryMsg::Credential`.
+#[cosmwasm_schema::cw_serde]
+pub struct CredentialResponse {
+    /// Credential identifier extracted from the VC `id`.
+    pub identifier: Uri,
+    /// Credential type URIs extracted from the VC `type` values.
+    pub types: Vec<Uri>,
+    /// Authority DID recorded as the credential issuer.
+    pub issuer: Uri,
+    /// Credential subject identifier.
+    pub subject: Uri,
+    /// Optional lower bound of the credential validity interval.
+    pub valid_from: Option<Timestamp>,
+    /// Optional exclusive upper bound of the credential validity interval.
+    pub valid_until: Option<Timestamp>,
+    /// Canonical N-Quads string representation of the credential RDF dataset.
+    pub quads: String,
 }

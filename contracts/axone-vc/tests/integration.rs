@@ -273,6 +273,37 @@ fn credential_raw_returns_the_expected_canonical_representation() -> anyhow::Res
 }
 
 #[test]
+fn credential_raw_includes_inferred_issuer() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential_id = "urn:uuid:credential-raw-with-inferred-issuer";
+    let input = format!(
+        r#"<{credential_id}> <https://www.w3.org/2018/credentials#credentialSubject> <did:example:subject> .
+<{credential_id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{credential_id}> <https://www.w3.org/2018/credentials#issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+"#
+    );
+    let expected = format!(
+        r#"<{credential_id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{credential_id}> <https://www.w3.org/2018/credentials#credentialSubject> <did:example:subject> .
+<{credential_id}> <https://www.w3.org/2018/credentials#issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<{credential_id}> <https://www.w3.org/2018/credentials#issuer> <{}> .
+"#,
+        authority.did
+    );
+
+    env.app.issue_credential(
+        Binary::from(input.into_bytes()),
+        Some(CredentialInputFormat::NQuads),
+    )?;
+
+    let response = AxoneVcQueryMsgFns::credential_raw(&env.app, credential_id.to_string())?;
+    assert_eq!(response.credential, Binary::from(expected.into_bytes()));
+
+    Ok(())
+}
+
+#[test]
 fn credential_query_returns_metadata_and_canonical_rdf() -> anyhow::Result<()> {
     let env = TestEnv::setup()?;
     let authority = AxoneVcQueryMsgFns::authority(&env.app)?;

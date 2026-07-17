@@ -1,7 +1,4 @@
-use crate::{
-    domain::Authority,
-    translation::{DecodedCredential, DecodedUri},
-};
+use crate::translation::{DecodedCredential, DecodedUri};
 use cosmwasm_std::Timestamp;
 use getset::{CopyGetters, Getters};
 use thiserror::Error;
@@ -45,34 +42,6 @@ pub struct Credential {
     subject_id: Uri,
     #[getset(get = "pub")]
     types: Vec<String>,
-}
-
-impl TryFrom<(DecodedCredential, Authority)> for Credential {
-    type Error = CredentialError;
-
-    fn try_from((decoded, authority): (DecodedCredential, Authority)) -> Result<Self, Self::Error> {
-        let id = decoded
-            .id()
-            .clone()
-            .ok_or(CredentialError::MissingIdentifier)?;
-        let issuer = match decoded.issuer() {
-            DecodedUri::Missing => authority.did().to_string(),
-            DecodedUri::Invalid => return Err(CredentialError::InvalidIssuer),
-            DecodedUri::Uri(uri) => uri.clone(),
-        };
-        if issuer != authority.did() {
-            return Err(CredentialError::InvalidIssuer);
-        }
-
-        Self::try_new(
-            id,
-            issuer,
-            *decoded.valid_from(),
-            *decoded.valid_until(),
-            decoded.subject_id(),
-            decoded.types().clone(),
-        )
-    }
 }
 
 impl TryFrom<DecodedCredential> for Credential {
@@ -144,17 +113,13 @@ impl Credential {
 mod tests {
     use super::Credential;
     use crate::{
-        domain::{Authority, CredentialError},
+        domain::CredentialError,
         translation::{DecodedCredential, DecodedUri},
     };
     use cosmwasm_std::Timestamp;
 
     const AUTHORITY_DID: &str = "did:pkh:cosmos:axone-localnet-1:cosmos1authority";
     const VC_TYPE: &str = "https://www.w3.org/2018/credentials#VerifiableCredential";
-
-    fn authority() -> Authority {
-        Authority::from_state(AUTHORITY_DID.to_string())
-    }
 
     fn decoded_credential() -> DecodedCredential {
         DecodedCredential::new(
@@ -171,17 +136,6 @@ mod tests {
 
     #[test]
     fn try_from_accepts_valid_credential() {
-        let credential = Credential::try_from((decoded_credential(), authority()))
-            .expect("credential should be valid");
-
-        assert_eq!(credential.id(), "urn:uuid:credential-1");
-        assert_eq!(credential.issuer(), AUTHORITY_DID);
-        assert_eq!(credential.subject_id(), "did:example:subject");
-        assert_eq!(credential.types().len(), 2);
-    }
-
-    #[test]
-    fn try_from_decoded_credential_accepts_stored_credential() {
         let credential =
             Credential::try_from(decoded_credential()).expect("credential should be valid");
 
@@ -218,32 +172,13 @@ mod tests {
             ],
             String::new(),
         );
-        let err = Credential::try_from((decoded, authority()))
-            .expect_err("missing identifier should fail");
+        let err = Credential::try_from(decoded).expect_err("missing identifier should fail");
 
         assert_eq!(err, CredentialError::MissingIdentifier);
     }
 
     #[test]
-    fn try_from_infers_missing_issuer_from_authority() {
-        let decoded = DecodedCredential::new(
-            Some("urn:uuid:credential-1".to_string()),
-            DecodedUri::Missing,
-            DecodedUri::Uri("did:example:subject".to_string()),
-            vec![
-                VC_TYPE.to_string(),
-                "https://example.com/types/Test".to_string(),
-            ],
-            String::new(),
-        );
-        let credential = Credential::try_from((decoded, authority()))
-            .expect("missing issuer should be inferred from authority");
-
-        assert_eq!(credential.issuer(), AUTHORITY_DID);
-    }
-
-    #[test]
-    fn try_from_rejects_invalid_issuer() {
+    fn try_from_accepts_any_valid_issuer() {
         let decoded = DecodedCredential::new(
             Some("urn:uuid:credential-1".to_string()),
             DecodedUri::Uri("did:example:issuer".to_string()),
@@ -254,10 +189,9 @@ mod tests {
             ],
             String::new(),
         );
-        let err =
-            Credential::try_from((decoded, authority())).expect_err("issuer mismatch should fail");
+        let credential = Credential::try_from(decoded).expect("credential should be valid");
 
-        assert_eq!(err, CredentialError::InvalidIssuer);
+        assert_eq!(credential.issuer(), "did:example:issuer");
     }
 
     #[test]
@@ -272,8 +206,7 @@ mod tests {
             ],
             String::new(),
         );
-        let err =
-            Credential::try_from((decoded, authority())).expect_err("invalid issuer should fail");
+        let err = Credential::try_from(decoded).expect_err("invalid issuer should fail");
 
         assert_eq!(err, CredentialError::InvalidIssuer);
     }
@@ -290,8 +223,7 @@ mod tests {
             ],
             String::new(),
         );
-        let err =
-            Credential::try_from((decoded, authority())).expect_err("missing subject should fail");
+        let err = Credential::try_from(decoded).expect_err("missing subject should fail");
 
         assert_eq!(err, CredentialError::MissingSubject);
     }
@@ -305,8 +237,7 @@ mod tests {
             vec![],
             String::new(),
         );
-        let err =
-            Credential::try_from((decoded, authority())).expect_err("missing types should fail");
+        let err = Credential::try_from(decoded).expect_err("missing types should fail");
 
         assert_eq!(err, CredentialError::MissingType);
     }
@@ -320,8 +251,7 @@ mod tests {
             vec!["https://example.com/types/Test".to_string()],
             String::new(),
         );
-        let err =
-            Credential::try_from((decoded, authority())).expect_err("missing vc type should fail");
+        let err = Credential::try_from(decoded).expect_err("missing vc type should fail");
 
         assert_eq!(err, CredentialError::NotVerifiableCredential);
     }
@@ -340,8 +270,8 @@ mod tests {
             Some(Timestamp::from_seconds(10)),
         );
 
-        let err = Credential::try_from((decoded, authority()))
-            .expect_err("inverted validity interval should fail");
+        let err =
+            Credential::try_from(decoded).expect_err("inverted validity interval should fail");
 
         assert_eq!(err, CredentialError::InvalidValidityInterval);
     }

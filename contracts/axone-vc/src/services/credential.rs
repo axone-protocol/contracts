@@ -9,7 +9,8 @@ use crate::{
         CredentialRecord, CredentialTombstone,
     },
     translation::{
-        decode_canonical_nquads_credential, decode_nquads_credential, CredentialDecodingError,
+        decode_canonical_nquads_credential, decode_nquads_credential_for_issuer,
+        CredentialDecodingError,
     },
 };
 use cosmwasm_std::{Binary, StdError, Storage, Timestamp};
@@ -67,12 +68,14 @@ fn issue_credential_with_authority(
     format: CredentialInputFormat,
 ) -> Result<(Credential, CredentialRecord), IssueCredentialError> {
     let decoded = match format {
-        CredentialInputFormat::NQuads => decode_nquads_credential(input)?,
+        CredentialInputFormat::NQuads => {
+            decode_nquads_credential_for_issuer(input, authority.did())?
+        }
     };
     let canonical_nquads = decoded.canonical_nquads().clone();
     let valid_from = *decoded.valid_from();
     let valid_until = *decoded.valid_until();
-    let credential = Credential::try_from((decoded, authority))?;
+    let credential = Credential::try_from(decoded)?;
 
     if has_credential(storage, credential.id()) {
         return Err(IssueCredentialError::CredentialAlreadyExists);
@@ -307,7 +310,7 @@ mod tests {
     fn issue_credential_accepts_missing_issuer() {
         let mut deps = mock_dependencies();
         let credential_id = "urn:uuid:credential-2";
-        initialized_authority(&mut deps);
+        let authority = initialized_authority(&mut deps);
 
         let result = issue_credential(
             deps.as_mut().storage,
@@ -317,6 +320,14 @@ mod tests {
         .expect("missing issuer should be inferred from authority");
 
         assert_eq!(result.credential_id, credential_id);
+        assert_eq!(result.issuer, authority.did());
+
+        let record = load_credential(deps.as_ref().storage, credential_id)
+            .expect("credential should be persisted");
+        assert!(record.canonical_nquads.contains(&format!(
+            "<{credential_id}> <https://www.w3.org/2018/credentials#issuer> <{}> .",
+            authority.did()
+        )));
     }
 
     #[test]

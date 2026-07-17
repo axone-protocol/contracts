@@ -273,6 +273,80 @@ fn credential_raw_returns_the_expected_canonical_representation() -> anyhow::Res
 }
 
 #[test]
+fn credential_query_returns_metadata_and_canonical_rdf() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    let credential_id = "urn:uuid:credential-query";
+    let input = credential_payload_with_validity(
+        &authority.did,
+        credential_id,
+        "1970-01-01T00:00:10Z",
+        "1970-01-01T00:00:20Z",
+    );
+    let expected_quads = format!(
+        r#"<{credential_id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{credential_id}> <https://www.w3.org/2018/credentials#credentialSubject> <did:example:subject> .
+<{credential_id}> <https://www.w3.org/2018/credentials#issuer> <{}> .
+<{credential_id}> <https://www.w3.org/2018/credentials#validFrom> "1970-01-01T00:00:10Z"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+<{credential_id}> <https://www.w3.org/2018/credentials#validUntil> "1970-01-01T00:00:20Z"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+"#,
+        authority.did
+    );
+
+    env.app
+        .issue_credential(Binary::from(input), Some(CredentialInputFormat::NQuads))?;
+
+    let response = AxoneVcQueryMsgFns::credential(&env.app, credential_id.to_string())?;
+
+    assert_eq!(response.identifier, credential_id);
+    assert_eq!(
+        response.types,
+        vec!["https://www.w3.org/2018/credentials#VerifiableCredential"]
+    );
+    assert_eq!(response.issuer, authority.did);
+    assert_eq!(response.subject, "did:example:subject");
+    assert_eq!(response.valid_from, Some(Timestamp::from_seconds(10)));
+    assert_eq!(response.valid_until, Some(Timestamp::from_seconds(20)));
+    assert_eq!(response.quads, expected_quads);
+
+    Ok(())
+}
+
+#[test]
+fn credential_query_rejects_unknown_and_revoked_credentials() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let credential_id = "urn:uuid:credential-query";
+
+    let err = AxoneVcQueryMsgFns::credential(&env.app, credential_id.to_string())
+        .expect_err("unknown credential should be rejected");
+    assert!(
+        format!("{err:?}").contains("credential not found"),
+        "{err:?}"
+    );
+
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+    env.app.issue_credential(
+        Binary::from(credential_payload_with_validity(
+            &authority.did,
+            credential_id,
+            "1970-01-01T00:00:10Z",
+            "1970-01-01T00:00:20Z",
+        )),
+        Some(CredentialInputFormat::NQuads),
+    )?;
+    env.app.revoke_credential(credential_id.to_string())?;
+
+    let err = AxoneVcQueryMsgFns::credential(&env.app, credential_id.to_string())
+        .expect_err("revoked credential should be rejected");
+    assert!(
+        format!("{err:?}").contains("credential not found"),
+        "{err:?}"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn credential_raw_rejects_unknown_and_revoked_credentials() -> anyhow::Result<()> {
     let env = TestEnv::setup()?;
     let credential_id = "urn:uuid:credential-raw";

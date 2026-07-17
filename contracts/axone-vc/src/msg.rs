@@ -34,8 +34,10 @@ pub enum AxoneVcExecuteMsg {
     /// - optional `validFrom` and `validUntil` claims, when present, encoded as
     ///   `xsd:dateTimeStamp` instants with `validFrom < validUntil`
     ///
-    /// The submitted payload may omit the issuer. In that case, the contract
-    /// treats the credential as issued by its authority DID.
+    /// When the submitted payload omits the issuer, the contract adds its authority
+    /// DID as the credential issuer.
+    ///
+    /// The registered credential therefore always contains the effective issuer.
     ///
     /// Issuance fails if the payload format is not supported, if the credential
     /// representation cannot be interpreted according to that format, or if a

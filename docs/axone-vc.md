@@ -51,7 +51,9 @@ The submitted payload must match the declared `format` and must describe exactly
 
 The credential is accepted only if it provides: - an identifier - either no issuer or an issuer equal to the authority DID exposed by this contract - a subject identifier - at least one type, including `VerifiableCredential` - optional `validFrom` and `validUntil` claims, when present, encoded as `xsd:dateTimeStamp` instants with `validFrom &lt; validUntil`
 
-The submitted payload may omit the issuer. In that case, the contract treats the credential as issued by its authority DID.
+When the submitted payload omits the issuer, the contract adds its authority DID as the credential issuer.
+
+The registered credential therefore always contains the effective issuer.
 
 Issuance fails if the payload format is not supported, if the credential representation cannot be interpreted according to that format, or if a credential with the same identifier has already been issued by this authority.
 
@@ -261,5 +263,5 @@ N-Quads extends N-Triples to represent RDF datasets by allowing an optional four
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`ac159514587baa44`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`b0e41424a881dbde`)*
 ````

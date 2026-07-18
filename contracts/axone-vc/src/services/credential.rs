@@ -1,3 +1,4 @@
+use crate::domain::Uri;
 use crate::{
     contract::AxoneVcResult,
     domain::{Credential, CredentialError},
@@ -5,15 +6,16 @@ use crate::{
     services::authority,
     state,
     state::{
-        credential as stored_credential, has_credential, is_revoked, record_credential,
-        CredentialRecord, CredentialTombstone,
+        credential as stored_credential, credentials as stored_credentials, credentials_by_subject,
+        credentials_by_type, has_credential, is_revoked, record_credential, CredentialRecord,
+        CredentialTombstone,
     },
     translation::{
         decode_canonical_nquads_credential, decode_nquads_credential_for_issuer,
         CredentialDecodingError, DecodedQuad,
     },
 };
-use cosmwasm_std::{Binary, StdError, Storage, Timestamp};
+use cosmwasm_std::{Binary, StdError, StdResult, Storage, Timestamp};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
@@ -147,6 +149,55 @@ pub fn credential(storage: &dyn Storage, credential_id: &str) -> AxoneVcResult<C
     let parsed = Credential::try_from(decoded)?;
 
     Ok(CredentialResult { parsed, quads })
+}
+
+pub fn credentials(
+    storage: &dyn Storage,
+    subject: Option<&str>,
+    credential_type: Option<&str>,
+    valid_at: Option<Timestamp>,
+    limit: usize,
+    start_after: Option<String>,
+) -> AxoneVcResult<Vec<Uri>> {
+    if limit == 0 {
+        return Ok(Vec::new());
+    }
+
+    let it = match (subject, credential_type) {
+        (Some(subject), _) => credentials_by_subject(storage, subject, start_after.as_deref()),
+        (None, Some(ctype)) => credentials_by_type(storage, ctype, start_after.as_deref()),
+        (None, None) => stored_credentials(storage, start_after.as_deref()),
+    };
+
+    let type_filter: Box<dyn FnMut(&StdResult<(String, CredentialRecord)>) -> bool> =
+        match credential_type {
+            Some(t) => {
+                let t = t.to_owned();
+                Box::new(move |r| match r {
+                    Ok((_, c)) => c.types.contains(&t),
+                    Err(_) => true,
+                })
+            }
+            None => Box::new(|_| true),
+        };
+
+    let valid_filter: Box<dyn FnMut(&StdResult<(String, CredentialRecord)>) -> bool> =
+        match valid_at {
+            Some(t) => Box::new(move |r| match r {
+                Ok((_, c)) => {
+                    c.valid_from.map(|from| from <= t).unwrap_or(true)
+                        && c.valid_until.map(|until| t <= until).unwrap_or(true)
+                }
+                Err(_) => true,
+            }),
+            None => Box::new(|_| true),
+        };
+
+    it.filter(type_filter)
+        .filter(valid_filter)
+        .take(limit)
+        .map(|item| item.map(|(id, _record)| id).map_err(Into::into))
+        .collect::<AxoneVcResult<Vec<_>>>()
 }
 
 #[derive(Debug, PartialEq)]

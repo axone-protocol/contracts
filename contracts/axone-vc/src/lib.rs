@@ -2,6 +2,7 @@ pub mod contract;
 pub mod domain;
 pub mod error;
 mod handlers;
+mod index;
 pub mod msg;
 mod services;
 pub mod state;

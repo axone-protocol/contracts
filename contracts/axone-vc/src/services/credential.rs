@@ -169,29 +169,28 @@ pub fn credentials(
         (None, None) => stored_credentials(storage, start_after.as_deref()),
     };
 
-    let type_filter: Box<dyn FnMut(&StdResult<(String, CredentialRecord)>) -> bool> =
-        match credential_type {
-            Some(t) => {
-                let t = t.to_owned();
-                Box::new(move |r| match r {
-                    Ok((_, c)) => c.types.contains(&t),
-                    Err(_) => true,
-                })
-            }
-            None => Box::new(|_| true),
-        };
-
-    let valid_filter: Box<dyn FnMut(&StdResult<(String, CredentialRecord)>) -> bool> =
-        match valid_at {
-            Some(t) => Box::new(move |r| match r {
-                Ok((_, c)) => {
-                    c.valid_from.map(|from| from <= t).unwrap_or(true)
-                        && c.valid_until.map(|until| t < until).unwrap_or(true)
-                }
+    type FilterPredicate = Box<dyn FnMut(&StdResult<(String, CredentialRecord)>) -> bool>;
+    let type_filter: FilterPredicate = match credential_type {
+        Some(t) => {
+            let t = t.to_owned();
+            Box::new(move |r| match r {
+                Ok((_, c)) => c.types.contains(&t),
                 Err(_) => true,
-            }),
-            None => Box::new(|_| true),
-        };
+            })
+        }
+        None => Box::new(|_| true),
+    };
+
+    let valid_filter: FilterPredicate = match valid_at {
+        Some(t) => Box::new(move |r| match r {
+            Ok((_, c)) => {
+                c.valid_from.is_none_or(|from| from <= t)
+                    && c.valid_until.is_none_or(|until| t < until)
+            }
+            Err(_) => true,
+        }),
+        None => Box::new(|_| true),
+    };
 
     it.filter(type_filter)
         .filter(valid_filter)

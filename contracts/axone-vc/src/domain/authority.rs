@@ -25,11 +25,6 @@ impl Authority {
     pub fn did(&self) -> &str {
         &self.0
     }
-
-    #[cfg(test)]
-    pub(crate) fn from_state(did: String) -> Self {
-        Self(did)
-    }
 }
 
 fn canonical_cosmos_account_address(account_addr: &Addr) -> StdResult<String> {

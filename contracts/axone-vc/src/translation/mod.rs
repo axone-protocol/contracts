@@ -1,4 +1,6 @@
 mod credential_rdf;
 
-pub use credential_rdf::decode_nquads_credential;
-pub(crate) use credential_rdf::{CredentialDecodingError, DecodedCredential, DecodedUri};
+pub(crate) use credential_rdf::{
+    decode_canonical_nquads_credential, decode_nquads_credential_for_issuer,
+    CredentialDecodingError, DecodedCredential, DecodedQuad, DecodedUri,
+};

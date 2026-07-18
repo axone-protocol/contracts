@@ -2,13 +2,15 @@ use cosmwasm_std::Timestamp;
 use getset::Getters;
 use oxrdf::{
     vocab::{rdf, xsd},
-    Dataset, Literal, NamedNodeRef, Quad, Subject, Term,
+    Dataset, GraphName, Literal, NamedNode, NamedNodeRef, Quad, Subject, Term,
 };
 use oxttl::NQuadsParser;
 use rdf_canon::canonicalize;
 use std::{collections::HashSet, str};
 use thiserror::Error;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+
+pub(crate) type DecodedQuad = Quad;
 
 const VC_ISSUER: NamedNodeRef<'static> =
     NamedNodeRef::new_unchecked("https://www.w3.org/2018/credentials#issuer");
@@ -60,6 +62,8 @@ pub struct DecodedCredential {
     types: Vec<String>,
     #[getset(get = "pub(crate)")]
     canonical_nquads: String,
+    #[getset(get = "pub(crate)")]
+    quads: Vec<DecodedQuad>,
 }
 
 impl DecodedCredential {
@@ -78,7 +82,13 @@ impl DecodedCredential {
             subject_id,
             types,
             canonical_nquads,
+            quads: Vec::new(),
         }
+    }
+
+    pub(crate) fn with_quads(mut self, quads: Vec<DecodedQuad>) -> Self {
+        self.quads = quads;
+        self
     }
 
     pub(crate) fn with_validity(
@@ -92,23 +102,67 @@ impl DecodedCredential {
     }
 }
 
-pub fn decode_nquads_credential(
-    input: &[u8],
-) -> Result<DecodedCredential, CredentialDecodingError> {
+#[cfg(test)]
+fn decode_nquads_credential(input: &[u8]) -> Result<DecodedCredential, CredentialDecodingError> {
     let utf8 = str::from_utf8(input).map_err(|_| CredentialDecodingError::InvalidUtf8)?;
     let quads = parse_nquads_quads(utf8.as_bytes())?;
     let dataset = Dataset::from_iter(quads.iter().cloned());
-    let credential_subject = find_credential_subject(&dataset)?;
-    let id = subject_to_identifier(&credential_subject);
-    let issuer = extract_issuer(&dataset, &credential_subject)?;
-    let valid_from = extract_validity_bound(&quads, &credential_subject, VC_VALID_FROM)?;
-    let valid_until = extract_validity_bound(&quads, &credential_subject, VC_VALID_UNTIL)?;
-    let subject_id = extract_subject_id(&dataset, &credential_subject)?;
-    let types = extract_types(&dataset, &credential_subject);
     let canonical_nquads = canonicalize_dataset(&dataset)?;
+
+    decode_dataset_credential(&quads, &dataset, canonical_nquads)
+}
+
+pub fn decode_nquads_credential_for_issuer(
+    input: &[u8],
+    issuer_did: &str,
+) -> Result<DecodedCredential, CredentialDecodingError> {
+    let utf8 = str::from_utf8(input).map_err(|_| CredentialDecodingError::InvalidUtf8)?;
+    let quads = parse_nquads_quads(utf8.as_bytes())?;
+    let mut dataset = Dataset::from_iter(quads.iter().cloned());
+    let credential_subject = find_credential_subject(&dataset)?;
+    let issuer = extract_issuer(&dataset, &credential_subject)?;
+
+    match issuer {
+        DecodedUri::Missing => {
+            insert_issuer(&mut dataset, credential_subject, issuer_did)?;
+        }
+        DecodedUri::Uri(issuer) if issuer == issuer_did => {}
+        DecodedUri::Uri(_) | DecodedUri::Invalid => {
+            return Err(CredentialDecodingError::InvalidDataset);
+        }
+    }
+
+    let canonical_nquads = canonicalize_dataset(&dataset)?;
+    let quads = parse_nquads_quads(canonical_nquads.as_bytes())?;
+
+    decode_dataset_credential(&quads, &dataset, canonical_nquads)
+}
+
+pub(crate) fn decode_canonical_nquads_credential(
+    input: &str,
+) -> Result<DecodedCredential, CredentialDecodingError> {
+    let quads = parse_nquads_quads(input.as_bytes())?;
+    let dataset = Dataset::from_iter(quads.iter().cloned());
+
+    decode_dataset_credential(&quads, &dataset, input.to_string())
+}
+
+fn decode_dataset_credential(
+    quads: &[Quad],
+    dataset: &Dataset,
+    canonical_nquads: String,
+) -> Result<DecodedCredential, CredentialDecodingError> {
+    let credential_subject = find_credential_subject(dataset)?;
+    let id = subject_to_identifier(&credential_subject);
+    let issuer = extract_issuer(dataset, &credential_subject)?;
+    let valid_from = extract_validity_bound(quads, &credential_subject, VC_VALID_FROM)?;
+    let valid_until = extract_validity_bound(quads, &credential_subject, VC_VALID_UNTIL)?;
+    let subject_id = extract_subject_id(dataset, &credential_subject)?;
+    let types = extract_types(dataset, &credential_subject);
 
     Ok(
         DecodedCredential::new(id, issuer, subject_id, types, canonical_nquads)
+            .with_quads(quads.to_vec())
             .with_validity(valid_from, valid_until),
     )
 }
@@ -125,7 +179,7 @@ fn parse_nquads_quads(input: &[u8]) -> Result<Vec<Quad>, CredentialDecodingError
         .map_err(|_| CredentialDecodingError::InvalidNQuads)
 }
 
-fn find_credential_subject(dataset: &Dataset) -> Result<Subject, CredentialDecodingError> {
+pub fn find_credential_subject(dataset: &Dataset) -> Result<Subject, CredentialDecodingError> {
     let candidate_subjects: HashSet<Subject> = [
         VC_ISSUER,
         VC_VALID_FROM,
@@ -149,7 +203,7 @@ fn find_credential_subject(dataset: &Dataset) -> Result<Subject, CredentialDecod
     Ok(subject)
 }
 
-fn subject_to_identifier(subject: &Subject) -> Option<String> {
+pub fn subject_to_identifier(subject: &Subject) -> Option<String> {
     match subject {
         Subject::NamedNode(node) => Some(node.as_str().to_string()),
         Subject::BlankNode(_) => None,
@@ -242,6 +296,22 @@ fn collect_objects(dataset: &Dataset, subject: &Subject, predicate: NamedNodeRef
         .collect()
 }
 
+fn insert_issuer(
+    dataset: &mut Dataset,
+    credential_subject: Subject,
+    issuer: &str,
+) -> Result<(), CredentialDecodingError> {
+    let issuer = NamedNode::new(issuer).map_err(|_| CredentialDecodingError::InvalidDataset)?;
+    let quad = Quad::new(
+        credential_subject,
+        VC_ISSUER.into_owned(),
+        issuer,
+        GraphName::DefaultGraph,
+    );
+    dataset.insert(quad.as_ref());
+    Ok(())
+}
+
 fn canonicalize_dataset(dataset: &Dataset) -> Result<String, CredentialDecodingError> {
     canonicalize(dataset).map_err(map_canonicalization_error)
 }
@@ -253,10 +323,10 @@ fn map_canonicalization_error(_: rdf_canon::CanonicalizationError) -> Credential
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_nquads_credential, extract_issuer, extract_subject_id, extract_validity_bound,
-        find_credential_subject, map_canonicalization_error, parse_nquads, parse_nquads_quads,
-        parse_validity_bound, subject_to_identifier, CredentialDecodingError, DecodedUri,
-        VC_ISSUER, VC_VALID_FROM,
+        decode_nquads_credential, decode_nquads_credential_for_issuer, extract_issuer,
+        extract_subject_id, extract_validity_bound, find_credential_subject,
+        map_canonicalization_error, parse_nquads, parse_nquads_quads, parse_validity_bound,
+        subject_to_identifier, CredentialDecodingError, DecodedUri, VC_ISSUER, VC_VALID_FROM,
     };
     use cosmwasm_std::Timestamp;
     use oxrdf::{BlankNode, Literal, NamedNodeRef, Subject};
@@ -366,6 +436,47 @@ mod tests {
         .expect("missing issuer should still decode");
 
         assert_eq!(decoded.issuer(), &DecodedUri::Missing);
+    }
+
+    #[test]
+    fn decode_credential_for_authority_injects_missing_issuer() {
+        let decoded = decode_nquads_credential_for_issuer(
+            format!(
+                r#"<{CREDENTIAL_ID}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<{CREDENTIAL_ID}> <{VC_NAMESPACE}credentialSubject> <did:example:subject> .
+"#
+            )
+            .as_bytes(),
+            AUTHORITY_DID,
+        )
+        .expect("missing issuer should be injected");
+
+        assert_eq!(
+            decoded.issuer(),
+            &DecodedUri::Uri(AUTHORITY_DID.to_string())
+        );
+        assert!(decoded.canonical_nquads().contains(&format!(
+            "<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuer> <{AUTHORITY_DID}> ."
+        )));
+    }
+
+    #[test]
+    fn decode_credential_for_authority_rejects_mismatched_issuer() {
+        let err = decode_nquads_credential_for_issuer(
+            format!(
+                r#"<{CREDENTIAL_ID}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuer> <did:example:issuer> .
+<{CREDENTIAL_ID}> <{VC_NAMESPACE}issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<{CREDENTIAL_ID}> <{VC_NAMESPACE}credentialSubject> <did:example:subject> .
+"#
+            )
+            .as_bytes(),
+            AUTHORITY_DID,
+        )
+        .expect_err("mismatched issuer should fail");
+
+        assert_eq!(err, CredentialDecodingError::InvalidDataset);
     }
 
     #[test]

@@ -13,6 +13,10 @@ const REVOKED_CREDENTIALS: Map<&str, CredentialTombstone> = Map::new("revoked_cr
 pub struct CredentialRecord {
     pub canonical_nquads: String,
     #[serde(default)]
+    pub subject: String,
+    #[serde(default)]
+    pub types: Vec<String>,
+    #[serde(default)]
     pub valid_from: Option<Timestamp>,
     #[serde(default)]
     pub valid_until: Option<Timestamp>,
@@ -21,11 +25,15 @@ pub struct CredentialRecord {
 impl CredentialRecord {
     pub fn new(
         canonical_nquads: String,
+        subject: String,
+        types: Vec<String>,
         valid_from: Option<Timestamp>,
         valid_until: Option<Timestamp>,
     ) -> Self {
         Self {
             canonical_nquads,
+            subject,
+            types,
             valid_from,
             valid_until,
         }

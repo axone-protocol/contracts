@@ -85,10 +85,15 @@ fn issue_credential_with_authority(
         return Err(IssueCredentialError::CredentialRevoked);
     }
 
-    Ok((
-        credential,
-        CredentialRecord::new(canonical_nquads, valid_from, valid_until),
-    ))
+    let record = CredentialRecord::new(
+        canonical_nquads,
+        credential.subject_id().clone(),
+        credential.types().clone(),
+        valid_from,
+        valid_until,
+    );
+
+    Ok((credential, record))
 }
 
 #[derive(Debug, PartialEq)]

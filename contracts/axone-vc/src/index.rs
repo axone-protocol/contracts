@@ -234,4 +234,124 @@ mod tests {
             vec![("alpha".to_string(), item("Alpha", &["blue"]))]
         );
     }
+
+    #[test]
+    fn empty_index_values_create_no_entries() {
+        let mut storage = MockStorage::new();
+
+        ITEMS
+            .save(&mut storage, "alpha", &item("Alpha", &[]))
+            .expect("alpha should save");
+
+        let indexed_items = ITEMS
+            .idx
+            .tags
+            .prefix("red".to_string())
+            .range(&storage, None, None, Order::Ascending)
+            .collect::<StdResult<Vec<_>>>()
+            .expect("items should load");
+
+        assert!(indexed_items.is_empty());
+    }
+
+    #[test]
+    fn duplicate_index_values_create_one_entry_per_primary_key() {
+        let mut storage = MockStorage::new();
+
+        ITEMS
+            .save(&mut storage, "alpha", &item("Alpha", &["red", "red"]))
+            .expect("alpha should save");
+
+        let indexed_items = ITEMS
+            .idx
+            .tags
+            .prefix("red".to_string())
+            .range(&storage, None, None, Order::Ascending)
+            .collect::<StdResult<Vec<_>>>()
+            .expect("items should load");
+
+        assert_eq!(
+            indexed_items,
+            vec![("alpha".to_string(), item("Alpha", &["red", "red"]))]
+        );
+    }
+
+    #[test]
+    fn prefix_respects_bounds_and_order() {
+        let mut storage = MockStorage::new();
+
+        for (pk, value) in [
+            ("alpha", item("Alpha", &["red"])),
+            ("beta", item("Beta", &["red"])),
+            ("gamma", item("Gamma", &["red"])),
+        ] {
+            ITEMS
+                .save(&mut storage, pk, &value)
+                .expect("item should save");
+        }
+
+        let indexed_items = ITEMS
+            .idx
+            .tags
+            .prefix("red".to_string())
+            .range(
+                &storage,
+                Some(cw_storage_plus::Bound::exclusive("alpha".to_string())),
+                None,
+                Order::Descending,
+            )
+            .collect::<StdResult<Vec<_>>>()
+            .expect("items should load");
+
+        assert_eq!(
+            indexed_items,
+            vec![
+                ("gamma".to_string(), item("Gamma", &["red"])),
+                ("beta".to_string(), item("Beta", &["red"])),
+            ]
+        );
+    }
+
+    #[test]
+    fn range_raw_returns_primary_keys_and_items() {
+        let mut storage = MockStorage::new();
+
+        ITEMS
+            .save(&mut storage, "alpha", &item("Alpha", &["red"]))
+            .expect("alpha should save");
+
+        let indexed_items = ITEMS
+            .idx
+            .tags
+            .prefix("red".to_string())
+            .range_raw(&storage, None, None, Order::Ascending)
+            .collect::<StdResult<Vec<_>>>()
+            .expect("items should load");
+
+        assert_eq!(
+            indexed_items,
+            vec![(b"alpha".to_vec(), item("Alpha", &["red"]))]
+        );
+    }
+
+    #[test]
+    fn range_reports_dangling_primary_key() {
+        let mut storage = MockStorage::new();
+
+        ITEMS
+            .save(&mut storage, "alpha", &item("Alpha", &["red"]))
+            .expect("alpha should save");
+        ITEMS.key("alpha").remove(&mut storage);
+
+        let err = ITEMS
+            .idx
+            .tags
+            .prefix("red".to_string())
+            .range(&storage, None, None, Order::Ascending)
+            .next()
+            .expect("index entry should remain")
+            .expect_err("missing primary key should fail");
+
+        assert_eq!(err.to_string(), "Generic error: pk not found");
+    }
 }

@@ -1,13 +1,41 @@
 use crate::domain::Authority;
 use crate::error::AxoneVcError;
+use crate::index::OneToManyIndex;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{StdError, Storage, Timestamp};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{Order, StdError, StdResult, Storage, Timestamp};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 const AUTHORITY: Item<Authority> = Item::new("authority");
-const CREDENTIALS: Map<&str, CredentialRecord> = Map::new("credentials");
 const REVOKED_CREDENTIALS: Map<&str, CredentialTombstone> = Map::new("revoked_credentials");
+
+const CREDENTIALS: IndexedMap<&str, CredentialRecord, CredentialIndexes<'static>> = IndexedMap::new(
+    "credentials",
+    CredentialIndexes {
+        subject: MultiIndex::new(
+            |_, r| r.subject.clone(),
+            "credentials",
+            "credentials__subject",
+        ),
+        credential_type: OneToManyIndex::new(
+            |_, r| r.types.as_slice(),
+            "credentials",
+            "credentials__type",
+        ),
+    },
+);
+
+pub struct CredentialIndexes<'a> {
+    pub subject: MultiIndex<'a, String, CredentialRecord, &'a str>,
+    pub credential_type: OneToManyIndex<'a, String, CredentialRecord, &'a str>,
+}
+
+impl IndexList<CredentialRecord> for CredentialIndexes<'_> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<CredentialRecord>> + '_> {
+        let indexes: Vec<&dyn Index<CredentialRecord>> = vec![&self.subject, &self.credential_type];
+        Box::new(indexes.into_iter())
+    }
+}
 
 #[cw_serde]
 pub struct CredentialRecord {
@@ -95,7 +123,7 @@ pub fn revoke_credential(
     credential_id: &str,
     tombstone: &CredentialTombstone,
 ) -> Result<(), AxoneVcError> {
-    CREDENTIALS.remove(storage, credential_id);
+    CREDENTIALS.remove(storage, credential_id)?;
     REVOKED_CREDENTIALS.save(storage, credential_id, tombstone)?;
     Ok(())
 }
@@ -119,6 +147,8 @@ mod tests {
         let record: CredentialRecord = from_json(br#"{"canonical_nquads":"<credential>"}"#)
             .expect("legacy credential record should deserialize");
 
+        assert_eq!(record.subject, "");
+        assert!(record.types.is_empty());
         assert_eq!(record.valid_from, None);
         assert_eq!(record.valid_until, None);
     }

@@ -2,8 +2,8 @@ use abstract_app::objects::namespace::Namespace;
 use abstract_client::{AbstractClient, Application};
 use axone_vc::{
     msg::{
-        AxoneVcExecuteMsgFns, AxoneVcInstantiateMsg, AxoneVcQueryMsgFns, CredentialInputFormat,
-        Quad,
+        AxoneVcExecuteMsgFns, AxoneVcInstantiateMsg, AxoneVcQueryMsgFns, CredentialFilter,
+        CredentialInputFormat, Quad,
     },
     AxoneVcInterface, AXONE_NAMESPACE,
 };
@@ -406,6 +406,156 @@ fn credential_query_rejects_unknown_and_revoked_credentials() -> anyhow::Result<
 }
 
 #[test]
+fn credentials_query_returns_empty_list_without_credentials() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+
+    let response =
+        AxoneVcQueryMsgFns::credentials(&env.app, CredentialFilter::default(), None, None)?;
+
+    assert!(response.identifiers.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn credentials_query_filters_and_paginates_identifiers() -> anyhow::Result<()> {
+    let env = TestEnv::setup()?;
+    let authority = AxoneVcQueryMsgFns::authority(&env.app)?;
+
+    for credential in [
+        credential_payload(
+            &authority.did,
+            "urn:uuid:credential-c",
+            "did:example:alice",
+            &["https://example.com/types/Member"],
+            Some(("1970-01-01T00:00:20Z", "1970-01-01T00:00:30Z")),
+        ),
+        credential_payload(
+            &authority.did,
+            "urn:uuid:credential-a",
+            "did:example:alice",
+            &["https://example.com/types/Employee"],
+            Some(("1970-01-01T00:00:10Z", "1970-01-01T00:00:20Z")),
+        ),
+        credential_payload(
+            &authority.did,
+            "urn:uuid:credential-b",
+            "did:example:bob",
+            &["https://example.com/types/Member"],
+            None,
+        ),
+        credential_payload(
+            &authority.did,
+            "urn:uuid:credential-d",
+            "did:example:alice",
+            &["https://example.com/types/Employee"],
+            None,
+        ),
+    ] {
+        env.app.issue_credential(
+            Binary::from(credential),
+            Some(CredentialInputFormat::NQuads),
+        )?;
+    }
+
+    let page =
+        AxoneVcQueryMsgFns::credentials(&env.app, CredentialFilter::default(), Some(2), None)?;
+    assert_eq!(
+        page.identifiers,
+        vec!["urn:uuid:credential-a", "urn:uuid:credential-b"]
+    );
+
+    let page = AxoneVcQueryMsgFns::credentials(
+        &env.app,
+        CredentialFilter::default(),
+        Some(2),
+        Some("urn:uuid:credential-b".to_string()),
+    )?;
+    assert_eq!(
+        page.identifiers,
+        vec!["urn:uuid:credential-c", "urn:uuid:credential-d"]
+    );
+
+    let response = AxoneVcQueryMsgFns::credentials(
+        &env.app,
+        CredentialFilter {
+            subject: Some("did:example:alice".to_string()),
+            ..Default::default()
+        },
+        None,
+        None,
+    )?;
+    assert_eq!(
+        response.identifiers,
+        vec![
+            "urn:uuid:credential-a",
+            "urn:uuid:credential-c",
+            "urn:uuid:credential-d"
+        ]
+    );
+
+    let response = AxoneVcQueryMsgFns::credentials(
+        &env.app,
+        CredentialFilter {
+            credential_type: Some("https://example.com/types/Member".to_string()),
+            ..Default::default()
+        },
+        None,
+        None,
+    )?;
+    assert_eq!(
+        response.identifiers,
+        vec!["urn:uuid:credential-b", "urn:uuid:credential-c"]
+    );
+
+    let response = AxoneVcQueryMsgFns::credentials(
+        &env.app,
+        CredentialFilter {
+            valid_at: Some(Timestamp::from_seconds(15)),
+            ..Default::default()
+        },
+        None,
+        None,
+    )?;
+    assert_eq!(
+        response.identifiers,
+        vec![
+            "urn:uuid:credential-a",
+            "urn:uuid:credential-b",
+            "urn:uuid:credential-d"
+        ]
+    );
+
+    let response = AxoneVcQueryMsgFns::credentials(
+        &env.app,
+        CredentialFilter {
+            subject: Some("did:example:alice".to_string()),
+            credential_type: Some("https://example.com/types/Member".to_string()),
+            valid_at: Some(Timestamp::from_seconds(25)),
+        },
+        None,
+        None,
+    )?;
+    assert_eq!(response.identifiers, vec!["urn:uuid:credential-c"]);
+
+    env.app
+        .revoke_credential("urn:uuid:credential-c".to_string())?;
+    let response = AxoneVcQueryMsgFns::credentials(
+        &env.app,
+        CredentialFilter {
+            subject: Some("did:example:alice".to_string()),
+            credential_type: Some("https://example.com/types/Member".to_string()),
+            ..Default::default()
+        },
+        None,
+        None,
+    )?;
+    assert!(response.identifiers.is_empty());
+
+    Ok(())
+}
+
+#[test]
 fn credential_raw_rejects_unknown_and_revoked_credentials() -> anyhow::Result<()> {
     let env = TestEnv::setup()?;
     let credential_id = "urn:uuid:credential-raw";
@@ -597,4 +747,35 @@ fn credential_payload_with_validity(
 "#
     )
     .into_bytes()
+}
+
+fn credential_payload(
+    authority_did: &str,
+    credential_id: &str,
+    subject: &str,
+    extra_types: &[&str],
+    validity: Option<(&str, &str)>,
+) -> Vec<u8> {
+    let mut payload = format!(
+        r#"<{credential_id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{credential_id}> <https://www.w3.org/2018/credentials#issuer> <{authority_did}> .
+<{credential_id}> <https://www.w3.org/2018/credentials#credentialSubject> <{subject}> .
+"#
+    );
+
+    for credential_type in extra_types {
+        payload.push_str(&format!(
+            "<{credential_id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <{credential_type}> .\n"
+        ));
+    }
+
+    if let Some((valid_from, valid_until)) = validity {
+        payload.push_str(&format!(
+            r#"<{credential_id}> <https://www.w3.org/2018/credentials#validFrom> "{valid_from}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+<{credential_id}> <https://www.w3.org/2018/credentials#validUntil> "{valid_until}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+"#
+        ));
+    }
+
+    payload.into_bytes()
 }

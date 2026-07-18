@@ -114,6 +114,45 @@ pub fn record_credential(
     Ok(())
 }
 
+pub fn credentials<'a>(
+    storage: &'a dyn Storage,
+    start_after: Option<&'a str>,
+) -> Box<dyn Iterator<Item = StdResult<(String, CredentialRecord)>> + 'a> {
+    let start = start_after.map(Bound::exclusive);
+
+    CREDENTIALS.range(storage, start, None, Order::Ascending)
+}
+
+pub fn credentials_by_subject<'a>(
+    storage: &'a dyn Storage,
+    subject: &'a str,
+    start_after: Option<&'a str>,
+) -> Box<dyn Iterator<Item = StdResult<(String, CredentialRecord)>> + 'a> {
+    CREDENTIALS.idx.subject.prefix(subject.to_string()).range(
+        storage,
+        start_after.map(Bound::exclusive),
+        None,
+        Order::Ascending,
+    )
+}
+
+pub fn credentials_by_type<'a>(
+    storage: &'a dyn Storage,
+    credential_type: &'a str,
+    start_after: Option<&'a str>,
+) -> Box<dyn Iterator<Item = StdResult<(String, CredentialRecord)>> + 'a> {
+    CREDENTIALS
+        .idx
+        .credential_type
+        .prefix(credential_type.to_string())
+        .range(
+            storage,
+            start_after.map(Bound::exclusive),
+            None,
+            Order::Ascending,
+        )
+}
+
 pub fn is_revoked(storage: &dyn Storage, credential_id: &str) -> bool {
     REVOKED_CREDENTIALS.has(storage, credential_id)
 }

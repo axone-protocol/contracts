@@ -1,10 +1,10 @@
 use crate::{
     contract::{AxoneVc, AxoneVcResult},
     msg::{
-        AuthorityResponse, AxoneVcQueryMsg, CredentialRawResponse, CredentialResponse,
-        Quad as QuadResponse, VerifyCredentialResponse,
+        pagination_limit, AuthorityResponse, AxoneVcQueryMsg, CredentialRawResponse,
+        CredentialResponse, CredentialsResponse, Quad as QuadResponse, VerifyCredentialResponse,
     },
-    services::{authority, credential, credential_raw, verify_credential},
+    services::{authority, credential, credential_raw, credentials, verify_credential},
     translation::DecodedQuad,
 };
 
@@ -29,6 +29,11 @@ pub fn query_handler(
         AxoneVcQueryMsg::Credential { identifier } => {
             to_json_binary(&query_credential(deps, identifier)?)
         }
+        AxoneVcQueryMsg::Credentials {
+            filter,
+            limit,
+            start_after,
+        } => to_json_binary(&query_credentials(deps, filter, limit, start_after)?),
     }
     .map_err(Into::into)
 }
@@ -64,6 +69,25 @@ fn query_credential(deps: Deps<'_>, identifier: String) -> AxoneVcResult<Credent
         valid_from: result.parsed.valid_from(),
         valid_until: result.parsed.valid_until(),
         quads: result.quads.into_iter().map(QuadResponse::from).collect(),
+    })
+}
+
+fn query_credentials(
+    deps: Deps<'_>,
+    filter: crate::msg::CredentialFilter,
+    limit: Option<u32>,
+    start_after: Option<String>,
+) -> AxoneVcResult<CredentialsResponse> {
+    let result = credentials(
+        deps.storage,
+        filter.subject.as_deref(),
+        filter.credential_type.as_deref(),
+        filter.valid_at,
+        pagination_limit(limit),
+        start_after,
+    )?;
+    Ok(CredentialsResponse {
+        identifiers: result,
     })
 }
 

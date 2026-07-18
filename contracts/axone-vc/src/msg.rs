@@ -5,6 +5,15 @@ use cosmwasm_std::{Binary, Timestamp};
 
 abstract_app::app_msg_types!(AxoneVc, AxoneVcExecuteMsg, AxoneVcQueryMsg);
 
+pub const MAX_PAGINATION_LIMIT: u32 = 100;
+pub const DEFAULT_PAGINATION_LIMIT: u32 = 50;
+
+pub(crate) fn pagination_limit(limit: Option<u32>) -> usize {
+    limit
+        .unwrap_or(DEFAULT_PAGINATION_LIMIT)
+        .min(MAX_PAGINATION_LIMIT) as usize
+}
+
 /// Instantiate message.
 ///
 /// Instantiating this app attaches a verifiable credential authority to the resource
@@ -147,6 +156,27 @@ pub enum AxoneVcQueryMsg {
         /// Identifier of the credential to retrieve.
         identifier: Uri,
     },
+
+    /// Return active credential identifiers matching all provided filters.
+    ///
+    /// An empty filter returns active credentials issued by this authority,
+    /// ordered by credential identifier and paginated with `start_after`.
+    ///
+    /// Revoked credentials are excluded because they are no longer part of the
+    /// active credential set.
+    #[returns(CredentialsResponse)]
+    Credentials {
+        /// Filters applied conjunctively to the active credential set.
+        filter: CredentialFilter,
+        /// Maximum number of identifiers to return.
+        ///
+        /// When omitted, the contract default is used. Values above the contract
+        /// maximum are capped.
+        limit: Option<u32>,
+        /// Exclusive pagination cursor using a credential identifier returned by
+        /// a previous page.
+        start_after: Option<Uri>,
+    },
 }
 
 /// Response returned by `AxoneVcQueryMsg::Authority`.
@@ -202,6 +232,28 @@ pub struct CredentialResponse {
     pub valid_until: Option<Timestamp>,
     /// Canonical credential RDF dataset represented as structured quads.
     pub quads: Vec<Quad>,
+}
+
+/// Filter accepted by `AxoneVcQueryMsg::Credentials`.
+#[cosmwasm_schema::cw_serde]
+#[derive(Default)]
+pub struct CredentialFilter {
+    /// Credential subject identifier to match.
+    pub subject: Option<Uri>,
+    /// Credential type URI to match against the VC `type` values.
+    pub credential_type: Option<Uri>,
+    /// Instant that must be contained by the credential validity interval.
+    ///
+    /// `validFrom` is inclusive when present, `validUntil` is exclusive when
+    /// present, and missing bounds are treated as unbounded.
+    pub valid_at: Option<Timestamp>,
+}
+
+/// Response returned by `AxoneVcQueryMsg::Credentials`.
+#[cosmwasm_schema::cw_serde]
+pub struct CredentialsResponse {
+    /// Active credential identifiers matching the requested filters.
+    pub identifiers: Vec<Uri>,
 }
 
 /// RDF quad returned by `AxoneVcQueryMsg::Credential`.

@@ -1,3 +1,4 @@
+use crate::domain::Uri;
 use crate::{
     contract::AxoneVcResult,
     domain::{Credential, CredentialError},
@@ -5,15 +6,16 @@ use crate::{
     services::authority,
     state,
     state::{
-        credential as stored_credential, has_credential, is_revoked, record_credential,
-        CredentialRecord, CredentialTombstone,
+        credential as stored_credential, credentials as stored_credentials, credentials_by_subject,
+        credentials_by_type, has_credential, is_revoked, record_credential, CredentialRecord,
+        CredentialTombstone,
     },
     translation::{
         decode_canonical_nquads_credential, decode_nquads_credential_for_issuer,
         CredentialDecodingError, DecodedQuad,
     },
 };
-use cosmwasm_std::{Binary, StdError, Storage, Timestamp};
+use cosmwasm_std::{Binary, StdError, StdResult, Storage, Timestamp};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
@@ -85,10 +87,15 @@ fn issue_credential_with_authority(
         return Err(IssueCredentialError::CredentialRevoked);
     }
 
-    Ok((
-        credential,
-        CredentialRecord::new(canonical_nquads, valid_from, valid_until),
-    ))
+    let record = CredentialRecord::new(
+        canonical_nquads,
+        credential.subject_id().clone(),
+        credential.types().clone(),
+        valid_from,
+        valid_until,
+    );
+
+    Ok((credential, record))
 }
 
 #[derive(Debug, PartialEq)]
@@ -142,6 +149,54 @@ pub fn credential(storage: &dyn Storage, credential_id: &str) -> AxoneVcResult<C
     let parsed = Credential::try_from(decoded)?;
 
     Ok(CredentialResult { parsed, quads })
+}
+
+pub fn credentials(
+    storage: &dyn Storage,
+    subject: Option<&str>,
+    credential_type: Option<&str>,
+    valid_at: Option<Timestamp>,
+    limit: usize,
+    start_after: Option<String>,
+) -> AxoneVcResult<Vec<Uri>> {
+    if limit == 0 {
+        return Ok(Vec::new());
+    }
+
+    let it = match (subject, credential_type) {
+        (Some(subject), _) => credentials_by_subject(storage, subject, start_after.as_deref()),
+        (None, Some(ctype)) => credentials_by_type(storage, ctype, start_after.as_deref()),
+        (None, None) => stored_credentials(storage, start_after.as_deref()),
+    };
+
+    type FilterPredicate = Box<dyn FnMut(&StdResult<(String, CredentialRecord)>) -> bool>;
+    let type_filter: FilterPredicate = match credential_type {
+        Some(t) => {
+            let t = t.to_owned();
+            Box::new(move |r| match r {
+                Ok((_, c)) => c.types.contains(&t),
+                Err(_) => true,
+            })
+        }
+        None => Box::new(|_| true),
+    };
+
+    let valid_filter: FilterPredicate = match valid_at {
+        Some(t) => Box::new(move |r| match r {
+            Ok((_, c)) => {
+                c.valid_from.is_none_or(|from| from <= t)
+                    && c.valid_until.is_none_or(|until| t < until)
+            }
+            Err(_) => true,
+        }),
+        None => Box::new(|_| true),
+    };
+
+    it.filter(type_filter)
+        .filter(valid_filter)
+        .take(limit)
+        .map(|item| item.map(|(id, _record)| id).map_err(Into::into))
+        .collect::<AxoneVcResult<Vec<_>>>()
 }
 
 #[derive(Debug, PartialEq)]
@@ -228,6 +283,38 @@ mod tests {
 "#
         )
         .into_bytes()
+    }
+
+    fn credential_payload_with_metadata(
+        authority_did: &str,
+        id: &str,
+        subject: &str,
+        extra_types: &[&str],
+        validity: Option<(&str, &str)>,
+    ) -> Vec<u8> {
+        let mut payload = format!(
+            r#"<{id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://www.w3.org/2018/credentials#VerifiableCredential> .
+<{id}> <https://www.w3.org/2018/credentials#issuer> <{authority_did}> .
+<{id}> <https://www.w3.org/2018/credentials#issuanceDate> "2025-01-01T00:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<{id}> <https://www.w3.org/2018/credentials#credentialSubject> <{subject}> .
+"#
+        );
+
+        for credential_type in extra_types {
+            payload.push_str(&format!(
+                "<{id}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <{credential_type}> .\n"
+            ));
+        }
+
+        if let Some((valid_from, valid_until)) = validity {
+            payload.push_str(&format!(
+                r#"<{id}> <https://www.w3.org/2018/credentials#validFrom> "{valid_from}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+<{id}> <https://www.w3.org/2018/credentials#validUntil> "{valid_until}"^^<http://www.w3.org/2001/XMLSchema#dateTimeStamp> .
+"#
+            ));
+        }
+
+        payload.into_bytes()
     }
 
     fn initialized_authority(
@@ -490,6 +577,203 @@ mod tests {
         let err = credential(deps.as_ref().storage, credential_id)
             .expect_err("revoked credential should fail");
         assert!(err.to_string().contains("credential not found"));
+    }
+
+    #[test]
+    fn credentials_returns_empty_list_without_credentials_and_with_zero_limit() {
+        let mut deps = mock_dependencies();
+        let authority = initialized_authority(&mut deps);
+
+        assert_eq!(
+            credentials(deps.as_ref().storage, None, None, None, 10, None)
+                .expect("credentials query should succeed"),
+            Vec::<String>::new()
+        );
+
+        issue_credential(
+            deps.as_mut().storage,
+            &credential_payload(authority.did(), "urn:uuid:credential-1"),
+            CredentialInputFormat::NQuads,
+        )
+        .expect("credential should issue");
+
+        assert_eq!(
+            credentials(deps.as_ref().storage, None, None, None, 0, None)
+                .expect("credentials query should succeed"),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn credentials_paginates_identifiers_in_ascending_order() {
+        let mut deps = mock_dependencies();
+        let authority = initialized_authority(&mut deps);
+
+        for id in [
+            "urn:uuid:credential-c",
+            "urn:uuid:credential-a",
+            "urn:uuid:credential-b",
+        ] {
+            issue_credential(
+                deps.as_mut().storage,
+                &credential_payload(authority.did(), id),
+                CredentialInputFormat::NQuads,
+            )
+            .expect("credential should issue");
+        }
+
+        assert_eq!(
+            credentials(deps.as_ref().storage, None, None, None, 2, None)
+                .expect("first page should load"),
+            vec!["urn:uuid:credential-a", "urn:uuid:credential-b"]
+        );
+        assert_eq!(
+            credentials(
+                deps.as_ref().storage,
+                None,
+                None,
+                None,
+                2,
+                Some("urn:uuid:credential-b".to_string())
+            )
+            .expect("second page should load"),
+            vec!["urn:uuid:credential-c"]
+        );
+    }
+
+    #[test]
+    fn credentials_filters_by_subject_type_and_validity() {
+        let mut deps = mock_dependencies();
+        let authority = initialized_authority(&mut deps);
+
+        for payload in [
+            credential_payload_with_metadata(
+                authority.did(),
+                "urn:uuid:credential-a",
+                "did:example:alice",
+                &["https://example.com/types/Employee"],
+                Some(("1970-01-01T00:00:10Z", "1970-01-01T00:00:20Z")),
+            ),
+            credential_payload_with_metadata(
+                authority.did(),
+                "urn:uuid:credential-b",
+                "did:example:bob",
+                &["https://example.com/types/Member"],
+                None,
+            ),
+            credential_payload_with_metadata(
+                authority.did(),
+                "urn:uuid:credential-c",
+                "did:example:alice",
+                &["https://example.com/types/Member"],
+                Some(("1970-01-01T00:00:20Z", "1970-01-01T00:00:30Z")),
+            ),
+            credential_payload_with_metadata(
+                authority.did(),
+                "urn:uuid:credential-d",
+                "did:example:alice",
+                &["https://example.com/types/Employee"],
+                None,
+            ),
+        ] {
+            issue_credential(
+                deps.as_mut().storage,
+                &payload,
+                CredentialInputFormat::NQuads,
+            )
+            .expect("credential should issue");
+        }
+
+        assert_eq!(
+            credentials(
+                deps.as_ref().storage,
+                Some("did:example:alice"),
+                None,
+                None,
+                10,
+                None
+            )
+            .expect("subject filter should load"),
+            vec![
+                "urn:uuid:credential-a",
+                "urn:uuid:credential-c",
+                "urn:uuid:credential-d"
+            ]
+        );
+        assert_eq!(
+            credentials(
+                deps.as_ref().storage,
+                None,
+                Some("https://example.com/types/Member"),
+                None,
+                10,
+                None
+            )
+            .expect("type filter should load"),
+            vec!["urn:uuid:credential-b", "urn:uuid:credential-c"]
+        );
+        assert_eq!(
+            credentials(
+                deps.as_ref().storage,
+                Some("did:example:alice"),
+                Some("https://example.com/types/Member"),
+                Some(Timestamp::from_seconds(25)),
+                10,
+                None
+            )
+            .expect("combined filters should load"),
+            vec!["urn:uuid:credential-c"]
+        );
+        assert_eq!(
+            credentials(
+                deps.as_ref().storage,
+                None,
+                None,
+                Some(Timestamp::from_seconds(20)),
+                10,
+                None
+            )
+            .expect("validity filter should load"),
+            vec![
+                "urn:uuid:credential-b",
+                "urn:uuid:credential-c",
+                "urn:uuid:credential-d"
+            ]
+        );
+    }
+
+    #[test]
+    fn credentials_excludes_revoked_credentials_from_indexes() {
+        let mut deps = mock_dependencies();
+        let authority = initialized_authority(&mut deps);
+
+        issue_credential(
+            deps.as_mut().storage,
+            &credential_payload_with_metadata(
+                authority.did(),
+                "urn:uuid:credential-a",
+                "did:example:alice",
+                &["https://example.com/types/Member"],
+                None,
+            ),
+            CredentialInputFormat::NQuads,
+        )
+        .expect("credential should issue");
+        revoke_credential(deps.as_mut().storage, "urn:uuid:credential-a")
+            .expect("credential should revoke");
+
+        assert_eq!(
+            credentials(
+                deps.as_ref().storage,
+                Some("did:example:alice"),
+                Some("https://example.com/types/Member"),
+                None,
+                10,
+                None
+            )
+            .expect("credentials query should succeed"),
+            Vec::<String>::new()
+        );
     }
 
     #[test]

@@ -136,6 +136,21 @@ This query fails when the identifier is unknown or the credential has been revok
 | `credential`            | _(Required.) _ **object**.                                           |
 | `credential.identifier` | _(Required.) _ **string**. Identifier of the credential to retrieve. |
 
+### QueryMsg::credentials
+
+Return active credential identifiers matching all provided filters.
+
+An empty filter returns active credentials issued by this authority, ordered by credential identifier and paginated with `start_after`.
+
+Revoked credentials are excluded because they are no longer part of the active credential set.
+
+| parameter                 | description                                                                                                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `credentials`             | _(Required.) _ **object**.                                                                                                                                       |
+| `credentials.filter`      | _(Required.) _ **[CredentialFilter](#credentialfilter)**. Filters applied conjunctively to the active credential set.                                            |
+| `credentials.limit`       | **integer\|null**. Maximum number of identifiers to return.<br /><br />When omitted, the contract default is used. Values above the contract maximum are capped. |
+| `credentials.start_after` | **string\|null**. Exclusive pagination cursor using a credential identifier returned by a previous page.                                                         |
+
 ## MigrateMsg
 
 Migrate message.
@@ -183,6 +198,14 @@ Response returned by `AxoneVcQueryMsg::CredentialRaw`.
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `credential` | _(Required.) _ **[Binary](#binary)**. Canonical serialized credential representation persisted by the contract.<br /><br />This binary value is base64-encoded in JSON responses and is independent from the format and presentation of the credential submitted at issuance. |
 
+### credentials
+
+Response returned by `AxoneVcQueryMsg::Credentials`.
+
+| property      | description                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------------------- |
+| `identifiers` | _(Required.) _ **Array&lt;string&gt;**. Active credential identifiers matching the requested filters. |
+
 ### verify_credential
 
 Response returned by `AxoneVcQueryMsg::VerifyCredential`.
@@ -201,6 +224,16 @@ A string containing Base64-encoded data.
 | type        |
 | ----------- |
 | **string**. |
+
+### CredentialFilter
+
+Filter accepted by `AxoneVcQueryMsg::Credentials`.
+
+| property          | description                                                                                                                                                                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `credential_type` | **string\|null**. Credential type URI to match against the VC `type` values.                                                                                                                                                                  |
+| `subject`         | **string\|null**. Credential subject identifier to match.                                                                                                                                                                                     |
+| `valid_at`        | **[Timestamp](#timestamp)\|null**. Instant that must be contained by the credential validity interval.<br /><br />`validFrom` is inclusive when present, `validUntil` is exclusive when present, and missing bounds are treated as unbounded. |
 
 ### CredentialInputFormat
 
@@ -263,5 +296,5 @@ N-Quads extends N-Triples to represent RDF datasets by allowing an optional four
 
 ---
 
-*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`b0e41424a881dbde`)*
+*Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-vc.json` (`fd0c7f3e46a589f3`)*
 ````

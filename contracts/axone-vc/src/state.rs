@@ -1,17 +1,49 @@
 use crate::domain::Authority;
 use crate::error::AxoneVcError;
+use crate::index::OneToManyIndex;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{StdError, Storage, Timestamp};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{Order, StdError, StdResult, Storage, Timestamp};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 const AUTHORITY: Item<Authority> = Item::new("authority");
-const CREDENTIALS: Map<&str, CredentialRecord> = Map::new("credentials");
 const REVOKED_CREDENTIALS: Map<&str, CredentialTombstone> = Map::new("revoked_credentials");
+
+const CREDENTIALS: IndexedMap<&str, CredentialRecord, CredentialIndexes<'static>> = IndexedMap::new(
+    "credentials",
+    CredentialIndexes {
+        subject: MultiIndex::new(
+            |_, r| r.subject.clone(),
+            "credentials",
+            "credentials__subject",
+        ),
+        credential_type: OneToManyIndex::new(
+            |_, r| r.types.as_slice(),
+            "credentials",
+            "credentials__type",
+        ),
+    },
+);
+
+pub struct CredentialIndexes<'a> {
+    pub subject: MultiIndex<'a, String, CredentialRecord, &'a str>,
+    pub credential_type: OneToManyIndex<'a, String, CredentialRecord, &'a str>,
+}
+
+impl IndexList<CredentialRecord> for CredentialIndexes<'_> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<CredentialRecord>> + '_> {
+        let indexes: Vec<&dyn Index<CredentialRecord>> = vec![&self.subject, &self.credential_type];
+        Box::new(indexes.into_iter())
+    }
+}
 
 #[cw_serde]
 pub struct CredentialRecord {
     pub canonical_nquads: String,
+    #[serde(default)]
+    pub subject: String,
+    #[serde(default)]
+    pub types: Vec<String>,
     #[serde(default)]
     pub valid_from: Option<Timestamp>,
     #[serde(default)]
@@ -21,11 +53,15 @@ pub struct CredentialRecord {
 impl CredentialRecord {
     pub fn new(
         canonical_nquads: String,
+        subject: String,
+        types: Vec<String>,
         valid_from: Option<Timestamp>,
         valid_until: Option<Timestamp>,
     ) -> Self {
         Self {
             canonical_nquads,
+            subject,
+            types,
             valid_from,
             valid_until,
         }
@@ -78,6 +114,45 @@ pub fn record_credential(
     Ok(())
 }
 
+pub fn credentials<'a>(
+    storage: &'a dyn Storage,
+    start_after: Option<&'a str>,
+) -> Box<dyn Iterator<Item = StdResult<(String, CredentialRecord)>> + 'a> {
+    let start = start_after.map(Bound::exclusive);
+
+    CREDENTIALS.range(storage, start, None, Order::Ascending)
+}
+
+pub fn credentials_by_subject<'a>(
+    storage: &'a dyn Storage,
+    subject: &'a str,
+    start_after: Option<&'a str>,
+) -> Box<dyn Iterator<Item = StdResult<(String, CredentialRecord)>> + 'a> {
+    CREDENTIALS.idx.subject.prefix(subject.to_string()).range(
+        storage,
+        start_after.map(Bound::exclusive),
+        None,
+        Order::Ascending,
+    )
+}
+
+pub fn credentials_by_type<'a>(
+    storage: &'a dyn Storage,
+    credential_type: &'a str,
+    start_after: Option<&'a str>,
+) -> Box<dyn Iterator<Item = StdResult<(String, CredentialRecord)>> + 'a> {
+    CREDENTIALS
+        .idx
+        .credential_type
+        .prefix(credential_type.to_string())
+        .range(
+            storage,
+            start_after.map(Bound::exclusive),
+            None,
+            Order::Ascending,
+        )
+}
+
 pub fn is_revoked(storage: &dyn Storage, credential_id: &str) -> bool {
     REVOKED_CREDENTIALS.has(storage, credential_id)
 }
@@ -87,7 +162,7 @@ pub fn revoke_credential(
     credential_id: &str,
     tombstone: &CredentialTombstone,
 ) -> Result<(), AxoneVcError> {
-    CREDENTIALS.remove(storage, credential_id);
+    CREDENTIALS.remove(storage, credential_id)?;
     REVOKED_CREDENTIALS.save(storage, credential_id, tombstone)?;
     Ok(())
 }
@@ -111,6 +186,8 @@ mod tests {
         let record: CredentialRecord = from_json(br#"{"canonical_nquads":"<credential>"}"#)
             .expect("legacy credential record should deserialize");
 
+        assert_eq!(record.subject, "");
+        assert!(record.types.is_empty());
         assert_eq!(record.valid_from, None);
         assert_eq!(record.valid_until, None);
     }

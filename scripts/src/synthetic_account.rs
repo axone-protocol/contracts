@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub const DEFAULT_NAME_PREFIX: &str = "axone-testnet-identity";
 pub const DEFAULT_DESCRIPTION: &str =
     "Synthetic AXONE testnet identity generated for traffic stimulation.";
-pub const DEFAULT_LINK: &str = "https://axone.xyz/testnet";
+pub const DEFAULT_LINK: &str = "https://surface.axone.xyz";
 const MAX_ABSTRACT_NAME_LENGTH: usize = 64;
 
 pub fn create<Chain: CwEnv>(

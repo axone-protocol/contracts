@@ -50,8 +50,7 @@ jobs:
 
       - name: Reject Nix warnings
         run: |
-          if grep -Ei '(^|[^[:alpha:]])warning:' /tmp/nix-flake-check.log | \
-            grep -Ev 'Nixpkgs 26\.05 will be the last release to support x86_64-darwin'; then
+          if grep -Ei '(^|[^[:alpha:]])warning:' /tmp/nix-flake-check.log; then
             echo "::error::Nix emitted one or more warnings"
             exit 1
           fi

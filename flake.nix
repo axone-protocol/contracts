@@ -39,6 +39,9 @@
               pkgs.pkg-config
               pkgs.rustup
               pkgs.taplo
+              pkgs.deadnix
+              pkgs.nixfmt
+              pkgs.statix
             ];
 
             shellHook = ''

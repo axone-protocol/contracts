@@ -61,14 +61,17 @@ A constitutional revision is performed by submitting an execution message that:
 
 1. Proposes a new constitution
 2. Evaluates the **current** constitution on a case containing the intent `gov:revise_constitution`
+3. Evaluates the **proposed** constitution on the constitutive intent `gov:establish`
 
-The revision is applied **only if** the verdict returned by the constitution is exactly:
+The revision is applied only when both decisions return:
 
 ```prolog
 gov:permitted
 ```
 
-Any other verdict (atom or compound term) results in a refusal.
+The authorization returned by the current constitution is recorded as a decision with that
+constitution's revision and hash. The decision record and revised constitution are committed in
+the same transaction, so a refused or failed revision records neither.
 
 ## InstantiateMsg
 
@@ -142,7 +145,7 @@ The complete case structure is (keys containing `:` are quoted atoms):
 
 `prolog ctx{ intent: &lt;intent_atom&gt;, % 'gov:revise_constitution' or 'gov:establish' 'gov:proposed_constitution_sha256': &lt;hex_atom&gt;, 'gov:current_constitution_sha256': &lt;hex_atom&gt;, 'gov:current_constitution_revision': &lt;integer&gt;, 'gov:module': module{ id: &lt;atom&gt;,       % Contract module ID (e.g., 'axone:axone-gov') version: &lt;atom&gt;   % Contract version (e.g., '1.2.3') }, 'cw:tx': tx{ message: msg{ sender: &lt;atom&gt;,                    % Bech32 address of message sender funds: [coin(Amount, Denom), ...]  % List of coins sent with message }, block: block{ height: &lt;integer&gt;,        % Block height time_seconds: &lt;integer&gt;,  % Block timestamp (seconds since epoch) tx_index: &lt;integer&gt;       % Transaction index } }, &lt;caller_provided_keys&gt;: &lt;caller_provided_values&gt;  % Any additional keys from caller's case } `
 
-The revision is applied only if both decisions return the verdict `gov:permitted`.
+The revision is applied only if both decisions return the verdict `gov:permitted`. The authorization decision returned by the current constitution is recorded with its current constitution revision and hash in the same transaction as the constitutional revision.
 
 | parameter                          | description                                                                                                                                                                                                                    |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -324,4 +327,4 @@ Response returned by `QueryMsg::Decision`.
 
 ---
 
-_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`c0d9d4e4566c0f12`)_
+_Rendered by [Fadroma](https://fadroma.tech) ([@fadroma/schema 1.1.0](https://www.npmjs.com/package/@fadroma/schema)) from `axone-gov.json` (`173f3ae21b46c8c8`)_

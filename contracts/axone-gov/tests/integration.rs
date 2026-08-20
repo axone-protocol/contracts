@@ -32,6 +32,25 @@ fn record_decision_case(case_body: &str) -> String {
     format!("case{{{case_body}, {}}}", record_decision_context())
 }
 
+fn revise_constitution_case(
+    proposed_constitution: &Binary,
+    current_constitution: &Binary,
+    current_revision: u64,
+) -> String {
+    let proposed_hash = atom_literal(&to_hex(
+        Checksum::generate(proposed_constitution.as_slice()).as_ref(),
+    ));
+    let current_hash = atom_literal(&to_hex(
+        Checksum::generate(current_constitution.as_slice()).as_ref(),
+    ));
+
+    format!(
+        "ctx{{intent: 'gov:revise_constitution', 'gov:proposed_constitution_sha256': {proposed_hash}, \
+'gov:current_constitution_sha256': {current_hash}, 'gov:current_constitution_revision': {current_revision}, {}}}",
+        record_decision_context()
+    )
+}
+
 #[derive(Clone)]
 struct LogicAskExpectations(Rc<RefCell<VecDeque<(String, QueryServiceAskResponse)>>>);
 
@@ -273,13 +292,14 @@ fn assert_hash_matches(payload: &[u8], got: &Binary) {
 fn assert_decision_response(
     record: &DecisionResponse,
     expected_id: u64,
+    expected_constitution_revision: u64,
     expected_constitution: &Binary,
     expected_case: &str,
     expected_verdict: &str,
     expected_motivation: Option<&str>,
 ) {
     assert_eq!(record.decision_id, expected_id);
-    assert_eq!(record.constitution_revision, 0);
+    assert_eq!(record.constitution_revision, expected_constitution_revision);
     assert_hash_matches(expected_constitution.as_slice(), &record.constitution_hash);
 
     assert_eq!(record.case, expected_case);
@@ -919,7 +939,7 @@ fn query_decision_returns_recorded_decision_without_motivation() {
 
     let response = AxoneGovQueryMsgFns::decision(&env.app, 1).expect("Failed to query decision");
 
-    assert_decision_response(&response, 1, &constitution, &case_term, verdict, None);
+    assert_decision_response(&response, 1, 0, &constitution, &case_term, verdict, None);
 }
 
 #[test]
@@ -948,6 +968,7 @@ fn query_decision_returns_recorded_decision_with_motivation() {
     assert_decision_response(
         &response,
         1,
+        0,
         &constitution,
         &case_term,
         verdict,
@@ -1029,6 +1050,7 @@ decide(case{action:mint}, allowed)."
     assert_decision_response(
         &response.decisions[0],
         1,
+        0,
         &constitution,
         &record_decision_case("action: transfer"),
         "allowed",
@@ -1037,6 +1059,7 @@ decide(case{action:mint}, allowed)."
     assert_decision_response(
         &response.decisions[1],
         2,
+        0,
         &constitution,
         &record_decision_case("action: withdraw"),
         "denied",
@@ -1045,6 +1068,7 @@ decide(case{action:mint}, allowed)."
     assert_decision_response(
         &response.decisions[2],
         3,
+        0,
         &constitution,
         &record_decision_case("action: mint"),
         "allowed",
@@ -1096,6 +1120,18 @@ fn revise_constitution_succeeds_with_permitted_verdict() {
     assert_eq!(
         status.constitution_hash,
         Binary::from(expected_hash.as_slice())
+    );
+
+    let decision =
+        AxoneGovQueryMsgFns::decision(&env.app, 1).expect("Failed to query revision authorization");
+    assert_decision_response(
+        &decision,
+        1,
+        0,
+        &constitution,
+        &revise_constitution_case(&new_constitution, &constitution, 0),
+        "'gov:permitted'",
+        Some("'Revision allowed'"),
     );
 }
 
@@ -1244,8 +1280,8 @@ fn revise_constitution_fails_when_proposed_constitution_refuses_establish() {
             ask_decision_with_motivation("denied", "'No'"),
         )
         .install();
-    let env =
-        TestEnv::setup(constitution, hook, expectations).expect("Failed to setup test environment");
+    let env = TestEnv::setup(constitution.clone(), hook, expectations)
+        .expect("Failed to setup test environment");
 
     let err = env
         .app
@@ -1261,6 +1297,22 @@ fn revise_constitution_fails_when_proposed_constitution_refuses_establish() {
         msg.contains("gov:establish"),
         "expected gov:establish intent in error, got: {msg}"
     );
+
+    let status = env
+        .app
+        .constitution_status()
+        .expect("Failed to query constitution status");
+    assert_eq!(status.constitution_revision, 0);
+
+    let constitution_got = env
+        .app
+        .constitution()
+        .expect("Failed to query constitution");
+    assert_eq!(constitution_got.constitution, constitution);
+
+    let decisions = AxoneGovQueryMsgFns::decisions(&env.app, None, None)
+        .expect("Failed to query recorded decisions");
+    assert!(decisions.decisions.is_empty());
 }
 
 #[test]
@@ -1632,4 +1684,16 @@ fn revise_constitution_increments_revision_number() {
         .constitution_status()
         .expect("Failed to query constitution status");
     assert_eq!(status.constitution_revision, 2);
+
+    let decision =
+        AxoneGovQueryMsgFns::decision(&env.app, 2).expect("Failed to query second authorization");
+    assert_decision_response(
+        &decision,
+        2,
+        1,
+        &new_constitution_1,
+        &revise_constitution_case(&new_constitution_2, &new_constitution_1, 1),
+        "'gov:permitted'",
+        Some("'Second revision allowed'"),
+    );
 }

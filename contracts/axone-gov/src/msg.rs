@@ -131,7 +131,9 @@ pub enum AxoneGovExecuteMsg {
     /// }
     /// ```
     ///
-    /// The revision is applied only if both decisions return the verdict `gov:permitted`.
+    /// The revision is applied only if both decisions return the verdict `gov:permitted`. The
+    /// authorization decision returned by the current constitution is recorded with its current
+    /// constitution revision and hash in the same transaction as the constitutional revision.
     ReviseConstitution {
         /// The proposed new constitution (UTF-8 Prolog program bytes).
         constitution: Binary,

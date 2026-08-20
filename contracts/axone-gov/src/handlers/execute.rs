@@ -93,6 +93,19 @@ fn execute_revise_constitution(
         });
     }
 
+    record_decision(
+        deps.storage,
+        Decision::new(
+            &current_status,
+            current_case.to_string(),
+            current_decision.verdict.to_string(),
+            Some(current_decision.motivation.to_string()),
+            info.sender.clone(),
+            env.block.height,
+            env.block.time.seconds(),
+        ),
+    )?;
+
     let status = save_revised_constitution(deps.storage, &revised_constitution)?;
 
     Ok(module.custom_response(

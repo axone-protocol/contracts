@@ -61,11 +61,14 @@ A constitutional revision is performed by submitting an execution message that:
 
 1. Proposes a new constitution
 2. Evaluates the **current** constitution on a case containing the intent `gov:revise_constitution`
+3. Evaluates the **proposed** constitution on the constitutive intent `gov:establish`
 
-The revision is applied **only if** the verdict returned by the constitution is exactly:
+The revision is applied only when both decisions return:
 
 ```prolog
 gov:permitted
 ```
 
-Any other verdict (atom or compound term) results in a refusal.
+The authorization returned by the current constitution is recorded as a decision with that
+constitution's revision and hash. The decision record and revised constitution are committed in
+the same transaction, so a refused or failed revision records neither.

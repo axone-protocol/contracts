@@ -26,11 +26,11 @@ abstract_app::app_msg_types!(AxoneGov, AxoneGovExecuteMsg, AxoneGovQueryMsg);
 ///
 /// Precondition: the `constitution` payload MUST be a UTF-8 encoded Prolog program.
 ///
-/// The contract validates that the program can be evaluated and that it defines the required entrypoints:
+/// The contract validates that the program can be evaluated and defines the required entrypoints:
 ///
-///    - `decide/2` as `governance:decide(+Case, -Verdict)`
+///    - `decide(+Case, -Verdict)`
 ///
-///    - `decide/3` as `governance:decide(+Case, -Verdict, -Motivation)`
+///    - `decide(+Case, -Verdict, -Motivation)`
 ///
 /// Where:
 ///
@@ -82,16 +82,15 @@ pub enum AxoneGovExecuteMsg {
     ///
     /// Injected keys are authoritative and overwrite any caller-provided value under the same keys.
     ///
-    /// The contract evaluates `governance:decide/2` or `governance:decide/3` depending on
-    /// `motivated`, and records the resulting verdict (and optional motivation) as a durable
-    /// decision record.
+    /// The contract evaluates `decide/2` or `decide/3` depending on `motivated`, and records the
+    /// resulting verdict (and optional motivation) as a durable decision record.
     RecordDecision {
         /// The decision context.
         case: String,
         /// Whether to request a motivated decision (defaults to `false`).
         ///
-        ///   - If `false`, the contract calls `governance:decide/2` and records only the verdict.
-        ///   - If `true`, the contract calls `governance:decide/3` and records both verdict and motivation.
+        ///   - If `false`, the contract calls `decide/2` and records only the verdict.
+        ///   - If `true`, the contract calls `decide/3` and records both verdict and motivation.
         motivated: Option<bool>,
     },
     /// Propose a constitutional revision (constitutional amendment).
@@ -166,7 +165,7 @@ pub enum AxoneGovQueryMsg {
     /// Decide a case using the stored constitution.
     ///
     /// The `case` parameter is a Prolog dict term string (typically `ctx{...}`) representing the decision context.
-    /// This is passed as the `Case` argument to `governance:decide/2` or `governance:decide/3`.
+    /// This is passed as the `Case` argument to `decide/2` or `decide/3`.
     ///
     /// Example:
     ///
@@ -193,8 +192,8 @@ pub enum AxoneGovQueryMsg {
         case: String,
         /// Whether to request a motivated decision (defaults to `false`).
         ///
-        ///   - If `false`, the contract calls `governance:decide/2` and returns only the verdict.
-        ///   - If `true`, the contract calls `governance:decide/3` and returns both verdict and motivation.
+        ///   - If `false`, the contract calls `decide/2` and returns only the verdict.
+        ///   - If `true`, the contract calls `decide/3` and returns both verdict and motivation.
         motivated: Option<bool>,
     },
 

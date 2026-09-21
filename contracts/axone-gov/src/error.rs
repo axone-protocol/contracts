@@ -96,9 +96,9 @@ pub enum AxoneGovError {
 
     /// A governance act was not permitted by the constitution.
     ///
-    /// This error is raised when the contract evaluates a decision (via `governance:decide/3`) for a
-    /// specific intent (for example `gov:revise_constitution` or `gov:establish`) and the returned verdict
-    /// does not authorize the act.
+    /// This error is raised when the contract evaluates a decision through `decide/3` for a specific
+    /// intent (for example `gov:revise_constitution` or `gov:establish`) and the returned verdict does not
+    /// authorize the act.
     ///
     /// The `verdict` and `motivation` are returned by the constitution as Prolog terms. The contract does not
     /// interpret the motivation: it may be empty or structured, and is preserved as-is for the caller.

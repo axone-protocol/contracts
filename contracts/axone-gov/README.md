@@ -24,8 +24,8 @@ Concretely, the constitution:
 
 The constitution exposes the following entrypoints:
 
-- `governance:decide/2`
-- `governance:decide/3`
+- `decide(+Case, -Verdict)`
+- `decide(+Case, -Verdict, -Motivation)`
 
 These predicates are validated at contract instantiation.
 

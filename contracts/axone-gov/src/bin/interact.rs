@@ -122,7 +122,7 @@ enum Command {
         /// Prolog case term, typically ctx{...}.
         #[arg(long)]
         case: String,
-        /// Ask for motivation through governance:decide/3.
+        /// Ask for motivation through decide/3.
         #[arg(long, default_value_t = false)]
         motivated: bool,
     },
@@ -131,7 +131,7 @@ enum Command {
         /// Prolog case term, typically ctx{...}.
         #[arg(long)]
         case: String,
-        /// Ask for motivation through governance:decide/3.
+        /// Ask for motivation through decide/3.
         #[arg(long, default_value_t = false)]
         motivated: bool,
     },

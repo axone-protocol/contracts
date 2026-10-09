@@ -31,13 +31,13 @@ pub const AXONE_TESTNET: ChainInfo = ChainInfo {
     chain_id: "axone-dendrite-2",
     gas_denom: "uaxone",
     gas_price: 0.025,
-    grpc_urls: &["http://grpc.axone.aknodes.net:9290"],
+    grpc_urls: &["https://axone-t-grpc.noders.services:443"],
     network_info: NetworkInfo {
         chain_name: "axone-testnet",
         pub_address_prefix: "axone",
         coin_type: 118u32,
     },
-    lcd_url: Some("https://api.axone.aknodes.net"),
+    lcd_url: Some("https://axone-test.api.cumulo.com.es"),
     fcd_url: None,
 };
 

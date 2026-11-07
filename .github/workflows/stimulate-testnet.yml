@@ -2,7 +2,7 @@ name: Stimulate / Testnet
 
 "on":
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 */6 * * *"
 
   workflow_dispatch:
     inputs:
@@ -66,7 +66,7 @@ jobs:
       - name: Generate synthetic Axone testnet activity
         env:
           ACCOUNT_COUNT: ${{ github.event.inputs.count || '1' }}
-          RUST_LOG: info
+          RUST_LOG: info,cw_orch_daemon::tx_broadcaster=debug,cw_orch_daemon::queriers::node=debug
           TEST_MNEMONIC: ${{ secrets.AXONE_GITHUB_TESTNET_WALLET }}
         run: |
           set -euo pipefail

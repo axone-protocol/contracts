@@ -31,7 +31,7 @@ pub const AXONE_TESTNET: ChainInfo = ChainInfo {
     chain_id: "axone-dendrite-2",
     gas_denom: "uaxone",
     gas_price: 0.025,
-    grpc_urls: &["https://axone-t-grpc.noders.services:443"],
+    grpc_urls: &["https://axone-test.grpc.cumulo.com.es:443"],
     network_info: NetworkInfo {
         chain_name: "axone-testnet",
         pub_address_prefix: "axone",
@@ -97,6 +97,10 @@ mod tests {
     fn test_parse_testnet() {
         let network = parse_network("testnet").unwrap();
         assert_eq!(network.chain_id, "axone-dendrite-2");
+        assert_eq!(
+            network.grpc_urls,
+            &["https://axone-test.grpc.cumulo.com.es:443"]
+        );
 
         let network = parse_network("axone-testnet").unwrap();
         assert_eq!(network.chain_id, "axone-dendrite-2");
